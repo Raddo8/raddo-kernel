@@ -20,6 +20,7 @@ export interface QueueActionParams {
   templateId?: string;
   playbookStepId?: string;
   triggerState?: string;
+  contactId?: string;
 }
 
 export interface QueueActionResult {
@@ -75,6 +76,7 @@ export async function queueAction(params: QueueActionParams): Promise<QueueActio
     templateId,
     playbookStepId,
     triggerState,
+    contactId,
   } = params;
 
   // --- Rate-limit check ---
@@ -114,6 +116,7 @@ export async function queueAction(params: QueueActionParams): Promise<QueueActio
       source,
       trigger_state: triggerState ?? null,
       playbook_step_id: playbookStepId ?? null,
+      contact_id: contactId ?? null,
     } as any)
     .select("id")
     .single();

@@ -20,6 +20,7 @@ export type Database = {
           id: string
           metadata: Json | null
           name: string
+          primary_contact_id: string | null
           status: string | null
           type: string | null
           updated_at: string
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name: string
+          primary_contact_id?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
@@ -40,12 +42,20 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name?: string
+          primary_contact_id?: string | null
           status?: string | null
           type?: string | null
           updated_at?: string
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "accounts_primary_contact_id_fkey"
+            columns: ["primary_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "accounts_workspace_id_fkey"
             columns: ["workspace_id"]
@@ -61,6 +71,7 @@ export type Database = {
           channel: string | null
           claimed_at: string | null
           claimed_by: string | null
+          contact_id: string | null
           created_at: string
           executed_at: string | null
           id: string
@@ -83,6 +94,7 @@ export type Database = {
           channel?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
+          contact_id?: string | null
           created_at?: string
           executed_at?: string | null
           id?: string
@@ -105,6 +117,7 @@ export type Database = {
           channel?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
+          contact_id?: string | null
           created_at?: string
           executed_at?: string | null
           id?: string
@@ -123,6 +136,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "actions_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "actions_item_id_fkey"
             columns: ["item_id"]
