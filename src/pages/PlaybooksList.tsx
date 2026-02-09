@@ -9,14 +9,16 @@ import { BookOpen, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useLabels } from "@/lib/labels-context";
 
 export default function PlaybooksList() {
+  const labels = useLabels();
   const { workspace } = useWorkspace();
   const [playbooks, setPlaybooks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
-  const [itemType, setItemType] = useState("invoice");
+  const [itemType, setItemType] = useState(labels.itemType);
 
   const fetch = async () => {
     if (!workspace) return;
@@ -58,7 +60,7 @@ export default function PlaybooksList() {
       {loading ? (
         <div className="p-6 text-muted-foreground text-sm">Loading...</div>
       ) : playbooks.length === 0 ? (
-        <EmptyState icon={BookOpen} title="No playbooks" description="Playbooks automate actions when item states change." />
+        <EmptyState icon={BookOpen} title="No playbooks" description={`Playbooks automate actions when ${labels.itemLower} states change.`} />
       ) : (
         <div className="divide-y divide-border">
           {playbooks.map(p => (

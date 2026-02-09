@@ -10,8 +10,10 @@ import { FileText, Plus } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useLabels } from "@/lib/labels-context";
 
 export default function ItemsList() {
+  const labels = useLabels();
   const { workspace } = useWorkspace();
   const [items, setItems] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -59,30 +61,30 @@ export default function ItemsList() {
     if (error) { toast.error(error.message); return; }
     setTitle(""); setAmount(""); setOpen(false);
     fetchAll();
-    toast.success("Item created");
+    toast.success(`${labels.item} created`);
   };
 
   return (
     <div>
       <PageHeader
-        title="Items"
+        title={labels.items}
         subtitle={`${items.length} total`}
         actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus size={16} className="mr-1" /> New Item</Button>
+              <Button size="sm"><Plus size={16} className="mr-1" /> {labels.newItem}</Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader><DialogTitle>New Item</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>{labels.newItem}</DialogTitle></DialogHeader>
               <div className="space-y-3">
-                <Input placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} />
+                <Input placeholder={labels.title} value={title} onChange={e => setTitle(e.target.value)} />
                 <Select value={accountId} onValueChange={setAccountId}>
                   <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
                   <SelectContent>
                     {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Input placeholder="Amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+                <Input placeholder={labels.amount} type="number" value={amount} onChange={e => setAmount(e.target.value)} />
                 <Input placeholder="Type (invoice, deal...)" value={type} onChange={e => setType(e.target.value)} />
                 {states.length > 0 && (
                   <Select value={stateId} onValueChange={setStateId}>
@@ -109,7 +111,7 @@ export default function ItemsList() {
       {loading ? (
         <div className="p-6 text-muted-foreground text-sm">Loading...</div>
       ) : items.length === 0 ? (
-        <EmptyState icon={FileText} title="No items" description="Create your first item to begin tracking." />
+        <EmptyState icon={FileText} title={`No ${labels.itemsLower}`} description={`Create your first ${labels.itemLower} to begin tracking.`} />
       ) : (
         <div className="divide-y divide-border">
           {items.map((item) => (
