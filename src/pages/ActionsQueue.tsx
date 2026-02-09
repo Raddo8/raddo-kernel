@@ -5,19 +5,19 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { Zap, Play, Check, X } from "lucide-react";
+import { Zap, Play, Check } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { executeAction } from "@/lib/execute-action";
 
 export default function ActionsQueue() {
-  const { workspace } = useWorkspace();
+  const { workspace, userId } = useWorkspace();
   const [actions, setActions] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
   const fetchActions = async () => {
     if (!workspace) return;
-    // Get all actions for items in this workspace
     let query = supabase
       .from("actions")
       .select("*, items!inner(workspace_id, title, account_id, accounts(name))")
@@ -36,39 +36,32 @@ export default function ActionsQueue() {
 
   useEffect(() => { fetchActions(); }, [workspace, filter]);
 
-  const executeAction = async (action: any) => {
-    // Mark as running
-    await supabase.from("actions").update({ status: "running" }).eq("id", action.id);
-    
-    // Mock execution: simulate send
-    await new Promise(r => setTimeout(r, 500));
-    
-    // Mark completed and log timeline
-    const { error } = await supabase.from("actions").update({
-      status: "completed",
-      executed_at: new Date().toISOString(),
-      result_json: { mock: true, message: "Simulated execution" },
-    }).eq("id", action.id);
+  const handleApprove = async (id: string) => {
+    // TEMPORARY: sets to 'scheduled' which currently means 'approved'.
+    // Step 3 will add the 'approved' enum value, at which point this
+    // will change to set status = 'approved'.
+    const { error } = await supabase
+      .from("actions")
+      .update({ status: "scheduled" as any })
+      .eq("id", id)
+      .eq("status", "pending_approval" as any);
 
-    if (!error) {
-      // Write timeline event
-      const item = action.items;
-      await supabase.from("timeline_events").insert({
-        account_id: item.account_id,
-        item_id: action.item_id,
-        direction: "outbound",
-        channel: action.channel,
-        summary: `Action executed: ${action.type}`,
-        body: `Mock ${action.channel} action completed`,
-      });
-      toast.success("Action executed");
-    }
+    if (error) { toast.error(error.message); return; }
+    toast.success("Action approved");
     fetchActions();
   };
 
-  const approveAction = async (id: string) => {
-    await supabase.from("actions").update({ status: "scheduled" }).eq("id", id);
-    toast.success("Action approved");
+  const handleExecute = async (action: any) => {
+    const result = await executeAction({
+      actionId: action.id,
+      actorUserId: userId ?? undefined,
+      source: "ui",
+    });
+    if (!result.success) {
+      toast.error(result.error || "Execution failed");
+    } else {
+      toast.success("Action executed");
+    }
     fetchActions();
   };
 
@@ -113,12 +106,12 @@ export default function ActionsQueue() {
               </div>
               <div className="flex items-center gap-1">
                 {a.status === "pending_approval" && (
-                  <Button size="sm" variant="ghost" onClick={() => approveAction(a.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => handleApprove(a.id)}>
                     <Check size={14} className="text-status-green" />
                   </Button>
                 )}
-                {(a.status === "scheduled" || a.status === "pending_approval") && (
-                  <Button size="sm" variant="ghost" onClick={() => executeAction(a)}>
+                {a.status === "scheduled" && (
+                  <Button size="sm" variant="ghost" onClick={() => handleExecute(a)}>
                     <Play size={14} />
                   </Button>
                 )}
