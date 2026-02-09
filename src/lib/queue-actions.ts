@@ -17,6 +17,9 @@ export interface QueueActionParams {
   idempotencyKey?: string;
   actorUserId?: string;
   source?: string; // "ui" | "playbook" | "system"
+  templateId?: string;
+  playbookStepId?: string;
+  triggerState?: string;
 }
 
 export interface QueueActionResult {
@@ -57,6 +60,9 @@ async function getRateLimit(itemId: string, channel: string): Promise<number> {
   return DEFAULT_RATE_LIMIT;
 }
 
+// Postgres unique violation error code
+const PG_UNIQUE_VIOLATION = "23505";
+
 export async function queueAction(params: QueueActionParams): Promise<QueueActionResult> {
   const {
     itemId, type, channel,
@@ -66,6 +72,9 @@ export async function queueAction(params: QueueActionParams): Promise<QueueActio
     idempotencyKey,
     actorUserId,
     source = "system",
+    templateId,
+    playbookStepId,
+    triggerState,
   } = params;
 
   // --- Rate-limit check ---
@@ -85,38 +94,8 @@ export async function queueAction(params: QueueActionParams): Promise<QueueActio
     return { skipped: false, rateLimited: true, error: `Rate limit exceeded (${limit}/hour)` };
   }
 
-  // --- Application-level idempotency check ---
-  // Until Step 3 adds a DB-level unique constraint, we check for existing
-  // actions with matching item_id + type + channel in a ±1 minute window
-  // around scheduledFor.
-  if (idempotencyKey) {
-    const windowStart = new Date(new Date(scheduledFor).getTime() - 60_000).toISOString();
-    const windowEnd = new Date(new Date(scheduledFor).getTime() + 60_000).toISOString();
-
-    const { data: existing } = await supabase
-      .from("actions")
-      .select("id")
-      .eq("item_id", itemId)
-      .eq("type", type)
-      .eq("channel", channel)
-      .gte("scheduled_for", windowStart)
-      .lte("scheduled_for", windowEnd)
-      .limit(1);
-
-    if (existing && existing.length > 0) {
-      return { skipped: true, rateLimited: false, actionId: existing[0].id };
-    }
-  }
-
-  // --- Insert action ---
-  // Store idempotency metadata in payload_json until Step 3 adds dedicated columns.
-  const enrichedPayload = {
-    ...payloadJson,
-    _idempotency_key: idempotencyKey ?? null,
-    _actor_user_id: actorUserId ?? null,
-    _source: source,
-  };
-
+  // --- Insert action with normalized columns ---
+  // workspace_id is set by the DB trigger (server-assigned only).
   const status = requiresApproval ? "pending_approval" : "scheduled";
 
   const { data, error } = await supabase
@@ -127,12 +106,24 @@ export async function queueAction(params: QueueActionParams): Promise<QueueActio
       channel,
       status: status as any,
       scheduled_for: scheduledFor,
-      payload_json: enrichedPayload,
-    })
+      payload_json: payloadJson,
+      idempotency_key: idempotencyKey ?? null,
+      template_id: templateId ?? null,
+      requires_approval: requiresApproval,
+      actor_user_id: actorUserId ?? null,
+      source,
+      trigger_state: triggerState ?? null,
+      playbook_step_id: playbookStepId ?? null,
+    } as any)
     .select("id")
     .single();
 
   if (error) {
+    // Only treat unique constraint violation on idempotency as "skipped"
+    if (error.code === PG_UNIQUE_VIOLATION && idempotencyKey) {
+      console.info(`[queueAction] Idempotency skip: key=${idempotencyKey}`);
+      return { skipped: true, rateLimited: false };
+    }
     console.error("[queueAction] Insert failed:", error.message);
     return { skipped: false, rateLimited: false, error: error.message };
   }
