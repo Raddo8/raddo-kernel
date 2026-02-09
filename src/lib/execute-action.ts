@@ -3,6 +3,10 @@
  *
  * UI components must NEVER execute actions directly. All execution
  * flows through executeAction().
+ *
+ * Routing:
+ *   channel=email + type=send_message → edge function execute-action-email
+ *   everything else                   → local mock execution
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +23,7 @@ export interface ExecuteActionParams {
   actionId: string;
   actorUserId?: string;
   source?: string; // "ui" | "system"
+  manualRetry?: boolean;
 }
 
 export interface ExecuteActionResult {
@@ -27,9 +32,9 @@ export interface ExecuteActionResult {
 }
 
 export async function executeAction(params: ExecuteActionParams): Promise<ExecuteActionResult> {
-  const { actionId, actorUserId, source = "system" } = params;
+  const { actionId, actorUserId, source = "system", manualRetry = false } = params;
 
-  // --- Load action with joins ---
+  // --- Load action (light read for routing decision) ---
   const { data: action, error: loadError } = await supabase
     .from("actions")
     .select("*, items(id, title, amount, due_date, account_id, workspace_id, accounts(id, name))")
@@ -49,9 +54,45 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
     return { success: false, error: `Action status "${action.status}" is not executable` };
   }
 
+  // --- Route: email+send_message → edge function ---
+  if (action.channel === "email" && action.type === "send_message") {
+    return executeViaEdgeFunction(actionId, manualRetry);
+  }
+
+  // --- Local mock path (non-email actions) ---
+  return executeMock(action, actionId, actorUserId, source);
+}
+
+// ── Edge function delegation ──
+
+async function executeViaEdgeFunction(
+  actionId: string,
+  manualRetry: boolean
+): Promise<ExecuteActionResult> {
+  const { data, error } = await supabase.functions.invoke("execute-action-email", {
+    body: { actionId, manualRetry },
+  });
+
+  if (error) {
+    return { success: false, error: error.message || "Edge function invocation failed" };
+  }
+
+  if (data && !data.success) {
+    return { success: false, error: data.error || "Email execution failed" };
+  }
+
+  return { success: true };
+}
+
+// ── Local mock execution (non-email) ──
+
+async function executeMock(
+  action: any,
+  actionId: string,
+  actorUserId?: string,
+  source?: string
+): Promise<ExecuteActionResult> {
   // --- Conditional update for concurrency guard + execution ownership ---
-  // Only claim the action if it's still in an executable status.
-  // Sets claimed_by/claimed_at to track ownership and prevent orphans.
   const { data: claimed, error: claimError } = await supabase
     .from("actions")
     .update({
@@ -86,7 +127,6 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
       .maybeSingle();
 
     if (template) {
-      // Load primary contact for the account
       let contact: { name?: string; email?: string | null; phone?: string | null } | undefined;
       if (item?.account_id) {
         const { data: contactData } = await supabase
@@ -111,12 +151,10 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
     }
   }
 
-  // --- Mock execution (Step 4 replaces with real Resend call) ---
+  // --- Mock execution ---
   try {
     await new Promise((r) => setTimeout(r, 500));
 
-    // --- Mark completed ---
-    // renderErrors are ALWAYS persisted to result_json, even on success (constraint 4).
     const resultJson = {
       mock: true,
       message: "Simulated execution",
@@ -133,7 +171,6 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
       })
       .eq("id", actionId);
 
-    // --- Write outbound timeline event via centralized helper (constraint 2) ---
     if (item?.account_id) {
       await writeTimelineEvent({
         accountId: item.account_id,
@@ -149,7 +186,6 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : "Unknown execution error";
 
-    // renderErrors are ALWAYS persisted, even on failure (constraint 4).
     const resultJson = {
       error: errorMessage,
       render_errors: renderErrors,
