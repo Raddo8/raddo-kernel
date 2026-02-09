@@ -10,8 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Trash2, ArrowDown } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useLabels } from "@/lib/labels-context";
 
 export default function PlaybookDetail() {
+  const labels = useLabels();
   const { id } = useParams();
   const { workspace } = useWorkspace();
   const [playbook, setPlaybook] = useState<any>(null);

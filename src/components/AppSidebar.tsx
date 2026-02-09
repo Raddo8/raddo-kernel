@@ -14,21 +14,22 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { to: "/accounts", label: "Accounts", icon: Building2 },
-  { to: "/items", label: "Items", icon: FileText },
-  { to: "/actions", label: "Actions", icon: Zap },
-  { to: "/timeline", label: "Timeline", icon: Clock },
-  { to: "/policies", label: "Policies", icon: Shield },
-  { to: "/playbooks", label: "Playbooks", icon: BookOpen },
-  { to: "/templates", label: "Templates", icon: LayoutTemplate },
-];
+import { useLabels } from "@/lib/labels-context";
 
 export default function AppSidebar() {
+  const labels = useLabels();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
+  const navItems = [
+    { to: "/accounts", label: labels.accounts, icon: Building2 },
+    { to: "/items", label: labels.items, icon: FileText },
+    { to: "/actions", label: "Actions", icon: Zap },
+    { to: "/timeline", label: "Timeline", icon: Clock },
+    { to: "/policies", label: "Policies", icon: Shield },
+    { to: "/playbooks", label: "Playbooks", icon: BookOpen },
+    { to: "/templates", label: "Templates", icon: LayoutTemplate },
+  ];
   return (
     <aside
       className={cn(

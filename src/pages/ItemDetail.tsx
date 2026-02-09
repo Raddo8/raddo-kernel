@@ -12,8 +12,10 @@ import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
 import { evaluatePlaybook } from "@/lib/evaluate-playbook";
 import { writeTimelineEvent } from "@/lib/timeline-events";
+import { useLabels } from "@/lib/labels-context";
 
 export default function ItemDetail() {
+  const labels = useLabels();
   const { id } = useParams();
   const { workspace, userId } = useWorkspace();
   const [item, setItem] = useState<any>(null);
@@ -103,7 +105,7 @@ export default function ItemDetail() {
     <div>
       <PageHeader
         title={item.title}
-        subtitle={`${item.type} · ${item.accounts?.name || "—"} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : "No amount"}`}
+        subtitle={`${item.type} · ${item.accounts?.name || "—"} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : `No ${labels.itemLower} amount`}`}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">

@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, User } from "lucide-react";
 import { toast } from "sonner";
+import { useLabels } from "@/lib/labels-context";
 
 export default function AccountDetail() {
+  const labels = useLabels();
   const { id } = useParams();
   const [account, setAccount] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
@@ -86,9 +88,9 @@ export default function AccountDetail() {
           </div>
 
           <div className="p-4">
-            <h3 className="text-sm font-semibold font-mono mb-3">ITEMS</h3>
+            <h3 className="text-sm font-semibold font-mono mb-3">{labels.itemsUpper}</h3>
             {items.length === 0 ? (
-              <p className="text-xs text-muted-foreground">No items yet</p>
+              <p className="text-xs text-muted-foreground">No {labels.itemsLower} yet</p>
             ) : (
               <div className="space-y-2">
                 {items.map(item => (
