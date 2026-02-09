@@ -17,6 +17,7 @@ import PolicyDetail from "@/pages/PolicyDetail";
 import PlaybooksList from "@/pages/PlaybooksList";
 import PlaybookDetail from "@/pages/PlaybookDetail";
 import TemplatesList from "@/pages/TemplatesList";
+import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,7 +48,7 @@ const App = () => (
           <WorkspaceProvider>
             <Routes>
               <Route element={<AppLayout />}>
-                <Route path="/" element={<Navigate to="/accounts" replace />} />
+                <Route path="/" element={<Index />} />
                 <Route path="/accounts" element={<AccountsList />} />
                 <Route path="/accounts/:id" element={<AccountDetail />} />
                 <Route path="/items" element={<ItemsList />} />
