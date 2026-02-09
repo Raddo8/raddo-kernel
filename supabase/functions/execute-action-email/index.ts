@@ -186,6 +186,8 @@ Deno.serve(async (req: Request) => {
     // ── Atomic claim (concurrency guard) ──
     // Only proceed if we successfully claim. This IS the idempotency gate for
     // concurrent duplicate sends — second caller gets 0 rows and aborts.
+    // Save original status before claiming so we can revert if needed.
+    const priorStatus = action.status;
     const { data: claimed, error: claimErr } = await supabase
       .from("actions")
       .update({
@@ -240,9 +242,25 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Check RESEND_API_KEY ──
+    // If not configured, revert claim (restore prior executable status) — do NOT fail the action.
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
-      await failAction(supabase, actionId, "RESEND_API_KEY not configured", renderErrors);
+      // Revert to prior status so action remains executable when key is added later.
+      // We stored the prior status before claiming — it was one of EXECUTABLE.
+      await supabase
+        .from("actions")
+        .update({
+          status: action.status as any, // restore original executable status
+          claimed_by: null,
+          claimed_at: null,
+          result_json: {
+            provider_not_configured: true,
+            error: "RESEND_API_KEY not configured",
+            render_errors: renderErrors,
+          },
+        } as any)
+        .eq("id", actionId);
+
       return jsonError(
         "RESEND_API_KEY is not configured. Add the secret to activate live email.",
         503
@@ -307,19 +325,29 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", actionId);
 
-    // ── Write outbound timeline event ──
+    // ── Write outbound timeline event (with allow-list validation) ──
     const accountId = item.account_id as string;
     if (accountId) {
-      await supabase.from("timeline_events").insert({
-        account_id: accountId,
-        item_id: action.item_id,
-        contact_id: contact.id,
-        direction: "outbound" as any,
-        channel: "email",
-        summary: `Email sent: ${renderedSubject || action.type}`,
-        body: renderedBody?.substring(0, 500) || null,
-        occurred_at: new Date().toISOString(),
-      });
+      const VALID_DIRECTIONS = new Set(["inbound", "outbound", "system"]);
+      const VALID_CHANNELS = new Set(["email", "sms", "phone", "system", "portal"]);
+
+      const direction = "outbound";
+      const channel = "email";
+
+      if (!VALID_DIRECTIONS.has(direction) || !VALID_CHANNELS.has(channel)) {
+        console.error(`[execute-action-email] Invalid timeline params: direction=${direction}, channel=${channel}`);
+      } else {
+        await supabase.from("timeline_events").insert({
+          account_id: accountId,
+          item_id: action.item_id,
+          contact_id: contact.id,
+          direction: direction as any,
+          channel,
+          summary: `Email sent: ${renderedSubject || action.type}`,
+          body: renderedBody?.substring(0, 500) || null,
+          occurred_at: new Date().toISOString(),
+        });
+      }
     }
 
     return new Response(
