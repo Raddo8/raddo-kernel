@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
+import { queueAction } from "@/lib/queue-actions";
+import { evaluatePlaybook } from "@/lib/evaluate-playbook";
+import { writeTimelineEvent } from "@/lib/timeline-events";
 
 export default function ItemDetail() {
   const { id } = useParams();
-  const { workspace } = useWorkspace();
+  const { workspace, userId } = useWorkspace();
   const [item, setItem] = useState<any>(null);
   const [actions, setActions] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
@@ -48,74 +51,48 @@ export default function ItemDetail() {
   }, [id, workspace]);
 
   const changeState = async (stateId: string) => {
-    if (!id || !item) return;
+    if (!id || !item || !workspace) return;
     setSelectedState(stateId);
     const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
     if (error) { toast.error(error.message); return; }
 
-    // Log state change to timeline
     const state = states.find(s => s.id === stateId);
-    await supabase.from("timeline_events").insert({
-      account_id: item.account_id || item.accounts?.id,
-      item_id: id,
+
+    // Centralized timeline write (constraint 2)
+    await writeTimelineEvent({
+      accountId: item.account_id || item.accounts?.id,
+      itemId: id,
       direction: "system",
       channel: "system",
-      summary: `State changed to ${state?.label || 'unknown'}`,
+      summary: `State changed to ${state?.label || "unknown"}`,
     });
 
-    // Evaluate playbook for this state
-    await evaluatePlaybook(stateId);
+    // Evaluate playbook via extracted module
+    await evaluatePlaybook({
+      itemId: id,
+      stateId,
+      stateName: state?.name || "",
+      itemType: item.type,
+      workspaceId: workspace.id,
+      actorUserId: userId ?? undefined,
+    });
+
     fetchItem();
     fetchActions();
     toast.success("State updated");
   };
 
-  const evaluatePlaybook = async (stateId: string) => {
-    if (!workspace || !item) return;
-    const state = states.find(s => s.id === stateId);
-    if (!state) return;
-
-    const { data: playbooks } = await supabase
-      .from("playbooks")
-      .select("id")
-      .eq("workspace_id", workspace.id)
-      .eq("item_type", item.type);
-
-    if (!playbooks || playbooks.length === 0) return;
-
-    for (const pb of playbooks) {
-      const { data: steps } = await supabase
-        .from("playbook_steps")
-        .select("*")
-        .eq("playbook_id", pb.id)
-        .eq("trigger_state", state.name)
-        .order("step_order");
-
-      if (!steps) continue;
-      for (const step of steps) {
-        const scheduledFor = new Date(Date.now() + (step.delay_minutes || 0) * 60000).toISOString();
-        await supabase.from("actions").insert({
-          item_id: id!,
-          type: step.action_type,
-          channel: step.channel || "email",
-          status: step.requires_approval ? "pending_approval" : "scheduled",
-          scheduled_for: scheduledFor,
-          payload_json: { template_id: step.template_id, step_id: step.id },
-        });
-      }
-    }
-  };
-
-  const queueAction = async (actionType: string, channel: string) => {
+  const handleQueueAction = async (actionType: string, channel: string) => {
     if (!id || !item) return;
-    const { error } = await supabase.from("actions").insert({
-      item_id: id,
+    const result = await queueAction({
+      itemId: id,
       type: actionType,
       channel,
-      status: "scheduled",
-      scheduled_for: new Date().toISOString(),
+      source: "ui",
+      actorUserId: userId ?? undefined,
     });
-    if (error) { toast.error(error.message); return; }
+    if (result.error) { toast.error(result.error); return; }
+    if (result.rateLimited) { toast.error("Rate limit exceeded"); return; }
     fetchActions();
     toast.success("Action queued");
   };
@@ -163,20 +140,20 @@ export default function ItemDetail() {
             )}
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — all route through queueAction() */}
           <div className="p-4">
             <h3 className="text-sm font-semibold font-mono mb-3">ACTIONS</h3>
             <div className="space-y-2">
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => queueAction("send_message", "email")}>
+              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("send_message", "email")}>
                 <Mail size={14} className="mr-2" /> Send Message
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => queueAction("request_verification", "email")}>
+              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("request_verification", "email")}>
                 <Shield size={14} className="mr-2" /> Request Verification
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => queueAction("present_options", "email")}>
+              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("present_options", "email")}>
                 <MessageSquare size={14} className="mr-2" /> Present Options
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => queueAction("escalate", "system")}>
+              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("escalate", "system")}>
                 <AlertTriangle size={14} className="mr-2" /> Escalate
               </Button>
             </div>
