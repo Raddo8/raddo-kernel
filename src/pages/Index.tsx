@@ -1,14 +1,32 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useEffect, useState } from "react";
+import { useWorkspace } from "@/lib/workspace-context";
+import { seedCaseyPack } from "@/lib/seed-casey";
+import { Navigate } from "react-router-dom";
 
-const Index = () => {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+export default function Index() {
+  const { workspace, loading } = useWorkspace();
+  const [seeding, setSeeding] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!workspace || seeding || done) return;
+    setSeeding(true);
+    seedCaseyPack(workspace.id).then(() => {
+      setDone(true);
+      setSeeding(false);
+    });
+  }, [workspace]);
+
+  if (loading || seeding) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <h1 className="font-mono font-bold text-2xl text-primary mb-2">RADDO</h1>
+          <p className="text-sm text-muted-foreground">Setting up your workspace...</p>
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
 
-export default Index;
+  return <Navigate to="/accounts" replace />;
+}
