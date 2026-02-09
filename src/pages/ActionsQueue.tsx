@@ -18,10 +18,11 @@ export default function ActionsQueue() {
 
   const fetchActions = async () => {
     if (!workspace) return;
+    // Use workspace_id directly on actions (no join needed for filtering)
     let query = supabase
       .from("actions")
-      .select("*, items!inner(workspace_id, title, account_id, accounts(name))")
-      .eq("items.workspace_id", workspace.id)
+      .select("*, items(title, account_id, accounts(name))")
+      .eq("workspace_id", workspace.id as any)
       .order("created_at", { ascending: false })
       .limit(200);
 
@@ -37,12 +38,9 @@ export default function ActionsQueue() {
   useEffect(() => { fetchActions(); }, [workspace, filter]);
 
   const handleApprove = async (id: string) => {
-    // TEMPORARY: sets to 'scheduled' which currently means 'approved'.
-    // Step 3 will add the 'approved' enum value, at which point this
-    // will change to set status = 'approved'.
     const { error } = await supabase
       .from("actions")
-      .update({ status: "scheduled" as any })
+      .update({ status: "approved" as any })
       .eq("id", id)
       .eq("status", "pending_approval" as any);
 
@@ -65,7 +63,7 @@ export default function ActionsQueue() {
     fetchActions();
   };
 
-  const filters = ["all", "pending_approval", "scheduled", "running", "completed", "failed"];
+  const filters = ["all", "pending_approval", "approved", "scheduled", "running", "completed", "failed", "canceled"];
 
   return (
     <div>
@@ -110,7 +108,7 @@ export default function ActionsQueue() {
                     <Check size={14} className="text-status-green" />
                   </Button>
                 )}
-                {a.status === "scheduled" && (
+                {(a.status === "scheduled" || a.status === "approved") && (
                   <Button size="sm" variant="ghost" onClick={() => handleExecute(a)}>
                     <Play size={14} />
                   </Button>

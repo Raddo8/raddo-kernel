@@ -12,13 +12,8 @@ import { writeTimelineEvent } from "@/lib/timeline-events";
 // Terminal statuses — execution is permanently denied.
 const TERMINAL_STATUSES = ["completed", "failed", "canceled"];
 
-/**
- * NOTE: 'scheduled' temporarily serves double duty as both
- * auto-scheduled and human-approved until Step 3 adds the
- * 'approved' enum value. Once 'approved' exists, this array
- * will become ["scheduled", "approved"].
- */
-const EXECUTABLE_STATUSES = ["scheduled"];
+// Statuses eligible for execution.
+const EXECUTABLE_STATUSES = ["scheduled", "approved"];
 
 export interface ExecuteActionParams {
   actionId: string;
@@ -54,11 +49,18 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
     return { success: false, error: `Action status "${action.status}" is not executable` };
   }
 
-  // --- Conditional update for concurrency guard ---
+  // --- Conditional update for concurrency guard + execution ownership ---
   // Only claim the action if it's still in an executable status.
+  // Sets claimed_by/claimed_at to track ownership and prevent orphans.
   const { data: claimed, error: claimError } = await supabase
     .from("actions")
-    .update({ status: "running" as any })
+    .update({
+      status: "running" as any,
+      claimed_by: actorUserId ?? null,
+      claimed_at: new Date().toISOString(),
+      actor_user_id: actorUserId ?? null,
+      source,
+    } as any)
     .eq("id", actionId)
     .in("status", EXECUTABLE_STATUSES as any)
     .select("id");
@@ -70,17 +72,17 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
   // --- Load template if referenced ---
   const item = action.items as any;
   const account = item?.accounts as any;
-  const payload = (action.payload_json || {}) as Record<string, unknown>;
+  const templateId = (action as any).template_id;
 
   let renderedSubject = "";
   let renderedBody = `Action executed: ${action.type}`;
   let renderErrors: string[] = [];
 
-  if (payload.template_id) {
+  if (templateId) {
     const { data: template } = await supabase
       .from("templates")
       .select("subject, body")
-      .eq("id", payload.template_id as string)
+      .eq("id", templateId)
       .maybeSingle();
 
     if (template) {
@@ -120,8 +122,6 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
       message: "Simulated execution",
       rendered_subject: renderedSubject,
       render_errors: renderErrors,
-      actor_user_id: actorUserId ?? null,
-      source,
     };
 
     await supabase
@@ -153,8 +153,6 @@ export async function executeAction(params: ExecuteActionParams): Promise<Execut
     const resultJson = {
       error: errorMessage,
       render_errors: renderErrors,
-      actor_user_id: actorUserId ?? null,
-      source,
     };
 
     await supabase

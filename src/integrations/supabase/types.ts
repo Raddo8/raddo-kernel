@@ -57,40 +57,70 @@ export type Database = {
       }
       actions: {
         Row: {
+          actor_user_id: string | null
           channel: string | null
+          claimed_at: string | null
+          claimed_by: string | null
           created_at: string
           executed_at: string | null
           id: string
+          idempotency_key: string | null
           item_id: string
           payload_json: Json | null
+          playbook_step_id: string | null
+          requires_approval: boolean
           result_json: Json | null
           scheduled_for: string | null
+          source: string
           status: Database["public"]["Enums"]["action_status"]
+          template_id: string | null
+          trigger_state: string | null
           type: string
+          workspace_id: string
         }
         Insert: {
+          actor_user_id?: string | null
           channel?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           created_at?: string
           executed_at?: string | null
           id?: string
+          idempotency_key?: string | null
           item_id: string
           payload_json?: Json | null
+          playbook_step_id?: string | null
+          requires_approval?: boolean
           result_json?: Json | null
           scheduled_for?: string | null
+          source?: string
           status?: Database["public"]["Enums"]["action_status"]
+          template_id?: string | null
+          trigger_state?: string | null
           type: string
+          workspace_id: string
         }
         Update: {
+          actor_user_id?: string | null
           channel?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           created_at?: string
           executed_at?: string | null
           id?: string
+          idempotency_key?: string | null
           item_id?: string
           payload_json?: Json | null
+          playbook_step_id?: string | null
+          requires_approval?: boolean
           result_json?: Json | null
           scheduled_for?: string | null
+          source?: string
           status?: Database["public"]["Enums"]["action_status"]
+          template_id?: string | null
+          trigger_state?: string | null
           type?: string
+          workspace_id?: string
         }
         Relationships: [
           {
@@ -98,6 +128,27 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_playbook_step_id_fkey"
+            columns: ["playbook_step_id"]
+            isOneToOne: false
+            referencedRelation: "playbook_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
@@ -776,6 +827,8 @@ export type Database = {
         | "running"
         | "completed"
         | "failed"
+        | "approved"
+        | "canceled"
       item_direction: "inbound" | "outbound" | "system"
       workspace_role: "owner" | "admin" | "member" | "viewer"
     }
@@ -911,6 +964,8 @@ export const Constants = {
         "running",
         "completed",
         "failed",
+        "approved",
+        "canceled",
       ],
       item_direction: ["inbound", "outbound", "system"],
       workspace_role: ["owner", "admin", "member", "viewer"],

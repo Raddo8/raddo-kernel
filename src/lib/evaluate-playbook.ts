@@ -56,9 +56,10 @@ export async function evaluatePlaybook(params: EvaluatePlaybookParams): Promise<
         idempotencyKey,
         actorUserId,
         source: "playbook",
+        templateId: step.template_id ?? undefined,
+        playbookStepId: step.id,
+        triggerState: stateName,
         payloadJson: {
-          template_id: step.template_id,
-          step_id: step.id,
           playbook_id: pb.id,
         },
       });
