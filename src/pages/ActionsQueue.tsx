@@ -98,7 +98,7 @@ export default function ActionsQueue() {
                   <StatusBadge status={a.status} />
                 </div>
                 <div className="text-xs text-muted-foreground mt-0.5">
-                  {a.items?.title} — {a.items?.accounts?.name}
+                  {a.items?.title}{a.items?.accounts?.name ? <span> · {a.items.accounts.name}</span> : null}
                   {a.scheduled_for && <span className="ml-2 font-mono">{format(new Date(a.scheduled_for), "MMM d HH:mm")}</span>}
                 </div>
               </div>
