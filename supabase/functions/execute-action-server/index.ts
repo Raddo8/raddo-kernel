@@ -143,13 +143,12 @@ async function authenticate(req: Request): Promise<AuthResult | Response> {
     global: { headers: { Authorization: authHeader } },
   });
 
-  const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await client.auth.getClaims(token);
-  if (error || !data?.claims) {
+  const { data: { user }, error } = await client.auth.getUser();
+  if (error || !user) {
     return jsonError("Invalid token", 401);
   }
 
-  return { mode: "ui", supabase: client, userId: data.claims.sub as string, source: "ui" };
+  return { mode: "ui", supabase: client, userId: user.id, source: "ui" };
 }
 
 // ── Main handler ──
