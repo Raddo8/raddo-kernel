@@ -80,6 +80,60 @@ export async function seedCaseyPack(workspaceId: string) {
     ]);
   }
 
+  // Seed default policy rules (no policy_id in schema)
+  if (templatesData) {
+    const { data: existingRules } = await supabase
+      .from("policy_rules")
+      .select("id")
+      .eq("workspace_id", workspaceId)
+      .eq("vertical_pack_key", "casey")
+      .gte("sort_order", 100)
+      .lte("sort_order", 300)
+      .limit(1);
+
+    if (!existingRules || existingRules.length === 0) {
+      const tMap = Object.fromEntries(templatesData.map(t => [t.template_type, t.id]));
+      await supabase.from("policy_rules").insert([
+        {
+          workspace_id: workspaceId,
+          vertical_pack_key: "casey",
+          sort_order: 100,
+          action_type: "send_message",
+          action_channel: "email",
+          template_id: tMap["reminder"],
+          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 1 }] },
+          delay_minutes: 0,
+          requires_approval: false,
+          enabled: true,
+        },
+        {
+          workspace_id: workspaceId,
+          vertical_pack_key: "casey",
+          sort_order: 200,
+          action_type: "send_message",
+          action_channel: "email",
+          template_id: tMap["verification_request"],
+          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 4320 }] },
+          delay_minutes: 0,
+          requires_approval: false,
+          enabled: true,
+        },
+        {
+          workspace_id: workspaceId,
+          vertical_pack_key: "casey",
+          sort_order: 300,
+          action_type: "send_message",
+          action_channel: "email",
+          template_id: tMap["escalation_notice"],
+          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 43200 }] },
+          delay_minutes: 0,
+          requires_approval: true,
+          enabled: true,
+        },
+      ]);
+    }
+  }
+
   // Create vertical pack config
   await supabase.from("vertical_packs").insert({
     workspace_id: workspaceId,
