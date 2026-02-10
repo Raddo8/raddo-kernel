@@ -66,7 +66,6 @@ function evaluatePredicate(
   item: Record<string, unknown>,
   now: number
 ): boolean {
-  // Logical combinators
   if (condition.all) {
     return condition.all.every((c) => evaluatePredicate(c, item, now));
   }
@@ -131,8 +130,6 @@ function evaluatePredicate(
 
 // ── Main handler ──
 
-const PG_UNIQUE_VIOLATION = "23505";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -154,7 +151,7 @@ Deno.serve(async (req) => {
 
   const now = Date.now();
   const tenMinutesAgo = new Date(now - 10 * 60_000).toISOString();
-  const oneDayFromNow = new Date(now + 24 * 60 * 60_000).toISOString().split("T")[0]; // date only
+  const oneDayFromNow = new Date(now + 24 * 60 * 60_000).toISOString().split("T")[0];
 
   let totalProcessed = 0;
   let totalQueued = 0;
@@ -162,14 +159,12 @@ Deno.serve(async (req) => {
   let totalErrors = 0;
 
   try {
-    // Load all workspaces
     const { data: workspaces, error: wsErr } = await supabase
       .from("workspaces")
       .select("id");
     if (wsErr) throw wsErr;
 
     for (const ws of workspaces || []) {
-      // Load enabled rules ordered by sort_order ASC, id ASC
       const { data: rules, error: rulesErr } = await supabase
         .from("policy_rules")
         .select("*")
@@ -180,7 +175,6 @@ Deno.serve(async (req) => {
 
       if (rulesErr || !rules || rules.length === 0) continue;
 
-      // Query candidate items
       const { data: items, error: itemsErr } = await supabase
         .from("items")
         .select("*")
@@ -190,13 +184,11 @@ Deno.serve(async (req) => {
 
       if (itemsErr || !items || items.length === 0) continue;
 
-      // Pre-compute predicate hashes for all rules
       const predicateHashes: string[] = [];
       for (const rule of rules) {
         predicateHashes.push(await hashPredicate(rule.predicate));
       }
 
-      // Evaluate each rule x item
       for (let i = 0; i < rules.length; i++) {
         const rule = rules[i];
         const predHash = predicateHashes[i];
@@ -211,7 +203,6 @@ Deno.serve(async (req) => {
           );
           if (!match) continue;
 
-          // Compute scheduled_for with delay
           const delayMs =
             ((rule.delay_minutes || 0) * 60_000) +
             ((rule.delay_seconds || 0) * 1_000);
@@ -219,33 +210,53 @@ Deno.serve(async (req) => {
 
           const idempotencyKey = `policy:${rule.id}:${item.id}:${predHash}:${i}`;
 
-          const { error: insertErr } = await supabase.from("actions").insert({
-            item_id: item.id,
-            workspace_id: ws.id,
-            type: rule.action_type,
-            channel: rule.action_channel,
-            status: rule.requires_approval ? "pending_approval" : "scheduled",
-            scheduled_for: scheduledFor,
-            payload_json: {},
-            idempotency_key: idempotencyKey,
-            template_id: rule.template_id ?? null,
-            requires_approval: rule.requires_approval,
-            contact_id: rule.contact_id ?? null,
-            source: "system",
-          });
+          // Route through execute-action-server create mode
+          try {
+            const response = await fetch(
+              `${supabaseUrl}/functions/v1/execute-action-server`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "X-CRON-SECRET": cronSecret,
+                },
+                body: JSON.stringify({
+                  mode: "create",
+                  params: {
+                    itemId: item.id,
+                    type: rule.action_type,
+                    channel: rule.action_channel,
+                    scheduledFor,
+                    idempotencyKey,
+                    requiresApproval: rule.requires_approval,
+                    templateId: rule.template_id ?? undefined,
+                    contactId: rule.contact_id ?? undefined,
+                    source: "system",
+                  },
+                }),
+              }
+            );
+            const result = await response.json();
 
-          if (insertErr) {
-            if (insertErr.code === PG_UNIQUE_VIOLATION) {
+            if (result.skipped && result.reason === "duplicate") {
+              totalSkipped++;
+            } else if (result.success && !result.skipped) {
+              totalQueued++;
+            } else if (result.skipped && result.reason === "rate_limited") {
               totalSkipped++;
             } else {
               totalErrors++;
               console.error(
-                `[process-policy-rules] Insert failed: ${insertErr.message}`,
-                { ruleId: rule.id, itemId: item.id }
+                `[process-policy-rules] Create failed:`,
+                { ruleId: rule.id, itemId: item.id, result }
               );
             }
-          } else {
-            totalQueued++;
+          } catch (fetchErr) {
+            totalErrors++;
+            console.error(
+              `[process-policy-rules] Fetch error:`,
+              { ruleId: rule.id, itemId: item.id, error: (fetchErr as Error).message }
+            );
           }
         }
       }

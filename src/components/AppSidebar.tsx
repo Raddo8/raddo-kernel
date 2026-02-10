@@ -11,6 +11,8 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  Users,
+  Plug,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -24,6 +26,7 @@ export default function AppSidebar() {
 
   const navItems = [
     { to: "/accounts", label: labels.accounts, icon: Building2 },
+    { to: "/contacts", label: "Contacts", icon: Users },
     { to: "/items", label: labels.items, icon: FileText },
     { to: "/actions", label: "Actions", icon: Zap },
     { to: "/timeline", label: "Timeline", icon: Clock },
@@ -31,6 +34,7 @@ export default function AppSidebar() {
     { to: "/policy-rules", label: "Rules", icon: ListFilter },
     { to: "/playbooks", label: "Playbooks", icon: BookOpen },
     { to: "/templates", label: "Templates", icon: LayoutTemplate },
+    { to: "/connectors", label: "Connectors", icon: Plug },
   ];
   return (
     <aside

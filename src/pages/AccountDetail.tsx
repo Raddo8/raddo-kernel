@@ -7,7 +7,7 @@ import TimelineStream from "@/components/TimelineStream";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, User } from "lucide-react";
+import { Plus, User, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLabels } from "@/lib/labels-context";
 
@@ -20,27 +20,44 @@ export default function AccountDetail() {
   const [contactOpen, setContactOpen] = useState(false);
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
+  const [cPhone, setCPhone] = useState("");
   const [cRole, setCRole] = useState("");
+
+  const fetchContacts = () => {
+    if (!id) return;
+    supabase.from("contacts").select("*").eq("account_id", id).order("created_at").then(({ data }) => setContacts(data || []));
+  };
 
   useEffect(() => {
     if (!id) return;
     supabase.from("accounts").select("*").eq("id", id).maybeSingle().then(({ data }) => setAccount(data));
-    supabase.from("contacts").select("*").eq("account_id", id).order("created_at").then(({ data }) => setContacts(data || []));
+    fetchContacts();
     supabase.from("items").select("*, item_states(name, label, color), policies(name)").eq("account_id", id).order("created_at", { ascending: false }).then(({ data }) => setItems(data || []));
   }, [id]);
 
+  const canAddContact = cName.trim() && (cEmail.trim() || cPhone.trim());
+
   const addContact = async () => {
-    if (!id || !cName.trim()) return;
+    if (!id || !canAddContact) return;
     const { error } = await supabase.from("contacts").insert({
       account_id: id,
       name: cName.trim(),
-      email: cEmail || null,
-      role: cRole || null,
+      email: cEmail.trim() || null,
+      phone: cPhone.trim() || null,
+      role: cRole.trim() || null,
     });
     if (error) { toast.error(error.message); return; }
-    setCName(""); setCEmail(""); setCRole(""); setContactOpen(false);
-    supabase.from("contacts").select("*").eq("account_id", id).order("created_at").then(({ data }) => setContacts(data || []));
+    setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setContactOpen(false);
+    fetchContacts();
     toast.success("Contact added");
+  };
+
+  const deleteContact = async (contactId: string) => {
+    if (!window.confirm("Delete this contact?")) return;
+    const { error } = await supabase.from("contacts").delete().eq("id", contactId);
+    if (error) { toast.error(error.message); return; }
+    fetchContacts();
+    toast.success("Contact deleted");
   };
 
   if (!account) return <div className="p-6 text-muted-foreground">Loading...</div>;
@@ -66,8 +83,10 @@ export default function AccountDetail() {
                   <div className="space-y-3">
                     <Input placeholder="Name" value={cName} onChange={e => setCName(e.target.value)} />
                     <Input placeholder="Email" value={cEmail} onChange={e => setCEmail(e.target.value)} />
+                    <Input placeholder="Phone" value={cPhone} onChange={e => setCPhone(e.target.value)} />
                     <Input placeholder="Role" value={cRole} onChange={e => setCRole(e.target.value)} />
-                    <Button onClick={addContact} className="w-full">Add</Button>
+                    <p className="text-xs text-muted-foreground">At least email or phone is required.</p>
+                    <Button onClick={addContact} className="w-full" disabled={!canAddContact}>Add</Button>
                   </div>
                 </DialogContent>
               </Dialog>
@@ -77,10 +96,22 @@ export default function AccountDetail() {
             ) : (
               <div className="space-y-2">
                 {contacts.map(c => (
-                  <div key={c.id} className="flex items-center gap-2 text-sm">
-                    <User size={14} className="text-muted-foreground" />
-                    <span>{c.name}</span>
-                    {c.role && <span className="text-xs text-muted-foreground font-mono">({c.role})</span>}
+                  <div key={c.id} className="flex items-center gap-2 text-sm group">
+                    <User size={14} className="text-muted-foreground shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span>{c.name}</span>
+                      {c.role && <span className="text-xs text-muted-foreground font-mono ml-1">({c.role})</span>}
+                      {c.email && <span className="text-xs text-muted-foreground ml-1">· {c.email}</span>}
+                      {c.phone && <span className="text-xs text-muted-foreground ml-1">· {c.phone}</span>}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteContact(c.id)}
+                    >
+                      <Trash2 size={12} />
+                    </Button>
                   </div>
                 ))}
               </div>
