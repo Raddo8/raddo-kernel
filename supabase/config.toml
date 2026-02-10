@@ -2,3 +2,6 @@ project_id = "vacpgxxgdfhgvkduljgs"
 
 [functions.process-scheduled-actions]
 verify_jwt = false
+
+[functions.process-policy-rules]
+verify_jwt = false

@@ -530,7 +530,7 @@ export type Database = {
           },
         ]
       }
-      policy_rules: {
+      policy_rate_rules: {
         Row: {
           created_at: string
           id: string
@@ -561,6 +561,68 @@ export type Database = {
             columns: ["policy_id"]
             isOneToOne: false
             referencedRelation: "policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      policy_rules: {
+        Row: {
+          action_channel: string
+          action_type: string
+          contact_id: string | null
+          created_at: string
+          delay_minutes: number | null
+          delay_seconds: number | null
+          enabled: boolean
+          id: string
+          predicate: Json
+          requires_approval: boolean
+          sort_order: number
+          template_id: string | null
+          updated_at: string
+          vertical_pack_key: string
+          workspace_id: string
+        }
+        Insert: {
+          action_channel: string
+          action_type: string
+          contact_id?: string | null
+          created_at?: string
+          delay_minutes?: number | null
+          delay_seconds?: number | null
+          enabled?: boolean
+          id?: string
+          predicate: Json
+          requires_approval?: boolean
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          vertical_pack_key: string
+          workspace_id: string
+        }
+        Update: {
+          action_channel?: string
+          action_type?: string
+          contact_id?: string | null
+          created_at?: string
+          delay_minutes?: number | null
+          delay_seconds?: number | null
+          enabled?: boolean
+          id?: string
+          predicate?: Json
+          requires_approval?: boolean
+          sort_order?: number
+          template_id?: string | null
+          updated_at?: string
+          vertical_pack_key?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "policy_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
             referencedColumns: ["id"]
           },
         ]
