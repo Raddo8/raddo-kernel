@@ -25,6 +25,120 @@ const CASEY_TEMPLATES = [
   { template_type: "escalation_notice", subject: "Escalation: {{item.title}}", body: "Dear {{contact.name}},\n\nInvoice {{item.title}} for {{item.amount}} has been escalated for further action. Please contact us immediately to avoid additional measures.\n\nThis is a time-sensitive matter." },
 ];
 
+// ── Self-healing template resolution ──
+
+async function ensureCaseyTemplates(workspaceId: string, missingKeys: string[]) {
+  const toInsert = CASEY_TEMPLATES
+    .filter(t => missingKeys.includes(t.template_type))
+    .map(t => ({ ...t, workspace_id: workspaceId, channel: "email", tone: "professional" }));
+
+  if (toInsert.length === 0) return;
+
+  const { error } = await supabase.from("templates").insert(toInsert);
+  if (error) {
+    console.error(`[seedCasey] Failed to create missing templates [${missingKeys.join(", ")}]:`, error.message);
+  }
+}
+
+// ── Independently idempotent policy_rules backfill ──
+
+const REQUIRED_TEMPLATE_KEYS = ["reminder", "verification_request", "escalation_notice"] as const;
+
+async function backfillPolicyRules(workspaceId: string): Promise<boolean> {
+  // Guard: already have casey rules in 100-300 band?
+  const { data: existingRules } = await supabase
+    .from("policy_rules")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("vertical_pack_key", "casey")
+    .gte("sort_order", 100)
+    .lte("sort_order", 300)
+    .limit(1);
+
+  if (existingRules && existingRules.length > 0) return false;
+
+  // Resolve required templates
+  const { data: templates } = await supabase
+    .from("templates")
+    .select("id, template_type")
+    .eq("workspace_id", workspaceId)
+    .in("template_type", [...REQUIRED_TEMPLATE_KEYS]);
+
+  const tMap = Object.fromEntries(
+    (templates || []).map(t => [t.template_type, t.id])
+  );
+
+  // Self-heal: create any missing templates deterministically
+  const missing = REQUIRED_TEMPLATE_KEYS.filter(k => !tMap[k]);
+  if (missing.length > 0) {
+    await ensureCaseyTemplates(workspaceId, [...missing]);
+
+    // Re-fetch after creation
+    const { data: refetched } = await supabase
+      .from("templates")
+      .select("id, template_type")
+      .eq("workspace_id", workspaceId)
+      .in("template_type", [...REQUIRED_TEMPLATE_KEYS]);
+
+    for (const t of refetched || []) {
+      tMap[t.template_type] = t.id;
+    }
+
+    // Final check: if still missing, abort loud
+    const stillMissing = REQUIRED_TEMPLATE_KEYS.filter(k => !tMap[k]);
+    if (stillMissing.length > 0) {
+      console.error(
+        `[seedCasey] Cannot backfill policy_rules: templates [${stillMissing.join(", ")}] still missing after creation attempt for workspace ${workspaceId}`
+      );
+      return false;
+    }
+  }
+
+  // Insert the 3 default rules
+  await supabase.from("policy_rules").insert([
+    {
+      workspace_id: workspaceId,
+      vertical_pack_key: "casey",
+      sort_order: 100,
+      action_type: "send_message",
+      action_channel: "email",
+      template_id: tMap["reminder"],
+      predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 1 }] },
+      delay_minutes: 0,
+      requires_approval: false,
+      enabled: true,
+    },
+    {
+      workspace_id: workspaceId,
+      vertical_pack_key: "casey",
+      sort_order: 200,
+      action_type: "send_message",
+      action_channel: "email",
+      template_id: tMap["verification_request"],
+      predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 4320 }] },
+      delay_minutes: 0,
+      requires_approval: false,
+      enabled: true,
+    },
+    {
+      workspace_id: workspaceId,
+      vertical_pack_key: "casey",
+      sort_order: 300,
+      action_type: "send_message",
+      action_channel: "email",
+      template_id: tMap["escalation_notice"],
+      predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 43200 }] },
+      delay_minutes: 0,
+      requires_approval: true,
+      enabled: true,
+    },
+  ]);
+
+  return true;
+}
+
+// ── Main seed function ──
+
 export async function seedCaseyPack(workspaceId: string) {
   // Check if already seeded
   const { data: existing } = await supabase
@@ -34,7 +148,10 @@ export async function seedCaseyPack(workspaceId: string) {
     .eq("name", "Casey Revenue Realization")
     .maybeSingle();
 
-  if (existing) return { alreadySeeded: true };
+  if (existing) {
+    const rulesBackfilled = await backfillPolicyRules(workspaceId);
+    return { alreadySeeded: true, rulesBackfilled };
+  }
 
   // Create states
   const { data: statesData } = await supabase
@@ -80,59 +197,8 @@ export async function seedCaseyPack(workspaceId: string) {
     ]);
   }
 
-  // Seed default policy rules (no policy_id in schema)
-  if (templatesData) {
-    const { data: existingRules } = await supabase
-      .from("policy_rules")
-      .select("id")
-      .eq("workspace_id", workspaceId)
-      .eq("vertical_pack_key", "casey")
-      .gte("sort_order", 100)
-      .lte("sort_order", 300)
-      .limit(1);
-
-    if (!existingRules || existingRules.length === 0) {
-      const tMap = Object.fromEntries(templatesData.map(t => [t.template_type, t.id]));
-      await supabase.from("policy_rules").insert([
-        {
-          workspace_id: workspaceId,
-          vertical_pack_key: "casey",
-          sort_order: 100,
-          action_type: "send_message",
-          action_channel: "email",
-          template_id: tMap["reminder"],
-          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 1 }] },
-          delay_minutes: 0,
-          requires_approval: false,
-          enabled: true,
-        },
-        {
-          workspace_id: workspaceId,
-          vertical_pack_key: "casey",
-          sort_order: 200,
-          action_type: "send_message",
-          action_channel: "email",
-          template_id: tMap["verification_request"],
-          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 4320 }] },
-          delay_minutes: 0,
-          requires_approval: false,
-          enabled: true,
-        },
-        {
-          workspace_id: workspaceId,
-          vertical_pack_key: "casey",
-          sort_order: 300,
-          action_type: "send_message",
-          action_channel: "email",
-          template_id: tMap["escalation_notice"],
-          predicate: { all: [{ field: "due_date", op: "older_than_minutes", value: 43200 }] },
-          delay_minutes: 0,
-          requires_approval: true,
-          enabled: true,
-        },
-      ]);
-    }
-  }
+  // Backfill policy rules (single code path for both new and existing workspaces)
+  await backfillPolicyRules(workspaceId);
 
   // Create vertical pack config
   await supabase.from("vertical_packs").insert({
