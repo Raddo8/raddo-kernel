@@ -134,7 +134,7 @@ export default function Index() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{ev.summary}</span>
                         <span className="text-xs font-mono text-muted-foreground">{ev.channel}</span>
-                        {ev.accounts && <span className="text-xs text-muted-foreground">— {ev.accounts.name}</span>}
+                        {ev.accounts && <span className="text-xs text-muted-foreground">· {ev.accounts.name}</span>}
                       </div>
                       {ev.body && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{ev.body}</p>}
                     </div>
