@@ -4,7 +4,7 @@
  * Only the variables below may be interpolated. Any unknown {{variable}}
  * is replaced with "[unknown: variable]" and recorded in renderErrors.
  * renderErrors are ALWAYS returned and ALWAYS persisted to result_json
- * — even when the render itself succeeds (constraint 4).
+ *, even when the render itself succeeds (constraint 4).
  */
 
 const ALLOWED_VARIABLES = new Set([

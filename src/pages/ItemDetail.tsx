@@ -142,7 +142,7 @@ export default function ItemDetail() {
             )}
           </div>
 
-          {/* Action buttons — all route through queueAction() */}
+          {/* Action buttons: all route through queueAction() */}
           <div className="p-4">
             <h3 className="text-sm font-semibold font-mono mb-3">ACTIONS</h3>
             <div className="space-y-2">
