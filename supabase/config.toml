@@ -1,1 +1,4 @@
 project_id = "vacpgxxgdfhgvkduljgs"
+
+[functions.process-scheduled-actions]
+verify_jwt = false
