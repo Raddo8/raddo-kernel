@@ -18,6 +18,8 @@ import PlaybooksList from "@/pages/PlaybooksList";
 import PlaybookDetail from "@/pages/PlaybookDetail";
 import TemplatesList from "@/pages/TemplatesList";
 import PolicyRulesList from "@/pages/PolicyRulesList";
+import ContactsList from "@/pages/ContactsList";
+import ConnectorsList from "@/pages/ConnectorsList";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import { useEffect, useState } from "react";
@@ -62,6 +64,8 @@ const App = () => (
                 <Route path="/playbooks/:id" element={<PlaybookDetail />} />
               <Route path="/templates" element={<TemplatesList />} />
               <Route path="/policy-rules" element={<PolicyRulesList />} />
+              <Route path="/contacts" element={<ContactsList />} />
+              <Route path="/connectors" element={<ConnectorsList />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>
