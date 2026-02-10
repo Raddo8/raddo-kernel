@@ -247,7 +247,7 @@ Deno.serve(async (req: Request) => {
 
     // ── Save prior status, then atomic claim ──
     const priorStatus = action.status;
-    const claimerId = userId || "scheduler";
+    const claimerId = userId || null;
 
     const { data: claimed, error: claimErr } = await supabase
       .from("actions")
@@ -262,7 +262,12 @@ Deno.serve(async (req: Request) => {
       .in("status", EXECUTABLE_STATUSES as any)
       .select("id");
 
-    if (claimErr || !claimed || claimed.length === 0) {
+    if (claimErr) {
+      console.error("[execute-action-server] Claim DB error:", JSON.stringify(claimErr));
+      return jsonError(`Claim failed: ${claimErr.message}`, 409);
+    }
+    if (!claimed || claimed.length === 0) {
+      console.error("[execute-action-server] Claim returned 0 rows. actionId:", actionId, "status was:", priorStatus);
       return jsonError("Action already claimed by another process", 409);
     }
 
