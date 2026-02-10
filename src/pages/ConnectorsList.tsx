@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plug, Plus, Trash2, Link as LinkIcon } from "lucide-react";
+import { Plug, Plus, Trash2, Link as LinkIcon, Pencil } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,14 @@ export default function ConnectorsList() {
   const [cFromEmail, setCFromEmail] = useState("");
   const [cFromName, setCFromName] = useState("");
   const [cReplyTo, setCReplyTo] = useState("");
+
+  // Edit connector form (separate from create)
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editFromEmail, setEditFromEmail] = useState("");
+  const [editFromName, setEditFromName] = useState("");
+  const [editReplyTo, setEditReplyTo] = useState("");
 
   // Selected connector for linked accounts
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -103,6 +111,34 @@ export default function ConnectorsList() {
     toast.success("Connector deleted");
   };
 
+  const openEdit = (c: any) => {
+    const cfg = (c.config || {}) as Record<string, string>;
+    setEditId(c.id);
+    setEditName(c.name);
+    setEditFromEmail(cfg.from_email || "");
+    setEditFromName(cfg.from_name || "");
+    setEditReplyTo(cfg.reply_to || "");
+    setEditOpen(true);
+  };
+
+  const canEdit = editName.trim() && editFromEmail.includes("@") && editFromName.trim();
+
+  const updateConnector = async () => {
+    if (!editId || !canEdit) return;
+    const { error } = await supabase.from("connectors").update({
+      name: editName.trim(),
+      config: {
+        from_email: editFromEmail.trim(),
+        from_name: editFromName.trim(),
+        reply_to: editReplyTo.trim() || undefined,
+      },
+    } as any).eq("id", editId);
+    if (error) { toast.error(error.message); return; }
+    setEditOpen(false); setEditId(null);
+    fetchConnectors();
+    toast.success("Connector updated");
+  };
+
   const linkAccount = async () => {
     if (!selectedId || !linkAccountId) return;
     const { error } = await supabase.from("connector_accounts").insert({
@@ -150,7 +186,20 @@ export default function ConnectorsList() {
                 <Input placeholder="From name" value={cFromName} onChange={e => setCFromName(e.target.value)} />
                 <Input placeholder="Reply-to (optional)" value={cReplyTo} onChange={e => setCReplyTo(e.target.value)} />
                 <Button onClick={create} className="w-full" disabled={!canAdd}>Create</Button>
+          </div>
+
+          <Dialog open={editOpen} onOpenChange={setEditOpen}>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Edit Connector</DialogTitle></DialogHeader>
+              <div className="space-y-3">
+                <Input placeholder="Connector name" value={editName} onChange={e => setEditName(e.target.value)} />
+                <Input placeholder="From email" value={editFromEmail} onChange={e => setEditFromEmail(e.target.value)} />
+                <Input placeholder="From name" value={editFromName} onChange={e => setEditFromName(e.target.value)} />
+                <Input placeholder="Reply-to (optional)" value={editReplyTo} onChange={e => setEditReplyTo(e.target.value)} />
+                <Button onClick={updateConnector} className="w-full" disabled={!canEdit}>Save</Button>
               </div>
+            </DialogContent>
+          </Dialog>
             </DialogContent>
           </Dialog>
         }
@@ -176,6 +225,13 @@ export default function ConnectorsList() {
                       <CardTitle className="text-sm font-medium">{c.name}</CardTitle>
                       <div className="flex items-center gap-2">
                         <StatusBadge status={c.type} />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={e => { e.stopPropagation(); openEdit(c); }}
+                        >
+                          <Pencil size={14} />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"

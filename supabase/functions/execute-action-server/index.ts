@@ -545,7 +545,7 @@ async function executeEmail(
   const { data: connector } = await supabase
     .from("connectors")
     .select("config")
-    .eq("type", "resend" as any)
+    .eq("type", "email" as any)
     .eq("workspace_id", action.workspace_id as any)
     .maybeSingle();
 
