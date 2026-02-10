@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
@@ -22,35 +22,55 @@ export default function ItemDetail() {
   const [actions, setActions] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
   const [selectedState, setSelectedState] = useState("");
+  const [notFound, setNotFound] = useState(false);
 
-  const fetchItem = async () => {
-    if (!id) return;
-    const { data } = await supabase
+  const fetchItem = async (itemId: string) => {
+    const { data, error } = await supabase
       .from("items")
       .select("*, accounts(id, name), item_states(id, name, label, color), policies(id, name)")
-      .eq("id", id)
+      .eq("id", itemId)
       .maybeSingle();
+    if (error || !data) {
+      setNotFound(true);
+      setActions([]);
+      return;
+    }
+    setNotFound(false);
     setItem(data);
-    if (data?.item_states) setSelectedState(data.item_states.id);
+    if (data.item_states) setSelectedState(data.item_states.id);
   };
 
-  const fetchActions = async () => {
-    if (!id) return;
-    const { data } = await supabase
+  const fetchActions = async (itemId: string) => {
+    const { data, error } = await supabase
       .from("actions")
       .select("*")
-      .eq("item_id", id)
+      .eq("item_id", itemId)
       .order("created_at", { ascending: false });
+    if (error) {
+      setActions([]);
+      toast.error("Failed to load actions");
+      return;
+    }
     setActions(data || []);
   };
 
   useEffect(() => {
-    fetchItem();
-    fetchActions();
+    setNotFound(false);
+    setItem(null);
+    setActions([]);
+    if (!id) return;
+    fetchItem(id);
+    fetchActions(id);
+  }, [id]);
+
+  useEffect(() => {
     if (workspace) {
-      supabase.from("item_states").select("*").eq("workspace_id", workspace.id).order("sort_order").then(({ data }) => setStates(data || []));
+      supabase.from("item_states").select("*")
+        .eq("workspace_id", workspace.id)
+        .order("sort_order")
+        .then(({ data }) => setStates(data || []));
     }
-  }, [id, workspace]);
+  }, [workspace]);
 
   const changeState = async (stateId: string) => {
     if (!id || !item || !workspace) return;
@@ -79,8 +99,8 @@ export default function ItemDetail() {
       actorUserId: userId ?? undefined,
     });
 
-    fetchItem();
-    fetchActions();
+    fetchItem(id);
+    fetchActions(id);
     toast.success("State updated");
   };
 
@@ -95,10 +115,23 @@ export default function ItemDetail() {
     });
     if (result.error) { toast.error(result.error); return; }
     if (result.rateLimited) { toast.error("Rate limit exceeded"); return; }
-    fetchActions();
+    fetchActions(id);
     toast.success("Action queued");
   };
 
+  if (notFound) {
+    return (
+      <div className="p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Item not found</h2>
+        <p className="text-sm text-muted-foreground">
+          This item does not exist or you do not have access.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/items">Back to {labels.items}</Link>
+        </Button>
+      </div>
+    );
+  }
   if (!item) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
   return (
