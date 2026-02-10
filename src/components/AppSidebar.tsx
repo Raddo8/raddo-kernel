@@ -6,6 +6,7 @@ import {
   Clock,
   Shield,
   BookOpen,
+  ListFilter,
   LayoutTemplate,
   LogOut,
   ChevronLeft,
@@ -27,6 +28,7 @@ export default function AppSidebar() {
     { to: "/actions", label: "Actions", icon: Zap },
     { to: "/timeline", label: "Timeline", icon: Clock },
     { to: "/policies", label: "Policies", icon: Shield },
+    { to: "/policy-rules", label: "Rules", icon: ListFilter },
     { to: "/playbooks", label: "Playbooks", icon: BookOpen },
     { to: "/templates", label: "Templates", icon: LayoutTemplate },
   ];
