@@ -1,50 +1,44 @@
 
 
-## Remove Remaining Em Dashes from 3 Files
+## Fix Double Separator in ItemDetail Subtitle
 
-Safe UI cleanup pass. No backend changes. No migrations.
+### Verified Current State
 
-### 1. ActionsQueue.tsx (line 101)
+- **ItemsList.tsx line 127**: Valid JSX. Middot inside `<span>` with `text-xs text-muted-foreground ml-2` classes. No change needed.
+- **ActionsQueue.tsx line 101**: Valid JSX. Ternary guard with `<span> · {name}</span>`. No change needed.
+- **ItemDetail.tsx line 108**: Empty string fallback creates double separators (`type ·  · $1,000`) when account is missing. Needs fix.
 
-Current:
-```text
-{a.items?.title} — {a.items?.accounts?.name}
-```
-
-Replace with (ternary to prevent stray spacing when account is missing):
-```text
-{a.items?.title}{a.items?.accounts?.name ? <span> · {a.items.accounts.name}</span> : null}
-```
-
-### 2. ItemsList.tsx (line 127)
+### Change: ItemDetail.tsx (line 108)
 
 Current:
 ```text
-{item.accounts && <span className="text-xs text-muted-foreground ml-2">— {item.accounts.name}</span>}
+subtitle={`${item.type} · ${item.accounts?.name || ""} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : `No ${labels.itemLower} amount`}`}
 ```
 
-Replace with (direct character swap, conditional rendering already correct):
+Replace with conditional account segment:
 ```text
-{item.accounts && <span className="text-xs text-muted-foreground ml-2">· {item.accounts.name}</span>}
+subtitle={`${item.type}${item.accounts?.name ? ` · ${item.accounts.name}` : ""} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : `No ${labels.itemLower} amount`}`}
 ```
 
-### 3. ItemDetail.tsx (line 108)
+Renders as:
+- With account and amount: `invoice · Acme Corp · $5,000`
+- Without account: `invoice · $5,000`
+- Without amount: `invoice · Acme Corp · No item amount`
+- Without either: `invoice · No item amount`
 
-Current:
-```text
-subtitle={`${item.type} · ${item.accounts?.name || "—"} · ${item.amount ? ...`}
-```
+### Post-Edit Verification
 
-Replace the em dash fallback with empty string for minimal UI noise:
-```text
-subtitle={`${item.type} · ${item.accounts?.name || ""} · ${item.amount ? ...`}
-```
+1. Confirm build compiles without errors
+2. Open Items list page: verify account names render as `· AccountName` with muted styling
+3. Open an item detail page with an account: verify subtitle shows `type · account · amount`
+4. Open an item detail page without an account: verify subtitle shows `type · amount` (no double separator)
+5. Open Actions Queue: verify account names render with middot separator
 
 ### Files Summary
 
-| File | Line | Change |
-|------|------|--------|
-| `src/pages/ActionsQueue.tsx` | 101 | Em dash to middot with ternary guard |
-| `src/pages/ItemsList.tsx` | 127 | Em dash to middot |
-| `src/pages/ItemDetail.tsx` | 108 | Em dash fallback to empty string |
+| File | Status |
+|------|--------|
+| `src/pages/ItemsList.tsx` | Verified correct, no change |
+| `src/pages/ActionsQueue.tsx` | Verified correct, no change |
+| `src/pages/ItemDetail.tsx` | Fix line 108: conditional account segment |
 
