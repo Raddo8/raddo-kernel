@@ -124,7 +124,7 @@ export default function ItemsList() {
                 <div>
                   <span className="text-sm font-medium">{item.title}</span>
                   <span className="text-xs text-muted-foreground ml-2 font-mono">{item.type}</span>
-                  {item.accounts && <span className="text-xs text-muted-foreground ml-2">— {item.accounts.name}</span>}
+                  {item.accounts && <span className="text-xs text-muted-foreground ml-2">· {item.accounts.name}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-3">
