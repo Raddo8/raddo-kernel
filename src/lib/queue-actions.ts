@@ -45,7 +45,7 @@ async function getRateLimit(itemId: string, channel: string): Promise<number> {
   if (!item?.policy_id) return DEFAULT_RATE_LIMIT;
 
   const { data: rules } = await supabase
-    .from("policy_rules")
+    .from("policy_rate_rules")
     .select("rule_json")
     .eq("policy_id", item.policy_id)
     .eq("rule_type", "rate_limit");

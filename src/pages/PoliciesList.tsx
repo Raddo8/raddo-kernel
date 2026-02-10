@@ -21,7 +21,7 @@ export default function PoliciesList() {
 
   const fetch = async () => {
     if (!workspace) return;
-    const { data } = await supabase.from("policies").select("*, policy_rules(id)").eq("workspace_id", workspace.id).order("created_at", { ascending: false });
+    const { data } = await supabase.from("policies").select("*, policy_rate_rules(id)").eq("workspace_id", workspace.id).order("created_at", { ascending: false });
     setPolicies(data || []);
     setLoading(false);
   };
@@ -66,7 +66,7 @@ export default function PoliciesList() {
             <Link key={p.id} to={`/policies/${p.id}`} className="block px-6 py-3 hover:bg-accent/50 transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">{p.name}</span>
-                <span className="text-xs font-mono text-muted-foreground">{p.policy_rules?.length || 0} rules</span>
+                <span className="text-xs font-mono text-muted-foreground">{p.policy_rate_rules?.length || 0} rules</span>
               </div>
               {p.description && <p className="text-xs text-muted-foreground mt-1">{p.description}</p>}
             </Link>

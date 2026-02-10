@@ -21,7 +21,7 @@ export default function PolicyDetail() {
     if (!id) return;
     const { data: p } = await supabase.from("policies").select("*").eq("id", id).maybeSingle();
     setPolicy(p);
-    const { data: r } = await supabase.from("policy_rules").select("*").eq("policy_id", id).order("sort_order");
+    const { data: r } = await supabase.from("policy_rate_rules").select("*").eq("policy_id", id).order("sort_order");
     setRules(r || []);
   };
 
@@ -31,7 +31,7 @@ export default function PolicyDetail() {
     if (!id || !ruleType.trim()) return;
     let parsed;
     try { parsed = JSON.parse(ruleJson); } catch { toast.error("Invalid JSON"); return; }
-    const { error } = await supabase.from("policy_rules").insert({
+    const { error } = await supabase.from("policy_rate_rules").insert({
       policy_id: id,
       rule_type: ruleType.trim(),
       rule_json: parsed,
@@ -44,7 +44,7 @@ export default function PolicyDetail() {
   };
 
   const deleteRule = async (ruleId: string) => {
-    await supabase.from("policy_rules").delete().eq("id", ruleId);
+    await supabase.from("policy_rate_rules").delete().eq("id", ruleId);
     fetchData();
   };
 

@@ -56,7 +56,7 @@ export async function seedCaseyPack(workspaceId: string) {
     .single();
 
   if (policy) {
-    await supabase.from("policy_rules").insert([
+    await supabase.from("policy_rate_rules").insert([
       { policy_id: policy.id, rule_type: "auto_remind", rule_json: { days_before_due: 3 }, sort_order: 0 },
       { policy_id: policy.id, rule_type: "escalation_trigger", rule_json: { days_overdue: 30 }, sort_order: 1 },
       { policy_id: policy.id, rule_type: "credit_hold_trigger", rule_json: { days_overdue: 60 }, sort_order: 2 },
