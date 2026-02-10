@@ -1,51 +1,54 @@
 
 
-## Fix: Backfill Policy Rules with Self-Healing Template Resolution
+## Execute Verification Steps B and C
 
-### Problem
+### Correction Acknowledged
 
-Line 37 (`if (existing) return`) exits before the `policy_rules` block (lines 83-135) is ever reached. Existing workspaces have zero policy_rules seeded.
+`due_date` is type `date`. The `older_than_minutes` predicate parses it via `new Date(fieldValue)` which yields midnight UTC -- not minute-granularity. Using `current_date - 1` (yesterday) guarantees the value is deterministically in the past by at least 24 hours, making the predicate pass reliably regardless of timezone.
 
-### Solution
+### Step B -- Cron queues actions
 
-Restructure `seedCaseyPack` into three parts:
-
-1. **New helper: `ensureCaseyTemplates(workspaceId, missingKeys)`** -- Filters `CASEY_TEMPLATES` to only the missing keys, inserts them, returns the inserted rows. Reuses the same template definitions from the `CASEY_TEMPLATES` constant (same subject, body, channel, tone). This is not a guess -- it is the identical seeding logic used on first-time seed.
-
-2. **New helper: `backfillPolicyRules(workspaceId)`** -- Self-contained, independently idempotent:
-   - Guard: check `policy_rules` where `workspace_id` + `vertical_pack_key = "casey"` + `sort_order` 100-300. If any exist, return false.
-   - Fetch the 3 required templates by `template_type` from the `templates` table for this workspace.
-   - Compute missing keys. If any missing: call `ensureCaseyTemplates(workspaceId, missing)` to create them, then re-fetch.
-   - Build `tMap`, insert the 3 rules. Return true.
-
-3. **Modified early-return block** (line 37):
-   ```
-   if (existing) {
-     const rulesBackfilled = await backfillPolicyRules(workspaceId);
-     return { alreadySeeded: true, rulesBackfilled };
-   }
+1. Run:
+   ```sql
+   UPDATE items
+   SET due_date = (current_date - 1),
+       updated_at = now()
+   WHERE id = '65d6cc88-f665-428c-a929-6ef87f005274';
    ```
 
-4. **First-time seed path** (lines 83-135): Replace with a call to `backfillPolicyRules(workspaceId)`. This eliminates the duplicated insertion logic and the `if (templatesData)` guard -- `backfillPolicyRules` resolves templates from the DB independently.
+2. Wait ~3 minutes for `process-policy-rules` cron tick.
 
-### File Changed
+3. Query actions (verified column names, no `rule_id` column exists -- rule reference lives only in the `idempotency_key` string):
+   ```sql
+   SELECT id, workspace_id, item_id, type, channel,
+          scheduled_for, idempotency_key, status, created_at
+   FROM actions
+   WHERE workspace_id = 'f3ebf868-ba4b-48cc-a36c-079452d04c78'
+     AND idempotency_key LIKE 'policy:%'
+   ORDER BY created_at DESC
+   LIMIT 5;
+   ```
 
-**`src/lib/seed-casey.ts`**
+4. Check `process-policy-rules` edge function logs for queued/skipped counts.
 
-### What Changes
+5. Wait another tick, re-query -- expect same row count (unique violation skip path).
 
-- Add `ensureCaseyTemplates(workspaceId, missingKeys)` helper before `seedCaseyPack`
-- Add `backfillPolicyRules(workspaceId)` helper before `seedCaseyPack`
-- Line 37: replace `return { alreadySeeded: true }` with backfill call + return
-- Lines 83-135: replace inline policy_rules block with `await backfillPolicyRules(workspaceId)`
-- Return type on backfill path becomes `{ alreadySeeded: true, rulesBackfilled: boolean }`
+### Step C -- UI toggle
 
-### Key Behaviors
+1. Open browser to `/policy-rules`.
+2. Toggle sort_order=100 rule OFF.
+3. Confirm DB:
+   ```sql
+   SELECT sort_order, enabled
+   FROM policy_rules
+   WHERE workspace_id = 'f3ebf868-ba4b-48cc-a36c-079452d04c78'
+     AND vertical_pack_key = 'casey'
+   ORDER BY sort_order;
+   ```
+4. Update item again (`updated_at = now()`), wait for tick, query actions -- no new row from disabled rule.
+5. Toggle back ON, wait, confirm skip (already queued via idempotency).
 
-- `ensureCaseyTemplates` only inserts templates for the specific missing keys, not all 9
-- `backfillPolicyRules` is fully self-contained: fetches its own template IDs from DB, never depends on variables from the outer scope
-- If templates exist: no re-insertion (upsert not needed, the fetch resolves them)
-- If templates are missing: creates them deterministically from `CASEY_TEMPLATES` constant
-- Idempotency guard on rules prevents duplicate insertion on repeated calls
-- No other files modified
+### Files Modified
+
+None -- database updates and browser interaction only.
 
