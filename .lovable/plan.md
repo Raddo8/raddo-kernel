@@ -1,83 +1,165 @@
 
 
-# Step 2: Execution Boundary + Queue Boundary
+# Scheduled Action Processor -- Implementation Plan
 
-All 4 constraints applied. This creates 6 new files and refactors 2 existing pages to remove all direct action writes.
+## Summary
 
----
-
-## New Files
-
-### 1. `src/lib/render-template.ts`
-Template engine with allow-listed variables only: `item.title`, `item.amount`, `item.due_date`, `item.id`, `account.name`, `contact.name`, `contact.email`, `contact.phone`. Unknown variables become `[unknown: variable]` and are recorded. `renderErrors` are always returned and always persisted to `result_json` (constraint 4).
-
-### 2. `src/lib/timeline-events.ts`
-Centralized timeline write helper (constraint 2). Single function `writeTimelineEvent()` that accepts `{ accountId, itemId?, contactId?, direction, channel, summary, body?, rawJson? }`. UI may call this helper but must never write to `timeline_events` directly.
-
-### 3. `src/lib/queue-actions.ts` (constraint 1: correct filename)
-Single entry point for all action creation. Responsibilities:
-- Rate limit check: count non-canceled actions for same `item_id + channel` in last hour vs threshold from `policy_rules` (rule_type='rate_limit'). Default: 10/hour.
-- Application-level idempotency check (DB constraint added in Step 3): checks for existing action with same item_id + type + channel + scheduled_for window.
-- Insert with status `pending_approval` if flagged, else `scheduled`.
-- Stores `_idempotency_key`, `_actor_user_id`, `_source` in `payload_json` until Step 3 adds dedicated columns.
-
-### 4. `src/lib/execute-action.ts`
-Single entry point for all outbound effects. Key behaviors:
-- Hard deny if status is `completed`, `failed`, or `canceled`.
-- Executable statuses: `["scheduled"]` with explicit comment (constraint 3): "NOTE: 'scheduled' temporarily serves double duty as both auto-scheduled and human-approved until Step 3 adds the 'approved' enum value."
-- Conditional update for concurrency: `update({status: 'running'}).eq('id', actionId).in('status', ['scheduled'])`. If no rows returned, abort.
-- Loads template, renders with allow-list, always persists `render_errors` in `result_json` even on success (constraint 4).
-- Writes outbound timeline event via `writeTimelineEvent()` helper (constraint 2).
-- Mock execution for now (500ms delay). Real Resend edge function in Step 4.
-
-### 5. `src/lib/evaluate-playbook.ts`
-Extracted from `ItemDetail.tsx`. On state change:
-- Queries playbooks matching workspace_id + item_type.
-- Queries steps matching trigger_state.
-- Computes deterministic idempotency key: `${itemId}:${step.id}:${stateName}:${scheduledFor}`.
-- Calls `queueAction()` for each step.
+Two new edge functions and one client-side simplification. All action execution converges on a single server-side function. The scheduler is a thin query-and-delegate loop. No UI changes. No schema changes.
 
 ---
 
-## Refactored Files
+## New Secret Required
 
-### 6. `src/pages/ItemDetail.tsx`
-**Removed:**
-- Lines 73-107: entire `evaluatePlaybook` function (moved to `src/lib/evaluate-playbook.ts`)
-- Lines 109-121: entire `queueAction` function (replaced by import from `src/lib/queue-actions.ts`)
-- Lines 58-64: direct `timeline_events` insert (replaced by `writeTimelineEvent()` helper)
+**`CRON_SECRET`** -- a random string shared between pg_cron and both edge functions. You will be prompted to create and enter this value before the cron job is registered. This avoids embedding the service role key in SQL.
 
-**Added:**
-- Imports: `evaluatePlaybook`, `queueAction`, `writeTimelineEvent`
-- `changeState` calls `writeTimelineEvent()` then `evaluatePlaybook()` with `{ itemId, stateId, stateName, itemType, workspaceId, actorUserId }`
-- Action buttons call `queueAction()` with `{ itemId, type, channel, source: "ui", actorUserId }`
-- Zero direct `supabase.from("actions").insert(...)` calls remain
-- Zero direct `supabase.from("timeline_events").insert(...)` calls remain
+---
 
-### 7. `src/pages/ActionsQueue.tsx`
-**Removed:**
-- Lines 39-67: entire `executeAction` function (inline DB writes, mock execution, timeline insert)
-- Lines 69-73: `approveAction` function (direct status update)
+## File 1: `supabase/functions/execute-action-server/index.ts` (CREATE)
 
-**Added:**
-- Import `executeAction` from `@/lib/execute-action`
-- `handleApprove`: updates status to `scheduled` with explicit comment: "// TEMPORARY: sets to 'scheduled' which currently means 'approved'. Step 3 will add the 'approved' enum value."
-- `handleExecute`: calls `executeAction({ actionId, actorUserId, source: "ui" })`
-- Zero direct action status transitions or timeline writes remain
+The single server-side execution boundary. Absorbs all logic from `execute-action-email` and the client-side mock path.
+
+**Auth (dual mode):**
+- If `X-CRON-SECRET` header matches `CRON_SECRET` env var: scheduler mode. Uses service role key for DB. Sets `source: "scheduler"`, `actor_user_id: null`.
+- Otherwise: requires valid user JWT via Authorization header. Validates workspace membership. Sets `source: "ui"`.
+
+**Execution flow:**
+1. Parse body: `{ actionId, manualRetry? }`
+2. Load action with item/account joins (using appropriate client)
+3. **Stuck-running recovery:**
+   - If `status === "running"` and `claimed_at` older than 10 minutes:
+     - If `result_json.provider_not_configured === true`: reset to `scheduled` (or `approved` if that was prior status, but since we cannot know prior status after a stuck claim, default to `scheduled`), clear `claimed_by`/`claimed_at`. Return `{ success: true, recovered: true, reset_to: "scheduled" }`.
+     - Otherwise (true deadlock): set to `failed` with timeout error. Return `{ success: true, recovered: true, failed: true }`.
+4. Status guard: reject terminal statuses, require `scheduled` or `approved`
+5. Provider idempotency guard: reject if `result_json.provider_message_id` exists (unless `manualRetry`)
+6. Save `priorStatus` before claim
+7. Atomic claim: `UPDATE actions SET status='running', claimed_by=..., claimed_at=now() WHERE id=X AND status IN ('scheduled','approved')`. Zero rows = abort (409).
+8. Load and render template (allow-listed variables, always persist `render_errors`)
+9. **Channel routing:**
+   - `channel=email` + `type=send_message`: resolve recipient, check RESEND_API_KEY (if missing: revert to `priorStatus`, clear claim, set `result_json.provider_not_configured=true`, return 503), load connector config, send via Resend, write timeline event
+   - Everything else: mock execution (500ms delay), write timeline event
+10. Update to `completed` or `failed` with full `result_json`
+
+**Template rendering:** Inline allow-listed renderer (same logic as `render-template.ts` -- duplicated server-side since client modules cannot be imported in Deno edge functions).
+
+**Timeline writes:** Direct insert to `timeline_events` table (same pattern as current `execute-action-email`). Cannot import `writeTimelineEvent()` from client code in Deno.
+
+---
+
+## File 2: `supabase/functions/process-scheduled-actions/index.ts` (CREATE)
+
+Deliberately thin scheduler. Contains zero claim/render/complete logic.
+
+**Auth:** Validates `X-CRON-SECRET` header ONLY. No JWT fallback. Returns 401 if missing or wrong.
+
+**Logic:**
+1. Create Supabase client with service role key
+2. Query due actions:
+   ```
+   SELECT id FROM actions
+   WHERE status IN ('scheduled', 'approved')
+     AND scheduled_for <= now()
+   ORDER BY scheduled_for ASC
+   LIMIT 10
+   ```
+3. For each `actionId`: call `execute-action-server` via HTTP fetch, passing `X-CRON-SECRET` header (same secret, forwarded)
+4. Collect results per action
+5. Return: `{ processed: N, succeeded: N, failed: N, skipped: N, details: [...] }`
+
+---
+
+## File 3: `src/lib/execute-action.ts` (SIMPLIFY)
+
+Remove all inline logic (mock execution, template rendering, channel routing, timeline writes). Replace with a single `supabase.functions.invoke("execute-action-server")` call.
+
+```
+export async function executeAction(params) {
+  const { actionId, manualRetry = false } = params;
+  const { data, error } = await supabase.functions.invoke("execute-action-server", {
+    body: { actionId, manualRetry },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data && !data.success) return { success: false, error: data.error };
+  return { success: true };
+}
+```
+
+Imports for `renderTemplate`, `writeTimelineEvent` removed. The `ExecuteActionParams` and `ExecuteActionResult` interfaces remain for type compatibility.
+
+---
+
+## File 4: `supabase/functions/execute-action-email/` (DELETE)
+
+Entirely replaced by `execute-action-server`. Will be deleted from filesystem and undeployed.
+
+---
+
+## Config: `supabase/config.toml`
+
+Do NOT add `verify_jwt = false` for `execute-action-server` (per your requirement -- JWT verification stays enabled; cron calls bypass via `X-CRON-SECRET` header validated in code).
+
+Add only:
+```
+[functions.process-scheduled-actions]
+verify_jwt = false
+```
+
+`process-scheduled-actions` needs `verify_jwt = false` because cron calls have no JWT -- it authenticates exclusively via `X-CRON-SECRET`.
+
+---
+
+## Cron Registration (SQL via insert tool, not migration)
+
+After `CRON_SECRET` is added as a secret, register the pg_cron job. The secret value will be provided as a literal in the SQL since `current_setting` is not available for edge function secrets:
+
+```sql
+SELECT cron.schedule(
+  'process-scheduled-actions',
+  '*/2 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/process-scheduled-actions',
+    headers := '{"Content-Type": "application/json", "X-CRON-SECRET": "<CRON_SECRET_VALUE>"}'::jsonb,
+    body := '{"source": "cron"}'::jsonb
+  ) AS request_id;
+  $$
+);
+```
+
+You will be asked to provide the CRON_SECRET value before this SQL is run.
+
+---
+
+## Proof Run
+
+After deployment:
+1. Insert a test action with `status = 'scheduled'`, `scheduled_for = now()`, `channel = 'system'`, `type = 'test'` for an existing item
+2. Wait up to 2 minutes for cron to fire
+3. Verify: action status changed to `completed`, `source = "scheduler"`, `result_json` contains mock data, timeline event created
+
+---
+
+## Execution Path Convergence
+
+| Trigger | Path |
+|---------|------|
+| UI button click | `execute-action.ts` -> `supabase.functions.invoke("execute-action-server")` with user JWT |
+| Scheduler cron | `process-scheduled-actions` -> `fetch("execute-action-server")` with X-CRON-SECRET |
+
+Both converge on the same function. One execution path. One claim gate. One template renderer. One timeline writer.
 
 ---
 
 ## Verification Checklist
 
-After implementation:
-1. `src/lib/execute-action.ts` -- exists, uses conditional update guard, enforces status rules
-2. `src/lib/queue-actions.ts` -- exists, checks rate limits and idempotency
-3. `src/lib/render-template.ts` -- exists, uses allow-list, returns renderErrors
-4. `src/lib/evaluate-playbook.ts` -- exists, computes deterministic idempotency keys
-5. `src/lib/timeline-events.ts` -- exists, centralized timeline writes
-6. `ItemDetail.tsx` -- zero `supabase.from("actions")` writes, zero `supabase.from("timeline_events")` writes
-7. `ActionsQueue.tsx` -- zero inline execution logic, zero timeline writes
-8. All `renderErrors` persisted to `result_json` on both success and failure paths
-
-Step 3 will NOT begin until these deliverables are audited.
+1. `execute-action-server` handles email and non-email through one path
+2. `process-scheduled-actions` contains zero claim/render/complete logic
+3. `execute-action.ts` (client) is a thin invoke wrapper with no inline logic
+4. `execute-action-email` deleted and undeployed
+5. `execute-action-server` keeps `verify_jwt` enabled (default); cron authenticated via `X-CRON-SECRET`
+6. `process-scheduled-actions` accepts `X-CRON-SECRET` only, never JWT
+7. Stuck-running with `provider_not_configured` resets to `scheduled`, not `failed`
+8. Stuck-running without `provider_not_configured` fails with timeout error
+9. Atomic claim is sole concurrency gate
+10. `render_errors` always in `result_json`
+11. Cron fires every 2 minutes, processes up to 10 due actions
 
