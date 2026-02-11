@@ -473,8 +473,9 @@ async function executeEmail(
     console.error("[executeEmail] Success update failed:", JSON.stringify(updateErr));
   }
 
-  // Verify provider columns actually persisted
-  if (updated && (!updated.provider || !updated.provider_message_id)) {
+  // Verify provider columns actually persisted (also fallback if update returned null/error)
+  const needsFallback = updateErr || !updated || !updated.provider || !updated.provider_message_id;
+  if (needsFallback) {
     console.error("[executeEmail] Provider fields missing after update. Attempting fallback.", {
       actionId, provider_message_id: resendResult.id,
     });
