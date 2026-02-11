@@ -1,79 +1,106 @@
 
 
-# Action Inspector Drawer with Message Events
+# Suppression List Management Page
 
 ## Overview
 
-Add a right-side Sheet drawer that opens when clicking any action row (in Actions Queue or Item Detail). Shows full action metadata and linked message events for delivery visibility.
+Build a `/suppression` page for viewing, searching, and managing suppressed email recipients. Members can view and manually add; only owners/admins can remove entries via a secure edge function.
 
-## New File: `src/components/ActionInspectorDrawer.tsx`
+## Changes
 
-A Sheet component that accepts an action object and renders two sections:
+### 1. Expose user role in WorkspaceContext
 
-**Section 1 -- Action Details**
-- Type, channel, status (using StatusBadge)
-- Item title + account name (from joined data)
-- Recipient email (from `result_json.recipient_email`)
-- Rendered subject (from `result_json.rendered_subject`)
-- Provider + provider_message_id
-- Timestamps: created_at, scheduled_for, executed_at
-- Persistence warning flag if `result_json.persistence_warning` exists
+**File: `src/lib/workspace-context.tsx`**
 
-**Section 2 -- Message Events**
-- Fetched using dual-query strategy:
-  1. Primary: `message_events.action_id = action.id` scoped by `workspace_id = action.workspace_id`, ordered by `occurred_at desc`, limit 50
-  2. Fallback: if primary returns empty AND `action.provider_message_id` is non-null, query by `provider_message_id`, same workspace scope + ordering
-  3. Merge and de-dupe by event `id`
-- Each event row shows: normalized event type badge (strip `email.` prefix, show original in tooltip), `occurred_at` timestamp
-- Empty state: "No delivery events yet" when no provider_message_id and no events
+- Add `userRole: string | null` to context interface and state
+- Update the existing `workspace_members` query to also select `role`
+- Extract `data.role` alongside the workspace data
 
-**Event type normalization helper** (inline in the component):
-```
-normalizeEventType("email.delivered") -> "delivered"
-normalizeEventType("bounced") -> "bounced"
-```
-Display the normalized label; show the raw value in a title/tooltip.
+### 2. New page: `src/pages/SuppressionList.tsx`
 
-## Modified: `src/components/StatusBadge.tsx`
+**Top controls:**
+- Search input (filters by email, client-side)
+- Reason filter: all / bounce / complaint / manual / unsubscribe
+- Source filter: all / webhook / manual / system
+- "Add Suppression" button (opens dialog)
 
-Add styles for message event types:
-- `delivered`: green (same as completed)
-- `bounced`: red (same as failed)
-- `complained`: red
-- `opened`: blue (same as scheduled)
-- `clicked`: blue
+**Table columns:**
+- Email
+- Reason (lightweight inline badge, styled locally -- NOT StatusBadge)
+- Source (lightweight inline badge, styled locally)
+- Created at (formatted)
+- Remove button (only visible when `userRole` is `owner` or `admin`)
 
-## Modified: `src/pages/ActionsQueue.tsx`
+**Data fetching:**
+- `SELECT * FROM suppression_list WHERE workspace_id = $ws ORDER BY created_at DESC LIMIT 200`
+- Client-side filtering by search text, reason, source
 
-- Add state: `selectedAction` and `drawerOpen`
-- Make each action row div clickable (`onClick` sets selected action + opens drawer)
-- On Play and Approve buttons: add `e.stopPropagation()` to prevent drawer from opening
-- Render `ActionInspectorDrawer` at bottom of component
-- The existing select query already fetches `*` which includes `workspace_id` and `provider_message_id`
+**Manual add dialog:**
+- Email input with basic validation
+- Inserts: `{ workspace_id, email: email.toLowerCase(), reason: 'manual', source: 'manual' }`
 
-## Modified: `src/pages/ItemDetail.tsx`
+**Remove (admin-gated):**
+- Calls edge function `POST /suppression-admin` with `{ action: "remove", suppression_id, workspace_id }`
+- Also accepts `{ action: "remove", email, workspace_id }` as alternative
+- On success, refetches list
 
-- Add state: `selectedAction` and `drawerOpen`
-- Make each action in the QUEUED list clickable (same pattern)
-- Render `ActionInspectorDrawer`
-- The existing actions query already fetches `*`
+**Empty state:** "No suppressed recipients" with ShieldOff icon
 
-## No Database Changes
+### 3. New edge function: `supabase/functions/suppression-admin/index.ts`
 
-`message_events` table already has RLS for workspace members and the necessary columns (`action_id`, `provider_message_id`, `workspace_id`, `event_type`, `occurred_at`).
+**Config:** `verify_jwt = true` (no manual JWT handling needed -- framework rejects unauthenticated requests)
+
+**Logic:**
+1. Standard CORS headers + OPTIONS handler
+2. Get authenticated user via `supabase.auth.getUser()` (JWT already verified)
+3. Query `workspace_members` to confirm user has `owner` or `admin` role in the given workspace
+4. If not authorized, return 403
+5. Create a service-role client for the delete operation
+6. Delete from `suppression_list` by `id + workspace_id` or by `email + workspace_id`
+7. Return success/error JSON
+
+### 4. Route and sidebar
+
+**`src/App.tsx`:** Add `<Route path="/suppression" element={<SuppressionList />} />`
+
+**`src/components/AppSidebar.tsx`:** Add nav item `{ to: "/suppression", label: "Suppressions", icon: ShieldOff }` after Connectors
+
+### 5. Reason/source badges
+
+Styled locally in `SuppressionList.tsx` as simple `<span>` elements with tailwind classes. StatusBadge is NOT modified -- it stays reserved for action lifecycle statuses.
+
+- Reason colors: bounce (red), complaint (red), manual (amber), unsubscribe (muted)
+- Source colors: webhook (blue), manual (amber), system (muted)
+
+## No database changes
+
+- `suppression_list` table exists with RLS (SELECT + INSERT for members, no DELETE)
+- `workspace_members` already has `role` column with `workspace_role` enum
+
+## Technical Notes
+
+- The edge function uses `verify_jwt = true` so unauthenticated requests are rejected at the gateway level
+- Service role is used only for the DELETE operation after server-side admin verification
+- The existing `workspace_role` enum (`owner | admin | member | viewer`) is already in the database
+
+## Files
+
+| File | Action |
+|------|--------|
+| `src/lib/workspace-context.tsx` | Modified (add userRole) |
+| `src/pages/SuppressionList.tsx` | New |
+| `supabase/functions/suppression-admin/index.ts` | New |
+| `src/App.tsx` | Modified (add route) |
+| `src/components/AppSidebar.tsx` | Modified (add nav link) |
 
 ## Acceptance Criteria
 
-1. Clicking an action row opens the drawer showing correct action id, rendered subject, and recipient
-2. Clicking Play or Approve executes without opening the drawer (stopPropagation)
-3. For a sent action with provider_message_id, drawer shows message events including "delivered"
-4. For an unsent action, message events section shows clean empty state
-5. No cross-workspace leakage (workspace_id scoped query + RLS)
-6. Event type badges strip `email.` prefix and show raw value in tooltip
-
-## Files Modified
-- `src/components/ActionInspectorDrawer.tsx` (new)
-- `src/components/StatusBadge.tsx`
-- `src/pages/ActionsQueue.tsx`
-- `src/pages/ItemDetail.tsx`
-
+1. Members can view suppression list filtered by workspace
+2. Search by email works
+3. Reason and source dropdown filters work
+4. Members can add manual suppressions (email lowercased)
+5. Only owners/admins see the Remove button
+6. Edge function returns 401 if unauthenticated (verify_jwt)
+7. Edge function returns 403 if not owner/admin
+8. Deletes are scoped by workspace_id
+9. Empty state shown when no suppressions exist
