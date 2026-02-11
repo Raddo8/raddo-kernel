@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
@@ -17,23 +17,44 @@ export default function AccountDetail() {
   const [account, setAccount] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [notFound, setNotFound] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
   const [cPhone, setCPhone] = useState("");
   const [cRole, setCRole] = useState("");
 
-  const fetchContacts = () => {
-    if (!id) return;
-    supabase.from("contacts").select("*").eq("account_id", id).order("created_at").then(({ data }) => setContacts(data || []));
-  };
-
   useEffect(() => {
+    setNotFound(false);
+    setAccount(null);
+    setContacts([]);
+    setItems([]);
     if (!id) return;
-    supabase.from("accounts").select("*").eq("id", id).maybeSingle().then(({ data }) => setAccount(data));
-    fetchContacts();
-    supabase.from("items").select("*, item_states(name, label, color), policies(name)").eq("account_id", id).order("created_at", { ascending: false }).then(({ data }) => setItems(data || []));
+
+    let active = true;
+
+    supabase.from("accounts").select("*").eq("id", id).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { toast.error("Failed to load account"); return; }
+        if (!data) { setNotFound(true); return; }
+        setAccount(data);
+
+        supabase.from("contacts").select("*").eq("account_id", id).order("created_at")
+          .then(({ data }) => { if (active) setContacts(data || []); });
+        supabase.from("items").select("*, item_states(name, label, color), policies(name)")
+          .eq("account_id", id).order("created_at", { ascending: false })
+          .then(({ data }) => { if (active) setItems(data || []); });
+      });
+
+    return () => { active = false; };
   }, [id]);
+
+  const refreshContacts = () => {
+    if (!id) return;
+    supabase.from("contacts").select("*").eq("account_id", id).order("created_at")
+      .then(({ data }) => setContacts(data || []));
+  };
 
   const canAddContact = cName.trim() && (cEmail.trim() || cPhone.trim());
 
@@ -48,7 +69,7 @@ export default function AccountDetail() {
     });
     if (error) { toast.error(error.message); return; }
     setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setContactOpen(false);
-    fetchContacts();
+    refreshContacts();
     toast.success("Contact added");
   };
 
@@ -56,9 +77,23 @@ export default function AccountDetail() {
     if (!window.confirm("Delete this contact?")) return;
     const { error } = await supabase.from("contacts").delete().eq("id", contactId);
     if (error) { toast.error(error.message); return; }
-    fetchContacts();
+    refreshContacts();
     toast.success("Contact deleted");
   };
+
+  if (notFound) {
+    return (
+      <div className="p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Account not found</h2>
+        <p className="text-sm text-muted-foreground">
+          This account does not exist or you do not have access.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/accounts">Back to accounts</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (!account) return <div className="p-6 text-muted-foreground">Loading...</div>;
 

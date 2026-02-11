@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,40 @@ export default function PolicyDetail() {
   const { id } = useParams();
   const [policy, setPolicy] = useState<any>(null);
   const [rules, setRules] = useState<any[]>([]);
+  const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
   const [ruleType, setRuleType] = useState("");
   const [ruleJson, setRuleJson] = useState("{}");
 
-  const fetchData = async () => {
+  useEffect(() => {
+    setNotFound(false);
+    setPolicy(null);
+    setRules([]);
     if (!id) return;
-    const { data: p } = await supabase.from("policies").select("*").eq("id", id).maybeSingle();
-    setPolicy(p);
-    const { data: r } = await supabase.from("policy_rate_rules").select("*").eq("policy_id", id).order("sort_order");
-    setRules(r || []);
-  };
 
-  useEffect(() => { fetchData(); }, [id]);
+    let active = true;
+
+    supabase.from("policies").select("*").eq("id", id).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { toast.error("Failed to load policy"); return; }
+        if (!data) { setNotFound(true); return; }
+        setPolicy(data);
+
+        supabase.from("policy_rate_rules").select("*")
+          .eq("policy_id", id).order("sort_order")
+          .then(({ data }) => { if (active) setRules(data || []); });
+      });
+
+    return () => { active = false; };
+  }, [id]);
+
+  const refreshRules = () => {
+    if (!id) return;
+    supabase.from("policy_rate_rules").select("*")
+      .eq("policy_id", id).order("sort_order")
+      .then(({ data }) => setRules(data || []));
+  };
 
   const addRule = async () => {
     if (!id || !ruleType.trim()) return;
@@ -39,14 +60,28 @@ export default function PolicyDetail() {
     });
     if (error) { toast.error(error.message); return; }
     setRuleType(""); setRuleJson("{}"); setOpen(false);
-    fetchData();
+    refreshRules();
     toast.success("Rule added");
   };
 
   const deleteRule = async (ruleId: string) => {
     await supabase.from("policy_rate_rules").delete().eq("id", ruleId);
-    fetchData();
+    refreshRules();
   };
+
+  if (notFound) {
+    return (
+      <div className="p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Policy not found</h2>
+        <p className="text-sm text-muted-foreground">
+          This policy does not exist or you do not have access.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/policies">Back to policies</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (!policy) return <div className="p-6 text-muted-foreground">Loading...</div>;
 

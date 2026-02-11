@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
@@ -20,6 +20,7 @@ export default function PlaybookDetail() {
   const [steps, setSteps] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
+  const [notFound, setNotFound] = useState(false);
   const [open, setOpen] = useState(false);
 
   // Step form
@@ -30,21 +31,47 @@ export default function PlaybookDetail() {
   const [delayMinutes, setDelayMinutes] = useState("0");
   const [requiresApproval, setRequiresApproval] = useState(false);
 
-  const fetchData = async () => {
-    if (!id || !workspace) return;
-    const [pbRes, stepsRes, tmplRes, statesRes] = await Promise.all([
-      supabase.from("playbooks").select("*").eq("id", id).maybeSingle(),
-      supabase.from("playbook_steps").select("*, templates(subject)").eq("playbook_id", id).order("step_order"),
-      supabase.from("templates").select("id, subject, template_type").eq("workspace_id", workspace.id),
-      supabase.from("item_states").select("*").eq("workspace_id", workspace.id).order("sort_order"),
-    ]);
-    setPlaybook(pbRes.data);
-    setSteps(stepsRes.data || []);
-    setTemplates(tmplRes.data || []);
-    setStates(statesRes.data || []);
-  };
+  // Effect 1: playbook + steps (keyed on id only)
+  useEffect(() => {
+    setNotFound(false);
+    setPlaybook(null);
+    setSteps([]);
+    if (!id) return;
 
-  useEffect(() => { fetchData(); }, [id, workspace]);
+    let active = true;
+
+    supabase.from("playbooks").select("*").eq("id", id).maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return;
+        if (error) { toast.error("Failed to load playbook"); return; }
+        if (!data) { setNotFound(true); return; }
+        setPlaybook(data);
+
+        supabase.from("playbook_steps").select("*, templates(subject)")
+          .eq("playbook_id", id).order("step_order")
+          .then(({ data }) => { if (active) setSteps(data || []); });
+      });
+
+    return () => { active = false; };
+  }, [id]);
+
+  // Effect 2: workspace-scoped option lists for Add Step dialog
+  useEffect(() => {
+    if (!workspace) return;
+    supabase.from("templates").select("id, subject, template_type")
+      .eq("workspace_id", workspace.id)
+      .then(({ data }) => setTemplates(data || []));
+    supabase.from("item_states").select("*")
+      .eq("workspace_id", workspace.id).order("sort_order")
+      .then(({ data }) => setStates(data || []));
+  }, [workspace]);
+
+  const refreshSteps = () => {
+    if (!id) return;
+    supabase.from("playbook_steps").select("*, templates(subject)")
+      .eq("playbook_id", id).order("step_order")
+      .then(({ data }) => setSteps(data || []));
+  };
 
   const addStep = async () => {
     if (!id || !triggerState) return;
@@ -60,14 +87,28 @@ export default function PlaybookDetail() {
     });
     if (error) { toast.error(error.message); return; }
     setOpen(false);
-    fetchData();
+    refreshSteps();
     toast.success("Step added");
   };
 
   const deleteStep = async (stepId: string) => {
     await supabase.from("playbook_steps").delete().eq("id", stepId);
-    fetchData();
+    refreshSteps();
   };
+
+  if (notFound) {
+    return (
+      <div className="p-6 space-y-3">
+        <h2 className="text-lg font-semibold">Playbook not found</h2>
+        <p className="text-sm text-muted-foreground">
+          This playbook does not exist or you do not have access.
+        </p>
+        <Button variant="outline" size="sm" asChild>
+          <Link to="/playbooks">Back to playbooks</Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (!playbook) return <div className="p-6 text-muted-foreground">Loading...</div>;
 
