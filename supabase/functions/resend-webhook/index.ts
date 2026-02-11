@@ -159,10 +159,23 @@ serve(async (req: Request) => {
   });
 
   if (upsertErr) {
-    console.error("[resend-webhook] Upsert error:", upsertErr.message);
+    console.log(JSON.stringify({
+      event: "webhook_upsert_failed",
+      provider: "resend",
+      event_type: shortEvent,
+      provider_message_id: providerMessageId,
+      action_id: action.id,
+      workspace_id: action.workspace_id,
+      error: upsertErr.message,
+      timestamp: new Date().toISOString(),
+    }));
+    return new Response(
+      JSON.stringify({ ok: false, error: "persistence_failed" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 
-  // ── Change 4: Structured audit log ──
+  // ── Change 4: Structured audit log (only after successful persistence) ──
   console.log(JSON.stringify({
     event: "webhook_processed",
     provider: "resend",
