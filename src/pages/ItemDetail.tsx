@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import TimelineStream from "@/components/TimelineStream";
+import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
@@ -23,6 +24,8 @@ export default function ItemDetail() {
   const [states, setStates] = useState<any[]>([]);
   const [selectedState, setSelectedState] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<any | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
@@ -202,7 +205,11 @@ export default function ItemDetail() {
             ) : (
               <div className="space-y-2">
                 {actions.slice(0, 5).map(a => (
-                  <div key={a.id} className="flex items-center justify-between text-sm">
+                  <div
+                    key={a.id}
+                    className="flex items-center justify-between text-sm cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5 transition-colors"
+                    onClick={() => { setSelectedAction(a); setDrawerOpen(true); }}
+                  >
                     <div className="flex items-center gap-2">
                       <ArrowRight size={12} className="text-muted-foreground" />
                       <span className="font-mono text-xs">{a.type}</span>
@@ -223,6 +230,7 @@ export default function ItemDetail() {
           <TimelineStream itemId={id!} />
         </div>
       </div>
+      <ActionInspectorDrawer action={selectedAction} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }
