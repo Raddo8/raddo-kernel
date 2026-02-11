@@ -696,6 +696,39 @@ export type Database = {
           },
         ]
       }
+      suppression_list: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          email: string
+          id: string
+          reason: string
+          scope: string
+          source: string
+          workspace_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          reason: string
+          scope?: string
+          source: string
+          workspace_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          reason?: string
+          scope?: string
+          source?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           body: string
