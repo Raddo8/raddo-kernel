@@ -20,6 +20,7 @@ import TemplatesList from "@/pages/TemplatesList";
 import PolicyRulesList from "@/pages/PolicyRulesList";
 import ContactsList from "@/pages/ContactsList";
 import ConnectorsList from "@/pages/ConnectorsList";
+import SuppressionList from "@/pages/SuppressionList";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import { useEffect, useState } from "react";
@@ -66,6 +67,7 @@ const App = () => (
               <Route path="/policy-rules" element={<PolicyRulesList />} />
               <Route path="/contacts" element={<ContactsList />} />
               <Route path="/connectors" element={<ConnectorsList />} />
+              <Route path="/suppression" element={<SuppressionList />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

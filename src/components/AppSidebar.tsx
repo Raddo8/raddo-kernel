@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ShieldOff,
   Users,
   Plug,
 } from "lucide-react";
@@ -35,6 +36,7 @@ export default function AppSidebar() {
     { to: "/playbooks", label: "Playbooks", icon: BookOpen },
     { to: "/templates", label: "Templates", icon: LayoutTemplate },
     { to: "/connectors", label: "Connectors", icon: Plug },
+    { to: "/suppression", label: "Suppressions", icon: ShieldOff },
   ];
   return (
     <aside
