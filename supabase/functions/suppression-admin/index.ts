@@ -6,21 +6,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    // ── Control 1: Strict Bearer token format ──
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith("Bearer ") || authHeader.replace("Bearer ", "").length < 20) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Authenticated client to read user + membership
+    // ── Control 2: Hard user-resolution gate ──
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -35,6 +38,7 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── Parse inputs ──
     const { action, suppression_id, email, workspace_id } = await req.json();
 
     if (action !== "remove" || !workspace_id) {
@@ -44,7 +48,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin/owner role
+    // ── Control 3: UUID validation ──
+    if (!UUID_RE.test(workspace_id)) {
+      return new Response(JSON.stringify({ error: "Invalid workspace_id format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (suppression_id && !UUID_RE.test(suppression_id)) {
+      return new Response(JSON.stringify({ error: "Invalid suppression_id format" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Membership role check (403) ──
     const { data: member } = await supabase
       .from("workspace_members")
       .select("role")
@@ -59,7 +78,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Service-role client for delete
+    // ── Service-role client + delete (only reached after all gates pass) ──
     const serviceClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
