@@ -35,7 +35,7 @@ export default function PolicyDetail() {
 
         supabase.from("policy_rate_rules").select("*")
           .eq("policy_id", id).order("sort_order")
-          .then(({ data }) => { if (active) setRules(data || []); });
+          .then(({ data, error }) => { if (!active || error) return; setRules(data || []); });
       });
 
     return () => { active = false; };
@@ -56,7 +56,7 @@ export default function PolicyDetail() {
       policy_id: id,
       rule_type: ruleType.trim(),
       rule_json: parsed,
-      sort_order: rules.length,
+      sort_order: rules.length ? Math.max(...rules.map(r => r.sort_order ?? 0)) + 1 : 0,
     });
     if (error) { toast.error(error.message); return; }
     setRuleType(""); setRuleJson("{}"); setOpen(false);
@@ -65,8 +65,10 @@ export default function PolicyDetail() {
   };
 
   const deleteRule = async (ruleId: string) => {
-    await supabase.from("policy_rate_rules").delete().eq("id", ruleId);
+    const { error } = await supabase.from("policy_rate_rules").delete().eq("id", ruleId);
+    if (error) { toast.error(error.message); return; }
     refreshRules();
+    toast.success("Rule deleted");
   };
 
   if (notFound) {
