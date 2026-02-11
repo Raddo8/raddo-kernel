@@ -125,6 +125,11 @@ export default function SuppressionList() {
     setRemoving(id);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast({ title: "Not authenticated", variant: "destructive" });
+        setRemoving(null);
+        return;
+      }
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/suppression-admin`,
         {
