@@ -1,157 +1,139 @@
 
 
-# Phase 1: Cleanup + Reputation Armor (with mandatory changes)
+# Fix Provider Persistence + Deterministic Recipient for Phase 1 Verification
 
-Incorporates both user-mandated changes: safe DELETE scoping and first-class `provider_message_id` indexing.
+## Problem
 
----
+1. `provider` and `provider_message_id` columns on `actions` stay NULL after successful email send (line 459-468 fires without error handling)
+2. Test emails go to seed contact instead of real inbox because `contact_id` is NULL on the action
 
-## Step 1: Clean Up E2E Test Data
+## Changes
 
-Safe, scoped deletes (no operator precedence bug):
+### 1. Harden success-path update in `execute-action-core.ts` (lines 449-480)
 
-```sql
--- Timeline events scoped by item_id + summary pattern (no action_id column exists)
-DELETE FROM timeline_events
-WHERE item_id = '65d6cc88-f665-428c-a929-6ef87f005274'
-  AND (summary ILIKE '%e2e%');
+Replace the fire-and-forget update with a verified pattern:
 
--- Test actions
-DELETE FROM actions
-WHERE id IN (
-  '3cc2d27b-53b8-4978-86c8-eda4990614f0',
-  '4dbb875f-ce77-48e9-8766-bc29a9f3b3f8'
-);
+- Use `.select("id, status, provider, provider_message_id").single()` to confirm persistence
+- If provider columns are NULL after primary update, run a dedicated fallback update for just those two columns
+- If fallback also fails: mark `result_json` with `persistence_warning: "provider_columns_failed"` and write a warning timeline event so the issue is visible in the UI (action stays `completed` since the email was actually sent)
+- Log all errors explicitly with `console.error`
 
--- Test template
-DELETE FROM templates
-WHERE id = '5a9e2eab-a3a2-445a-afb9-a027fa71b244';
-```
-
----
-
-## Step 2: Migration -- `suppression_list` table
+### 2. Database: Set account primary contact
 
 ```sql
-CREATE TABLE public.suppression_list (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL,
-  email text NOT NULL,
-  contact_id uuid,
-  reason text NOT NULL,        -- bounce, complaint, manual, unsubscribe
-  source text NOT NULL,         -- webhook, manual, system
-  scope text NOT NULL DEFAULT 'workspace',
-  created_at timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (workspace_id, email),
-  CHECK (email = lower(email))
-);
-
-ALTER TABLE public.suppression_list ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Members can view suppression_list"
-  ON public.suppression_list FOR SELECT
-  USING (is_workspace_member(auth.uid(), workspace_id));
-
-CREATE POLICY "Members can insert suppression_list"
-  ON public.suppression_list FOR INSERT
-  WITH CHECK (is_workspace_member(auth.uid(), workspace_id));
+UPDATE accounts
+SET primary_contact_id = '57be3fd2-e5c1-4154-afd5-d8648a802651'
+WHERE id = 'e270a810-3f4f-4224-914b-4828318dc90a'
+  AND primary_contact_id IS NULL;
 ```
 
----
+### 3. Deploy and create test action with explicit `contact_id`
 
-## Step 3: Migration -- Add `provider` + `provider_message_id` columns to `actions`
+- Deploy the updated edge function
+- Create a new `send_message`/`email` action with `contact_id = '57be3fd2-e5c1-4154-afd5-d8648a802651'` (Steve Miller / jacobdburkett@gmail.com) to eliminate recipient ambiguity
+- Execute the action
+
+### 4. Verify
+
+Run the two verification queries:
 
 ```sql
-ALTER TABLE public.actions
-  ADD COLUMN provider text,
-  ADD COLUMN provider_message_id text;
+SELECT id, status, provider, provider_message_id, executed_at
+FROM actions WHERE status = 'completed' ORDER BY executed_at DESC LIMIT 5;
 
-CREATE INDEX idx_actions_provider_message
-  ON public.actions (provider, provider_message_id);
+SELECT created_at, event_type, provider_message_id, action_id
+FROM message_events ORDER BY created_at DESC LIMIT 10;
 ```
 
----
-
-## Step 4: Code -- Suppression check + provider columns in `execute-action-core.ts`
-
-Two changes in `executeEmail()`:
-
-**A. Suppression check** (after recipient resolution, before Resend call, ~15 lines):
-- Query `suppression_list` for `workspace_id + lower(contact.email)`
-- If match: fail action with `error_code: 'suppressed_recipient'`, write timeline, return early
-
-**B. Write `provider` + `provider_message_id` columns** on success:
-- In the success update block, add `provider: 'resend'` and `provider_message_id: resendResult.id` alongside the existing `result_json` write
+**Pass criteria:**
+- `provider = 'resend'` and `provider_message_id` not NULL
+- Email arrives at jacobdburkett@gmail.com
+- `message_events` has a `delivered` row with matching `provider_message_id` and non-null `action_id`
 
 ---
 
-## Step 5: Migration -- `message_events` table
+## Technical Detail: Updated success path in `executeEmail()`
 
-```sql
-CREATE TABLE public.message_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL,
-  action_id uuid,
-  provider text NOT NULL DEFAULT 'resend',
-  provider_message_id text NOT NULL,
-  event_type text NOT NULL,
-  payload jsonb,
-  occurred_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now()
-);
+```typescript
+// ── Success ──
+const resultJson = {
+  provider: "resend",
+  provider_message_id: resendResult.id,
+  rendered_subject: renderedSubject,
+  render_errors: renderErrors,
+  recipient_email: contact.email,
+  recipient_contact_id: contact.id,
+};
 
-ALTER TABLE public.message_events ENABLE ROW LEVEL SECURITY;
+const { data: updated, error: updateErr } = await supabase
+  .from("actions")
+  .update({
+    status: "completed" as any,
+    executed_at: new Date().toISOString(),
+    result_json: resultJson,
+    provider: "resend",
+    provider_message_id: resendResult.id,
+  } as any)
+  .eq("id", actionId)
+  .select("id, status, provider, provider_message_id")
+  .single();
 
-CREATE POLICY "Members can view message_events"
-  ON public.message_events FOR SELECT
-  USING (is_workspace_member(auth.uid(), workspace_id));
+if (updateErr) {
+  console.error("[executeEmail] Success update failed:", JSON.stringify(updateErr));
+}
 
-CREATE INDEX idx_message_events_provider_msg
-  ON public.message_events (provider_message_id);
+// Verify provider columns actually persisted
+if (updated && (!updated.provider || !updated.provider_message_id)) {
+  console.error("[executeEmail] Provider fields missing after update. Attempting fallback.", {
+    actionId, provider_message_id: resendResult.id,
+  });
+
+  const { error: fallbackErr } = await supabase
+    .from("actions")
+    .update({
+      provider: "resend",
+      provider_message_id: resendResult.id,
+    } as any)
+    .eq("id", actionId);
+
+  if (fallbackErr) {
+    console.error("[executeEmail] Fallback also failed:", JSON.stringify(fallbackErr));
+
+    // Write persistence warning into result_json + timeline
+    await supabase.from("actions").update({
+      result_json: { ...resultJson, persistence_warning: "provider_columns_failed" },
+    } as any).eq("id", actionId);
+
+    if (accountId) {
+      await writeTimeline(supabase, {
+        accountId,
+        itemId: action.item_id,
+        direction: "system",
+        channel: "email",
+        summary: `Warning: email sent but provider columns failed to persist (${action.type})`,
+      });
+    }
+  }
+}
+
+// Timeline: email sent
+await writeTimeline(supabase, {
+  accountId,
+  itemId: action.item_id,
+  contactId: contact.id,
+  direction: "outbound",
+  channel: "email",
+  summary: `Email sent: ${renderedSubject || action.type}`,
+  body: renderedBody?.substring(0, 500) || null,
+});
+
+return { success: true, provider_message_id: resendResult.id };
 ```
 
----
-
-## Step 6: New edge function -- `resend-webhook/index.ts`
-
-- `verify_jwt = false` in config.toml
-- Validates Svix signature headers (`svix-id`, `svix-timestamp`, `svix-signature`) using webhook signing secret (`RESEND_WEBHOOK_SECRET`)
-- Rejects if timestamp older than 5 minutes (replay protection)
-- Looks up action via indexed query: `SELECT id, workspace_id FROM actions WHERE provider = 'resend' AND provider_message_id = $1 LIMIT 1`
-- Inserts into `message_events`
-- On `bounced` (hard): auto-insert into `suppression_list` with `reason = 'bounce'`, `source = 'webhook'`
-- On `complained`: auto-insert into `suppression_list` with `reason = 'complaint'`, `source = 'webhook'`
-
-Requires new secret: `RESEND_WEBHOOK_SECRET` (will prompt user).
-
----
-
-## Step 7: Deploy and test
-
-- Deploy `resend-webhook` edge function
-- Prompt user to register webhook URL in Resend: `https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/resend-webhook`
-- Test: send email, confirm `delivered` event row in `message_events`
-- Test: simulate bounce to confirm suppression entry created
-
----
-
-## Execution order
-
-1. Delete test data (SQL via insert tool)
-2. Migration: `suppression_list` table
-3. Migration: `provider` + `provider_message_id` columns + index on `actions`
-4. Code: suppression enforcement + provider column writes in `execute-action-core.ts`
-5. Migration: `message_events` table
-6. New file: `supabase/functions/resend-webhook/index.ts`
-7. Update `supabase/config.toml`: add `[functions.resend-webhook]`
-8. Prompt for `RESEND_WEBHOOK_SECRET`
-9. Deploy and register webhook
-10. End-to-end test
-
-### Files modified
+## Files Modified
 - `supabase/functions/_shared/execute-action-core.ts`
-- `supabase/config.toml`
 
-### Files created
-- `supabase/functions/resend-webhook/index.ts`
+## Database Changes
+- `accounts`: set `primary_contact_id` for test account
+- New test action row with explicit `contact_id`
 
