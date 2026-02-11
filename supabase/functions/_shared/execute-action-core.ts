@@ -356,9 +356,7 @@ async function executeEmail(
     return { success: false, error: "provider_not_configured" };
   }
 
-  // ── Send via Resend ──
-  let fromEmail = "noreply@example.com";
-  let fromName = "Casey";
+  // ── Resolve from address from workspace connector ──
   const { data: connector } = await supabase
     .from("connectors")
     .select("config")
@@ -366,10 +364,25 @@ async function executeEmail(
     .eq("workspace_id", action.workspace_id as any)
     .maybeSingle();
 
-  if (connector?.config) {
-    const cfg = connector.config as Record<string, string>;
-    if (cfg.from_email) fromEmail = cfg.from_email;
-    if (cfg.from_name) fromName = cfg.from_name;
+  const cfg = connector?.config as Record<string, string> | undefined;
+  const fromEmail = cfg?.from_email;
+  const fromName = cfg?.from_name;
+
+  if (!fromEmail || !fromName) {
+    const errMsg = "from_address_not_configured: set from_email and from_name in the email connector config";
+    await failAction(supabase, actionId, errMsg, renderErrors, {
+      error_code: "from_address_not_configured",
+    });
+    if (accountId) {
+      await writeTimeline(supabase, {
+        accountId,
+        itemId: action.item_id,
+        direction: "system",
+        channel: "system",
+        summary: `Action failed: email connector missing from_email/from_name (${action.type})`,
+      });
+    }
+    return { success: false, error: "from_address_not_configured" };
   }
 
   const resendResponse = await fetch("https://api.resend.com/emails", {
