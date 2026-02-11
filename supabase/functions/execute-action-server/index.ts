@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { writeTimeline } from "../_shared/write-timeline.ts";
+import { executeActionCore } from "../_shared/execute-action-core.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,107 +10,8 @@ const corsHeaders = {
 
 // ── Constants ──
 
-const TERMINAL_STATUSES = ["completed", "failed", "canceled"];
-const EXECUTABLE_STATUSES = ["scheduled", "approved"];
-const STUCK_THRESHOLD_MS = 10 * 60 * 1000; // 10 minutes
 const PG_UNIQUE_VIOLATION = "23505";
 const DEFAULT_RATE_LIMIT = 10; // per hour per item+channel
-
-// ── Template rendering (allow-listed, mirrored from src/lib/render-template.ts) ──
-
-const ALLOWED_VARIABLES = new Set([
-  "item.title",
-  "item.amount",
-  "item.due_date",
-  "item.id",
-  "account.name",
-  "contact.name",
-  "contact.email",
-  "contact.phone",
-]);
-
-interface TemplateContext {
-  item?: Record<string, unknown>;
-  account?: Record<string, unknown>;
-  contact?: Record<string, unknown>;
-}
-
-function resolve(path: string, ctx: TemplateContext): string | undefined {
-  const [root, key] = path.split(".");
-  const obj = ctx[root as keyof TemplateContext];
-  if (!obj || !(key in obj)) return undefined;
-  const val = obj[key];
-  if (val === null || val === undefined) return "";
-  return String(val);
-}
-
-function renderString(template: string, ctx: TemplateContext, errors: string[]): string {
-  return template.replace(/\{\{(\s*[\w.]+\s*)\}\}/g, (_match, raw: string) => {
-    const variable = raw.trim();
-    if (!ALLOWED_VARIABLES.has(variable)) {
-      errors.push(`Unknown variable: ${variable}`);
-      return `[unknown: ${variable}]`;
-    }
-    const value = resolve(variable, ctx);
-    if (value === undefined) {
-      errors.push(`Variable "${variable}" could not be resolved from context`);
-      return "";
-    }
-    return value;
-  });
-}
-
-// ── Recipient resolution ──
-
-async function resolveRecipient(
-  supabase: ReturnType<typeof createClient>,
-  action: Record<string, unknown>,
-  item: Record<string, unknown>
-): Promise<{
-  contact: { id: string; name: string; email: string; phone: string | null } | null;
-  error?: string;
-}> {
-  const accountId = item.account_id as string;
-
-  // 1. Explicit contact_id on the action
-  if (action.contact_id) {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, email, phone")
-      .eq("id", action.contact_id)
-      .maybeSingle();
-    if (data?.email) return { contact: data };
-  }
-
-  // 2. Account primary_contact_id
-  const { data: account } = await supabase
-    .from("accounts")
-    .select("primary_contact_id")
-    .eq("id", accountId)
-    .maybeSingle();
-
-  if (account?.primary_contact_id) {
-    const { data } = await supabase
-      .from("contacts")
-      .select("id, name, email, phone")
-      .eq("id", account.primary_contact_id)
-      .maybeSingle();
-    if (data?.email) return { contact: data };
-  }
-
-  // 3. Most recent contact for this account
-  const { data: recentContact } = await supabase
-    .from("contacts")
-    .select("id, name, email, phone")
-    .eq("account_id", accountId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (recentContact?.email) return { contact: recentContact };
-
-  return { contact: null, error: "No contact with email found for this account" };
-}
 
 // ── Auth helpers ──
 
@@ -343,320 +245,52 @@ Deno.serve(async (req: Request) => {
       return await handleCreate(supabase, authResult, params);
     }
 
-    // ── Execute mode ──
+    // ── Execute mode (delegates to shared core) ──
     const actionId = body.actionId;
     const manualRetry = body.manualRetry;
     if (!actionId) return jsonError("actionId is required", 400);
 
-    // ── Load action with joins ──
-    const { data: action, error: loadErr } = await supabase
-      .from("actions")
-      .select("*, items(id, title, amount, due_date, account_id, workspace_id, accounts(id, name))")
-      .eq("id", actionId)
-      .maybeSingle();
-
-    if (loadErr || !action) {
-      return jsonError(loadErr?.message || "Action not found", 404);
-    }
-
-    const item = action.items as Record<string, unknown>;
-    const account = (item as any)?.accounts as Record<string, unknown> | undefined;
-
-    // ── Workspace membership check (UI mode only) ──
+    // UI mode: workspace membership check is done inside core after loading action
+    // But we do it here for the UI path to fail fast
     if (authResult.mode === "ui" && userId) {
-      const { data: isMember } = await supabase.rpc("is_workspace_member", {
-        _user_id: userId,
-        _workspace_id: action.workspace_id,
-      });
-      if (!isMember) return jsonError("Not a workspace member", 403);
-    }
-
-    // ── Stuck-running recovery ──
-    if (action.status === "running") {
-      const claimedAt = action.claimed_at ? new Date(action.claimed_at).getTime() : 0;
-      const age = Date.now() - claimedAt;
-
-      if (age > STUCK_THRESHOLD_MS) {
-        const resultJson = action.result_json as Record<string, unknown> | null;
-
-        if (resultJson?.provider_not_configured === true) {
-          await supabase
-            .from("actions")
-            .update({
-              status: "scheduled" as any,
-              claimed_by: null,
-              claimed_at: null,
-            } as any)
-            .eq("id", actionId);
-
-          return jsonOk({ success: true, recovered: true, reset_to: "scheduled" });
-        } else {
-          await supabase
-            .from("actions")
-            .update({
-              status: "failed" as any,
-              result_json: { error: "Execution timeout: stuck in running for >10 minutes" },
-            })
-            .eq("id", actionId);
-
-          return jsonOk({ success: true, recovered: true, failed: true });
-        }
-      }
-
-      return jsonError("Action is currently running", 409);
-    }
-
-    // ── Status guard ──
-    if (TERMINAL_STATUSES.includes(action.status)) {
-      return jsonError(`Action is in terminal status: ${action.status}`, 409);
-    }
-    if (!EXECUTABLE_STATUSES.includes(action.status)) {
-      return jsonError(`Action status "${action.status}" is not executable`, 409);
-    }
-
-    // ── Provider idempotency guard ──
-    const existingResult = action.result_json as Record<string, unknown> | null;
-    if (existingResult?.provider_message_id && manualRetry !== true) {
-      return jsonError("Already sent (provider_message_id exists). Set manualRetry=true to resend.", 409);
-    }
-
-    // ── Save prior status, then atomic claim ──
-    const priorStatus = action.status;
-    const claimerId = userId || null;
-
-    const { data: claimed, error: claimErr } = await supabase
-      .from("actions")
-      .update({
-        status: "running" as any,
-        claimed_by: claimerId,
-        claimed_at: new Date().toISOString(),
-        actor_user_id: userId || null,
-        source,
-      } as any)
-      .eq("id", actionId)
-      .in("status", EXECUTABLE_STATUSES as any)
-      .select("id");
-
-    if (claimErr) {
-      console.error("[execute-action-server] Claim DB error:", JSON.stringify(claimErr));
-      return jsonError(`Claim failed: ${claimErr.message}`, 409);
-    }
-    if (!claimed || claimed.length === 0) {
-      console.error("[execute-action-server] Claim returned 0 rows. actionId:", actionId, "status was:", priorStatus);
-      return jsonError("Action already claimed by another process", 409);
-    }
-
-    // ── Load & render template ──
-    let renderedSubject = "";
-    let renderedBody = `Action executed: ${action.type}`;
-    const renderErrors: string[] = [];
-
-    let contact: { id: string; name: string; email: string; phone: string | null } | null = null;
-
-    if (action.template_id) {
-      const { data: template } = await supabase
-        .from("templates")
-        .select("subject, body")
-        .eq("id", action.template_id)
+      const { data: action } = await supabase
+        .from("actions")
+        .select("workspace_id")
+        .eq("id", actionId)
         .maybeSingle();
 
-      if (template) {
-        if (item?.account_id) {
-          const resolved = await resolveRecipient(supabase, action as any, item);
-          contact = resolved.contact;
-        }
-
-        const ctx: TemplateContext = {
-          item: item
-            ? { id: item.id, title: item.title, amount: item.amount, due_date: item.due_date }
-            : undefined,
-          account: account ? { name: account.name } : undefined,
-          contact: contact
-            ? { name: contact.name, email: contact.email, phone: contact.phone }
-            : undefined,
-        };
-        renderedSubject = renderString(template.subject || "", ctx, renderErrors);
-        renderedBody = renderString(template.body, ctx, renderErrors);
+      if (action) {
+        const { data: isMember } = await supabase.rpc("is_workspace_member", {
+          _user_id: userId,
+          _workspace_id: action.workspace_id,
+        });
+        if (!isMember) return jsonError("Not a workspace member", 403);
       }
     }
 
-    // ── Channel routing ──
-    if (action.channel === "email" && action.type === "send_message") {
-      return await executeEmail(
-        supabase, action, actionId, item, account, contact, priorStatus,
-        renderedSubject, renderedBody, renderErrors
-      );
-    } else {
-      return await executeMock(
-        supabase, action, actionId, item, renderedSubject, renderedBody, renderErrors
-      );
+    const result = await executeActionCore(supabase, actionId, {
+      userId,
+      source,
+      manualRetry,
+    });
+
+    if (result.recovered) {
+      return jsonOk({ success: true, recovered: true, failed: result.failed });
     }
+    if (!result.success) {
+      const status = result.error?.includes("not found") ? 404
+        : result.error?.includes("claimed") ? 409 : 500;
+      return jsonError(result.error || "Execution failed", status);
+    }
+    return jsonOk({
+      success: true,
+      provider_message_id: result.provider_message_id,
+    });
   } catch (err) {
     console.error("[execute-action-server] Unhandled:", err);
     return jsonError(err instanceof Error ? err.message : "Internal error", 500);
   }
 });
-
-// ── Email execution path ──
-
-async function executeEmail(
-  supabase: ReturnType<typeof createClient>,
-  action: any,
-  actionId: string,
-  item: Record<string, unknown>,
-  account: Record<string, unknown> | undefined,
-  existingContact: { id: string; name: string; email: string; phone: string | null } | null,
-  priorStatus: string,
-  renderedSubject: string,
-  renderedBody: string,
-  renderErrors: string[]
-): Promise<Response> {
-  let contact = existingContact;
-  if (!contact) {
-    const resolved = await resolveRecipient(supabase, action, item);
-    contact = resolved.contact;
-    if (!contact) {
-      await failAction(supabase, actionId, resolved.error || "No recipient", renderErrors);
-      return jsonError(resolved.error || "No recipient contact found", 422);
-    }
-  }
-
-  const resendKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendKey) {
-    await supabase
-      .from("actions")
-      .update({
-        status: priorStatus as any,
-        claimed_by: null,
-        claimed_at: null,
-        result_json: {
-          provider_not_configured: true,
-          error: "RESEND_API_KEY not configured",
-          render_errors: renderErrors,
-        },
-      } as any)
-      .eq("id", actionId);
-
-    return jsonError("RESEND_API_KEY is not configured. Add the secret to activate live email.", 503);
-  }
-
-  let fromEmail = "noreply@example.com";
-  let fromName = "Casey";
-  const { data: connector } = await supabase
-    .from("connectors")
-    .select("config")
-    .eq("type", "email" as any)
-    .eq("workspace_id", action.workspace_id as any)
-    .maybeSingle();
-
-  if (connector?.config) {
-    const cfg = connector.config as Record<string, string>;
-    if (cfg.from_email) fromEmail = cfg.from_email;
-    if (cfg.from_name) fromName = cfg.from_name;
-  }
-
-  const resendResponse = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${resendKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: [contact.email],
-      subject: renderedSubject || `Action: ${action.type}`,
-      html: renderedBody,
-    }),
-  });
-
-  const resendResult = await resendResponse.json();
-
-  if (!resendResponse.ok) {
-    const errMsg = resendResult?.message || resendResult?.error || "Resend API error";
-    await failAction(supabase, actionId, errMsg, renderErrors);
-    return jsonError(`Email send failed: ${errMsg}`, 502);
-  }
-
-  const resultJson = {
-    provider: "resend",
-    provider_message_id: resendResult.id,
-    rendered_subject: renderedSubject,
-    render_errors: renderErrors,
-    recipient_email: contact.email,
-    recipient_contact_id: contact.id,
-  };
-
-  await supabase
-    .from("actions")
-    .update({
-      status: "completed" as any,
-      executed_at: new Date().toISOString(),
-      result_json: resultJson,
-    })
-    .eq("id", actionId);
-
-  await writeTimeline(supabase, {
-    accountId: item.account_id as string,
-    itemId: action.item_id,
-    contactId: contact.id,
-    direction: "outbound",
-    channel: "email",
-    summary: `Email sent: ${renderedSubject || action.type}`,
-    body: renderedBody?.substring(0, 500) || null,
-  });
-
-  return jsonOk({ success: true, provider_message_id: resendResult.id });
-}
-
-// ── Mock execution path (non-email) ──
-
-async function executeMock(
-  supabase: ReturnType<typeof createClient>,
-  action: any,
-  actionId: string,
-  item: Record<string, unknown>,
-  renderedSubject: string,
-  renderedBody: string,
-  renderErrors: string[]
-): Promise<Response> {
-  try {
-    await new Promise((r) => setTimeout(r, 500));
-
-    const resultJson = {
-      mock: true,
-      message: "Simulated execution",
-      rendered_subject: renderedSubject,
-      render_errors: renderErrors,
-    };
-
-    await supabase
-      .from("actions")
-      .update({
-        status: "completed" as any,
-        executed_at: new Date().toISOString(),
-        result_json: resultJson,
-      })
-      .eq("id", actionId);
-
-    const accountId = item?.account_id as string;
-    if (accountId) {
-      await writeTimeline(supabase, {
-        accountId,
-        itemId: action.item_id,
-        direction: "outbound",
-        channel: action.channel || "system",
-        summary: `Action executed: ${action.type}`,
-        body: renderedBody ? renderedBody.substring(0, 500) : null,
-      });
-    }
-
-    return jsonOk({ success: true });
-  } catch (err: unknown) {
-    const errorMessage = err instanceof Error ? err.message : "Unknown execution error";
-    await failAction(supabase, actionId, errorMessage, renderErrors);
-    return jsonError(errorMessage, 500);
-  }
-}
 
 // ── Response helpers ──
 
@@ -672,19 +306,4 @@ function jsonError(message: string, status: number) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
-}
-
-async function failAction(
-  supabase: ReturnType<typeof createClient>,
-  actionId: string,
-  error: string,
-  renderErrors: string[]
-) {
-  await supabase
-    .from("actions")
-    .update({
-      status: "failed" as any,
-      result_json: { error, render_errors: renderErrors },
-    })
-    .eq("id", actionId);
 }
