@@ -1,181 +1,102 @@
 
 
-## Fix Scheduler Pipeline: Shared Execution Core (Corrected)
+# Steps B and C: Runtime Verification (Revised)
 
-### Problem
+## Overview
 
-`process-scheduled-actions` calls `execute-action-server` via HTTP with `X-CRON-SECRET`, but `execute-action-server` blocks cron secret for execute mode (line 133). Every scheduled/approved action fails with 403. No automated execution works.
+Verify toggle behavior and approval gating using a dedicated TEST rule and a clean mock execution path. No production rules are mutated.
 
-### Solution
+## Step B: Toggle Behavior
 
-Extract execution logic into a shared library module (`execute-action-core.ts`). `process-scheduled-actions` calls it directly with its service-role client. `execute-action-server` imports it for UI-triggered execution. No new endpoints. Cron-secret block stays.
+### Setup
 
-### Corrections Applied
+Insert a new temporary TEST policy rule into workspace `f3ebf868`:
 
-1. **Stuck-running recovery**: Fixed condition to `claimed_at < now() - 10min` (was backwards). Also handles `claimed_at IS NULL` as stuck.
-
-2. **Provider-missing = terminal failure**: When `RESEND_API_KEY` is missing, the action is marked `failed` with `error_code: "provider_not_configured"` instead of reverting to prior status. This prevents the infinite retry loop.
-
-3. **Scheduler query excludes running**: Only queries `status IN ('scheduled', 'approved')`. Recovery of stuck-running actions happens inside `executeActionCore` when it encounters one, not by selecting running rows as due.
-
-4. **Claim returns the row**: Conditional UPDATE uses `.select("id")` so 0-row return means "already claimed, exit."
-
-### File Changes
-
-#### 1. New: `supabase/functions/_shared/execute-action-core.ts`
-
-Shared library (not an endpoint). Contains all extracted logic:
-
-- **Constants**: TERMINAL_STATUSES, EXECUTABLE_STATUSES, STUCK_THRESHOLD_MS (10min), ALLOWED_VARIABLES, DEFAULT_RATE_LIMIT
-- **Template rendering**: resolve(), renderString() -- identical to current
-- **Recipient resolution**: resolveRecipient() -- identical
-- **failAction()** helper -- sets status=failed, persists error + render_errors to result_json
-- **executeActionCore()** main function:
-
-```typescript
-export interface ExecuteActionCoreResult {
-  success: boolean;
-  error?: string;
-  recovered?: boolean;
-  reset_to?: string;
-  failed?: boolean;
-  skipped?: boolean;
-  provider_message_id?: string;
-}
-
-export async function executeActionCore(
-  supabase: SupabaseClient,
-  actionId: string,
-  opts: {
-    userId?: string | null;
-    source: string;
-    manualRetry?: boolean;
-  }
-): Promise<ExecuteActionCoreResult>
+```text
+workspace_id: f3ebf868-ba4b-48cc-a36c-079452d04c78
+vertical_pack_key: "casey"
+action_type: "log_event"         <-- routes to mock (not email+send_message)
+action_channel: "system"         <-- routes to mock
+enabled: true
+requires_approval: false
+sort_order: 9999                 <-- end of list, no interference
+predicate: {"all":[{"field":"due_date","op":"older_than_minutes","value":1}]}
 ```
 
-Internal flow:
+This rule matches item `65d6` (due Feb 9, ~2+ days overdue). Channel `system` + type `log_event` routes to mock execution in the core. The sort_order 9999 and unique predicate hash guarantee a fresh idempotency key with no collisions.
 
-1. Load action with joins (items, accounts)
-2. **Stuck-running recovery**: if `status === "running"`:
-   - If `claimed_at` is NULL or `claimed_at < Date.now() - 10min` --> stuck
-   - Mark `failed` with error `"Execution timeout"`, return `{ recovered: true, failed: true }`
-   - If not stuck (claimed recently), return `{ success: false, error: "Currently running" }`
-3. **Status guard**: reject terminal or non-executable statuses
-4. **Provider idempotency guard**: reject if `provider_message_id` exists (unless manualRetry)
-5. **Atomic claim**: conditional UPDATE where `status IN ('scheduled', 'approved')`, sets `status='running'`, `claimed_by=userId||null`, `claimed_at=now()`. Uses `.select("id")`. If 0 rows, return immediately with error "already claimed"
-6. **Write execution-start timeline**: `"Action execution started: {type} via {channel}"`
-7. **Load and render template**: resolve recipient, render subject/body. If render throws, catch it, call failAction with render error persisted to result_json, write failure timeline, return error (never crash caller)
-8. **Channel routing**:
-   - email + send_message: check RESEND_API_KEY. If missing, call `failAction()` with `error_code: "provider_not_configured"`, write failure timeline. Return `{ success: false, error: "provider_not_configured" }`. No status revert.
-   - If key present: call Resend API, handle success/failure
-   - else: mock execution (500ms delay)
-9. **On success**: update status=completed, executed_at=now(), result_json with render_errors. Write completion timeline
-10. **On failure**: failAction() persists error + render_errors to result_json. Write failure timeline. Never throws.
+### Sequence
 
-#### 2. Refactor: `supabase/functions/execute-action-server/index.ts`
+1. **Insert TEST rule** (enabled=true, predicate `older_than_minutes: 1`)
+2. **Trigger** `process-policy-rules` via curl
+3. **Verify** a new action appears with idempotency key `policy:{TEST_RULE_ID}:65d6...:*:*`
+4. **Update TEST rule**: set `enabled=false`, change predicate to `older_than_minutes: 2` (new hash = no idempotency collision)
+5. **Trigger** sweep again
+6. **Verify** zero new actions created (disabled rule is filtered by `.eq("enabled", true)`)
+7. **Update TEST rule**: set `enabled=true`, change predicate to `older_than_minutes: 3` (another new hash)
+8. **Trigger** sweep again
+9. **Verify** a new action appears
+10. **Cleanup**: delete the TEST rule and its test actions
 
-**Remove** (lines 18-60): template rendering functions (resolve, renderString, ALLOWED_VARIABLES, TemplateContext) -- moved to core
-**Remove** (lines 62-112): resolveRecipient -- moved to core
-**Remove** (lines 500-659): executeEmail, executeMock -- logic moved to core
-**Remove** (lines 677-690): failAction -- moved to core
-**Remove** (lines 10-16): constants (TERMINAL_STATUSES, etc.) -- moved to core
+### Pass Criteria
 
-**Keep**:
-- CORS headers (lines 4-8)
-- authenticate() (lines 114-156) with cron-secret block intact
-- getRateLimit() (lines 158-188)
-- handleCreate() (lines 190-315)
-- Main handler routing (lines 318-345)
-- jsonOk() / jsonError() (lines 663-675)
+- Enabled: action created
+- Disabled: nothing created
+- Re-enabled: action created again
 
-**Change execute mode** (lines 346-497): replace entire block with:
+## Step C: Approval Gating
 
-```typescript
-import { executeActionCore } from "../_shared/execute-action-core.ts";
+### Setup
 
-// In execute mode:
-const actionId = body.actionId;
-const manualRetry = body.manualRetry;
-if (!actionId) return jsonError("actionId is required", 400);
+Update action `122247a2` to use mock execution path before approving:
 
-const result = await executeActionCore(supabase, actionId, {
-  userId,
-  source,
-  manualRetry,
-});
-
-if (result.recovered) {
-  return jsonOk({ success: true, recovered: true, failed: result.failed });
-}
-if (!result.success) {
-  const status = result.error?.includes("not found") ? 404
-    : result.error?.includes("claimed") ? 409 : 500;
-  return jsonError(result.error || "Execution failed", status);
-}
-return jsonOk({
-  success: true,
-  provider_message_id: result.provider_message_id,
-});
+```sql
+UPDATE actions
+SET channel = 'system', type = 'log_event'
+WHERE id = '122247a2-9674-48d4-b674-1657314ea3a2';
 ```
 
-#### 3. Refactor: `supabase/functions/process-scheduled-actions/index.ts`
+This ensures the action routes to mock (500ms delay, always completes) instead of failing with `provider_not_configured`.
 
-**Remove**: the HTTP fetch loop (lines 62-91)
+### Sequence
 
-**Change**:
-- Import `executeActionCore` from shared module
-- Raise query limit from 10 to 50
-- Call core directly for each due action:
+1. **Trigger** `process-scheduled-actions` -- confirm action `122247a2` stays `pending_approval` (scheduler queries `status IN ('scheduled','approved')` only)
+2. **Update** action channel/type to system/log_event (service role)
+3. **Approve** via Actions Queue UI (click check button, status becomes `approved`)
+4. **Wait** 1-2 scheduler ticks or trigger manually
+5. **Verify** action transitions: `approved` -> `running` -> `completed`
+6. **Verify** timeline events: execution-start + completion for account `1b095ade`
 
-```typescript
-import { executeActionCore } from "../_shared/execute-action-core.ts";
+### Pass Criteria
 
-// After querying due actions:
-for (const action of dueActions) {
-  try {
-    const result = await executeActionCore(supabase, action.id, {
-      userId: null,
-      source: "scheduler",
-    });
-    if (result.recovered) { skipped++; }
-    else if (result.success) { succeeded++; }
-    else { failed++; }
-    details.push({ actionId: action.id, result: result.success ? "succeeded" : "failed", error: result.error });
-  } catch (err) {
-    failed++;
-    details.push({ actionId: action.id, result: "failed", error: err?.message });
-  }
-}
-```
+- `pending_approval` stays idle through scheduler tick
+- After approval: clean `completed` status
+- Timeline shows start and completion events
 
-### No Changes To
+## Technical Notes
 
-- `supabase/config.toml` -- no new functions
-- `supabase/functions/_shared/write-timeline.ts` -- reused as-is
-- `supabase/functions/process-policy-rules/index.ts` -- only creates actions (create mode works fine)
-- `src/lib/execute-action.ts` -- client wrapper unchanged
+- The TEST rule uses `action_type: "log_event"` and `action_channel: "system"` which the execution core routes to mock (any combo other than `email` + `send_message`)
+- Each predicate change (1, 2, 3 minutes) produces a different SHA-256 hash, giving unique idempotency keys without needing to delete rows
+- The `process-policy-rules` function filters with `.eq("enabled", true)` on line 172, so disabled rules are never evaluated
+- The `process-scheduled-actions` function filters with `.in("status", ["scheduled", "approved"])` on line 35, so `pending_approval` is excluded by construction
+- All DB mutations use service-role client (direct SQL or edge function calls with CRON_SECRET for create mode)
 
-### Security Properties
+## Implementation Steps
 
-- X-CRON-SECRET still blocked from execute-action-server execute mode
-- process-scheduled-actions uses service-role client directly (no HTTP delegation)
-- Atomic claim prevents double-execution
-- UI path still requires JWT + workspace membership
-- Provider-missing is terminal (no infinite retry loop)
-
-### Verification After Deploy
-
-1. Confirm 403 errors stop in logs
-2. Confirm scheduled/approved actions transition to completed/failed within 1-2 cron ticks
-3. **Step B (Toggle)**: disable rule, trigger sweep, confirm no new actions; re-enable, confirm resume
-4. **Step C (Approval)**: pending_approval ignored by scheduler; approve via UI; confirm execution on next tick; verify timeline events
-
-### File Summary
-
-| File | Action |
-|------|--------|
-| `supabase/functions/_shared/execute-action-core.ts` | New shared library (~250 lines extracted + corrected) |
-| `supabase/functions/execute-action-server/index.ts` | Refactor: import core, remove ~400 lines of duplicated logic |
-| `supabase/functions/process-scheduled-actions/index.ts` | Refactor: call core directly, raise limit to 50 |
-
+| Step | Action | Tool |
+|------|--------|------|
+| 1 | Insert TEST rule | DB insert (service role) |
+| 2 | Trigger policy sweep | Curl `process-policy-rules` with CRON_SECRET |
+| 3 | Query new actions | DB read |
+| 4 | Disable TEST rule + change predicate | DB update |
+| 5 | Trigger sweep | Curl |
+| 6 | Verify no new actions | DB read |
+| 7 | Re-enable TEST rule + change predicate | DB update |
+| 8 | Trigger sweep | Curl |
+| 9 | Verify new action | DB read |
+| 10 | Trigger scheduler, confirm pending_approval stays | Curl `process-scheduled-actions` |
+| 11 | Update action 122247a2 channel/type | DB update |
+| 12 | Approve in UI | User clicks approve button |
+| 13 | Trigger scheduler or wait | Curl or wait |
+| 14 | Verify completed + timeline | DB read |
+| 15 | Cleanup: delete TEST rule + test actions | DB delete |
