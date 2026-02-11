@@ -1,128 +1,153 @@
 
 
-# Suppression-Admin: Non-Silent Delete, Audit Logging, and JSON Hardening
+# Resend Webhook Normalization
 
 ## Overview
 
-Three targeted patches to the existing hardened `suppression-admin` edge function. No new tables. Audit is via **structured console logs + response payload** (not `timeline_events`, which requires a non-nullable `account_id` that suppressions don't have).
+Harden the existing `resend-webhook` edge function with DB-level idempotency, queryable recipient tracking, orphan-safe handling, and structured audit logging. One migration + one function patch.
 
-## Why Not timeline_events
+## Migration
 
-The `timeline_events` table has `account_id uuid NOT NULL`. Suppressions are workspace-scoped and may not relate to any specific account. Inserting with a null `account_id` would violate the constraint. Therefore, audit is handled through structured `console.log` (queryable in edge function logs) and the response payload returning proof of what was deleted.
+A single SQL migration with two changes:
 
-## Patch 1: Non-Silent Delete with Deleted Record Details
+```sql
+-- 1. Idempotency: one row per (provider, message, event_type)
+-- provider_message_id is already NOT NULL, so no partial index needed
+CREATE UNIQUE INDEX IF NOT EXISTS idx_message_events_idempotent
+  ON public.message_events (provider, provider_message_id, event_type);
 
-**File: `supabase/functions/suppression-admin/index.ts`**
+-- 2. Queryable recipient email column
+ALTER TABLE public.message_events
+  ADD COLUMN IF NOT EXISTS recipient_email text;
+```
 
-Replace the current delete logic (lines 83-97) with:
+No partial index needed because `provider_message_id` is enforced `NOT NULL` at the column level. The unique index is clean and deterministic.
+
+## Edge Function Changes (`supabase/functions/resend-webhook/index.ts`)
+
+### Change 1: Extract recipient email early (robust)
+
+Right after parsing `providerMessageId`, extract recipient with defensive type handling:
 
 ```typescript
-const { data: deleted, error: delErr } = await deleteQuery.select("id,email,reason,source");
+const toField = data.to;
+const recipientEmail = (
+  Array.isArray(toField) ? toField[0] :
+  typeof toField === "string" ? toField :
+  null
+)?.toLowerCase() || null;
+```
 
-if (delErr) {
-  return new Response(JSON.stringify({ error: delErr.message }), {
-    status: 500,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
+This handles Resend sending `to` as either an array or a string.
 
-if (!deleted || deleted.length === 0) {
-  return new Response(JSON.stringify({ error: "Not found" }), {
-    status: 404,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+### Change 2: Orphan handling (skip insert, no suppression)
+
+Replace the current unconditional insert block. If no matching action is found:
+- Do NOT insert into `message_events` (avoids fake workspace_id rows)
+- Do NOT run suppression logic (wrong workspace risk)
+- Log a structured orphan warning with full reconciliation fields
+- Return 200 (so Resend doesn't retry)
+
+```typescript
+if (!action) {
+  console.log(JSON.stringify({
+    event: "webhook_orphan",
+    reason: "action_not_found",
+    provider: "resend",
+    provider_message_id: providerMessageId,
+    event_type: shortEvent,
+    recipient_email: recipientEmail,
+    occurred_at: data.created_at || new Date().toISOString(),
+    timestamp: new Date().toISOString(),
+  }));
+  return new Response(
+    JSON.stringify({ ok: true, skipped: true, reason: "action_not_found" }),
+    { status: 200, headers: { "Content-Type": "application/json" } }
+  );
 }
 ```
 
-Success response becomes:
+### Change 3: Idempotent upsert (replaces `.insert()`)
+
+Switch to `.upsert()` with conflict target matching the new unique index:
+
 ```typescript
-return new Response(JSON.stringify({
-  ok: true,
-  deleted_count: deleted.length,
-  deleted: deleted.map(r => ({ id: r.id, email: r.email, reason: r.reason, source: r.source })),
-}), {
-  headers: { ...corsHeaders, "Content-Type": "application/json" },
+const { error: upsertErr } = await supabase.from("message_events").upsert({
+  workspace_id: action.workspace_id,
+  action_id: action.id,
+  provider: "resend",
+  provider_message_id: providerMessageId,
+  event_type: shortEvent,
+  recipient_email: recipientEmail,
+  payload,
+  occurred_at: data.created_at || new Date().toISOString(),
+}, {
+  onConflict: "provider,provider_message_id,event_type",
+  ignoreDuplicates: true,
 });
 ```
 
-This returns only `id`, `email`, `reason`, `source` -- no `contact_id`, no `workspace_id` in the payload.
+`ignoreDuplicates: true` means retries silently no-op (no update, no error).
 
-## Patch 2: Structured Audit Log
-
-**File: `supabase/functions/suppression-admin/index.ts`**
-
-Immediately before the success response, emit a structured log:
+### Change 4: Structured audit log after successful upsert
 
 ```typescript
 console.log(JSON.stringify({
-  event: "suppression_removed",
-  actor: user.id,
-  workspace_id,
-  target: suppression_id || email,
-  deleted_count: deleted.length,
+  event: "webhook_processed",
+  provider: "resend",
+  event_type: shortEvent,
+  provider_message_id: providerMessageId,
+  action_id: action.id,
+  workspace_id: action.workspace_id,
+  recipient_email: recipientEmail,
   timestamp: new Date().toISOString(),
 }));
 ```
 
-This is queryable via the edge function logs dashboard.
+### Change 5: Reuse `recipientEmail` in suppression block
 
-## Patch 3: JSON Parsing Hardening
-
-**File: `supabase/functions/suppression-admin/index.ts`**
-
-Wrap the `req.json()` call in a try/catch. Gate order remains: Bearer check, then getUser gate, then JSON parse. This avoids giving hints to unauthenticated callers about body format.
+Replace `(data.to?.[0] || "").toLowerCase()` on the existing line 148 with the already-extracted `recipientEmail` variable. Add structured log after suppression upsert:
 
 ```typescript
-let body: any;
-try {
-  body = await req.json();
-} catch {
-  return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
-    status: 400,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-const { action, suppression_id, email, workspace_id } = body;
+console.log(JSON.stringify({
+  event: "suppression_added",
+  provider: "resend",
+  reason,
+  email: recipientEmail,
+  workspace_id: action.workspace_id,
+  source: "webhook",
+  timestamp: new Date().toISOString(),
+}));
 ```
 
-## No UI Changes Needed
+### Change 6: Guard suppression behind action existence
 
-The existing `handleRemove` in `SuppressionList.tsx` throws on `!res.ok`, so 404 surfaces as "Not found" in the error toast automatically.
+The suppression block already only fires when `workspaceId` is truthy. Since we now return early when no action is found, `workspaceId` is always valid in the suppression path. No code change needed -- the early return handles it.
 
-## Verification
+## What Does NOT Change
 
-**Test A -- No token -> 401:**
-Raw curl (no Authorization header). Note: Lovable tooling auto-injects tokens, so this test is verified by code inspection. For live confirmation, run manually:
-```
-curl -X POST https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/suppression-admin \
-  -H "Content-Type: application/json" \
-  -d '{"action":"remove","workspace_id":"00000000-0000-0000-0000-000000000000","suppression_id":"00000000-0000-0000-0000-000000000001"}'
-```
-Expected: 401
-
-**Test B -- Member token -> 403:**
-Requires a real member-role user session token. Cannot be executed without one.
-
-**Test C -- Admin + wrong workspace -> 403:**
-Already verified.
-
-**Test D -- Admin + non-existent suppression_id -> 404:**
-POST with valid admin token, valid workspace_id, random UUID for suppression_id.
-Expected: `404 { error: "Not found" }`
+- Svix signature verification (lines 1-62, untouched)
+- Secret configuration (RESEND_WEBHOOK_SECRET already set)
+- `supabase/config.toml` (already has `verify_jwt = false`)
+- Soft bounce filtering logic
+- Suppression upsert conflict handling (`onConflict: "workspace_id,email"`)
+- No UI changes needed
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `supabase/functions/suppression-admin/index.ts` | Non-silent delete with `.select("id,email,reason,source")`, 404 on zero rows, structured audit log, JSON parse hardening |
+| New migration | Unique index on `(provider, provider_message_id, event_type)` + `recipient_email` column |
+| `supabase/functions/resend-webhook/index.ts` | Defensive recipient extraction, orphan skip with structured log, idempotent upsert, audit logging, DRY recipient variable |
 
-## Acceptance Criteria
+## Verification Checklist
 
-1. Delete of non-existent suppression returns `404 { error: "Not found" }`
-2. Successful delete returns `{ ok: true, deleted_count: N, deleted: [{ id, email, reason, source }] }`
-3. Structured audit log emitted on every successful delete (actor, target, workspace_id, timestamp) -- queryable in edge function logs
-4. Invalid JSON body returns 400 before any DB work
-5. Test D passes (admin + non-existent ID returns 404)
-6. Tests A/C still pass (no regression)
-7. `contact_id` and `workspace_id` are NOT included in the deleted record response payload
+| # | Test | Method | Expected |
+|---|------|--------|----------|
+| 1 | Idempotency | Replay same webhook twice via Resend retry or manual curl | Exactly 1 row per `(provider_message_id, event_type)` in `message_events` |
+| 2 | Recipient stored | Query `SELECT recipient_email FROM message_events` | Lowercase email present |
+| 3 | Orphan webhook | Send webhook with unknown `email_id` | 200 returned, no `message_events` row, no suppression row, structured orphan log emitted |
+| 4 | Hard bounce suppression | Trigger bounce webhook for known action | `suppression_list` row with `reason=bounce`, `source=webhook` |
+| 5 | Orphan does NOT suppress | Bounce webhook with no matching action | No suppression row created |
+| 6 | Structured logs | Check edge function logs after any webhook | JSON entries with `event`, `provider_message_id`, `action_id` |
 
