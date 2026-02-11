@@ -422,6 +422,7 @@ export type Database = {
           payload: Json | null
           provider: string
           provider_message_id: string
+          recipient_email: string | null
           workspace_id: string
         }
         Insert: {
@@ -433,6 +434,7 @@ export type Database = {
           payload?: Json | null
           provider?: string
           provider_message_id: string
+          recipient_email?: string | null
           workspace_id: string
         }
         Update: {
@@ -444,6 +446,7 @@ export type Database = {
           payload?: Json | null
           provider?: string
           provider_message_id?: string
+          recipient_email?: string | null
           workspace_id?: string
         }
         Relationships: []
