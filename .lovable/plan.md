@@ -1,99 +1,78 @@
 
 
-# Store RESEND_API_KEY, Fail-Fast From Address, and End-to-End Email Test
+# Phase 0: E2E Email Proof -- Test Data Seed
 
-## Step 1 — Store RESEND_API_KEY as a backend secret
+## Changes applied from your review
 
-Use the secure secrets tool to prompt for the key. It gets stored as an edge function environment variable — never in code, DB, or frontend.
+| # | Your change | Resolution |
+|---|-------------|------------|
+| 1 | Status = `approved`, not `scheduled` | Applied. Manual test action will be `approved` with `scheduled_for = null`. |
+| 2 | Explicit connector linkage | No `connector_account_id` or similar column exists on `actions`. The executor resolves the connector via implicit `workspace_id` lookup (line 362-365 of `execute-action-core.ts`). This is the only path -- no field to force. Confirmed safe. |
+| 3 | Template fields must match renderer | Renderer loads `subject` and `body` (line 248). Templates table has exactly `subject` and `body`. Match confirmed. |
+| 4 | Drop `item.amount` from body | Applied. Body simplified to use only guaranteed fields. (Note: `amount = 1000.00` on this item, so it would work, but removing per minimum-risk principle.) |
+| 5 | Extra acceptance signals | Applied. Will verify `executed_at` is populated (this is the completion timestamp) and `result_json` contains no `error_code`. |
 
-Then redeploy all three edge functions: `execute-action-server`, `process-scheduled-actions`, `process-policy-rules`.
+## What will be inserted (2 rows)
 
-## Step 2 — Replace fallback with fail-fast
+### Row 1: Test template
 
-In `supabase/functions/_shared/execute-action-core.ts` (lines 359-373), remove the generic fallback and instead fail the action if the workspace has no email connector configured.
-
-```text
-Before (lines 360-373):
-  let fromEmail = "noreply@example.com";
-  let fromName = "Casey";
-  const { data: connector } = await supabase
-    .from("connectors")
-    .select("config")
-    .eq("type", "email")
-    .eq("workspace_id", action.workspace_id)
-    .maybeSingle();
-  if (connector?.config) {
-    const cfg = connector.config as Record<string, string>;
-    if (cfg.from_email) fromEmail = cfg.from_email;
-    if (cfg.from_name) fromName = cfg.from_name;
-  }
-
-After:
-  const { data: connector } = await supabase
-    .from("connectors")
-    .select("config")
-    .eq("type", "email")
-    .eq("workspace_id", action.workspace_id)
-    .maybeSingle();
-
-  const cfg = connector?.config as Record<string, string> | undefined;
-  const fromEmail = cfg?.from_email;
-  const fromName = cfg?.from_name;
-
-  if (!fromEmail || !fromName) {
-    const errMsg = "from_address_not_configured: set from_email and from_name in the email connector config";
-    await failAction(supabase, actionId, errMsg, renderErrors, {
-      error_code: "from_address_not_configured",
-    });
-    if (accountId) {
-      await writeTimeline(supabase, {
-        accountId,
-        itemId: action.item_id,
-        direction: "system",
-        channel: "system",
-        summary: `Action failed: email connector missing from_email/from_name (${action.type})`,
-      });
-    }
-    return { success: false, error: "from_address_not_configured" };
-  }
+```sql
+INSERT INTO templates (workspace_id, template_type, channel, tone, subject, body)
+VALUES (
+  'f3ebf868-ba4b-48cc-a36c-079452d04c78',
+  'e2e_test',
+  'email',
+  'professional',
+  'E2E Test: {{account.name}} - {{item.title}}',
+  'Hello {{contact.name}}, this is an end-to-end delivery test from Raddo Engine. Item: {{item.title}}.'
+)
+RETURNING id;
 ```
 
-This keeps the engine workspace-neutral. Each workspace must configure its own email connector with `from_email` and `from_name`. No environment-specific branding baked in.
+### Row 2: Manual-execute action (status = approved)
 
-## Step 3 — Update your workspace email connector
+```sql
+INSERT INTO actions (item_id, type, channel, status, contact_id, template_id, source, scheduled_for)
+VALUES (
+  '65d6cc88-f665-428c-a929-6ef87f005274',
+  'send_message',
+  'email',
+  'approved',
+  '57be3fd2-e5c1-4154-afd5-d8648a802651',
+  '<template_id from row 1>',
+  'system',
+  NULL
+);
+```
 
-The existing connector `095900b6` currently has `from_email: "aa@aa.com"` and `from_name: "TEST Connector A"`. Update it to:
+`workspace_id` is auto-set by the `set_action_workspace_id` trigger from `item.workspace_id`.
 
-- `from_email`: `system@mail.raddo.ai`
-- `from_name`: `Raddo Engine`
+## After insert: Manual execute via UI
 
-This is a DB update on the `connectors` table config column.
+Navigate to Actions Queue, find the action, click Play.
 
-## Step 4 — End-to-end test via UI
+## Acceptance criteria (Step 1)
 
-1. Create a test template with subject `Test: {{account.name}}` and body `Hello {{contact.name}}, this is a test from Raddo Engine.`
-2. Create a test action: channel=`email`, type=`send_message`, status=`scheduled`, pointing at an existing item/account/contact with a real email address, template_id set to the test template
-3. Execute via the Actions Queue UI (click the execute button)
-4. Verify:
-   - Action status = `completed`
-   - `result_json.provider` = `"resend"`
-   - `result_json.provider_message_id` exists
-   - Timeline event with direction=`outbound`, channel=`email`
-   - Email received in inbox
+- `status` = `completed`
+- `executed_at` is populated (not null)
+- `result_json.provider` = `"resend"`
+- `result_json.provider_message_id` present
+- `result_json.recipient_email` = `jacobdburkett@gmail.com`
+- `result_json.render_errors` = `[]`
+- No `error_code` in `result_json`
+- Timeline: execution-start event (system) + outbound email event
+- Email arrives at `jacobdburkett@gmail.com`
 
-## Step 5 — Scheduler test
+## Step 2: Scheduler test (after Step 1 passes)
 
-1. Create another test action with `scheduled_for` set 1 minute ahead, status=`scheduled`
-2. Wait for scheduler tick (or trigger manually)
-3. Confirm it transitions `scheduled` -> `running` -> `completed` automatically
+Insert a second action identical to Row 2 but with:
 
-## Summary of changes
+- `status`: `scheduled`
+- `scheduled_for`: `now() + interval '3 minutes'`
 
-| What | Where | Type |
-|------|-------|------|
-| RESEND_API_KEY | Backend secrets | Secret |
-| Fail-fast from address | `_shared/execute-action-core.ts` lines 359-373 | Code change (1 file) |
-| Connector config update | `connectors` table, row `095900b6` | DB update |
-| Redeploy | 3 edge functions | Deploy |
-| No schema/migration changes needed | | |
+Acceptance: scheduler claims it, transitions to `completed`, `executed_at` populated, email arrives.
+
+## No code changes required
+
+All code is deployed. This is purely 2 DB inserts + UI verification.
 
