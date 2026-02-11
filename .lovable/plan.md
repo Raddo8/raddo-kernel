@@ -1,88 +1,128 @@
 
 
-# Harden suppression-admin Edge Function + UI Auth Guard
+# Suppression-Admin: Non-Silent Delete, Audit Logging, and JSON Hardening
 
 ## Overview
 
-Apply three security controls to the `suppression-admin` edge function and one UI fix, then run three verification tests. The function uses `verify_jwt = false` (consistent with all other project functions) but enforces a strict security boundary in code.
+Three targeted patches to the existing hardened `suppression-admin` edge function. No new tables. Audit is via **structured console logs + response payload** (not `timeline_events`, which requires a non-nullable `account_id` that suppressions don't have).
 
-## Changes
+## Why Not timeline_events
 
-### 1. Edge Function: `supabase/functions/suppression-admin/index.ts`
+The `timeline_events` table has `account_id uuid NOT NULL`. Suppressions are workspace-scoped and may not relate to any specific account. Inserting with a null `account_id` would violate the constraint. Therefore, audit is handled through structured `console.log` (queryable in edge function logs) and the response payload returning proof of what was deleted.
 
-**Control 1 -- Strict Bearer token format (replace lines 15-21):**
-- Header must start with `"Bearer "` and token must be 20+ characters
-- Reject with 401 otherwise
+## Patch 1: Non-Silent Delete with Deleted Record Details
 
-**Control 2 -- Hard user-resolution gate (lines 30-36, already present but now stated as the explicit security boundary):**
-- `supabase.auth.getUser()` must resolve a valid user
-- If `userErr` or `!user`: return 401 immediately
-- No membership query, no service-role client creation, no deletes happen past this point unless user resolves
+**File: `supabase/functions/suppression-admin/index.ts`**
 
-**Control 3 -- UUID validation (add after line 38, before membership query):**
-- Validate `workspace_id` matches UUID regex
-- Validate `suppression_id` matches UUID regex when provided
-- Reject with 400 if invalid
+Replace the current delete logic (lines 83-97) with:
 
-**Execution order is strictly gated:**
+```typescript
+const { data: deleted, error: delErr } = await deleteQuery.select("id,email,reason,source");
 
-```text
-Bearer format check (401)
-  |
-  v
-auth.getUser() must resolve (401)
-  |
-  v
-Parse + validate inputs (400)
-  |
-  v
-Membership role check (403)
-  |
-  v
-Service-role client + delete (only here)
+if (delErr) {
+  return new Response(JSON.stringify({ error: delErr.message }), {
+    status: 500,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+if (!deleted || deleted.length === 0) {
+  return new Response(JSON.stringify({ error: "Not found" }), {
+    status: 404,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
 ```
 
-No step executes unless the previous one passes.
-
-### 2. UI Auth Guard: `src/pages/SuppressionList.tsx`
-
-In `handleRemove` (line 127), after getting session:
-- If `!session?.access_token`, show toast "Not authenticated" and return early
-- Prevents sending `Bearer undefined` to the endpoint
-
-### 3. Config: `supabase/config.toml`
-
-Add entry (consistent with project convention):
-```
-[functions.suppression-admin]
-verify_jwt = false
+Success response becomes:
+```typescript
+return new Response(JSON.stringify({
+  ok: true,
+  deleted_count: deleted.length,
+  deleted: deleted.map(r => ({ id: r.id, email: r.email, reason: r.reason, source: r.source })),
+}), {
+  headers: { ...corsHeaders, "Content-Type": "application/json" },
+});
 ```
 
-### 4. Deploy + Run Three Security Tests
+This returns only `id`, `email`, `reason`, `source` -- no `contact_id`, no `workspace_id` in the payload.
+
+## Patch 2: Structured Audit Log
+
+**File: `supabase/functions/suppression-admin/index.ts`**
+
+Immediately before the success response, emit a structured log:
+
+```typescript
+console.log(JSON.stringify({
+  event: "suppression_removed",
+  actor: user.id,
+  workspace_id,
+  target: suppression_id || email,
+  deleted_count: deleted.length,
+  timestamp: new Date().toISOString(),
+}));
+```
+
+This is queryable via the edge function logs dashboard.
+
+## Patch 3: JSON Parsing Hardening
+
+**File: `supabase/functions/suppression-admin/index.ts`**
+
+Wrap the `req.json()` call in a try/catch. Gate order remains: Bearer check, then getUser gate, then JSON parse. This avoids giving hints to unauthenticated callers about body format.
+
+```typescript
+let body: any;
+try {
+  body = await req.json();
+} catch {
+  return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+    status: 400,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+const { action, suppression_id, email, workspace_id } = body;
+```
+
+## No UI Changes Needed
+
+The existing `handleRemove` in `SuppressionList.tsx` throws on `!res.ok`, so 404 surfaces as "Not found" in the error toast automatically.
+
+## Verification
 
 **Test A -- No token -> 401:**
-POST to `/suppression-admin` with no Authorization header.
+Raw curl (no Authorization header). Note: Lovable tooling auto-injects tokens, so this test is verified by code inspection. For live confirmation, run manually:
+```
+curl -X POST https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/suppression-admin \
+  -H "Content-Type: application/json" \
+  -d '{"action":"remove","workspace_id":"00000000-0000-0000-0000-000000000000","suppression_id":"00000000-0000-0000-0000-000000000001"}'
+```
+Expected: 401
 
 **Test B -- Member token -> 403:**
-POST with a valid user token for a non-admin member.
+Requires a real member-role user session token. Cannot be executed without one.
 
 **Test C -- Admin + wrong workspace -> 403:**
-POST with a valid admin token but a `workspace_id` the admin does not belong to.
+Already verified.
+
+**Test D -- Admin + non-existent suppression_id -> 404:**
+POST with valid admin token, valid workspace_id, random UUID for suppression_id.
+Expected: `404 { error: "Not found" }`
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `supabase/functions/suppression-admin/index.ts` | Strict Bearer check, UUID validation, unchanged user gate |
-| `src/pages/SuppressionList.tsx` | Early return if no access_token |
+| `supabase/functions/suppression-admin/index.ts` | Non-silent delete with `.select("id,email,reason,source")`, 404 on zero rows, structured audit log, JSON parse hardening |
 
 ## Acceptance Criteria
 
-1. 401 on missing or malformed Bearer token (code-enforced)
-2. 401 if `auth.getUser()` fails to resolve -- no downstream operations execute
-3. 400 on non-UUID `workspace_id` or `suppression_id`
-4. 403 on non-admin user
-5. 403 on admin with non-member `workspace_id`
-6. UI shows "Not authenticated" toast if session is missing
-7. Tests A, B, C all pass
+1. Delete of non-existent suppression returns `404 { error: "Not found" }`
+2. Successful delete returns `{ ok: true, deleted_count: N, deleted: [{ id, email, reason, source }] }`
+3. Structured audit log emitted on every successful delete (actor, target, workspace_id, timestamp) -- queryable in edge function logs
+4. Invalid JSON body returns 400 before any DB work
+5. Test D passes (admin + non-existent ID returns 404)
+6. Tests A/C still pass (no regression)
+7. `contact_id` and `workspace_id` are NOT included in the deleted record response payload
 
