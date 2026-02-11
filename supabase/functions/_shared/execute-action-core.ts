@@ -456,7 +456,7 @@ async function executeEmail(
     recipient_contact_id: contact.id,
   };
 
-  await supabase
+  const { data: updated, error: updateErr } = await supabase
     .from("actions")
     .update({
       status: "completed" as any,
@@ -465,8 +465,49 @@ async function executeEmail(
       provider: "resend",
       provider_message_id: resendResult.id,
     } as any)
-    .eq("id", actionId);
+    .eq("id", actionId)
+    .select("id, status, provider, provider_message_id")
+    .single();
 
+  if (updateErr) {
+    console.error("[executeEmail] Success update failed:", JSON.stringify(updateErr));
+  }
+
+  // Verify provider columns actually persisted
+  if (updated && (!updated.provider || !updated.provider_message_id)) {
+    console.error("[executeEmail] Provider fields missing after update. Attempting fallback.", {
+      actionId, provider_message_id: resendResult.id,
+    });
+
+    const { error: fallbackErr } = await supabase
+      .from("actions")
+      .update({
+        provider: "resend",
+        provider_message_id: resendResult.id,
+      } as any)
+      .eq("id", actionId);
+
+    if (fallbackErr) {
+      console.error("[executeEmail] Fallback also failed:", JSON.stringify(fallbackErr));
+
+      // Write persistence warning into result_json + timeline
+      await supabase.from("actions").update({
+        result_json: { ...resultJson, persistence_warning: "provider_columns_failed" },
+      } as any).eq("id", actionId);
+
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId,
+          itemId: action.item_id,
+          direction: "system",
+          channel: "email",
+          summary: `Warning: email sent but provider columns failed to persist (${action.type})`,
+        });
+      }
+    }
+  }
+
+  // Timeline: email sent
   await writeTimeline(supabase, {
     accountId,
     itemId: action.item_id,
