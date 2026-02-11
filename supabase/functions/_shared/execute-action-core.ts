@@ -385,6 +385,34 @@ async function executeEmail(
     return { success: false, error: "from_address_not_configured" };
   }
 
+  // ── Suppression check ──
+  const { data: suppressed } = await supabase
+    .from("suppression_list")
+    .select("id, reason")
+    .eq("workspace_id", action.workspace_id)
+    .eq("email", contact.email.toLowerCase())
+    .maybeSingle();
+
+  if (suppressed) {
+    const errMsg = `Recipient suppressed (${suppressed.reason})`;
+    await failAction(supabase, actionId, errMsg, renderErrors, {
+      error_code: "suppressed_recipient",
+      suppression_reason: suppressed.reason,
+    });
+
+    if (accountId) {
+      await writeTimeline(supabase, {
+        accountId,
+        itemId: action.item_id,
+        direction: "system",
+        channel: "email",
+        summary: `Action failed: recipient suppressed – ${suppressed.reason} (${action.type})`,
+      });
+    }
+
+    return { success: false, error: errMsg };
+  }
+
   const resendResponse = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -434,7 +462,9 @@ async function executeEmail(
       status: "completed" as any,
       executed_at: new Date().toISOString(),
       result_json: resultJson,
-    })
+      provider: "resend",
+      provider_message_id: resendResult.id,
+    } as any)
     .eq("id", actionId);
 
   await writeTimeline(supabase, {
