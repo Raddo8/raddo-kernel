@@ -412,6 +412,42 @@ export type Database = {
           },
         ]
       }
+      message_events: {
+        Row: {
+          action_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json | null
+          provider: string
+          provider_message_id: string
+          workspace_id: string
+        }
+        Insert: {
+          action_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          occurred_at: string
+          payload?: Json | null
+          provider?: string
+          provider_message_id: string
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json | null
+          provider?: string
+          provider_message_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       playbook_steps: {
         Row: {
           action_type: string
