@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { executeActionCore } from "../_shared/execute-action-core.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +35,7 @@ Deno.serve(async (req: Request) => {
       .in("status", ["scheduled", "approved"])
       .lte("scheduled_for", new Date().toISOString())
       .order("scheduled_for", { ascending: true })
-      .limit(10);
+      .limit(50);
 
     if (queryErr) {
       console.error("[process-scheduled-actions] Query error:", queryErr.message);
@@ -51,8 +52,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ── Delegate each action to execute-action-server ──
-    const executeUrl = `${supabaseUrl}/functions/v1/execute-action-server`;
+    // ── Execute each action directly via shared core ──
     let succeeded = 0;
     let failed = 0;
     let skipped = 0;
@@ -60,28 +60,20 @@ Deno.serve(async (req: Request) => {
 
     for (const action of dueActions) {
       try {
-        const resp = await fetch(executeUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-CRON-SECRET": cronSecret,
-          },
-          body: JSON.stringify({ actionId: action.id }),
+        const result = await executeActionCore(supabase, action.id, {
+          userId: null,
+          source: "scheduler",
         });
 
-        const body = await resp.json();
-
-        if (resp.ok && body.success) {
-          if (body.recovered) {
-            skipped++;
-            details.push({ actionId: action.id, result: "recovered", error: body.reset_to || (body.failed ? "failed-timeout" : undefined) });
-          } else {
-            succeeded++;
-            details.push({ actionId: action.id, result: "succeeded" });
-          }
+        if (result.recovered) {
+          skipped++;
+          details.push({ actionId: action.id, result: "recovered", error: result.failed ? "timeout" : undefined });
+        } else if (result.success) {
+          succeeded++;
+          details.push({ actionId: action.id, result: "succeeded" });
         } else {
           failed++;
-          details.push({ actionId: action.id, result: "failed", error: body.error });
+          details.push({ actionId: action.id, result: "failed", error: result.error });
         }
       } catch (err) {
         failed++;
