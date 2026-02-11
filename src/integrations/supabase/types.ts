@@ -79,6 +79,8 @@ export type Database = {
           item_id: string
           payload_json: Json | null
           playbook_step_id: string | null
+          provider: string | null
+          provider_message_id: string | null
           requires_approval: boolean
           result_json: Json | null
           scheduled_for: string | null
@@ -102,6 +104,8 @@ export type Database = {
           item_id: string
           payload_json?: Json | null
           playbook_step_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
           requires_approval?: boolean
           result_json?: Json | null
           scheduled_for?: string | null
@@ -125,6 +129,8 @@ export type Database = {
           item_id?: string
           payload_json?: Json | null
           playbook_step_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
           requires_approval?: boolean
           result_json?: Json | null
           scheduled_for?: string | null
