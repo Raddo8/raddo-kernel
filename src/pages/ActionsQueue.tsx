@@ -4,6 +4,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import StatusBadge from "@/components/StatusBadge";
+import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Zap, Play, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -15,10 +16,11 @@ export default function ActionsQueue() {
   const [actions, setActions] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [selectedAction, setSelectedAction] = useState<any | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const fetchActions = async () => {
     if (!workspace) return;
-    // Use workspace_id directly on actions (no join needed for filtering)
     let query = supabase
       .from("actions")
       .select("*, items(title, account_id, accounts(name))")
@@ -37,7 +39,8 @@ export default function ActionsQueue() {
 
   useEffect(() => { fetchActions(); }, [workspace, filter]);
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
     const { error } = await supabase
       .from("actions")
       .update({ status: "approved" as any })
@@ -49,7 +52,8 @@ export default function ActionsQueue() {
     fetchActions();
   };
 
-  const handleExecute = async (action: any) => {
+  const handleExecute = async (e: React.MouseEvent, action: any) => {
+    e.stopPropagation();
     const result = await executeAction({
       actionId: action.id,
       actorUserId: userId ?? undefined,
@@ -90,7 +94,11 @@ export default function ActionsQueue() {
       ) : (
         <div className="divide-y divide-border">
           {actions.map((a) => (
-            <div key={a.id} className="flex items-center justify-between px-6 py-3">
+            <div
+              key={a.id}
+              className="flex items-center justify-between px-6 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+              onClick={() => { setSelectedAction(a); setDrawerOpen(true); }}
+            >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-mono">{a.type}</span>
@@ -104,12 +112,12 @@ export default function ActionsQueue() {
               </div>
               <div className="flex items-center gap-1">
                 {a.status === "pending_approval" && (
-                  <Button size="sm" variant="ghost" onClick={() => handleApprove(a.id)}>
+                  <Button size="sm" variant="ghost" onClick={(e) => handleApprove(e, a.id)}>
                     <Check size={14} className="text-status-green" />
                   </Button>
                 )}
                 {(a.status === "scheduled" || a.status === "approved") && (
-                  <Button size="sm" variant="ghost" onClick={() => handleExecute(a)}>
+                  <Button size="sm" variant="ghost" onClick={(e) => handleExecute(e, a)}>
                     <Play size={14} />
                   </Button>
                 )}
@@ -118,6 +126,8 @@ export default function ActionsQueue() {
           ))}
         </div>
       )}
+
+      <ActionInspectorDrawer action={selectedAction} open={drawerOpen} onOpenChange={setDrawerOpen} />
     </div>
   );
 }
