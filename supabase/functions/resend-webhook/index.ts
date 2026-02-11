@@ -99,6 +99,17 @@ serve(async (req: Request) => {
     });
   }
 
+  // ── Change 1: Extract recipient email early (robust) ──
+  const toField = data.to;
+  const recipientEmail = (
+    Array.isArray(toField) ? toField[0] :
+    typeof toField === "string" ? toField :
+    null
+  )?.toLowerCase() || null;
+
+  // Normalize event type: "email.delivered" -> "delivered"
+  const shortEvent = eventType.replace("email.", "");
+
   // ── Init service-role client ──
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
@@ -114,22 +125,54 @@ serve(async (req: Request) => {
     .limit(1)
     .maybeSingle();
 
-  const workspaceId = action?.workspace_id;
-  const actionId = action?.id;
+  // ── Change 2: Orphan handling (skip insert, no suppression) ──
+  if (!action) {
+    console.log(JSON.stringify({
+      event: "webhook_orphan",
+      reason: "action_not_found",
+      provider: "resend",
+      provider_message_id: providerMessageId,
+      event_type: shortEvent,
+      recipient_email: recipientEmail,
+      occurred_at: data.created_at || new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+    }));
+    return new Response(
+      JSON.stringify({ ok: true, skipped: true, reason: "action_not_found" }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
-  // Normalize event type: "email.delivered" -> "delivered"
-  const shortEvent = eventType.replace("email.", "");
-
-  // ── Insert message_event ──
-  await supabase.from("message_events").insert({
-    workspace_id: workspaceId || "00000000-0000-0000-0000-000000000000",
-    action_id: actionId || null,
+  // ── Change 3: Idempotent upsert (replaces .insert()) ──
+  const { error: upsertErr } = await supabase.from("message_events").upsert({
+    workspace_id: action.workspace_id,
+    action_id: action.id,
     provider: "resend",
     provider_message_id: providerMessageId,
     event_type: shortEvent,
+    recipient_email: recipientEmail,
     payload,
     occurred_at: data.created_at || new Date().toISOString(),
+  }, {
+    onConflict: "provider,provider_message_id,event_type",
+    ignoreDuplicates: true,
   });
+
+  if (upsertErr) {
+    console.error("[resend-webhook] Upsert error:", upsertErr.message);
+  }
+
+  // ── Change 4: Structured audit log ──
+  console.log(JSON.stringify({
+    event: "webhook_processed",
+    provider: "resend",
+    event_type: shortEvent,
+    provider_message_id: providerMessageId,
+    action_id: action.id,
+    workspace_id: action.workspace_id,
+    recipient_email: recipientEmail,
+    timestamp: new Date().toISOString(),
+  }));
 
   // ── Auto-suppress on hard bounce or complaint ──
   if (shortEvent === "bounced" || shortEvent === "complained") {
@@ -145,14 +188,14 @@ serve(async (req: Request) => {
       }
     }
 
-    const recipientEmail = (data.to?.[0] || "").toLowerCase();
-    if (recipientEmail && workspaceId) {
+    // ── Change 5: Reuse recipientEmail (DRY) ──
+    if (recipientEmail && action.workspace_id) {
       const reason = shortEvent === "bounced" ? "bounce" : "complaint";
       const { error: suppressErr } = await supabase
         .from("suppression_list")
         .upsert(
           {
-            workspace_id: workspaceId,
+            workspace_id: action.workspace_id,
             email: recipientEmail,
             reason,
             source: "webhook",
@@ -163,7 +206,15 @@ serve(async (req: Request) => {
       if (suppressErr) {
         console.error("[resend-webhook] Suppression insert error:", suppressErr.message);
       } else {
-        console.log(`[resend-webhook] Suppressed ${recipientEmail} (${reason})`);
+        console.log(JSON.stringify({
+          event: "suppression_added",
+          provider: "resend",
+          reason,
+          email: recipientEmail,
+          workspace_id: action.workspace_id,
+          source: "webhook",
+          timestamp: new Date().toISOString(),
+        }));
       }
     }
   }
