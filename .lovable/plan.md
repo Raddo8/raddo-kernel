@@ -1,139 +1,79 @@
 
 
-# Fix Provider Persistence + Deterministic Recipient for Phase 1 Verification
+# Action Inspector Drawer with Message Events
 
-## Problem
+## Overview
 
-1. `provider` and `provider_message_id` columns on `actions` stay NULL after successful email send (line 459-468 fires without error handling)
-2. Test emails go to seed contact instead of real inbox because `contact_id` is NULL on the action
+Add a right-side Sheet drawer that opens when clicking any action row (in Actions Queue or Item Detail). Shows full action metadata and linked message events for delivery visibility.
 
-## Changes
+## New File: `src/components/ActionInspectorDrawer.tsx`
 
-### 1. Harden success-path update in `execute-action-core.ts` (lines 449-480)
+A Sheet component that accepts an action object and renders two sections:
 
-Replace the fire-and-forget update with a verified pattern:
+**Section 1 -- Action Details**
+- Type, channel, status (using StatusBadge)
+- Item title + account name (from joined data)
+- Recipient email (from `result_json.recipient_email`)
+- Rendered subject (from `result_json.rendered_subject`)
+- Provider + provider_message_id
+- Timestamps: created_at, scheduled_for, executed_at
+- Persistence warning flag if `result_json.persistence_warning` exists
 
-- Use `.select("id, status, provider, provider_message_id").single()` to confirm persistence
-- If provider columns are NULL after primary update, run a dedicated fallback update for just those two columns
-- If fallback also fails: mark `result_json` with `persistence_warning: "provider_columns_failed"` and write a warning timeline event so the issue is visible in the UI (action stays `completed` since the email was actually sent)
-- Log all errors explicitly with `console.error`
+**Section 2 -- Message Events**
+- Fetched using dual-query strategy:
+  1. Primary: `message_events.action_id = action.id` scoped by `workspace_id = action.workspace_id`, ordered by `occurred_at desc`, limit 50
+  2. Fallback: if primary returns empty AND `action.provider_message_id` is non-null, query by `provider_message_id`, same workspace scope + ordering
+  3. Merge and de-dupe by event `id`
+- Each event row shows: normalized event type badge (strip `email.` prefix, show original in tooltip), `occurred_at` timestamp
+- Empty state: "No delivery events yet" when no provider_message_id and no events
 
-### 2. Database: Set account primary contact
-
-```sql
-UPDATE accounts
-SET primary_contact_id = '57be3fd2-e5c1-4154-afd5-d8648a802651'
-WHERE id = 'e270a810-3f4f-4224-914b-4828318dc90a'
-  AND primary_contact_id IS NULL;
+**Event type normalization helper** (inline in the component):
 ```
-
-### 3. Deploy and create test action with explicit `contact_id`
-
-- Deploy the updated edge function
-- Create a new `send_message`/`email` action with `contact_id = '57be3fd2-e5c1-4154-afd5-d8648a802651'` (Steve Miller / jacobdburkett@gmail.com) to eliminate recipient ambiguity
-- Execute the action
-
-### 4. Verify
-
-Run the two verification queries:
-
-```sql
-SELECT id, status, provider, provider_message_id, executed_at
-FROM actions WHERE status = 'completed' ORDER BY executed_at DESC LIMIT 5;
-
-SELECT created_at, event_type, provider_message_id, action_id
-FROM message_events ORDER BY created_at DESC LIMIT 10;
+normalizeEventType("email.delivered") -> "delivered"
+normalizeEventType("bounced") -> "bounced"
 ```
+Display the normalized label; show the raw value in a title/tooltip.
 
-**Pass criteria:**
-- `provider = 'resend'` and `provider_message_id` not NULL
-- Email arrives at jacobdburkett@gmail.com
-- `message_events` has a `delivered` row with matching `provider_message_id` and non-null `action_id`
+## Modified: `src/components/StatusBadge.tsx`
 
----
+Add styles for message event types:
+- `delivered`: green (same as completed)
+- `bounced`: red (same as failed)
+- `complained`: red
+- `opened`: blue (same as scheduled)
+- `clicked`: blue
 
-## Technical Detail: Updated success path in `executeEmail()`
+## Modified: `src/pages/ActionsQueue.tsx`
 
-```typescript
-// ── Success ──
-const resultJson = {
-  provider: "resend",
-  provider_message_id: resendResult.id,
-  rendered_subject: renderedSubject,
-  render_errors: renderErrors,
-  recipient_email: contact.email,
-  recipient_contact_id: contact.id,
-};
+- Add state: `selectedAction` and `drawerOpen`
+- Make each action row div clickable (`onClick` sets selected action + opens drawer)
+- On Play and Approve buttons: add `e.stopPropagation()` to prevent drawer from opening
+- Render `ActionInspectorDrawer` at bottom of component
+- The existing select query already fetches `*` which includes `workspace_id` and `provider_message_id`
 
-const { data: updated, error: updateErr } = await supabase
-  .from("actions")
-  .update({
-    status: "completed" as any,
-    executed_at: new Date().toISOString(),
-    result_json: resultJson,
-    provider: "resend",
-    provider_message_id: resendResult.id,
-  } as any)
-  .eq("id", actionId)
-  .select("id, status, provider, provider_message_id")
-  .single();
+## Modified: `src/pages/ItemDetail.tsx`
 
-if (updateErr) {
-  console.error("[executeEmail] Success update failed:", JSON.stringify(updateErr));
-}
+- Add state: `selectedAction` and `drawerOpen`
+- Make each action in the QUEUED list clickable (same pattern)
+- Render `ActionInspectorDrawer`
+- The existing actions query already fetches `*`
 
-// Verify provider columns actually persisted
-if (updated && (!updated.provider || !updated.provider_message_id)) {
-  console.error("[executeEmail] Provider fields missing after update. Attempting fallback.", {
-    actionId, provider_message_id: resendResult.id,
-  });
+## No Database Changes
 
-  const { error: fallbackErr } = await supabase
-    .from("actions")
-    .update({
-      provider: "resend",
-      provider_message_id: resendResult.id,
-    } as any)
-    .eq("id", actionId);
+`message_events` table already has RLS for workspace members and the necessary columns (`action_id`, `provider_message_id`, `workspace_id`, `event_type`, `occurred_at`).
 
-  if (fallbackErr) {
-    console.error("[executeEmail] Fallback also failed:", JSON.stringify(fallbackErr));
+## Acceptance Criteria
 
-    // Write persistence warning into result_json + timeline
-    await supabase.from("actions").update({
-      result_json: { ...resultJson, persistence_warning: "provider_columns_failed" },
-    } as any).eq("id", actionId);
-
-    if (accountId) {
-      await writeTimeline(supabase, {
-        accountId,
-        itemId: action.item_id,
-        direction: "system",
-        channel: "email",
-        summary: `Warning: email sent but provider columns failed to persist (${action.type})`,
-      });
-    }
-  }
-}
-
-// Timeline: email sent
-await writeTimeline(supabase, {
-  accountId,
-  itemId: action.item_id,
-  contactId: contact.id,
-  direction: "outbound",
-  channel: "email",
-  summary: `Email sent: ${renderedSubject || action.type}`,
-  body: renderedBody?.substring(0, 500) || null,
-});
-
-return { success: true, provider_message_id: resendResult.id };
-```
+1. Clicking an action row opens the drawer showing correct action id, rendered subject, and recipient
+2. Clicking Play or Approve executes without opening the drawer (stopPropagation)
+3. For a sent action with provider_message_id, drawer shows message events including "delivered"
+4. For an unsent action, message events section shows clean empty state
+5. No cross-workspace leakage (workspace_id scoped query + RLS)
+6. Event type badges strip `email.` prefix and show raw value in tooltip
 
 ## Files Modified
-- `supabase/functions/_shared/execute-action-core.ts`
-
-## Database Changes
-- `accounts`: set `primary_contact_id` for test account
-- New test action row with explicit `contact_id`
+- `src/components/ActionInspectorDrawer.tsx` (new)
+- `src/components/StatusBadge.tsx`
+- `src/pages/ActionsQueue.tsx`
+- `src/pages/ItemDetail.tsx`
 
