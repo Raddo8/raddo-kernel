@@ -38,8 +38,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Parse inputs ──
-    const { action, suppression_id, email, workspace_id } = await req.json();
+    // ── Parse inputs (hardened) ──
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { action, suppression_id, email, workspace_id } = body;
 
     if (action !== "remove" || !workspace_id) {
       return new Response(JSON.stringify({ error: "Invalid request" }), {
@@ -97,7 +106,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { error: delErr } = await deleteQuery;
+    const { data: deleted, error: delErr } = await deleteQuery.select("id,email,reason,source");
     if (delErr) {
       return new Response(JSON.stringify({ error: delErr.message }), {
         status: 500,
@@ -105,7 +114,28 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    if (!deleted || deleted.length === 0) {
+      return new Response(JSON.stringify({ error: "Not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Structured audit log (queryable in edge function logs) ──
+    console.log(JSON.stringify({
+      event: "suppression_removed",
+      actor: user.id,
+      workspace_id,
+      target: suppression_id || email,
+      deleted_count: deleted.length,
+      timestamp: new Date().toISOString(),
+    }));
+
+    return new Response(JSON.stringify({
+      ok: true,
+      deleted_count: deleted.length,
+      deleted: deleted.map((r: any) => ({ id: r.id, email: r.email, reason: r.reason, source: r.source })),
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
