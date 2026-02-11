@@ -1,106 +1,88 @@
 
 
-# Suppression List Management Page
+# Harden suppression-admin Edge Function + UI Auth Guard
 
 ## Overview
 
-Build a `/suppression` page for viewing, searching, and managing suppressed email recipients. Members can view and manually add; only owners/admins can remove entries via a secure edge function.
+Apply three security controls to the `suppression-admin` edge function and one UI fix, then run three verification tests. The function uses `verify_jwt = false` (consistent with all other project functions) but enforces a strict security boundary in code.
 
 ## Changes
 
-### 1. Expose user role in WorkspaceContext
+### 1. Edge Function: `supabase/functions/suppression-admin/index.ts`
 
-**File: `src/lib/workspace-context.tsx`**
+**Control 1 -- Strict Bearer token format (replace lines 15-21):**
+- Header must start with `"Bearer "` and token must be 20+ characters
+- Reject with 401 otherwise
 
-- Add `userRole: string | null` to context interface and state
-- Update the existing `workspace_members` query to also select `role`
-- Extract `data.role` alongside the workspace data
+**Control 2 -- Hard user-resolution gate (lines 30-36, already present but now stated as the explicit security boundary):**
+- `supabase.auth.getUser()` must resolve a valid user
+- If `userErr` or `!user`: return 401 immediately
+- No membership query, no service-role client creation, no deletes happen past this point unless user resolves
 
-### 2. New page: `src/pages/SuppressionList.tsx`
+**Control 3 -- UUID validation (add after line 38, before membership query):**
+- Validate `workspace_id` matches UUID regex
+- Validate `suppression_id` matches UUID regex when provided
+- Reject with 400 if invalid
 
-**Top controls:**
-- Search input (filters by email, client-side)
-- Reason filter: all / bounce / complaint / manual / unsubscribe
-- Source filter: all / webhook / manual / system
-- "Add Suppression" button (opens dialog)
+**Execution order is strictly gated:**
 
-**Table columns:**
-- Email
-- Reason (lightweight inline badge, styled locally -- NOT StatusBadge)
-- Source (lightweight inline badge, styled locally)
-- Created at (formatted)
-- Remove button (only visible when `userRole` is `owner` or `admin`)
+```text
+Bearer format check (401)
+  |
+  v
+auth.getUser() must resolve (401)
+  |
+  v
+Parse + validate inputs (400)
+  |
+  v
+Membership role check (403)
+  |
+  v
+Service-role client + delete (only here)
+```
 
-**Data fetching:**
-- `SELECT * FROM suppression_list WHERE workspace_id = $ws ORDER BY created_at DESC LIMIT 200`
-- Client-side filtering by search text, reason, source
+No step executes unless the previous one passes.
 
-**Manual add dialog:**
-- Email input with basic validation
-- Inserts: `{ workspace_id, email: email.toLowerCase(), reason: 'manual', source: 'manual' }`
+### 2. UI Auth Guard: `src/pages/SuppressionList.tsx`
 
-**Remove (admin-gated):**
-- Calls edge function `POST /suppression-admin` with `{ action: "remove", suppression_id, workspace_id }`
-- Also accepts `{ action: "remove", email, workspace_id }` as alternative
-- On success, refetches list
+In `handleRemove` (line 127), after getting session:
+- If `!session?.access_token`, show toast "Not authenticated" and return early
+- Prevents sending `Bearer undefined` to the endpoint
 
-**Empty state:** "No suppressed recipients" with ShieldOff icon
+### 3. Config: `supabase/config.toml`
 
-### 3. New edge function: `supabase/functions/suppression-admin/index.ts`
+Add entry (consistent with project convention):
+```
+[functions.suppression-admin]
+verify_jwt = false
+```
 
-**Config:** `verify_jwt = true` (no manual JWT handling needed -- framework rejects unauthenticated requests)
+### 4. Deploy + Run Three Security Tests
 
-**Logic:**
-1. Standard CORS headers + OPTIONS handler
-2. Get authenticated user via `supabase.auth.getUser()` (JWT already verified)
-3. Query `workspace_members` to confirm user has `owner` or `admin` role in the given workspace
-4. If not authorized, return 403
-5. Create a service-role client for the delete operation
-6. Delete from `suppression_list` by `id + workspace_id` or by `email + workspace_id`
-7. Return success/error JSON
+**Test A -- No token -> 401:**
+POST to `/suppression-admin` with no Authorization header.
 
-### 4. Route and sidebar
+**Test B -- Member token -> 403:**
+POST with a valid user token for a non-admin member.
 
-**`src/App.tsx`:** Add `<Route path="/suppression" element={<SuppressionList />} />`
+**Test C -- Admin + wrong workspace -> 403:**
+POST with a valid admin token but a `workspace_id` the admin does not belong to.
 
-**`src/components/AppSidebar.tsx`:** Add nav item `{ to: "/suppression", label: "Suppressions", icon: ShieldOff }` after Connectors
+## Files Modified
 
-### 5. Reason/source badges
-
-Styled locally in `SuppressionList.tsx` as simple `<span>` elements with tailwind classes. StatusBadge is NOT modified -- it stays reserved for action lifecycle statuses.
-
-- Reason colors: bounce (red), complaint (red), manual (amber), unsubscribe (muted)
-- Source colors: webhook (blue), manual (amber), system (muted)
-
-## No database changes
-
-- `suppression_list` table exists with RLS (SELECT + INSERT for members, no DELETE)
-- `workspace_members` already has `role` column with `workspace_role` enum
-
-## Technical Notes
-
-- The edge function uses `verify_jwt = true` so unauthenticated requests are rejected at the gateway level
-- Service role is used only for the DELETE operation after server-side admin verification
-- The existing `workspace_role` enum (`owner | admin | member | viewer`) is already in the database
-
-## Files
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/lib/workspace-context.tsx` | Modified (add userRole) |
-| `src/pages/SuppressionList.tsx` | New |
-| `supabase/functions/suppression-admin/index.ts` | New |
-| `src/App.tsx` | Modified (add route) |
-| `src/components/AppSidebar.tsx` | Modified (add nav link) |
+| `supabase/functions/suppression-admin/index.ts` | Strict Bearer check, UUID validation, unchanged user gate |
+| `src/pages/SuppressionList.tsx` | Early return if no access_token |
 
 ## Acceptance Criteria
 
-1. Members can view suppression list filtered by workspace
-2. Search by email works
-3. Reason and source dropdown filters work
-4. Members can add manual suppressions (email lowercased)
-5. Only owners/admins see the Remove button
-6. Edge function returns 401 if unauthenticated (verify_jwt)
-7. Edge function returns 403 if not owner/admin
-8. Deletes are scoped by workspace_id
-9. Empty state shown when no suppressions exist
+1. 401 on missing or malformed Bearer token (code-enforced)
+2. 401 if `auth.getUser()` fails to resolve -- no downstream operations execute
+3. 400 on non-UUID `workspace_id` or `suppression_id`
+4. 403 on non-admin user
+5. 403 on admin with non-member `workspace_id`
+6. UI shows "Not authenticated" toast if session is missing
+7. Tests A, B, C all pass
+
