@@ -41,10 +41,10 @@ export default function AccountDetail() {
         setAccount(data);
 
         supabase.from("contacts").select("*").eq("account_id", id).order("created_at")
-          .then(({ data }) => { if (active) setContacts(data || []); });
+          .then(({ data, error }) => { if (!active || error) return; setContacts(data || []); });
         supabase.from("items").select("*, item_states(name, label, color), policies(name)")
           .eq("account_id", id).order("created_at", { ascending: false })
-          .then(({ data }) => { if (active) setItems(data || []); });
+          .then(({ data, error }) => { if (!active || error) return; setItems(data || []); });
       });
 
     return () => { active = false; };

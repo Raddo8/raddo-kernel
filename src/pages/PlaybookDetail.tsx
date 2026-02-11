@@ -49,7 +49,7 @@ export default function PlaybookDetail() {
 
         supabase.from("playbook_steps").select("*, templates(subject)")
           .eq("playbook_id", id).order("step_order")
-          .then(({ data }) => { if (active) setSteps(data || []); });
+          .then(({ data, error }) => { if (!active || error) return; setSteps(data || []); });
       });
 
     return () => { active = false; };
@@ -77,7 +77,7 @@ export default function PlaybookDetail() {
     if (!id || !triggerState) return;
     const { error } = await supabase.from("playbook_steps").insert({
       playbook_id: id,
-      step_order: steps.length,
+      step_order: steps.length ? Math.max(...steps.map(s => s.step_order ?? 0)) + 1 : 0,
       trigger_state: triggerState,
       action_type: actionType,
       channel,
@@ -92,8 +92,10 @@ export default function PlaybookDetail() {
   };
 
   const deleteStep = async (stepId: string) => {
-    await supabase.from("playbook_steps").delete().eq("id", stepId);
+    const { error } = await supabase.from("playbook_steps").delete().eq("id", stepId);
+    if (error) { toast.error(error.message); return; }
     refreshSteps();
+    toast.success("Step deleted");
   };
 
   if (notFound) {
