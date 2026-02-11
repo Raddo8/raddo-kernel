@@ -1,102 +1,99 @@
 
 
-# Steps B and C: Runtime Verification (Revised)
+# Store RESEND_API_KEY, Fail-Fast From Address, and End-to-End Email Test
 
-## Overview
+## Step 1 — Store RESEND_API_KEY as a backend secret
 
-Verify toggle behavior and approval gating using a dedicated TEST rule and a clean mock execution path. No production rules are mutated.
+Use the secure secrets tool to prompt for the key. It gets stored as an edge function environment variable — never in code, DB, or frontend.
 
-## Step B: Toggle Behavior
+Then redeploy all three edge functions: `execute-action-server`, `process-scheduled-actions`, `process-policy-rules`.
 
-### Setup
+## Step 2 — Replace fallback with fail-fast
 
-Insert a new temporary TEST policy rule into workspace `f3ebf868`:
+In `supabase/functions/_shared/execute-action-core.ts` (lines 359-373), remove the generic fallback and instead fail the action if the workspace has no email connector configured.
 
 ```text
-workspace_id: f3ebf868-ba4b-48cc-a36c-079452d04c78
-vertical_pack_key: "casey"
-action_type: "log_event"         <-- routes to mock (not email+send_message)
-action_channel: "system"         <-- routes to mock
-enabled: true
-requires_approval: false
-sort_order: 9999                 <-- end of list, no interference
-predicate: {"all":[{"field":"due_date","op":"older_than_minutes","value":1}]}
+Before (lines 360-373):
+  let fromEmail = "noreply@example.com";
+  let fromName = "Casey";
+  const { data: connector } = await supabase
+    .from("connectors")
+    .select("config")
+    .eq("type", "email")
+    .eq("workspace_id", action.workspace_id)
+    .maybeSingle();
+  if (connector?.config) {
+    const cfg = connector.config as Record<string, string>;
+    if (cfg.from_email) fromEmail = cfg.from_email;
+    if (cfg.from_name) fromName = cfg.from_name;
+  }
+
+After:
+  const { data: connector } = await supabase
+    .from("connectors")
+    .select("config")
+    .eq("type", "email")
+    .eq("workspace_id", action.workspace_id)
+    .maybeSingle();
+
+  const cfg = connector?.config as Record<string, string> | undefined;
+  const fromEmail = cfg?.from_email;
+  const fromName = cfg?.from_name;
+
+  if (!fromEmail || !fromName) {
+    const errMsg = "from_address_not_configured: set from_email and from_name in the email connector config";
+    await failAction(supabase, actionId, errMsg, renderErrors, {
+      error_code: "from_address_not_configured",
+    });
+    if (accountId) {
+      await writeTimeline(supabase, {
+        accountId,
+        itemId: action.item_id,
+        direction: "system",
+        channel: "system",
+        summary: `Action failed: email connector missing from_email/from_name (${action.type})`,
+      });
+    }
+    return { success: false, error: "from_address_not_configured" };
+  }
 ```
 
-This rule matches item `65d6` (due Feb 9, ~2+ days overdue). Channel `system` + type `log_event` routes to mock execution in the core. The sort_order 9999 and unique predicate hash guarantee a fresh idempotency key with no collisions.
+This keeps the engine workspace-neutral. Each workspace must configure its own email connector with `from_email` and `from_name`. No environment-specific branding baked in.
 
-### Sequence
+## Step 3 — Update your workspace email connector
 
-1. **Insert TEST rule** (enabled=true, predicate `older_than_minutes: 1`)
-2. **Trigger** `process-policy-rules` via curl
-3. **Verify** a new action appears with idempotency key `policy:{TEST_RULE_ID}:65d6...:*:*`
-4. **Update TEST rule**: set `enabled=false`, change predicate to `older_than_minutes: 2` (new hash = no idempotency collision)
-5. **Trigger** sweep again
-6. **Verify** zero new actions created (disabled rule is filtered by `.eq("enabled", true)`)
-7. **Update TEST rule**: set `enabled=true`, change predicate to `older_than_minutes: 3` (another new hash)
-8. **Trigger** sweep again
-9. **Verify** a new action appears
-10. **Cleanup**: delete the TEST rule and its test actions
+The existing connector `095900b6` currently has `from_email: "aa@aa.com"` and `from_name: "TEST Connector A"`. Update it to:
 
-### Pass Criteria
+- `from_email`: `system@mail.raddo.ai`
+- `from_name`: `Raddo Engine`
 
-- Enabled: action created
-- Disabled: nothing created
-- Re-enabled: action created again
+This is a DB update on the `connectors` table config column.
 
-## Step C: Approval Gating
+## Step 4 — End-to-end test via UI
 
-### Setup
+1. Create a test template with subject `Test: {{account.name}}` and body `Hello {{contact.name}}, this is a test from Raddo Engine.`
+2. Create a test action: channel=`email`, type=`send_message`, status=`scheduled`, pointing at an existing item/account/contact with a real email address, template_id set to the test template
+3. Execute via the Actions Queue UI (click the execute button)
+4. Verify:
+   - Action status = `completed`
+   - `result_json.provider` = `"resend"`
+   - `result_json.provider_message_id` exists
+   - Timeline event with direction=`outbound`, channel=`email`
+   - Email received in inbox
 
-Update action `122247a2` to use mock execution path before approving:
+## Step 5 — Scheduler test
 
-```sql
-UPDATE actions
-SET channel = 'system', type = 'log_event'
-WHERE id = '122247a2-9674-48d4-b674-1657314ea3a2';
-```
+1. Create another test action with `scheduled_for` set 1 minute ahead, status=`scheduled`
+2. Wait for scheduler tick (or trigger manually)
+3. Confirm it transitions `scheduled` -> `running` -> `completed` automatically
 
-This ensures the action routes to mock (500ms delay, always completes) instead of failing with `provider_not_configured`.
+## Summary of changes
 
-### Sequence
+| What | Where | Type |
+|------|-------|------|
+| RESEND_API_KEY | Backend secrets | Secret |
+| Fail-fast from address | `_shared/execute-action-core.ts` lines 359-373 | Code change (1 file) |
+| Connector config update | `connectors` table, row `095900b6` | DB update |
+| Redeploy | 3 edge functions | Deploy |
+| No schema/migration changes needed | | |
 
-1. **Trigger** `process-scheduled-actions` -- confirm action `122247a2` stays `pending_approval` (scheduler queries `status IN ('scheduled','approved')` only)
-2. **Update** action channel/type to system/log_event (service role)
-3. **Approve** via Actions Queue UI (click check button, status becomes `approved`)
-4. **Wait** 1-2 scheduler ticks or trigger manually
-5. **Verify** action transitions: `approved` -> `running` -> `completed`
-6. **Verify** timeline events: execution-start + completion for account `1b095ade`
-
-### Pass Criteria
-
-- `pending_approval` stays idle through scheduler tick
-- After approval: clean `completed` status
-- Timeline shows start and completion events
-
-## Technical Notes
-
-- The TEST rule uses `action_type: "log_event"` and `action_channel: "system"` which the execution core routes to mock (any combo other than `email` + `send_message`)
-- Each predicate change (1, 2, 3 minutes) produces a different SHA-256 hash, giving unique idempotency keys without needing to delete rows
-- The `process-policy-rules` function filters with `.eq("enabled", true)` on line 172, so disabled rules are never evaluated
-- The `process-scheduled-actions` function filters with `.in("status", ["scheduled", "approved"])` on line 35, so `pending_approval` is excluded by construction
-- All DB mutations use service-role client (direct SQL or edge function calls with CRON_SECRET for create mode)
-
-## Implementation Steps
-
-| Step | Action | Tool |
-|------|--------|------|
-| 1 | Insert TEST rule | DB insert (service role) |
-| 2 | Trigger policy sweep | Curl `process-policy-rules` with CRON_SECRET |
-| 3 | Query new actions | DB read |
-| 4 | Disable TEST rule + change predicate | DB update |
-| 5 | Trigger sweep | Curl |
-| 6 | Verify no new actions | DB read |
-| 7 | Re-enable TEST rule + change predicate | DB update |
-| 8 | Trigger sweep | Curl |
-| 9 | Verify new action | DB read |
-| 10 | Trigger scheduler, confirm pending_approval stays | Curl `process-scheduled-actions` |
-| 11 | Update action 122247a2 channel/type | DB update |
-| 12 | Approve in UI | User clicks approve button |
-| 13 | Trigger scheduler or wait | Curl or wait |
-| 14 | Verify completed + timeline | DB read |
-| 15 | Cleanup: delete TEST rule + test actions | DB delete |
