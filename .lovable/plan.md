@@ -1,75 +1,135 @@
 
 
-# Verify Cleanup RPC + Add Rate Limits Cleanup Cron
+# Secure Cron Secret Remediation + Rotation
 
-Two small infra hygiene tasks to complete the rate limiting hardening.
+## Current State
 
-## Task 1: Verify `clean_expired_rate_limits()` Works
+- **2 jobs** (`process-scheduled-actions`, `process-policy-rules`) have the CRON_SECRET **hardcoded** in `cron.job.command` -- treat as compromised
+- **1 job** (`cleanup-maintenance-5min`) uses the secure `current_setting()` pattern but it resolves to NULL (401 failures)
+- Supabase Vault extension is available
 
-The function exists but hasn't been tested in production. There is currently 1 expired row in `rate_limits` ready to be cleaned.
+## Approach: Vault + SECURITY DEFINER Helper
 
-**Approach**: Call the RPC directly from the client or via a quick service-role invocation. Since the function uses `LANGUAGE sql` (not security definer), it needs to be called with appropriate permissions. The simplest verification is to invoke it via the Supabase client using `.rpc('clean_expired_rate_limits')`.
+Store the secret in Supabase Vault (encrypted at rest), then create a tiny `SECURITY DEFINER` function that reads it and builds the headers JSONB. Cron commands call this function -- no secret ever appears in SQL text.
 
-However, since `rate_limits` has no RLS policies for DELETE and the function runs as the caller, we need to either:
-- Call it with service role (from an edge function), or
-- Add it to the cleanup cron (which uses service role anyway)
+## Steps
 
-**Decision**: Fold the verification into Task 2 — the cron edge function will call it with service role, and we verify via logs.
+### Step 1: Create Vault secret + helper function (migration)
 
-## Task 2: Add Cleanup Cron for Rate Limits
+```sql
+-- Store secret in Vault (encrypted at rest via pgsodium)
+SELECT vault.create_secret(
+  '<new_rotated_secret>',
+  'cron_secret',
+  'CRON_SECRET for edge function authentication'
+);
 
-Create a lightweight edge function `cleanup-maintenance` that calls `clean_expired_rate_limits()` and returns the count of deleted rows. Then schedule it via `pg_cron` + `pg_net`.
-
-### New file: `supabase/functions/cleanup-maintenance/index.ts`
-
-Follows the exact pattern from `process-scheduled-actions`:
-- Authenticates via `X-CRON-SECRET` header (no JWT)
-- Creates a service-role Supabase client
-- Calls `clean_expired_rate_limits()` RPC
-- Returns `{ success: true, deleted: N }`
-
-### Config update: `supabase/config.toml`
-
-Add:
-```toml
-[functions.cleanup-maintenance]
-verify_jwt = false
+-- Helper: returns headers JSONB by reading from Vault
+CREATE OR REPLACE FUNCTION public.get_cron_headers()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+  SELECT jsonb_build_object(
+    'Content-Type', 'application/json',
+    'X-CRON-SECRET', decrypted_secret
+  )
+  FROM vault.decrypted_secrets
+  WHERE name = 'cron_secret'
+  LIMIT 1;
+$$;
 ```
 
-### Cron job (via SQL insert, not migration)
+The `SECURITY DEFINER` allows the function to access `vault.decrypted_secrets` (which requires elevated privileges) while being callable from cron context.
 
-Schedule every 5 minutes using `pg_cron` + `pg_net`:
+### Step 2: Rotate the CRON_SECRET
+
+Since the old secret is compromised (visible in `cron.job`), generate a new one:
+
+1. Generate a new high-entropy secret (no commas or special chars that could break header parsing)
+2. Store it in Vault (Step 1 above)
+3. Update the Edge Function environment variable `CRON_SECRET` to the new value using the secrets tool
+4. All three edge functions (`process-scheduled-actions`, `process-policy-rules`, `cleanup-maintenance`) already read `CRON_SECRET` from `Deno.env` -- no code changes needed
+
+### Step 3: Reschedule all three cron jobs (via change-data tool, not migration)
+
+Unschedule all three and recreate using the Vault-backed helper:
+
 ```sql
+-- Remove all existing jobs
+SELECT cron.unschedule('process-scheduled-actions');
+SELECT cron.unschedule('process-policy-rules');
+SELECT cron.unschedule('cleanup-maintenance-5min');
+
+-- Reschedule with secure headers from Vault
+SELECT cron.schedule(
+  'process-scheduled-actions',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/process-scheduled-actions',
+    headers := public.get_cron_headers(),
+    body := '{"source": "cron"}'::jsonb
+  ) AS request_id;
+  $$
+);
+
+SELECT cron.schedule(
+  'process-policy-rules',
+  '* * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/process-policy-rules',
+    headers := public.get_cron_headers(),
+    body := '{"source": "cron"}'::jsonb
+  ) AS request_id;
+  $$
+);
+
 SELECT cron.schedule(
   'cleanup-maintenance-5min',
   '*/5 * * * *',
-  $$ SELECT net.http_post(
-    url := '<FUNCTION_URL>/cleanup-maintenance',
-    headers := '{"Content-Type":"application/json","X-CRON-SECRET":"<secret>"}'::jsonb,
+  $$
+  SELECT net.http_post(
+    url := 'https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/cleanup-maintenance',
+    headers := public.get_cron_headers(),
     body := '{}'::jsonb
-  ) AS request_id; $$
+  ) AS request_id;
+  $$
 );
 ```
 
-### Verification
+### Step 4: Verify
 
-After deployment:
-1. Call the edge function directly to confirm it returns `{ success: true, deleted: N }`
-2. Check logs to confirm the RPC executed
-3. Query `rate_limits` to confirm expired rows were removed
-4. Wait for cron to fire and verify via edge function logs
+1. Query `cron.job` -- confirm no command contains a literal secret
+2. Call `SELECT public.get_cron_headers()` -- confirm it returns valid JSONB with the secret
+3. Wait one cron cycle and check edge function logs for all three functions -- expect HTTP 200
+4. Confirm `rate_limits` expired rows are cleaned
+
+## Execution Order
+
+1. Generate new secret value
+2. Use secrets tool to update `CRON_SECRET` edge function env var
+3. Run migration: create Vault secret + `get_cron_headers()` function
+4. Run change-data: unschedule + reschedule all three jobs
+5. Verify via `cron.job` audit + edge function logs
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `supabase/functions/cleanup-maintenance/index.ts` | New -- lightweight cron target |
-| `supabase/config.toml` | Add `verify_jwt = false` for cleanup-maintenance |
-| SQL (via insert tool) | `cron.schedule` for 5-minute cleanup cycle |
+| Target | Change |
+|--------|--------|
+| Migration (SQL) | `vault.create_secret()` + `get_cron_headers()` function |
+| Change-data (SQL) | Unschedule 3 jobs, reschedule with `get_cron_headers()` |
+| Edge Function secret | Rotate `CRON_SECRET` to new value |
+| No code files | Edge functions already read from `Deno.env.get("CRON_SECRET")` |
 
-## Technical Notes
+## Security Properties
 
-- The edge function is intentionally minimal -- it does one thing and logs the result
-- Using the same `X-CRON-SECRET` pattern as all other scheduled functions
-- The `clean_expired_rate_limits()` function already handles the 5-minute expiry window
-- No frontend changes needed
+- Secret encrypted at rest in Vault (pgsodium)
+- Never appears in `cron.job.command`, query logs, or SQL history
+- `get_cron_headers()` is `SECURITY DEFINER` so it can read `vault.decrypted_secrets`
+- Old compromised secret is fully rotated out
+- New secret avoids commas/special characters
+
