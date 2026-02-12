@@ -1,117 +1,63 @@
 
 
-# Fix: Present Options Template Resolution (Revised)
+# Fix: Replace Broken base64url Import with JSR + Expand Action Reset
 
-All four requirements addressed. No hardcoded UUIDs anywhere.
+## 1. Replace broken import with pinned JSR import
 
----
+**File:** `supabase/functions/_shared/execute-action-core.ts` (lines 342-345)
 
-## Changes to `src/pages/ItemDetail.tsx`
-
-### 1. Add dynamic template lookup by workspace + type
-
-New state and effect that resolves the template at runtime:
-
+Replace:
 ```typescript
-const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
-
-useEffect(() => {
-  if (workspace) {
-    supabase.from("templates")
-      .select("id")
-      .eq("workspace_id", workspace.id)
-      .eq("template_type", "present_options")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => setPresentOptionsTemplateId(data?.id ?? null));
-  }
-}, [workspace]);
+const { encode: base64urlEncode } = await import("https://deno.land/std@0.224.0/encoding/base64url.ts");
+const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+const token = base64urlEncode(tokenBytes);
 ```
 
-No concrete UUID referenced anywhere.
-
-### 2. Disable the button when template is unresolved
-
-The "Present Options" button gets a `disabled` prop and visual feedback:
-
+With:
 ```typescript
-<Button
-  variant="secondary"
-  size="sm"
-  className="w-full justify-start"
-  disabled={!presentOptionsTemplateId}
-  onClick={() => handleQueueAction("present_options", "email", {
-    options: [
-      { key: "pay_full", label: "Pay in Full" },
-      { key: "request_extension", label: "Request Extension" },
-      { key: "payment_plan", label: "Propose Payment Plan" },
-      { key: "dispute", label: "Dispute" },
-    ],
-  }, presentOptionsTemplateId!)}
->
-  <MessageSquare size={14} className="mr-2" />
-  {presentOptionsTemplateId ? "Present Options" : "Present Options (template missing)"}
-</Button>
+import { encodeBase64Url } from "jsr:@std/encoding@1.0.10/base64url";
+// ... (at top of file, static import)
 ```
 
-When `presentOptionsTemplateId` is `null`, the button is grayed out and labeled accordingly. No action can be queued.
-
-### 3. Fix the function signature
-
-Update `handleQueueAction` to accept a 4th optional `templateId` parameter and forward it to `queueAction()` using the existing `templateId` field on `QueueActionParams`:
-
+And at line 342-345:
 ```typescript
-const handleQueueAction = async (
-  actionType: string,
-  channel: string,
-  payloadJson?: Record<string, unknown>,
-  templateId?: string,
-) => {
-  if (!id || !item) return;
-  const result = await queueAction({
-    itemId: id,
-    type: actionType,
-    channel,
-    source: "ui",
-    actorUserId: userId ?? undefined,
-    payloadJson,
-    templateId,        // forwarded to QueueActionParams.templateId
-  });
-  // ... existing error/success handling unchanged
-};
+const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+const token = encodeBase64Url(tokenBytes);
 ```
 
-The field name `templateId` matches `QueueActionParams` exactly -- no mapping needed.
+The import moves to the top of the file as a static import (not dynamic), pinned to `@std/encoding@1.0.10`. This is the official JSR path for Deno's standard library base64url encoder.
 
-### 4. Guard against missing template at queue time
+## 2. Reset stuck action with full execution marker cleanup
 
-Even though the button is disabled, add a runtime guard as defense-in-depth:
+The `actions` table has these execution-related columns: `status`, `claimed_at`, `claimed_by`, `executed_at`, `result_json`, `provider`, `provider_message_id`, `source`.
 
-```typescript
-if (actionType === "present_options" && !templateId) {
-  toast.error("No present_options template configured for this workspace");
-  return;
-}
+Reset SQL (to be run via data tool after deploy):
+```sql
+UPDATE actions
+SET status = 'scheduled',
+    claimed_at = NULL,
+    claimed_by = NULL,
+    executed_at = NULL,
+    result_json = NULL,
+    provider = NULL,
+    provider_message_id = NULL
+WHERE id = '593328e8-a421-4278-ba89-13cc03e1a1f8';
 ```
 
-This sits at the top of `handleQueueAction`, before calling `queueAction()`. Prevents terminal failures if the button state is somehow bypassed.
+This clears every execution marker so the scheduler treats it as a fresh schedulable action.
 
----
+## 3. After deploy: Resume E2E validation
 
-## No other files change
+1. Deploy updated edge function
+2. Run the reset SQL
+3. Scheduler picks up the action (or trigger manually)
+4. Continue validation: email, respond page, integrity checks, negative tests
 
-- `queue-actions.ts` already has `templateId` on `QueueActionParams` -- no changes needed.
-- No backend changes needed -- SITE_URL and template already configured.
+## Summary
 
-## After deployment: E2E test sequence
-
-1. Open any item with contacts
-2. Verify "Present Options" button is enabled (template resolved)
-3. Click it -- confirm action queued successfully
-4. Verify action transitions to completed
-5. Check email, click link, verify respond page
-6. Submit option, verify "Response received"
-7. Revisit link, verify "Already responded"
-8. Check timeline for inbound event with correct raw_json
-9. Negative tests: expired token, random token
+| Item | Detail |
+|---|---|
+| File changed | `supabase/functions/_shared/execute-action-core.ts` |
+| Import | `jsr:@std/encoding@1.0.10/base64url` (static, pinned) |
+| Stuck action reset | Clears `status`, `claimed_at`, `claimed_by`, `executed_at`, `result_json`, `provider`, `provider_message_id` |
 
