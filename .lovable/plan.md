@@ -1,190 +1,134 @@
 
 
-# Public Endpoint Rate Limiting -- Perimeter Protection (Revised)
+# DB-Backed Rate Limiting -- Real Perimeter Protection
 
-## Why This Is Priority #1
+## Problem
 
-Three edge functions accept anonymous requests with no authentication beyond token entropy:
-- `get-response` -- token lookup (read-only, but enables enumeration)
-- `submit-response` -- token submission (writes to DB, triggers timeline)
-- `resend-webhook` -- already HMAC-signed, but still publicly reachable
+The in-memory sliding window rate limiter was validated and confirmed ineffective in production: each request lands on a different Deno isolate, so the counter resets every time. This means public endpoints (`get-response`, `submit-response`, `resend-webhook`) have no meaningful abuse protection.
 
-Without rate limiting, an attacker can brute-force tokens, flood writes, or burn compute.
+## Solution
 
-## Approach: In-Memory Sliding Window per Endpoint+IP
+Replace the in-memory `Map` with a Postgres-backed atomic counter. No Redis required -- at current volumes, a single row upsert per request is negligible load.
 
-Edge Functions on Deno Deploy are stateless across cold starts, but within a warm instance, an in-memory `Map` provides effective burst protection.
+## Database Design
 
-### Design
+New table: `public.rate_limits`
 
-- **Shared module**: `supabase/functions/_shared/rate-limit.ts`
-- **Algorithm**: Sliding window counter keyed by `${endpoint}:${ip}`
-- **Limits**:
-  - `get-response`: 10 requests per minute per IP
-  - `submit-response`: 5 requests per minute per IP
-  - `resend-webhook`: 60 requests per minute per IP
-- **Response on exceed**: HTTP 429 with `Retry-After` header, CORS headers, structured JSON
-- **Eviction**: Stale entries pruned on each check to prevent memory leak
+| Column | Type | Purpose |
+|--------|------|---------|
+| `key` | `text` PRIMARY KEY | `${endpoint}:${ip}` |
+| `window_start` | `timestamptz` NOT NULL | Start of current window |
+| `request_count` | `int` NOT NULL DEFAULT 1 | Requests in current window |
 
-### Limitations (Documented)
+**No RLS** -- this table is only accessed by service-role clients in edge functions. No user-facing reads. RLS disabled explicitly to avoid accidental lockout.
 
-- Resets on cold start (acceptable -- infrequent under load)
-- Per-instance only (no cross-instance coordination)
-- IP-based (raises the bar, not a WAF replacement)
+**Auto-cleanup**: A database function `clean_expired_rate_limits()` deletes rows older than 5 minutes, callable periodically or lazily.
 
-## Fixes Applied (from review)
+## Algorithm (single atomic query per request)
 
-### Fix 1: Namespace rate-limit key by endpoint
+```sql
+INSERT INTO rate_limits (key, window_start, request_count)
+VALUES ($1, now(), 1)
+ON CONFLICT (key) DO UPDATE SET
+  request_count = CASE
+    WHEN rate_limits.window_start + ($2 || ' milliseconds')::interval < now()
+    THEN 1                                    -- window expired, reset
+    ELSE rate_limits.request_count + 1        -- still in window, increment
+  END,
+  window_start = CASE
+    WHEN rate_limits.window_start + ($2 || ' milliseconds')::interval < now()
+    THEN now()                                -- reset window
+    ELSE rate_limits.window_start             -- keep current window
+  END
+RETURNING request_count, window_start;
+```
 
-`checkRateLimit` accepts an `endpoint` parameter. Internal map key becomes `${endpoint}:${ip}`. Each function's counter is fully independent.
+If `request_count > maxRequests`, reject with 429 + `Retry-After`.
 
-### Fix 2: Real Retry-After header on 429
+This is wrapped in a Postgres function `check_rate_limit(p_key text, p_window_ms int, p_max_requests int)` returning `(allowed boolean, retry_after int)` for clean edge function calls.
 
-All 429 responses include `Retry-After: <seconds>` alongside CORS and Content-Type headers. A dedicated `rateLimitResponse` helper ensures consistency.
+## Implementation Steps
 
-### Fix 3: IP extraction precedence (spoofing reduction)
+### Step 1: Migration -- Create table + DB function
 
-Order: `cf-connecting-ip` (platform-trusted) first, then `x-forwarded-for` first segment, then `"unknown"`. The `"unknown"` fallback is safe because the key is `${endpoint}:unknown`, not a global shared bucket.
+- Create `rate_limits` table with `key` as primary key
+- Create `check_rate_limit()` Postgres function that does the atomic upsert + check in one call
+- Create `clean_expired_rate_limits()` function for periodic cleanup
+- RLS disabled (service-role only access)
 
-### Fix 4: Structured logging -- no persistence claims
+### Step 2: Update `_shared/rate-limit.ts`
 
-Rate limit log emits only: `event`, `endpoint`, `ip`, `retry_after_seconds`, `timestamp`. No language implying DB writes occurred.
-
-## Implementation
-
-### Step 1: Create `supabase/functions/_shared/rate-limit.ts`
+Replace the in-memory `Map` logic with a Supabase RPC call:
 
 ```typescript
-interface WindowEntry {
-  timestamps: number[];
-}
-
-const windows = new Map<string, WindowEntry>();
-
-export function checkRateLimit(
+export async function checkRateLimitDb(
+  supabase: SupabaseClient,
   endpoint: string,
   ip: string,
   maxRequests: number,
   windowMs: number
-): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const cutoff = now - windowMs;
+): Promise<{ allowed: boolean; retryAfter?: number }> {
   const key = `${endpoint}:${ip}`;
-
-  // Prune stale entries when map grows large
-  if (windows.size > 10000) {
-    for (const [k, entry] of windows) {
-      entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-      if (entry.timestamps.length === 0) windows.delete(k);
-    }
-  }
-
-  let entry = windows.get(key);
-  if (!entry) {
-    entry = { timestamps: [] };
-    windows.set(key, entry);
-  }
-
-  entry.timestamps = entry.timestamps.filter(t => t > cutoff);
-
-  if (entry.timestamps.length >= maxRequests) {
-    const oldestInWindow = entry.timestamps[0];
-    const retryAfter = Math.ceil((oldestInWindow + windowMs - now) / 1000);
-    return { allowed: false, retryAfter: Math.max(1, retryAfter) };
-  }
-
-  entry.timestamps.push(now);
-  return { allowed: true };
-}
-
-export function getClientIp(headers: Headers): string {
-  return headers.get("cf-connecting-ip")
-    || headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || "unknown";
-}
-```
-
-### Step 2: Rate limit response helper (used in each function)
-
-Each endpoint includes this inline helper (or inlined directly):
-
-```typescript
-function rateLimitedResponse(endpoint: string, ip: string, retryAfter: number) {
-  console.log(JSON.stringify({
-    event: "rate_limited",
-    endpoint,
-    ip,
-    retry_after_seconds: retryAfter,
-    timestamp: new Date().toISOString(),
-  }));
-  return new Response(
-    JSON.stringify({ valid: false, reason_code: "RATE_LIMITED" }),
-    {
-      status: 429,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-        "Retry-After": String(retryAfter),
-      },
-    }
-  );
-}
-```
-
-### Step 3: Integrate into `get-response/index.ts`
-
-After the OPTIONS check, before any logic:
-
-```typescript
-import { checkRateLimit, getClientIp } from "../_shared/rate-limit.ts";
-
-const clientIp = getClientIp(req.headers);
-const rateCheck = checkRateLimit("get-response", clientIp, 10, 60_000);
-if (!rateCheck.allowed) {
-  return rateLimitedResponse("get-response", clientIp, rateCheck.retryAfter!);
-}
-```
-
-### Step 4: Integrate into `submit-response/index.ts`
-
-Same pattern, stricter limit:
-
-```typescript
-const rateCheck = checkRateLimit("submit-response", clientIp, 5, 60_000);
-```
-
-### Step 5: Integrate into `resend-webhook/index.ts`
-
-Higher limit for provider bursts (placed after method check, before signature verification):
-
-```typescript
-const rateCheck = checkRateLimit("resend-webhook", clientIp, 60, 60_000);
-if (!rateCheck.allowed) {
-  // Returns 429 with Retry-After (no CORS needed -- server-to-server)
-  return new Response(JSON.stringify({ error: "rate_limited" }), {
-    status: 429,
-    headers: {
-      "Content-Type": "application/json",
-      "Retry-After": String(rateCheck.retryAfter),
-    },
+  const { data, error } = await supabase.rpc("check_rate_limit", {
+    p_key: key,
+    p_window_ms: windowMs,
+    p_max_requests: maxRequests,
   });
+  // Returns { allowed, retry_after }
 }
 ```
+
+Keep `getClientIp()` unchanged -- it's already correct.
+
+### Step 3: Update `get-response/index.ts`
+
+- The supabase client is already created (service-role) -- move it above the rate limit check
+- Replace `checkRateLimit(...)` with `await checkRateLimitDb(supabase, ...)`
+- Keep the `rateLimitedResponse` helper unchanged
+
+### Step 4: Update `submit-response/index.ts`
+
+- Same pattern: move supabase client creation above rate limit, swap to `checkRateLimitDb`
+
+### Step 5: Update `resend-webhook/index.ts`
+
+- Same pattern, 60 req/min limit preserved
+
+### Step 6: Cleanup -- remove in-memory code
+
+- Remove the `Map`, `WindowEntry`, and old `checkRateLimit` from `rate-limit.ts`
+- Keep only `checkRateLimitDb` and `getClientIp`
+
+## Limits (unchanged)
+
+| Endpoint | Limit |
+|----------|-------|
+| `get-response` | 10/min/IP |
+| `submit-response` | 5/min/IP |
+| `resend-webhook` | 60/min/IP |
+
+## What This Fixes
+
+- Cross-isolate consistency (all isolates share Postgres)
+- Deterministic enforcement (atomic upsert, no race conditions)
+- Auditable (rows visible in DB for forensics)
+- No external infrastructure (no Redis/Upstash dependency)
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/_shared/rate-limit.ts` | New -- shared sliding window module with endpoint-namespaced keys and trusted IP extraction |
-| `supabase/functions/get-response/index.ts` | Add rate limit check (10/min/IP), 429 with Retry-After |
-| `supabase/functions/submit-response/index.ts` | Add rate limit check (5/min/IP), 429 with Retry-After |
-| `supabase/functions/resend-webhook/index.ts` | Add rate limit check (60/min/IP), 429 with Retry-After |
+| Migration SQL | New `rate_limits` table + `check_rate_limit()` + `clean_expired_rate_limits()` functions |
+| `supabase/functions/_shared/rate-limit.ts` | Replace in-memory Map with `checkRateLimitDb()` RPC call |
+| `supabase/functions/get-response/index.ts` | Swap to async DB-backed rate check |
+| `supabase/functions/submit-response/index.ts` | Swap to async DB-backed rate check |
+| `supabase/functions/resend-webhook/index.ts` | Swap to async DB-backed rate check |
 
-No database migrations. No frontend changes.
+No frontend changes.
 
 ## Impact
 
-- **Operational Infrastructure**: ~25% to ~33-35%
+- **Operational Infrastructure**: ~33% to ~40-42% (real perimeter protection, not just code-present)
 - **Kernel Integrity**: Unchanged at 90%
 - **Open risks unchanged**: Bounce validation, orphan webhooks, concurrency load testing remain open
 
