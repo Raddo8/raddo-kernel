@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.suppression-admin]
 verify_jwt = false
+
+[functions.get-response]
+verify_jwt = false
+
+[functions.submit-response]
+verify_jwt = false

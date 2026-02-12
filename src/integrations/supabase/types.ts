@@ -65,6 +65,63 @@ export type Database = {
           },
         ]
       }
+      action_responses: {
+        Row: {
+          action_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          item_ref: string
+          metadata: Json | null
+          options: Json
+          selected_option: string | null
+          submitted_at: string | null
+          token_hash: string
+          workspace_id: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          item_ref: string
+          metadata?: Json | null
+          options?: Json
+          selected_option?: string | null
+          submitted_at?: string | null
+          token_hash: string
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          item_ref?: string
+          metadata?: Json | null
+          options?: Json
+          selected_option?: string | null
+          submitted_at?: string | null
+          token_hash?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_responses_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "action_responses_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       actions: {
         Row: {
           actor_user_id: string | null

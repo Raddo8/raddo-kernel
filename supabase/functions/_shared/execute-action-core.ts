@@ -16,6 +16,7 @@ const ALLOWED_VARIABLES = new Set([
   "contact.name",
   "contact.email",
   "contact.phone",
+  "response_url",
 ]);
 
 // ── Types ──
@@ -24,6 +25,7 @@ interface TemplateContext {
   item?: Record<string, unknown>;
   account?: Record<string, unknown>;
   contact?: Record<string, unknown>;
+  response_url?: string;
 }
 
 export interface ExecuteActionCoreResult {
@@ -41,10 +43,16 @@ type SupabaseClient = ReturnType<typeof createClient>;
 // ── Template rendering ──
 
 function resolve(path: string, ctx: TemplateContext): string | undefined {
+  // Handle top-level variables like response_url (no dot)
+  if (!path.includes(".")) {
+    const val = ctx[path as keyof TemplateContext];
+    if (val === null || val === undefined) return undefined;
+    return String(val);
+  }
   const [root, key] = path.split(".");
   const obj = ctx[root as keyof TemplateContext];
-  if (!obj || !(key in obj)) return undefined;
-  const val = obj[key];
+  if (!obj || typeof obj !== "object" || !(key in (obj as Record<string, unknown>))) return undefined;
+  const val = (obj as Record<string, unknown>)[key];
   if (val === null || val === undefined) return "";
   return String(val);
 }
@@ -235,6 +243,31 @@ export async function executeActionCore(
     });
   }
 
+  // ── 6b. present_options fail-fast checks ──
+  if (action.type === "present_options") {
+    const siteUrl = Deno.env.get("SITE_URL");
+    if (!siteUrl) {
+      await failAction(supabase, actionId, "SITE_URL required for present_options", []);
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId, itemId: action.item_id, direction: "system", channel: "system",
+          summary: "Action failed: SITE_URL not configured (present_options)",
+        });
+      }
+      return { success: false, error: "SITE_URL required for present_options" };
+    }
+    if (!action.template_id) {
+      await failAction(supabase, actionId, "present_options requires a template", []);
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId, itemId: action.item_id, direction: "system", channel: "system",
+          summary: "Action failed: present_options requires a template",
+        });
+      }
+      return { success: false, error: "present_options requires a template" };
+    }
+  }
+
   // ── 7. Load & render template ──
   let renderedSubject = "";
   let renderedBody = `Action executed: ${action.type}`;
@@ -285,12 +318,107 @@ export async function executeActionCore(
     return { success: false, error: errMsg };
   }
 
-  // ── 8. Channel routing ──
-  if (action.channel === "email" && action.type === "send_message") {
-    return await executeEmail(
+  // ── 8a. Token generation for present_options (before email send) ──
+  let responseUrl: string | undefined;
+  if (action.type === "present_options") {
+    // Non-retryable: check for existing response row
+    const { data: existingResp } = await supabase
+      .from("action_responses")
+      .select("id")
+      .eq("action_id", actionId)
+      .maybeSingle();
+
+    if (existingResp) {
+      await failAction(supabase, actionId, "present_options cannot be retried after token issuance", renderErrors);
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId, itemId: action.item_id, direction: "system", channel: "system",
+          summary: "Action failed: token already issued, cannot retry (present_options)",
+        });
+      }
+      return { success: false, error: "present_options cannot be retried after token issuance" };
+    }
+
+    // Generate 32-byte token
+    const { encode: base64urlEncode } = await import("https://deno.land/std@0.224.0/encoding/base64url.ts");
+    const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
+    const token = base64urlEncode(tokenBytes);
+
+    // SHA-256 hash for storage
+    const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    const tokenHash = [...new Uint8Array(hashBuffer)].map(b => b.toString(16).padStart(2, "0")).join("");
+
+    const payload = action.payload_json as Record<string, unknown> | null;
+    const DEFAULT_OPTIONS = [
+      { key: "pay_full", label: "Pay in Full" },
+      { key: "request_extension", label: "Request Extension" },
+      { key: "payment_plan", label: "Propose Payment Plan" },
+      { key: "dispute", label: "Dispute" },
+    ];
+    const options = (payload?.options as Array<{ key: string; label: string }>) ?? DEFAULT_OPTIONS;
+    const expiresInDays = (payload?.expires_in_days as number) ?? 7;
+    const expiresAt = new Date(Date.now() + expiresInDays * 86400000).toISOString();
+    const itemRef = (item.id as string).slice(-6);
+
+    const { error: insertErr } = await supabase.from("action_responses").insert({
+      action_id: actionId,
+      workspace_id: action.workspace_id,
+      token_hash: tokenHash,
+      options,
+      expires_at: expiresAt,
+      item_ref: itemRef,
+    });
+
+    if (insertErr) {
+      await failAction(supabase, actionId, `Response row creation failed: ${insertErr.message}`, renderErrors);
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId, itemId: action.item_id, direction: "system", channel: "system",
+          summary: "Action failed: could not create response row (present_options)",
+        });
+      }
+      return { success: false, error: insertErr.message };
+    }
+
+    const siteUrl = Deno.env.get("SITE_URL")!;
+    responseUrl = `${siteUrl}/respond/${token}`;
+
+    // Re-render template with response_url injected
+    if (action.template_id) {
+      const ctx: TemplateContext = {
+        item: item ? { id: item.id, title: item.title, amount: item.amount, due_date: item.due_date } : undefined,
+        account: account ? { name: account.name } : undefined,
+        contact: contact ? { name: contact.name, email: contact.email, phone: contact.phone } : undefined,
+        response_url: responseUrl,
+      };
+      const { data: tmpl } = await supabase.from("templates").select("subject, body").eq("id", action.template_id).maybeSingle();
+      if (tmpl) {
+        renderErrors.length = 0;
+        renderedSubject = renderString(tmpl.subject || "", ctx, renderErrors);
+        renderedBody = renderString(tmpl.body, ctx, renderErrors);
+      }
+    }
+  }
+
+  // ── 8b. Channel routing ──
+  if (action.channel === "email" && (action.type === "send_message" || action.type === "present_options")) {
+    const result = await executeEmail(
       supabase, action, actionId, item, account, contact,
       renderedSubject, renderedBody, renderErrors
     );
+
+    // Non-retryable: if email failed after token issuance for present_options
+    if (!result.success && action.type === "present_options") {
+      // Action already failed inside executeEmail, but ensure it's terminal
+      if (accountId) {
+        await writeTimeline(supabase, {
+          accountId, itemId: action.item_id, direction: "system", channel: "system",
+          summary: "Action failed: email send failed after token issuance. Manual requeue required.",
+        });
+      }
+    }
+
+    return result;
   } else {
     return await executeMock(
       supabase, action, actionId, item,
