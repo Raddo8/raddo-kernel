@@ -756,6 +756,24 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          key: string
+          request_count: number
+          window_start: string
+        }
+        Insert: {
+          key: string
+          request_count?: number
+          window_start?: string
+        }
+        Update: {
+          key?: string
+          request_count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       scores: {
         Row: {
           account_id: string | null
@@ -1032,6 +1050,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: { p_key: string; p_max_requests: number; p_window_ms: number }
+        Returns: Json
+      }
+      clean_expired_rate_limits: { Args: never; Returns: number }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean

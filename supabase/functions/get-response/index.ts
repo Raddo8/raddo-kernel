@@ -1,5 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
-import { checkRateLimit, getClientIp } from "../_shared/rate-limit.ts";
+import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,8 +38,13 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
   const clientIp = getClientIp(req.headers);
-  const rateCheck = checkRateLimit("get-response", clientIp, 10, 60_000);
+  const rateCheck = await checkRateLimitDb(supabase, "get-response", clientIp, 10, 60_000);
   if (!rateCheck.allowed) {
     return rateLimitedResponse("get-response", clientIp, rateCheck.retryAfter!);
   }
@@ -52,11 +57,6 @@ Deno.serve(async (req: Request) => {
 
     const tokenHash = await hashToken(token);
     const prefix = tokenHash.substring(0, 8);
-
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     const { data: row, error } = await supabase
       .from("action_responses")
