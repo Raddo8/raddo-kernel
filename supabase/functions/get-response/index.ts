@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { checkRateLimit, getClientIp } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,9 +12,36 @@ async function hashToken(token: string): Promise<string> {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function rateLimitedResponse(endpoint: string, ip: string, retryAfter: number) {
+  console.log(JSON.stringify({
+    event: "rate_limited",
+    endpoint,
+    ip,
+    retry_after_seconds: retryAfter,
+    timestamp: new Date().toISOString(),
+  }));
+  return new Response(
+    JSON.stringify({ valid: false, reason_code: "RATE_LIMITED" }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfter),
+      },
+    }
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const clientIp = getClientIp(req.headers);
+  const rateCheck = checkRateLimit("get-response", clientIp, 10, 60_000);
+  if (!rateCheck.allowed) {
+    return rateLimitedResponse("get-response", clientIp, rateCheck.retryAfter!);
   }
 
   try {
