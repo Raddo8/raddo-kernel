@@ -1055,6 +1055,7 @@ export type Database = {
         Returns: Json
       }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean

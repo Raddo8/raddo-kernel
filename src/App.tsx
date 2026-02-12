@@ -21,6 +21,7 @@ import PolicyRulesList from "@/pages/PolicyRulesList";
 import ContactsList from "@/pages/ContactsList";
 import ConnectorsList from "@/pages/ConnectorsList";
 import SuppressionList from "@/pages/SuppressionList";
+import SchedulerHealth from "@/pages/SchedulerHealth";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
@@ -74,6 +75,7 @@ const App = () => (
             <Route path="/contacts" element={<ContactsList />} />
             <Route path="/connectors" element={<ConnectorsList />} />
             <Route path="/suppression" element={<SuppressionList />} />
+            <Route path="/scheduler-health" element={<SchedulerHealth />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
