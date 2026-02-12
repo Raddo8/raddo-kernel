@@ -51,32 +51,32 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/respond/:token" element={<RespondPage />} />
+          <Route element={
+            <AuthGate>
+              <WorkspaceProvider>
+                <AppLayout />
+              </WorkspaceProvider>
+            </AuthGate>
+          }>
+            <Route path="/" element={<Index />} />
+            <Route path="/accounts" element={<AccountsList />} />
+            <Route path="/accounts/:id" element={<AccountDetail />} />
+            <Route path="/items" element={<ItemsList />} />
+            <Route path="/items/:id" element={<ItemDetail />} />
+            <Route path="/actions" element={<ActionsQueue />} />
+            <Route path="/timeline" element={<TimelinePage />} />
+            <Route path="/policies" element={<PoliciesList />} />
+            <Route path="/policies/:id" element={<PolicyDetail />} />
+            <Route path="/playbooks" element={<PlaybooksList />} />
+            <Route path="/playbooks/:id" element={<PlaybookDetail />} />
+            <Route path="/templates" element={<TemplatesList />} />
+            <Route path="/policy-rules" element={<PolicyRulesList />} />
+            <Route path="/contacts" element={<ContactsList />} />
+            <Route path="/connectors" element={<ConnectorsList />} />
+            <Route path="/suppression" element={<SuppressionList />} />
+          </Route>
+          <Route path="*" element={<NotFound />} />
         </Routes>
-        <AuthGate>
-          <WorkspaceProvider>
-            <Routes>
-              <Route element={<AppLayout />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/accounts" element={<AccountsList />} />
-                <Route path="/accounts/:id" element={<AccountDetail />} />
-                <Route path="/items" element={<ItemsList />} />
-                <Route path="/items/:id" element={<ItemDetail />} />
-                <Route path="/actions" element={<ActionsQueue />} />
-                <Route path="/timeline" element={<TimelinePage />} />
-                <Route path="/policies" element={<PoliciesList />} />
-                <Route path="/policies/:id" element={<PolicyDetail />} />
-                <Route path="/playbooks" element={<PlaybooksList />} />
-                <Route path="/playbooks/:id" element={<PlaybookDetail />} />
-                <Route path="/templates" element={<TemplatesList />} />
-                <Route path="/policy-rules" element={<PolicyRulesList />} />
-                <Route path="/contacts" element={<ContactsList />} />
-                <Route path="/connectors" element={<ConnectorsList />} />
-                <Route path="/suppression" element={<SuppressionList />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </WorkspaceProvider>
-        </AuthGate>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

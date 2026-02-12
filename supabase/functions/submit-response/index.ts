@@ -69,6 +69,18 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (updateErr || !updated) {
+      const { data: recheck } = await supabase
+        .from("action_responses")
+        .select("submitted_at, expires_at")
+        .eq("token_hash", tokenHash)
+        .maybeSingle();
+
+      if (recheck?.submitted_at) {
+        return json({ valid: false, reason_code: "ALREADY_RESPONDED" });
+      }
+      if (recheck && new Date(recheck.expires_at) <= new Date()) {
+        return json({ valid: false, reason_code: "TOKEN_EXPIRED" });
+      }
       return json({ valid: false, reason_code: "ALREADY_RESPONDED" });
     }
 
@@ -88,6 +100,12 @@ Deno.serve(async (req: Request) => {
         direction: "inbound",
         channel: "portal",
         summary: `Recipient responded: ${matchedOption.label}`,
+        rawJson: {
+          event_type: "recipient_response",
+          selected_option,
+          submitted_at: now,
+          token_hash_prefix: prefix,
+        },
       });
     }
 

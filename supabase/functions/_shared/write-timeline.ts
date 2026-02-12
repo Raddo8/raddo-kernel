@@ -11,6 +11,7 @@ export interface WriteTimelineParams {
   channel: string;
   summary: string;
   body?: string | null;
+  rawJson?: Record<string, unknown> | null;
 }
 
 export async function writeTimeline(
@@ -32,6 +33,7 @@ export async function writeTimeline(
     channel: params.channel,
     summary: params.summary,
     body: params.body || null,
+    raw_json: params.rawJson ?? null,
     occurred_at: new Date().toISOString(),
   });
 }
