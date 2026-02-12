@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.submit-response]
 verify_jwt = false
+
+[functions.cleanup-maintenance]
+verify_jwt = false
