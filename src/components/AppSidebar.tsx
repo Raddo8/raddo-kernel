@@ -14,6 +14,7 @@ import {
   ShieldOff,
   Users,
   Plug,
+  HeartPulse,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -37,6 +38,7 @@ export default function AppSidebar() {
     { to: "/templates", label: "Templates", icon: LayoutTemplate },
     { to: "/connectors", label: "Connectors", icon: Plug },
     { to: "/suppression", label: "Suppressions", icon: ShieldOff },
+    { to: "/scheduler-health", label: "Health", icon: HeartPulse },
   ];
   return (
     <aside
