@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { encodeBase64Url } from "jsr:@std/encoding@1.0.10/base64url";
 import { writeTimeline } from "./write-timeline.ts";
 
 // ── Constants ──
@@ -340,9 +341,8 @@ export async function executeActionCore(
     }
 
     // Generate 32-byte token
-    const { encode: base64urlEncode } = await import("https://deno.land/std@0.224.0/encoding/base64url.ts");
     const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
-    const token = base64urlEncode(tokenBytes);
+    const token = encodeBase64Url(tokenBytes);
 
     // SHA-256 hash for storage
     const hashBuffer = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
