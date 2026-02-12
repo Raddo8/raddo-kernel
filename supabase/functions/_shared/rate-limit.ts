@@ -1,43 +1,30 @@
-interface WindowEntry {
-  timestamps: number[];
-}
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
-const windows = new Map<string, WindowEntry>();
-
-export function checkRateLimit(
+export async function checkRateLimitDb(
+  supabase: SupabaseClient,
   endpoint: string,
   ip: string,
   maxRequests: number,
   windowMs: number
-): { allowed: boolean; retryAfter?: number } {
-  const now = Date.now();
-  const cutoff = now - windowMs;
+): Promise<{ allowed: boolean; retryAfter?: number }> {
   const key = `${endpoint}:${ip}`;
+  const { data, error } = await supabase.rpc("check_rate_limit", {
+    p_key: key,
+    p_window_ms: windowMs,
+    p_max_requests: maxRequests,
+  });
 
-  // Prune stale entries when map grows large
-  if (windows.size > 10000) {
-    for (const [k, entry] of windows) {
-      entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
-      if (entry.timestamps.length === 0) windows.delete(k);
-    }
+  if (error) {
+    // Fail open: if DB is down, allow the request but log the error
+    console.error("[rate-limit] DB check failed, allowing request:", error.message);
+    return { allowed: true };
   }
 
-  let entry = windows.get(key);
-  if (!entry) {
-    entry = { timestamps: [] };
-    windows.set(key, entry);
-  }
-
-  entry.timestamps = entry.timestamps.filter((t) => t > cutoff);
-
-  if (entry.timestamps.length >= maxRequests) {
-    const oldestInWindow = entry.timestamps[0];
-    const retryAfter = Math.ceil((oldestInWindow + windowMs - now) / 1000);
-    return { allowed: false, retryAfter: Math.max(1, retryAfter) };
-  }
-
-  entry.timestamps.push(now);
-  return { allowed: true };
+  const result = data as { allowed: boolean; retry_after: number };
+  return {
+    allowed: result.allowed,
+    retryAfter: result.allowed ? undefined : result.retry_after,
+  };
 }
 
 export function getClientIp(headers: Headers): string {
