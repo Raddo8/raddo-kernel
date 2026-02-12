@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, x-cron-timestamp, x-cron-token",
 };
 
 // ── Canonical predicate hashing ──
@@ -135,19 +135,29 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth: X-CRON-SECRET only
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  const provided = req.headers.get("x-cron-secret");
-  if (!cronSecret || provided !== cronSecret) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+  // Auth: HMAC token verification
+  const timestamp = req.headers.get("X-Cron-Timestamp") || req.headers.get("x-cron-timestamp");
+  const token = req.headers.get("X-Cron-Token") || req.headers.get("x-cron-token");
+  if (!timestamp || !token) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabase = createClient(supabaseUrl, serviceRoleKey);
+  const { data: isValid } = await supabase.rpc("verify_cron_token", {
+    p_timestamp: timestamp,
+    p_token: token,
+  });
+  if (!isValid) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
 
   const now = Date.now();
   const tenMinutesAgo = new Date(now - 10 * 60_000).toISOString();
@@ -218,7 +228,8 @@ Deno.serve(async (req) => {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "X-CRON-SECRET": cronSecret,
+                  "X-Cron-Timestamp": timestamp!,
+                  "X-Cron-Token": token!,
                 },
                 body: JSON.stringify({
                   mode: "create",

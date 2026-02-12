@@ -5,7 +5,7 @@ import { executeActionCore } from "../_shared/execute-action-core.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-cron-timestamp, x-cron-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // ── Constants ──
@@ -26,17 +26,24 @@ async function authenticate(req: Request, requestMode: string): Promise<AuthResu
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const cronSecret = Deno.env.get("CRON_SECRET");
 
-  // Check X-CRON-SECRET header first
-  const reqCronSecret = req.headers.get("X-CRON-SECRET") || req.headers.get("x-cron-secret");
-  if (reqCronSecret && cronSecret && reqCronSecret === cronSecret) {
-    // Cron secret is strictly scoped to create mode only
-    if (requestMode === "execute") {
-      return jsonError("Cron secret not allowed for execute mode", 403);
+  // Check HMAC cron token first
+  const cronTimestamp = req.headers.get("X-Cron-Timestamp") || req.headers.get("x-cron-timestamp");
+  const cronToken = req.headers.get("X-Cron-Token") || req.headers.get("x-cron-token");
+  if (cronTimestamp && cronToken) {
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: isValid } = await serviceClient.rpc("verify_cron_token", {
+      p_timestamp: cronTimestamp,
+      p_token: cronToken,
+    });
+    if (!isValid) {
+      return jsonError("Unauthorized", 401);
     }
-    const client = createClient(supabaseUrl, serviceRoleKey);
-    return { mode: "scheduler", supabase: client, userId: null, source: "scheduler" };
+    // Cron auth is strictly scoped to create mode only
+    if (requestMode === "execute") {
+      return jsonError("Cron auth not allowed for execute mode", 403);
+    }
+    return { mode: "scheduler", supabase: serviceClient, userId: null, source: "scheduler" };
   }
 
   // Fall back to user JWT

@@ -354,6 +354,24 @@ export type Database = {
           },
         ]
       }
+      internal_keys: {
+        Row: {
+          created_at: string
+          key_value: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          key_value?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          key_value?: string
+          name?: string
+        }
+        Relationships: []
+      }
       item_states: {
         Row: {
           color: string | null
@@ -1059,6 +1077,10 @@ export type Database = {
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      verify_cron_token: {
+        Args: { p_timestamp: string; p_token: string }
         Returns: boolean
       }
     }

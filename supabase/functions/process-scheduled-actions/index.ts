@@ -4,7 +4,7 @@ import { executeActionCore } from "../_shared/execute-action-core.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-secret",
+    "authorization, x-client-info, apikey, content-type, x-cron-timestamp, x-cron-token",
 };
 
 Deno.serve(async (req: Request) => {
@@ -13,11 +13,24 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ── Auth: X-CRON-SECRET only, no JWT fallback ──
-    const cronSecret = Deno.env.get("CRON_SECRET");
-    const reqSecret = req.headers.get("X-CRON-SECRET");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    if (!cronSecret || !reqSecret || reqSecret !== cronSecret) {
+    // ── Auth: HMAC token verification ──
+    const timestamp = req.headers.get("X-Cron-Timestamp") || req.headers.get("x-cron-timestamp");
+    const token = req.headers.get("X-Cron-Token") || req.headers.get("x-cron-token");
+    if (!timestamp || !token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const { data: isValid } = await supabase.rpc("verify_cron_token", {
+      p_timestamp: timestamp,
+      p_token: token,
+    });
+    if (!isValid) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -25,10 +38,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Query due actions ──
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
-
     const { data: dueActions, error: queryErr } = await supabase
       .from("actions")
       .select("id")
