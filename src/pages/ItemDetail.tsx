@@ -26,6 +26,7 @@ export default function ItemDetail() {
   const [notFound, setNotFound] = useState(false);
   const [selectedAction, setSelectedAction] = useState<any | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
 
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
@@ -72,6 +73,12 @@ export default function ItemDetail() {
         .eq("workspace_id", workspace.id)
         .order("sort_order")
         .then(({ data }) => setStates(data || []));
+      supabase.from("templates").select("id")
+        .eq("workspace_id", workspace.id)
+        .eq("template_type", "present_options")
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => setPresentOptionsTemplateId(data?.id ?? null));
     }
   }, [workspace]);
 
@@ -107,8 +114,12 @@ export default function ItemDetail() {
     toast.success("State updated");
   };
 
-  const handleQueueAction = async (actionType: string, channel: string, payloadJson?: Record<string, unknown>) => {
+  const handleQueueAction = async (actionType: string, channel: string, payloadJson?: Record<string, unknown>, templateId?: string) => {
     if (!id || !item) return;
+    if (actionType === "present_options" && !templateId) {
+      toast.error("No present_options template configured for this workspace");
+      return;
+    }
     const result = await queueAction({
       itemId: id,
       type: actionType,
@@ -116,6 +127,7 @@ export default function ItemDetail() {
       source: "ui",
       actorUserId: userId ?? undefined,
       payloadJson,
+      templateId,
     });
     if (result.error) { toast.error(result.error); return; }
     if (result.rateLimited) { toast.error("Rate limit exceeded"); return; }
@@ -189,15 +201,15 @@ export default function ItemDetail() {
               <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("request_verification", "email")}>
                 <Shield size={14} className="mr-2" /> Request Verification
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("present_options", "email", {
+              <Button variant="secondary" size="sm" className="w-full justify-start" disabled={!presentOptionsTemplateId} onClick={() => handleQueueAction("present_options", "email", {
                 options: [
                   { key: "pay_full", label: "Pay in Full" },
                   { key: "request_extension", label: "Request Extension" },
                   { key: "payment_plan", label: "Propose Payment Plan" },
                   { key: "dispute", label: "Dispute" },
                 ],
-              })}>
-                <MessageSquare size={14} className="mr-2" /> Present Options
+              }, presentOptionsTemplateId!)}>
+                <MessageSquare size={14} className="mr-2" /> {presentOptionsTemplateId ? "Present Options" : "Present Options (template missing)"}
               </Button>
               <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("escalate", "system")}>
                 <AlertTriangle size={14} className="mr-2" /> Escalate
