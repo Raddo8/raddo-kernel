@@ -268,7 +268,15 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const result = await executeActionCore(supabase, actionId, {
+    // Use service-role client for execution core (needs to insert into
+    // action_responses which has no user-facing INSERT RLS policy).
+    // Auth + membership already verified above.
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const result = await executeActionCore(serviceClient, actionId, {
       userId,
       source,
       manualRetry,
