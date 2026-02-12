@@ -1,52 +1,117 @@
 
 
-# Set SITE_URL and Create present_options Template
+# Fix: Present Options Template Resolution (Revised)
 
-Two steps to unblock the end-to-end test.
-
----
-
-## Step 1: Set the SITE_URL secret
-
-SITE_URL tells the backend where to build response links. Since this project is not yet published, we will use the preview URL:
-
-```
-https://id-preview--ae13e380-add9-4492-8c49-ab005fe534ad.lovable.app
-```
-
-No trailing slash. This will be stored as a backend secret accessible by edge functions.
+All four requirements addressed. No hardcoded UUIDs anywhere.
 
 ---
 
-## Step 2: Create the `present_options` email template
+## Changes to `src/pages/ItemDetail.tsx`
 
-No `present_options` template exists yet. We will insert one into the database via the Templates page. The template must include `{{response_url}}` so the rendered email contains the clickable link.
+### 1. Add dynamic template lookup by workspace + type
 
-**Template details:**
-- **template_type**: `present_options`
-- **channel**: `email`
-- **subject**: `Action Required: {{item.title}}`
-- **body**:
+New state and effect that resolves the template at runtime:
+
+```typescript
+const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
+
+useEffect(() => {
+  if (workspace) {
+    supabase.from("templates")
+      .select("id")
+      .eq("workspace_id", workspace.id)
+      .eq("template_type", "present_options")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setPresentOptionsTemplateId(data?.id ?? null));
+  }
+}, [workspace]);
 ```
-Dear {{contact.name}},
 
-Regarding invoice {{item.title}} for {{item.amount}}, please select one of the options below:
+No concrete UUID referenced anywhere.
 
-{{response_url}}
+### 2. Disable the button when template is unresolved
 
-Thank you for your prompt attention.
+The "Present Options" button gets a `disabled` prop and visual feedback:
+
+```typescript
+<Button
+  variant="secondary"
+  size="sm"
+  className="w-full justify-start"
+  disabled={!presentOptionsTemplateId}
+  onClick={() => handleQueueAction("present_options", "email", {
+    options: [
+      { key: "pay_full", label: "Pay in Full" },
+      { key: "request_extension", label: "Request Extension" },
+      { key: "payment_plan", label: "Propose Payment Plan" },
+      { key: "dispute", label: "Dispute" },
+    ],
+  }, presentOptionsTemplateId!)}
+>
+  <MessageSquare size={14} className="mr-2" />
+  {presentOptionsTemplateId ? "Present Options" : "Present Options (template missing)"}
+</Button>
 ```
 
-This will be inserted directly into the `templates` table for the current workspace.
+When `presentOptionsTemplateId` is `null`, the button is grayed out and labeled accordingly. No action can be queued.
+
+### 3. Fix the function signature
+
+Update `handleQueueAction` to accept a 4th optional `templateId` parameter and forward it to `queueAction()` using the existing `templateId` field on `QueueActionParams`:
+
+```typescript
+const handleQueueAction = async (
+  actionType: string,
+  channel: string,
+  payloadJson?: Record<string, unknown>,
+  templateId?: string,
+) => {
+  if (!id || !item) return;
+  const result = await queueAction({
+    itemId: id,
+    type: actionType,
+    channel,
+    source: "ui",
+    actorUserId: userId ?? undefined,
+    payloadJson,
+    templateId,        // forwarded to QueueActionParams.templateId
+  });
+  // ... existing error/success handling unchanged
+};
+```
+
+The field name `templateId` matches `QueueActionParams` exactly -- no mapping needed.
+
+### 4. Guard against missing template at queue time
+
+Even though the button is disabled, add a runtime guard as defense-in-depth:
+
+```typescript
+if (actionType === "present_options" && !templateId) {
+  toast.error("No present_options template configured for this workspace");
+  return;
+}
+```
+
+This sits at the top of `handleQueueAction`, before calling `queueAction()`. Prevents terminal failures if the button state is somehow bypassed.
 
 ---
 
-## Technical Details
+## No other files change
 
-| Step | Action |
-|---|---|
-| 1 | Use `add_secret` tool to set `SITE_URL` to the preview URL |
-| 2 | Insert a row into `templates` table with `template_type = 'present_options'` and body containing `{{response_url}}` |
+- `queue-actions.ts` already has `templateId` on `QueueActionParams` -- no changes needed.
+- No backend changes needed -- SITE_URL and template already configured.
 
-After both steps, you can queue a `present_options` action on any item to trigger the full flow.
+## After deployment: E2E test sequence
+
+1. Open any item with contacts
+2. Verify "Present Options" button is enabled (template resolved)
+3. Click it -- confirm action queued successfully
+4. Verify action transitions to completed
+5. Check email, click link, verify respond page
+6. Submit option, verify "Response received"
+7. Revisit link, verify "Already responded"
+8. Check timeline for inbound event with correct raw_json
+9. Negative tests: expired token, random token
 
