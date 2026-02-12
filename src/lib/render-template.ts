@@ -34,6 +34,7 @@ export interface TemplateContext {
     email?: string | null;
     phone?: string | null;
   };
+  response_url?: string;
 }
 
 export interface RenderResult {
@@ -43,6 +44,12 @@ export interface RenderResult {
 }
 
 function resolve(path: string, ctx: TemplateContext): string | undefined {
+  if (!path.includes(".")) {
+    const val = (ctx as Record<string, unknown>)[path];
+    if (val === undefined) return undefined;
+    if (val === null) return "";
+    return String(val);
+  }
   const [root, key] = path.split(".");
   const obj = ctx[root as keyof TemplateContext] as Record<string, unknown> | undefined;
   if (!obj || !(key in obj)) return undefined;
