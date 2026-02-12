@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { checkRateLimit, getClientIp } from "../_shared/rate-limit.ts";
 
 // ── Svix signature verification ──
 
@@ -64,6 +65,25 @@ async function verifyWebhookSignature(
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+
+  const clientIp = getClientIp(req.headers);
+  const rateCheck = checkRateLimit("resend-webhook", clientIp, 60, 60_000);
+  if (!rateCheck.allowed) {
+    console.log(JSON.stringify({
+      event: "rate_limited",
+      endpoint: "resend-webhook",
+      ip: clientIp,
+      retry_after_seconds: rateCheck.retryAfter,
+      timestamp: new Date().toISOString(),
+    }));
+    return new Response(JSON.stringify({ error: "rate_limited" }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(rateCheck.retryAfter),
+      },
+    });
   }
 
   const webhookSecret = Deno.env.get("RESEND_WEBHOOK_SECRET");

@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { writeTimeline } from "../_shared/write-timeline.ts";
+import { checkRateLimit, getClientIp } from "../_shared/rate-limit.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,9 +13,36 @@ async function hashToken(token: string): Promise<string> {
   return [...new Uint8Array(buffer)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function rateLimitedResponse(endpoint: string, ip: string, retryAfter: number) {
+  console.log(JSON.stringify({
+    event: "rate_limited",
+    endpoint,
+    ip,
+    retry_after_seconds: retryAfter,
+    timestamp: new Date().toISOString(),
+  }));
+  return new Response(
+    JSON.stringify({ valid: false, reason_code: "RATE_LIMITED" }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfter),
+      },
+    }
+  );
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  const clientIp = getClientIp(req.headers);
+  const rateCheck = checkRateLimit("submit-response", clientIp, 5, 60_000);
+  if (!rateCheck.allowed) {
+    return rateLimitedResponse("submit-response", clientIp, rateCheck.retryAfter!);
   }
 
   try {
@@ -31,7 +59,6 @@ Deno.serve(async (req: Request) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Step 1: Select row to validate option (safe: options are immutable)
     const { data: row, error: selectErr } = await supabase
       .from("action_responses")
       .select("options, submitted_at, expires_at")
@@ -50,14 +77,12 @@ Deno.serve(async (req: Request) => {
       return json({ valid: false, reason_code: "TOKEN_EXPIRED" });
     }
 
-    // Step 2: Validate selected_option key against options
     const options = row.options as Array<{ key: string; label: string }>;
     const matchedOption = options.find((o) => o.key === selected_option);
     if (!matchedOption) {
       return json({ valid: false, reason_code: "INVALID_OPTION" });
     }
 
-    // Step 3: Atomic update
     const now = new Date().toISOString();
     const { data: updated, error: updateErr } = await supabase
       .from("action_responses")
@@ -84,14 +109,12 @@ Deno.serve(async (req: Request) => {
       return json({ valid: false, reason_code: "ALREADY_RESPONDED" });
     }
 
-    // Step 4: Load action -> item -> account_id for timeline
     const { data: action } = await supabase
       .from("actions")
       .select("item_id, items(account_id)")
       .eq("id", updated.action_id)
       .maybeSingle();
 
-    // Step 5: Write inbound timeline event (only after update success)
     if (action?.items) {
       const accountId = (action.items as any).account_id as string;
       await writeTimeline(supabase, {
@@ -109,7 +132,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Step 6: Structured log
     console.log(JSON.stringify({
       event: "response_submitted",
       token_hash_prefix: prefix,
