@@ -23,6 +23,7 @@ import ConnectorsList from "@/pages/ConnectorsList";
 import SuppressionList from "@/pages/SuppressionList";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
+import RespondPage from "@/pages/RespondPage";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,6 +49,9 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Routes>
+          <Route path="/respond/:token" element={<RespondPage />} />
+        </Routes>
         <AuthGate>
           <WorkspaceProvider>
             <Routes>
@@ -63,11 +67,11 @@ const App = () => (
                 <Route path="/policies/:id" element={<PolicyDetail />} />
                 <Route path="/playbooks" element={<PlaybooksList />} />
                 <Route path="/playbooks/:id" element={<PlaybookDetail />} />
-              <Route path="/templates" element={<TemplatesList />} />
-              <Route path="/policy-rules" element={<PolicyRulesList />} />
-              <Route path="/contacts" element={<ContactsList />} />
-              <Route path="/connectors" element={<ConnectorsList />} />
-              <Route path="/suppression" element={<SuppressionList />} />
+                <Route path="/templates" element={<TemplatesList />} />
+                <Route path="/policy-rules" element={<PolicyRulesList />} />
+                <Route path="/contacts" element={<ContactsList />} />
+                <Route path="/connectors" element={<ConnectorsList />} />
+                <Route path="/suppression" element={<SuppressionList />} />
               </Route>
               <Route path="*" element={<NotFound />} />
             </Routes>

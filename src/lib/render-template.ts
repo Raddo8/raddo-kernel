@@ -16,6 +16,7 @@ const ALLOWED_VARIABLES = new Set([
   "contact.name",
   "contact.email",
   "contact.phone",
+  "response_url",
 ]);
 
 export interface TemplateContext {

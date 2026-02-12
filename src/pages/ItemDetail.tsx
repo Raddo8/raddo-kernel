@@ -107,7 +107,7 @@ export default function ItemDetail() {
     toast.success("State updated");
   };
 
-  const handleQueueAction = async (actionType: string, channel: string) => {
+  const handleQueueAction = async (actionType: string, channel: string, payloadJson?: Record<string, unknown>) => {
     if (!id || !item) return;
     const result = await queueAction({
       itemId: id,
@@ -115,6 +115,7 @@ export default function ItemDetail() {
       channel,
       source: "ui",
       actorUserId: userId ?? undefined,
+      payloadJson,
     });
     if (result.error) { toast.error(result.error); return; }
     if (result.rateLimited) { toast.error("Rate limit exceeded"); return; }
@@ -188,7 +189,14 @@ export default function ItemDetail() {
               <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("request_verification", "email")}>
                 <Shield size={14} className="mr-2" /> Request Verification
               </Button>
-              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("present_options", "email")}>
+              <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("present_options", "email", {
+                options: [
+                  { key: "pay_full", label: "Pay in Full" },
+                  { key: "request_extension", label: "Request Extension" },
+                  { key: "payment_plan", label: "Propose Payment Plan" },
+                  { key: "dispute", label: "Dispute" },
+                ],
+              })}>
                 <MessageSquare size={14} className="mr-2" /> Present Options
               </Button>
               <Button variant="secondary" size="sm" className="w-full justify-start" onClick={() => handleQueueAction("escalate", "system")}>

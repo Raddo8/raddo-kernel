@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import StatusBadge from "@/components/StatusBadge";
 import { format } from "date-fns";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Loader2 } from "lucide-react";
 
 function normalizeEventType(raw: string): string {
   return raw.startsWith("email.") ? raw.slice(6) : raw;
@@ -18,20 +18,26 @@ interface ActionInspectorDrawerProps {
 export default function ActionInspectorDrawer({ action, open, onOpenChange }: ActionInspectorDrawerProps) {
   const [events, setEvents] = useState<any[]>([]);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [responseStatus, setResponseStatus] = useState<{ state: "awaiting" | "responded" | "expired" | "none"; label?: string } | null>(null);
 
   useEffect(() => {
     if (!action || !open) {
       setEvents([]);
+      setResponseStatus(null);
       return;
     }
     fetchEvents();
+    if (action.type === "present_options") {
+      fetchResponseStatus();
+    } else {
+      setResponseStatus(null);
+    }
   }, [action?.id, open]);
 
   const fetchEvents = async () => {
     if (!action) return;
     setLoadingEvents(true);
 
-    // Primary: by action_id
     const { data: primary } = await supabase
       .from("message_events")
       .select("*")
@@ -42,7 +48,6 @@ export default function ActionInspectorDrawer({ action, open, onOpenChange }: Ac
 
     let merged = primary || [];
 
-    // Fallback: by provider_message_id if primary empty
     if (merged.length === 0 && action.provider_message_id) {
       const { data: fallback } = await supabase
         .from("message_events")
@@ -62,6 +67,30 @@ export default function ActionInspectorDrawer({ action, open, onOpenChange }: Ac
 
     setEvents(merged);
     setLoadingEvents(false);
+  };
+
+  const fetchResponseStatus = async () => {
+    if (!action) return;
+    const { data } = await supabase
+      .from("action_responses")
+      .select("selected_option, submitted_at, expires_at, options")
+      .eq("action_id", action.id)
+      .maybeSingle();
+
+    if (!data) {
+      setResponseStatus({ state: "none" });
+      return;
+    }
+
+    if (data.submitted_at && data.selected_option) {
+      const options = data.options as Array<{ key: string; label: string }>;
+      const matched = options?.find((o) => o.key === data.selected_option);
+      setResponseStatus({ state: "responded", label: matched?.label || data.selected_option });
+    } else if (new Date(data.expires_at) <= new Date()) {
+      setResponseStatus({ state: "expired" });
+    } else {
+      setResponseStatus({ state: "awaiting" });
+    }
   };
 
   if (!action) return null;
@@ -113,7 +142,29 @@ export default function ActionInspectorDrawer({ action, open, onOpenChange }: Ac
           )}
         </div>
 
-        {/* Section 2: Message Events */}
+        {/* Section 2: Response Status (present_options only) */}
+        {action.type === "present_options" && responseStatus && responseStatus.state !== "none" && (
+          <div className="mt-6">
+            <h4 className="text-xs font-semibold font-mono text-muted-foreground mb-2">RESPONSE STATUS</h4>
+            {responseStatus.state === "awaiting" && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock size={14} /> Awaiting response
+              </div>
+            )}
+            {responseStatus.state === "responded" && (
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 size={14} className="text-primary" /> Responded: {responseStatus.label}
+              </div>
+            )}
+            {responseStatus.state === "expired" && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertTriangle size={14} /> Expired (no response)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Section 3: Message Events */}
         <div className="mt-6">
           <h4 className="text-xs font-semibold font-mono text-muted-foreground mb-2">MESSAGE EVENTS</h4>
           {loadingEvents ? (
