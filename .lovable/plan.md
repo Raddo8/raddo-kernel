@@ -1,157 +1,189 @@
 
 
-# Fix action_responses Sensitive Data Exposure -- Hardened Plan
+# Harden Warning-Level RLS Gaps: Mutation Deny Policies (Corrected)
 
 ## Summary
 
-Replace the broad SELECT policy on `action_responses` with a hardened RPC function, preventing `token_hash` exposure to workspace members. All four required hardening elements are addressed.
+Close all missing UPDATE/DELETE (and INSERT where applicable) gaps on 6 tables using a three-layer defense: restrictive RLS policies, privilege revocation, and service-role bypass preservation.
 
-## Pre-Condition Verification (Confirmed via DB Queries)
+## What Changed From Previous Plan
 
-| Check | Status |
-|---|---|
-| RLS enabled on `action_responses` | Confirmed (`relrowsecurity = true`) |
-| Unique enforcement on `action_id` | Unique INDEX exists (`idx_action_responses_action`), but no formal CONSTRAINT -- migration will add one |
-| Only one user-facing read path | Confirmed: only `ActionInspectorDrawer.tsx` |
-| Edge functions use service-role | Confirmed: `get-response`, `submit-response`, `execute-action-core` all bypass RLS |
-
-## Complete Access Audit
-
-| Location | Client | Affected by DROP? |
+| Element | Previous (Flawed) | Corrected |
 |---|---|---|
-| `ActionInspectorDrawer.tsx` | User (anon key) | Yes -- migrate to RPC |
-| `get-response/index.ts` | Service-role | No |
-| `submit-response/index.ts` | Service-role | No |
-| `execute-action-core.ts` | Service-role | No |
-| `execute-action-server/index.ts` | Service-role | No |
+| Policy type | Default permissive `USING (false)` | `AS RESTRICTIVE USING (false)` -- AND-blocks, cannot be overridden by future permissive policies |
+| Role scope | `TO authenticated` only | `TO authenticated, anon` -- covers all non-service roles |
+| Privilege layer | Not addressed | Explicit `REVOKE INSERT, UPDATE, DELETE FROM anon, authenticated` on each table |
+| Governance alignment | Claimed "restrictive" but implemented permissive | Implementation now matches claim |
 
-## Deploy Order (4 steps, no regression window)
+## Why Three Layers
 
-### Step 1: Database Migration
+1. **Restrictive RLS policies**: `AS RESTRICTIVE` ensures the deny is AND-ed with any future permissive policy, making it impossible to override without explicitly dropping the restrictive policy first.
+2. **Privilege revocation**: Even if RLS were somehow bypassed or disabled, the role itself lacks the SQL privilege to mutate. Defense in depth.
+3. **Service-role preservation**: `service_role` bypasses both RLS and privilege checks, so edge functions continue working without change.
 
-Single migration with all hardening elements:
+## Tables and Operations
+
+| Table | Missing Operations | Has `workspace_id`? |
+|---|---|---|
+| `suppression_list` | UPDATE, DELETE | Yes (direct) |
+| `message_events` | INSERT, UPDATE, DELETE | Yes (direct) |
+| `timeline_events` | UPDATE, DELETE | No (via accounts join) |
+| `scores` | INSERT, UPDATE, DELETE | No (via items/accounts join) |
+| `workspace_members` | UPDATE, DELETE | Yes (direct) |
+| `workspaces` | DELETE | Yes (is `id`) |
+
+## Migration SQL
+
+Single migration, two sections per table: restrictive RLS policies, then privilege revocation.
 
 ```sql
--- 1. Confirm RLS is enabled (idempotent)
-ALTER TABLE public.action_responses ENABLE ROW LEVEL SECURITY;
+-- ============================================================
+-- suppression_list
+-- Mutations only via suppression-admin edge function (service-role)
+-- ============================================================
+CREATE POLICY "Deny update on suppression_list"
+  ON public.suppression_list FOR UPDATE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
--- 2. Add formal UNIQUE constraint (index already exists, constraint does not)
-ALTER TABLE public.action_responses
-ADD CONSTRAINT action_responses_action_id_unique UNIQUE USING INDEX idx_action_responses_action;
+CREATE POLICY "Deny delete on suppression_list"
+  ON public.suppression_list FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
--- 3. Create hardened RPC
-CREATE OR REPLACE FUNCTION public.get_action_response_status(p_action_id uuid)
-RETURNS jsonb
-LANGUAGE plpgsql
-STABLE
-SECURITY DEFINER
-SET search_path = 'public'
-AS $$
-DECLARE
-  v_workspace_id uuid;
-  v_result record;
-BEGIN
-  -- Validate action exists
-  SELECT a.workspace_id INTO v_workspace_id
-  FROM public.actions a WHERE a.id = p_action_id;
+REVOKE UPDATE, DELETE ON TABLE public.suppression_list FROM anon, authenticated;
 
-  IF v_workspace_id IS NULL THEN
-    RAISE EXCEPTION 'action_not_found'
-      USING HINT = 'The specified action does not exist';
-  END IF;
+-- ============================================================
+-- message_events
+-- Append-only via resend-webhook edge function (service-role)
+-- No user INSERT, UPDATE, or DELETE
+-- ============================================================
+CREATE POLICY "Deny insert on message_events"
+  ON public.message_events FOR INSERT
+  TO authenticated, anon
+  AS RESTRICTIVE
+  WITH CHECK (false);
 
-  -- Enforce workspace membership (explicit deny, auditable)
-  IF NOT public.is_workspace_member(auth.uid(), v_workspace_id) THEN
-    RAISE EXCEPTION 'access_denied'
-      USING HINT = 'You are not a member of this workspace';
-  END IF;
+CREATE POLICY "Deny update on message_events"
+  ON public.message_events FOR UPDATE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
-  -- Return only safe columns (never token_hash)
-  SELECT ar.selected_option, ar.submitted_at, ar.expires_at, ar.options
-  INTO v_result
-  FROM public.action_responses ar
-  WHERE ar.action_id = p_action_id;
+CREATE POLICY "Deny delete on message_events"
+  ON public.message_events FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
-  IF v_result IS NULL THEN
-    RETURN NULL;
-  END IF;
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.message_events FROM anon, authenticated;
 
-  RETURN jsonb_build_object(
-    'selected_option', v_result.selected_option,
-    'submitted_at', v_result.submitted_at,
-    'expires_at', v_result.expires_at,
-    'options', v_result.options
-  );
-END;
-$$;
+-- ============================================================
+-- timeline_events
+-- Append-only from user perspective (INSERT policy exists)
+-- UPDATE and DELETE only via service-role
+-- ============================================================
+CREATE POLICY "Deny update on timeline_events"
+  ON public.timeline_events FOR UPDATE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
--- 4. Pin owner to postgres (prevent ownership drift)
-ALTER FUNCTION public.get_action_response_status(uuid) OWNER TO postgres;
+CREATE POLICY "Deny delete on timeline_events"
+  ON public.timeline_events FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
 
--- 5. Deterministic privilege lockdown: revoke all, then grant only authenticated
-REVOKE ALL ON FUNCTION public.get_action_response_status(uuid) FROM PUBLIC;
-REVOKE ALL ON FUNCTION public.get_action_response_status(uuid) FROM anon;
-REVOKE ALL ON FUNCTION public.get_action_response_status(uuid) FROM authenticated;
-GRANT EXECUTE ON FUNCTION public.get_action_response_status(uuid) TO authenticated;
+REVOKE UPDATE, DELETE ON TABLE public.timeline_events FROM anon, authenticated;
 
--- 6. Drop the overly broad SELECT policy (RLS is confirmed enabled above)
-DROP POLICY IF EXISTS "Members can view action_responses" ON action_responses;
+-- ============================================================
+-- scores
+-- Read-only for users, all writes via service-role
+-- ============================================================
+CREATE POLICY "Deny insert on scores"
+  ON public.scores FOR INSERT
+  TO authenticated, anon
+  AS RESTRICTIVE
+  WITH CHECK (false);
+
+CREATE POLICY "Deny update on scores"
+  ON public.scores FOR UPDATE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
+
+CREATE POLICY "Deny delete on scores"
+  ON public.scores FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
+
+REVOKE INSERT, UPDATE, DELETE ON TABLE public.scores FROM anon, authenticated;
+
+-- ============================================================
+-- workspace_members
+-- Self-insert only (existing INSERT policy), no UPDATE or DELETE
+-- Future role management will require deliberate migration
+-- ============================================================
+CREATE POLICY "Deny update on workspace_members"
+  ON public.workspace_members FOR UPDATE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
+
+CREATE POLICY "Deny delete on workspace_members"
+  ON public.workspace_members FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
+
+REVOKE UPDATE, DELETE ON TABLE public.workspace_members FROM anon, authenticated;
+
+-- ============================================================
+-- workspaces
+-- Has SELECT/INSERT/UPDATE policies. Missing DELETE only.
+-- Workspace deletion is destructive, deny by default.
+-- ============================================================
+CREATE POLICY "Deny delete on workspaces"
+  ON public.workspaces FOR DELETE
+  TO authenticated, anon
+  AS RESTRICTIVE
+  USING (false);
+
+REVOKE DELETE ON TABLE public.workspaces FROM anon, authenticated;
 ```
 
-All function calls are fully qualified (`public.actions`, `public.action_responses`, `public.is_workspace_member`, `auth.uid`).
+## Impact on Existing Policies
 
-### Step 2: Update Frontend -- ActionInspectorDrawer.tsx
+Existing permissive policies (e.g., `Members can insert suppression_list`, `Members can insert timeline_events`) are unaffected. Restrictive policies only AND-block the specific operations they target (UPDATE, DELETE, or INSERT as specified). Operations with existing permissive policies that are NOT covered by a new restrictive deny continue to work normally.
 
-Replace the `fetchResponseStatus` method's direct table query with the RPC call:
+For `timeline_events`: the existing INSERT permissive policy continues to allow workspace-scoped inserts. The new restrictive UPDATE/DELETE policies block those operations independently.
 
-**Before:**
-```typescript
-const { data } = await supabase
-  .from("action_responses")
-  .select("selected_option, submitted_at, expires_at, options")
-  .eq("action_id", action.id)
-  .maybeSingle();
-```
-
-**After:**
-```typescript
-const { data, error } = await supabase
-  .rpc("get_action_response_status", { p_action_id: action.id });
-
-if (error) {
-  setResponseStatus({ state: "none" });
-  return;
-}
-```
-
-The rest of the response-status logic (checking `submitted_at`, `selected_option`, `expires_at`) stays identical since the returned fields match.
-
-### Step 3: Update Security Findings
-
-- **Delete** the `action_responses` finding (vulnerability resolved)
-- **Ignore** the `contacts` finding (already workspace-scoped via accounts-join RLS)
-- **Ignore** the `profiles` finding (already self-scoped RLS)
-
-### Step 4: Verify
-
-- Test Action Inspector drawer for a `present_options` action to confirm response status renders
-- Confirm edge functions still work (they use service-role, unaffected)
-- Run security scan to confirm no new findings
-
-## Hardening Checklist
-
-- [x] RLS explicitly enabled (`ALTER TABLE ... ENABLE ROW LEVEL SECURITY`)
-- [x] Unique constraint formalized (`ADD CONSTRAINT ... UNIQUE USING INDEX`)
-- [x] Full revoke then explicit grant (`REVOKE ALL FROM PUBLIC, anon, authenticated` then `GRANT TO authenticated`)
-- [x] Owner pinned (`ALTER FUNCTION ... OWNER TO postgres`)
-- [x] All function calls fully qualified (no unqualified names)
-- [x] Explicit exception on access denied (not silent empty return)
-- [x] `search_path` set to `'public'`
-- [x] Complete code path audit (only 1 user-facing read, all others service-role)
+For `workspace_members`: the existing INSERT policy (`auth.uid() = user_id`) continues to allow self-registration. The new restrictive UPDATE/DELETE policies block those operations independently.
 
 ## What Does NOT Change
 
-- Edge functions continue using service-role (bypass RLS)
-- `contacts` and `profiles` tables (already properly secured)
-- No changes to `RespondPage.tsx` or public-facing response flows
-- No changes to `get-response` or `submit-response` edge functions
+- All existing SELECT policies remain unchanged
+- All existing INSERT policies on `suppression_list`, `timeline_events`, `workspace_members` remain functional
+- All existing UPDATE policy on `workspaces` remains functional
+- Edge functions using service-role continue to bypass both RLS and privilege checks
+- No frontend code changes needed (no user-facing mutations exist on these tables)
+
+## Hardening Checklist
+
+- [x] All deny policies use `AS RESTRICTIVE` (AND-blocks, cannot be overridden)
+- [x] All deny policies target `TO authenticated, anon` (all non-service roles)
+- [x] Privilege layer enforced via `REVOKE` on each table
+- [x] Service-role paths verified unaffected (bypasses RLS + privileges)
+- [x] No user-facing code paths broken (no frontend mutations on these tables)
+- [x] Implementation matches governance claims (restrictive = AS RESTRICTIVE)
+
+## Post-Migration
+
+1. Re-run security scan to confirm all warnings resolved
+2. Verify edge functions still work (service-role bypass unaffected)
+3. Confirm frontend operations unchanged
+
