@@ -1,6 +1,6 @@
 # RADDO — Institutional Security Posture Report
 
-**Version:** `2026.0214+ — POST-MUTATION-HARDENING + POST-STRESS-VALIDATION`
+**Version:** `2026.0213.1645 — POST-MUTATION-HARDENING + POST-STRESS-VALIDATION`
 
 **Date:** 2026-02-13
 
