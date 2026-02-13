@@ -1,50 +1,55 @@
 
 
-# Test 7: Idempotency-Key Dedup Under Concurrent Insert
+# Regenerate HANDOFF Documentation
 
 ## Summary
 
-Add a 7th stress test to `supabase/functions/stress-test/index.ts` that proves two simultaneous action-creation attempts with the same `idempotency_key` result in exactly one row, with the loser receiving a deterministic dedup indication and no duplicate side effects.
+Create `docs/HANDOFF.md` -- the master institutional handoff document at version `2026.0213.HHMM` (timestamp set at generation time), reflecting the post-stress 7/7 validated state with all protocol obligations intact.
 
-## What It Proves
+## Version Format Update
 
-The partial unique index `actions_idempotency_uq ON (workspace_id, idempotency_key) WHERE idempotency_key IS NOT NULL` correctly prevents duplicate action rows. The `execute-action-server` create handler catches the `23505` (PG_UNIQUE_VIOLATION) and returns `{ skipped: true, reason: "duplicate" }` instead of leaking an error.
+**New rule (Memory Register item):** All HANDOFF and institutional documents use `YEAR.MonthDay.Time` format.
 
-## Test Steps
+- Example: `2026.0213.1530`
+- Guarantees strict chronological ordering across same-day versions
+- Applies to: HANDOFF.md, SECURITY_POSTURE_REPORT.md, and any future institutional documents
 
-1. Create test workspace, account, item (same helpers as existing tests)
-2. Generate a deterministic idempotency key: `stress-dedup:{workspaceId}:{itemId}:{timestamp}`
-3. Fire two parallel `fetch()` calls to `execute-action-server` with `mode: "create"` and identical params including the same `idempotency_key` -- using HMAC cron auth headers (same pattern as Test 2)
-4. Assert:
-   - Exactly one of the two responses has `skipped: false` and returns an `actionId`
-   - Exactly one has `skipped: true, reason: "duplicate"`
-   - Query `actions` table: exactly 1 row with that `idempotency_key`
-   - Query `timeline_events` for the item: exactly 1 "Action queued" timeline entry (no duplicate side effects)
-5. Clean up all test data
+## File
 
-## Implementation Details
+`docs/HANDOFF.md` -- single new file
 
-- Uses the real `execute-action-server` endpoint (not raw SQL), exercising the full production path including rate-limit check, insert, conflict handling, and timeline write
-- HMAC cron headers obtained via `get_cron_headers()` RPC (same as burst scheduler test)
-- `Promise.all()` for tightest race window
-- Added as `testIdempotencyDedup()` function, wired into the main handler as Test 7
-- Suite log updated from "6-test suite" to "7-test suite"
-- Cleanup includes the created action and timeline events
+## Content (in order)
 
-## Changes
+1. **Version metadata** -- `2026.0213.HHMM` format, phase, kernel/SaaS/infrastructure/blended percentages
+2. **Continuation Declaration** -- mandatory acknowledgment block
+3. **Operating Mode** -- DECOMPOSE/SOLVE/VERIFY/SYNTHESIZE/REFLECT protocol
+4. **Approval/Allow Protocol** -- strict response rules, confidence thresholds
+5. **Kernel Intent** -- RADDO = Jet Engine, CASEY = First Vehicle, 10 engine invariants
+6. **Memory Register** -- all mandatory carryover items including the new versioning format rule
+7. **Security Architecture** -- HMAC cron auth, sensitive table hardening, internal_keys
+8. **Mutation Surface Lock** -- three-layer defense across six tables
+9. **Verified Runtime Integrity** -- service-role write paths, SECURITY DEFINER ownership, auth boundary tests
+10. **Empirical Validation Evidence** -- 7/7 stress suite results with per-test details
+11. **Open Validation Obligations** -- saturation testing, long-run telemetry, SLO dashboards, chaos injection
+12. **Infrastructure Still Required** -- load testing, SLO dashboards, billing, metering, admin tooling, alerting
+13. **PROGRESS Structure** -- locked format with updated composite maturity (~75%)
+14. **Current Position** -- what RADDO is and is not
+15. **Handoff Protocol** -- mandatory inclusion checklist for future handoffs
+16. **Confidence Level and Key Caveat** at the end
 
-**File: `supabase/functions/stress-test/index.ts`**
+## Memory Register Addition
 
-1. Add new `testIdempotencyDedup` function (~80 lines) after `testStuckRecovery` (after line 617)
-2. Update main handler (lines 655-691):
-   - Change log message from "6-test suite" to "7-test suite"
-   - Add `results.push(await testIdempotencyDedup(supabase))` with corresponding log line
-   - Update result index references for the new 7th test
+New item to include in the Memory Register section:
 
-## Success Criteria
+> Institutional document versioning must follow YEAR.MonthDay.Time format (e.g., 2026.0213.1423) for strict chronological ordering.
 
-- 2 concurrent creates with same idempotency_key produces exactly 1 action row
-- Loser returns `{ skipped: true, reason: "duplicate" }` -- no error leak
-- Exactly 1 timeline event for the queued action (no duplicate side effects)
-- Full suite: 7/7 PASS
+## Also Update
+
+`docs/SECURITY_POSTURE_REPORT.md` line 3 -- update version string from `2026.0214+` to the new timestamped format for consistency.
+
+## Technical Details
+
+- No code changes, no database changes, no edge function changes
+- Content matches the user's approved handoff copy with the versioning format correction applied
+- All Memory Register items carried forward including the new versioning rule
 
