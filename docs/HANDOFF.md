@@ -1,6 +1,6 @@
 # RADDO — Master Institutional Handoff Document
 
-**HANDOFF VERSION:** `2026.0213.1645`
+**HANDOFF VERSION:** `2026.0213.1730`
 
 **Phase:** Infrastructure Hardening Phase (Correctness Proven, Capacity Pending)
 
@@ -8,8 +8,8 @@
 |---|---|
 | Kernel Completion | ~97% |
 | SaaS Capability | ~45% |
-| Operational Infrastructure | ~74% |
-| **Blended Company Maturity** | **~75%** |
+| Operational Infrastructure | ~76% |
+| **Blended Company Maturity** | **~76%** |
 
 **Verified Date:** 2026-02-13 (America/Chicago)
 
@@ -135,6 +135,10 @@ Engine invariants:
 - Sensitive tables must never expose token_hash or replayable credentials via PostgREST.
 - RLS must always be explicitly enabled on sensitive tables.
 - Institutional document versioning must follow YEAR.MonthDay.Time format (e.g., 2026.0213.1423) for strict chronological ordering.
+- `stress-test` edge function is the canonical correctness regression suite (7/7). It must not be deleted or conflated with capacity testing.
+- Saturation load testing must use external tooling (k6). Edge functions must not be used to determine throughput ceilings.
+- `health-probe` is constrained to micro-benchmark role only (max 5 requests, no capacity measurement).
+- `IDEAS?` command must return structured ideation across all categories when invoked.
 
 ---
 
@@ -259,11 +263,51 @@ Stress test edge function deployed and executed under HMAC cron auth with servic
 
 ---
 
+## 🏗️ SATURATION LOAD TESTING INFRASTRUCTURE (BUILT)
+
+### Three-Tier Testing Architecture
+
+| Tier | Tool | Role | Location |
+|---|---|---|---|
+| Correctness Regression | `stress-test` edge function | 7/7 deterministic behavior under contention | `supabase/functions/stress-test/` |
+| Capacity Quantification | k6 external scripts | RPS ceiling, p50/p95/p99, error budgets | `load-tests/ramp.js`, `sustained.js`, `burst.js` |
+| Micro Health Probe | `health-probe` edge function | Binary create-path responsiveness (max 5 requests) | `supabase/functions/health-probe/` |
+
+### k6 Phases
+
+- **Phase 1 (Ramp):** 1–50 VUs, finds safe RPS ceiling, 10% dedup subtest (shared idempotency keys under concurrency)
+- **Phase 2 (Sustained):** 30 VUs for 15 minutes, detects latency drift and connection pool saturation
+- **Phase 3 (Burst):** 5× spike (100 VUs) for 60 seconds, verifies no duplicates or stuck actions
+
+### Safety Guardrails
+
+- Dedicated test workspace required (`K6_TEST_WORKSPACE_ID`). Scripts refuse to run without it.
+- Hard VU caps per script (ramp: 50, sustained: 40, burst: 100)
+- Hard duration caps per script (ramp: 5m, sustained: 30m, burst: 2m)
+- All test data uses `[LOAD-TEST]` / `[HEALTH-PROBE]` prefixes with cleanup
+- health-probe requires `confirm_load: true` safety gate in request body
+
+### Metrics Scope
+
+- k6 measures **client-observed latency** (external HTTP round-trip including DNS, TLS, network). These are the canonical throughput and latency numbers.
+- k6 does NOT measure DB CPU, memory, lock contention, connection pool usage, or edge function cold starts.
+- health-probe measures **internal request latency only** (edge-function-to-edge-function). Explicitly not representative of end-user latency.
+- Infrastructure metrics (DB CPU, active connections via `pg_stat_activity`, lock contention via `pg_locks`, function invocation logs) must be collected separately during any k6 run.
+
+### Duplicate Prevention Measurement (Corrected)
+
+- 10% of k6 ramp requests intentionally share idempotency keys in pairs
+- Post-run verification confirms exactly one action row per shared key
+- `duplicate_prevention_rate` must equal 1.0 for a passing run
+- This measures actual dedup under concurrency, not just unique-key throughput
+
+---
+
 ## 🔍 OPEN VALIDATION OBLIGATIONS (UPDATED)
 
 Still **OPEN**:
 
-- Sustained throughput saturation testing (capacity limits, latency, error budgets)
+- Sustained throughput saturation testing -- harness built (k6 + health-probe), first quantified run pending
 - Long run provider telemetry validation (real bounce patterns over time, not simulated only)
 - Observability expansion to SLO level dashboards
 - Chaos style fault injection beyond forced DB failure (network timeouts, partial provider outages)
@@ -274,7 +318,7 @@ Still **OPEN**:
 
 ## 🚧 INFRASTRUCTURE STILL REQUIRED (UPDATED)
 
-- Load testing harness for saturation (not just correctness)
+- ~~Load testing harness for saturation~~ -- **DONE** (k6 scripts + health-probe deployed). First quantified run pending.
 - SLO dashboards per function (success rate, retry rate, p95 latency, queue depth)
 - Billing integration
 - Usage metering
@@ -288,13 +332,13 @@ Still **OPEN**:
 
 When user types `PROGRESS?` output full 3 Horizon structure.
 
-**Composite maturity (updated): ~75%**
+**Composite maturity (updated): ~76%**
 
 | Dimension | Maturity |
 |---|---|
 | Kernel | ~97% |
 | SaaS | ~45% |
-| Infrastructure | ~74% |
+| Infrastructure | ~76% |
 
 ---
 
@@ -312,6 +356,7 @@ When user types `PROGRESS?` output full 3 Horizon structure.
 - Audit truthful
 - Runtime integrity verified
 - Institutionally documented (Security posture report exists and updated)
+- Saturation load testing infrastructure deployed (k6 external + health-probe micro-benchmark)
 
 **RADDO is NOT:**
 
@@ -320,6 +365,89 @@ When user types `PROGRESS?` output full 3 Horizon structure.
 - Autonomous
 
 **Infrastructure Hardening Phase remains active until saturation and long run telemetry are proven.**
+
+---
+
+## 🗂️ EDGE FUNCTION INVENTORY
+
+| Function | Role | Auth | Cron |
+|---|---|---|---|
+| `execute-action-server` | Action creation (create mode) and execution (execute mode) | HMAC cron (create) / JWT (execute) | Yes (via process-scheduled-actions) |
+| `process-scheduled-actions` | Scheduler sweep — claims and executes due actions | HMAC cron | Yes (every minute) |
+| `process-policy-rules` | Evaluates policy rules and queues resulting actions | HMAC cron | Yes (every minute) |
+| `resend-webhook` | Processes inbound Resend webhook events (delivery, bounce, complaint) | Resend HMAC signature | No |
+| `suppression-admin` | Admin CRUD for suppression list entries | JWT + admin role check | No |
+| `get-response` | Public endpoint to retrieve action response form | Token-based (no JWT) | No |
+| `submit-response` | Public endpoint to submit action response | Token-based (no JWT) | No |
+| `cleanup-maintenance` | Prunes expired rate limits and stale data | HMAC cron | Yes (every 5 minutes) |
+| `stress-test` | Correctness regression suite (7/7 tests) | HMAC cron | No |
+| `health-probe` | Micro-benchmark health check (max 5 requests) | HMAC cron + confirm_load gate | No |
+
+---
+
+## 💡 IDEAS PROTOCOL (LOCKED)
+
+When user types `IDEAS?`, the response must return structured ideation across all applicable categories:
+
+| Category | Scope |
+|---|---|
+| System Ideas | Architecture, scaling, resilience |
+| AI Ideas | Intelligent automation, ML-driven scoring, predictive analytics |
+| Design Ideas | UI/UX, accessibility, white-label theming |
+| Data Ideas | Analytics, data lakes, cross-workspace intelligence |
+| New Market Ideas | Vertical expansion, industry-specific vehicles |
+| Marketing Ideas | Growth loops, referral, content |
+| Build Ideas | Developer experience, SDK, API marketplace |
+| Security Ideas | Zero-trust, SOC2, compliance automation |
+| Engagement Ideas | Gamification, retention, notifications |
+| Communication Ideas | Omnichannel, AI voice, SMS, WhatsApp |
+| Messaging Ideas | Templating, personalization, A/B testing |
+| Responsiveness Ideas | Real-time, webhooks, streaming |
+| Strategy Ideas | Pricing, competitive positioning, partnerships |
+| Metadata Ideas | Tagging, custom fields, audit enrichment |
+
+Each idea must include: **name**, **one-sentence description**, **Horizon alignment** (1/2/3), and **estimated impact** (low/medium/high).
+
+---
+
+## 🚀 STRATEGIC VISION — 11-FIGURE ROADMAP
+
+### Core Thesis
+
+RADDO is a deterministic, multi-tenant execution engine. CASEY is the first vehicle (collections/debt recovery). The engine is designed to be remixed into any industry requiring:
+
+- Deterministic action sequencing
+- Multi-channel communication orchestration
+- Compliance-grade audit trails
+- Workspace-isolated multi-tenancy
+- Policy-driven automation with human-in-the-loop approval gates
+
+### Identified Vehicle Opportunities (Horizon 3)
+
+| Vehicle | Industry | Core Use Case |
+|---|---|---|
+| CASEY | Collections / Debt Recovery | Payment plan orchestration, compliance notices, escalation workflows |
+| Vehicle 2 (TBD) | Healthcare | Patient engagement, appointment sequencing, insurance follow-up |
+| Vehicle 3 (TBD) | Legal / Compliance | Case management workflows, regulatory notice sequencing, deadline tracking |
+| Vehicle 4 (TBD) | Real Estate | Lease management, tenant communication, maintenance escalation |
+| Vehicle 5 (TBD) | Insurance | Claims processing, policyholder communication, adjuster workflows |
+| Vehicle 6 (TBD) | Education | Student engagement, enrollment workflows, financial aid sequencing |
+| Vehicle 7 (TBD) | Government / Municipal | Citizen communication, permit processing, compliance enforcement |
+
+### Platform Capabilities Required for Multi-Vehicle (Horizon 2–3)
+
+- White-label theming and branding per workspace
+- Custom field / metadata schema per workspace
+- Industry-specific template libraries
+- Marketplace for playbook templates
+- API-first SDK for third-party integrations
+- AI-driven action recommendation engine
+- Predictive analytics (churn risk, response likelihood, optimal send time)
+- Omnichannel expansion: SMS (Twilio), WhatsApp (Meta Business API), AI Voice (ElevenLabs/Bland.ai), Push Notifications
+- SOC 2 Type II compliance automation
+- Usage-based billing with tiered pricing
+- Self-serve onboarding with workspace provisioning
+- Cross-workspace analytics for platform operators
 
 ---
 
@@ -339,6 +467,10 @@ When user types `HANDOFF COPY` the response must include:
 - Maturity numbers
 - Strategic next priorities
 - Confidence Level and Key Caveat
+- Load testing infrastructure summary (k6 phases, health-probe, stress-test roles)
+- Edge function inventory
+- IDEAS protocol
+- Strategic vision and vehicle roadmap
 
 **No compression. No omission. No regression.**
 
@@ -346,4 +478,4 @@ When user types `HANDOFF COPY` the response must include:
 
 **Confidence Level:** 0.97
 
-**Key Caveat:** Concurrency correctness and deduplication are now empirically proven (7/7). Sustained capacity limits and long run provider behavior remain unmeasured and must be validated before declaring full Horizon 1 completion at production scale.
+**Key Caveat:** Concurrency correctness and deduplication are now empirically proven (7/7). Sustained capacity limits and long run provider behavior remain unmeasured and must be validated before declaring full Horizon 1 completion at production scale. Saturation harness is built and verified but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
