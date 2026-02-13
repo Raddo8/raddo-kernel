@@ -1,220 +1,192 @@
 
-# Update HANDOFF.md — Saturation Load Testing + Full Audit + IDEAS Protocol
 
-## Summary
+# ST1 Phase 1: Usage Metering Engine (No Stripe)
 
-Update `docs/HANDOFF.md` to version `2026.0213.1730` reflecting:
-1. The now-deployed saturation load testing infrastructure (k6 + health-probe)
-2. Full audit of current build state from the ChatGPT institutional session
-3. New `IDEAS?` command protocol
-4. Enhanced 3-Horizon Roadmap with strategic feature vision
-5. Corrected maturity numbers
+## Strategic Framing
 
-## Version
+This is engine-level infrastructure only. We build the fuel gauge, not the cash register.
 
-`2026.0213.1730`
+- Metering layer: YES (measure every completed action)
+- Workspace billing config: YES (pricing-agnostic plan limits in DB)
+- Internal usage dashboard: YES (visibility into engine throughput)
+- Stripe integration: NO (deferred to Phase 2 when revenue trigger arrives)
+
+The execution core (`execute-action-core.ts`) remains untouched. Metering is a side effect via database trigger.
+
+---
+
+## Database Changes
+
+### Migration 1: `usage_events` table + trigger
+
+**Table: `usage_events`**
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK, gen_random_uuid() |
+| workspace_id | uuid | NOT NULL |
+| action_id | uuid | NOT NULL |
+| event_type | text | NOT NULL (e.g. 'action_executed') |
+| channel | text | NOT NULL (email, sms, system, portal) |
+| unit_count | integer | NOT NULL, default 1 |
+| recorded_at | timestamptz | NOT NULL, default now() |
+| billing_period | text | NOT NULL (e.g. '2026-02') |
+| stripe_reported | boolean | NOT NULL, default false (future-proofed for Phase 2) |
+| metadata | jsonb | default '{}' |
+
+**RLS:**
+- SELECT: workspace members only (`is_workspace_member(auth.uid(), workspace_id)`)
+- INSERT/UPDATE/DELETE: denied for authenticated/anon (trigger writes via SECURITY DEFINER)
+
+**Trigger: `after_action_completed`**
+
+Fires on UPDATE of `actions` when status transitions to 'completed'. Inserts one row into `usage_events`. Uses `SECURITY DEFINER` so the trigger function can write to the table even though authenticated users cannot.
+
+```sql
+CREATE OR REPLACE FUNCTION record_usage_event()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public'
+AS $$
+BEGIN
+  IF NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM 'completed') THEN
+    INSERT INTO usage_events (workspace_id, action_id, event_type, channel, billing_period)
+    VALUES (
+      NEW.workspace_id,
+      NEW.id,
+      'action_executed',
+      COALESCE(NEW.channel, 'system'),
+      to_char(now(), 'YYYY-MM')
+    );
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER after_action_completed
+  AFTER UPDATE ON actions
+  FOR EACH ROW
+  EXECUTE FUNCTION record_usage_event();
+```
+
+This is the key architectural decision: metering at the database layer, not application code. Every completed action is automatically metered regardless of execution path (UI, scheduler, API, future channels).
+
+### Migration 2: `workspace_billing` table
+
+**Table: `workspace_billing`**
+
+| Column | Type | Notes |
+|---|---|---|
+| id | uuid | PK, gen_random_uuid() |
+| workspace_id | uuid | NOT NULL, unique |
+| plan | text | NOT NULL, default 'free' |
+| monthly_action_limit | integer | NOT NULL, default 100 |
+| overage_rate_cents | integer | NOT NULL, default 0 |
+| billing_email | text | nullable |
+| current_period_start | timestamptz | nullable |
+| current_period_end | timestamptz | nullable |
+| stripe_customer_id | text | nullable (reserved for Phase 2) |
+| stripe_subscription_id | text | nullable (reserved for Phase 2) |
+| created_at | timestamptz | default now() |
+| updated_at | timestamptz | default now() |
+
+**RLS:**
+- SELECT: workspace members
+- UPDATE: workspace members (owner-only enforcement deferred to RPC later)
+- INSERT/DELETE: denied for authenticated
+
+Note: Stripe columns are nullable placeholders. No Stripe logic touches them in Phase 1.
+
+### Seed existing workspaces
+
+Insert a `free` plan row for every existing workspace that does not yet have a `workspace_billing` row.
 
 ---
 
-## Section-by-Section Changes
+## Edge Function: `billing-usage` (new)
 
-### 1. Version Metadata (line 3)
+Single new edge function. No Stripe. Returns usage data only.
 
-Change from `2026.0213.1645` to `2026.0213.1730`
+**GET** (authenticated, workspace member):
+- Current billing period usage total
+- Breakdown by channel
+- Breakdown by day (last 30 days)
+- Plan limits from `workspace_billing`
+- Remaining quota
 
-### 2. Memory Register — New Items (after line 137)
-
-Add:
-- `stress-test` edge function is the canonical correctness regression suite (7/7). It must not be deleted or conflated with capacity testing.
-- Saturation load testing must use external tooling (k6). Edge functions must not be used to determine throughput ceilings.
-- `health-probe` is constrained to micro-benchmark role only (max 5 requests, no capacity measurement).
-- `IDEAS?` command must return structured ideation across all categories when invoked.
-
-### 3. New Section: SATURATION LOAD TESTING INFRASTRUCTURE (BUILT)
-
-Insert after the Empirical Validation Evidence section (after line 259), before Open Validation Obligations.
-
-Content:
-
-**Three-Tier Testing Architecture**
-
-| Tier | Tool | Role | Location |
-|---|---|---|---|
-| Correctness Regression | `stress-test` edge function | 7/7 deterministic behavior under contention | `supabase/functions/stress-test/` |
-| Capacity Quantification | k6 external scripts | RPS ceiling, p50/p95/p99, error budgets | `load-tests/ramp.js`, `sustained.js`, `burst.js` |
-| Micro Health Probe | `health-probe` edge function | Binary create-path responsiveness (max 5 requests) | `supabase/functions/health-probe/` |
-
-**k6 Phases:**
-- Phase 1 (Ramp): 1-50 VUs, finds safe RPS ceiling, 10% dedup subtest (shared idempotency keys under concurrency)
-- Phase 2 (Sustained): 30 VUs for 15 minutes, detects latency drift and connection pool saturation
-- Phase 3 (Burst): 5x spike (100 VUs) for 60 seconds, verifies no duplicates or stuck actions
-
-**Safety Guardrails:**
-- Dedicated test workspace required (`K6_TEST_WORKSPACE_ID`). Scripts refuse to run without it.
-- Hard VU caps per script (ramp: 50, sustained: 40, burst: 100)
-- Hard duration caps per script (ramp: 5m, sustained: 30m, burst: 2m)
-- All test data uses `[LOAD-TEST]` / `[HEALTH-PROBE]` prefixes with cleanup
-- health-probe requires `confirm_load: true` safety gate in request body
-
-**Metrics Scope:**
-- k6 measures **client-observed latency** (external HTTP round-trip including DNS, TLS, network). These are the canonical throughput and latency numbers.
-- k6 does NOT measure DB CPU, memory, lock contention, connection pool usage, or edge function cold starts.
-- health-probe measures **internal request latency only** (edge-function-to-edge-function). Explicitly not representative of end-user latency.
-- Infrastructure metrics (DB CPU, active connections via `pg_stat_activity`, lock contention via `pg_locks`, function invocation logs) must be collected separately during any k6 run.
-
-**Duplicate Prevention Measurement (Corrected):**
-- 10% of k6 ramp requests intentionally share idempotency keys in pairs
-- Post-run verification confirms exactly one action row per shared key
-- `duplicate_prevention_rate` must equal 1.0 for a passing run
-- This measures actual dedup under concurrency, not just unique-key throughput
-
-### 4. Update Open Validation Obligations (lines 262-271)
-
-Replace first bullet:
-```
-- Sustained throughput saturation testing (capacity limits, latency, error budgets)
-```
-With:
-```
-- Sustained throughput saturation testing -- harness built (k6 + health-probe), first quantified run pending
-```
-
-### 5. Update Infrastructure Still Required (lines 275-284)
-
-Replace first bullet:
-```
-- Load testing harness for saturation (not just correctness)
-```
-With:
-```
-- ~~Load testing harness for saturation~~ -- DONE (k6 scripts + health-probe deployed). First quantified run pending.
-```
-
-### 6. Update Maturity Numbers (lines 7-12, 291-297)
-
-| Dimension | Previous | Updated |
-|---|---|---|
-| Kernel Completion | ~97% | ~97% (unchanged) |
-| SaaS Capability | ~45% | ~45% (unchanged) |
-| Operational Infrastructure | ~74% | ~76% (harness built, not yet run) |
-| Blended Company Maturity | ~75% | ~76% |
-
-### 7. Update Current Position (lines 301-314)
-
-Add to "RADDO is:" list:
-```
-- Saturation load testing infrastructure deployed (k6 external + health-probe micro-benchmark)
-```
-
-### 8. New Section: IDEAS PROTOCOL
-
-Insert before the Handoff Protocol section. When user types `IDEAS?`, the response must return structured ideation across all applicable categories:
-
-Categories:
-- System Ideas (architecture, scaling, resilience)
-- AI Ideas (intelligent automation, ML-driven scoring, predictive analytics)
-- Design Ideas (UI/UX, accessibility, white-label theming)
-- Data Ideas (analytics, data lakes, cross-workspace intelligence)
-- New Market Ideas (vertical expansion, industry-specific vehicles)
-- Marketing Ideas (growth loops, referral, content)
-- Build Ideas (developer experience, SDK, API marketplace)
-- Security Ideas (zero-trust, SOC2, compliance automation)
-- Engagement Ideas (gamification, retention, notifications)
-- Communication Ideas (omnichannel, AI voice, SMS, WhatsApp)
-- Messaging Ideas (templating, personalization, A/B testing)
-- Responsiveness Ideas (real-time, webhooks, streaming)
-- Strategy Ideas (pricing, competitive positioning, partnerships)
-- Metadata Ideas (tagging, custom fields, audit enrichment)
-
-Each idea must include: name, one-sentence description, Horizon alignment (1/2/3), and estimated impact (low/medium/high).
-
-### 9. New Section: STRATEGIC VISION — 11-FIGURE ROADMAP
-
-Insert after IDEAS Protocol. This section captures the jet-engine-to-multiple-vehicles strategy for scaling RADDO across industries:
-
-**Core Thesis:** RADDO is a deterministic, multi-tenant execution engine. CASEY is the first vehicle (collections/debt recovery). The engine is designed to be remixed into any industry requiring:
-- Deterministic action sequencing
-- Multi-channel communication orchestration
-- Compliance-grade audit trails
-- Workspace-isolated multi-tenancy
-- Policy-driven automation with human-in-the-loop approval gates
-
-**Identified Vehicle Opportunities (Horizon 3):**
-
-| Vehicle | Industry | Core Use Case |
-|---|---|---|
-| CASEY | Collections / Debt Recovery | Payment plan orchestration, compliance notices, escalation workflows |
-| Vehicle 2 (TBD) | Healthcare | Patient engagement, appointment sequencing, insurance follow-up |
-| Vehicle 3 (TBD) | Legal / Compliance | Case management workflows, regulatory notice sequencing, deadline tracking |
-| Vehicle 4 (TBD) | Real Estate | Lease management, tenant communication, maintenance escalation |
-| Vehicle 5 (TBD) | Insurance | Claims processing, policyholder communication, adjuster workflows |
-| Vehicle 6 (TBD) | Education | Student engagement, enrollment workflows, financial aid sequencing |
-| Vehicle 7 (TBD) | Government / Municipal | Citizen communication, permit processing, compliance enforcement |
-
-**Platform Capabilities Required for Multi-Vehicle (Horizon 2-3):**
-- White-label theming and branding per workspace
-- Custom field / metadata schema per workspace
-- Industry-specific template libraries
-- Marketplace for playbook templates
-- API-first SDK for third-party integrations
-- AI-driven action recommendation engine
-- Predictive analytics (churn risk, response likelihood, optimal send time)
-- Omnichannel expansion: SMS (Twilio), WhatsApp (Meta Business API), AI Voice (ElevenLabs/Bland.ai), Push Notifications
-- SOC 2 Type II compliance automation
-- Usage-based billing with tiered pricing
-- Self-serve onboarding with workspace provisioning
-- Cross-workspace analytics for platform operators
-
-### 10. New Section: EDGE FUNCTION INVENTORY
-
-Complete inventory of deployed edge functions:
-
-| Function | Role | Auth | Cron |
-|---|---|---|---|
-| `execute-action-server` | Action creation (create mode) and execution (execute mode) | HMAC cron (create) / JWT (execute) | Yes (via process-scheduled-actions) |
-| `process-scheduled-actions` | Scheduler sweep -- claims and executes due actions | HMAC cron | Yes (every minute) |
-| `process-policy-rules` | Evaluates policy rules and queues resulting actions | HMAC cron | Yes (every minute) |
-| `resend-webhook` | Processes inbound Resend webhook events (delivery, bounce, complaint) | Resend HMAC signature | No |
-| `suppression-admin` | Admin CRUD for suppression list entries | JWT + admin role check | No |
-| `get-response` | Public endpoint to retrieve action response form | Token-based (no JWT) | No |
-| `submit-response` | Public endpoint to submit action response | Token-based (no JWT) | No |
-| `cleanup-maintenance` | Prunes expired rate limits and stale data | HMAC cron | Yes (every 5 minutes) |
-| `stress-test` | Correctness regression suite (7/7 tests) | HMAC cron | No |
-| `health-probe` | Micro-benchmark health check (max 5 requests) | HMAC cron + confirm_load gate | No |
-
-### 11. Update Handoff Protocol Checklist (lines 328-341)
-
-Add bullets:
-```
-- Load testing infrastructure summary (k6 phases, health-probe, stress-test roles)
-- Edge function inventory
-- IDEAS protocol
-- Strategic vision and vehicle roadmap
-```
-
-### 12. Update Key Caveat (line 349)
-
-Append: "Saturation harness is built and verified but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables."
+This uses a service-role client internally to query `usage_events` (since it needs aggregation across the table efficiently).
 
 ---
+
+## Frontend Changes
+
+### New Page: `/billing`
+
+Internal-only usage dashboard. No payment flows.
+
+- Current plan display (Free / Starter / Growth / Enterprise -- labels only, no purchase flow)
+- Usage meter: progress bar showing X / Y actions consumed this period
+- Usage by channel: small table (email, sms, system, portal)
+- Usage over time: recharts line chart, last 30 days, daily granularity
+- Billing period dates
+
+Uses the existing recharts dependency (already installed) and the existing chart components (`src/components/ui/chart.tsx`).
+
+### Sidebar Addition
+
+- Add "Usage" nav item with `BarChart3` icon from lucide-react
+- Position after "Health" in the nav list
+
+---
+
+## Soft Limit Check (Optional Enforcement)
+
+Add a lightweight check in `execute-action-server` create mode:
+- Before inserting a new action, query current period usage count vs workspace limit
+- If over limit and plan = 'free': return `{ success: false, reason: 'usage_limit_reached' }`
+- If over limit and plan has overage configured: allow (future Stripe billing handles cost)
+- This is a SELECT query, not a constraint -- does not block the execution path
+
+This is the only change to an existing edge function, and it is in the create path only (not the execution core).
+
+---
+
+## Implementation Sequence
+
+1. Database migration: `usage_events` table + RLS + trigger
+2. Database migration: `workspace_billing` table + RLS
+3. Seed `workspace_billing` for existing workspaces
+4. Edge function: `billing-usage` (usage query endpoint)
+5. Frontend: `/billing` page with usage dashboard
+6. Sidebar: add "Usage" nav link
+7. Soft limit check in `execute-action-server` create mode
+8. Update `docs/HANDOFF.md` with metering architecture
+
+---
+
+## What Is NOT Built (Deferred to Phase 2)
+
+- Stripe products, prices, subscriptions
+- Stripe webhooks (`billing-webhook`)
+- Stripe billing portal (`billing-portal`)
+- Overage billing sync
+- Plan upgrade/downgrade flows
+- Payment method management
+- Invoice generation
 
 ## What Is NOT Changed
 
-- `stress-test` edge function preserved (canonical correctness suite, 7/7)
-- All Memory Register items carried forward
-- All protocols (Approval/Allow, Operating Mode) unchanged
-- Security Architecture section unchanged
-- Mutation Surface Lock section unchanged
-- Empirical Validation Evidence (7/7) unchanged
-- No code changes, no database changes, no edge function changes
+- `execute-action-core.ts` is NOT modified
+- `stress-test` edge function preserved (7/7)
+- `health-probe` edge function preserved
+- All existing RLS policies unchanged
+- All existing edge functions unchanged (except soft limit addition to `execute-action-server` create mode)
 
-## Files Modified
+## Security
 
-1. `docs/HANDOFF.md` -- updated with all sections described above
+- `usage_events` write-only for service_role (trigger runs as SECURITY DEFINER)
+- `workspace_billing` update restricted to workspace members
+- No Stripe keys needed in Phase 1
+- Plan limits enforced server-side only
 
-## Technical Notes
-
-- The ChatGPT session history confirms the full build journey: mutation hardening (DO NOT APPROVE -> corrected to AS RESTRICTIVE + REVOKE), stress testing (6/6 then 7/7 with idempotency dedup added), security posture report generation, and the disciplined sequencing enforced by the approval protocol
-- The 6/6 stress suite was later expanded to 7/7 with the addition of Test 7 (idempotency key dedup under concurrent insert)
-- The ChatGPT session confirms all key architectural decisions were made through the DECOMPOSE/SOLVE/VERIFY/SYNTHESIZE/REFLECT protocol with explicit confidence levels
-- The DO NOT APPROVE remediation on the original load testing plan (edge function as primary harness) was correctly applied, resulting in the current three-tier architecture
