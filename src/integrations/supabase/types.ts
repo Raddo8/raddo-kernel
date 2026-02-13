@@ -1058,6 +1058,47 @@ export type Database = {
           },
         ]
       }
+      workspace_billing: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_action_limit: number
+          plan: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_action_limit?: number
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_action_limit?: number
+          plan?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workspace_billing_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_members: {
         Row: {
           created_at: string
