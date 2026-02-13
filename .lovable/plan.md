@@ -1,189 +1,143 @@
 
 
-# Harden Warning-Level RLS Gaps: Mutation Deny Policies (Corrected)
+# Stress Testing: Concurrent Execution, Retry, and Bounce Validation
 
 ## Summary
 
-Close all missing UPDATE/DELETE (and INSERT where applicable) gaps on 6 tables using a three-layer defense: restrictive RLS policies, privilege revocation, and service-role bypass preservation.
+Build a comprehensive edge function test suite that empirically validates six open obligations before any architecture freeze or posture documentation is finalized. Each test targets a specific revenue-integrity risk.
 
-## What Changed From Previous Plan
+## Open Obligations Being Validated
 
-| Element | Previous (Flawed) | Corrected |
+| Obligation | Risk Level | Test Approach |
 |---|---|---|
-| Policy type | Default permissive `USING (false)` | `AS RESTRICTIVE USING (false)` -- AND-blocks, cannot be overridden by future permissive policies |
-| Role scope | `TO authenticated` only | `TO authenticated, anon` -- covers all non-service roles |
-| Privilege layer | Not addressed | Explicit `REVOKE INSERT, UPDATE, DELETE FROM anon, authenticated` on each table |
-| Governance alignment | Claimed "restrictive" but implemented permissive | Implementation now matches claim |
+| Concurrent execution race conditions | High | Double-submit atomic claim test |
+| Burst scheduler load | High | Parallel process-scheduled-actions invocations |
+| Hard bounce suppression | Medium | Simulated webhook with bounce payload |
+| Soft bounce handling | Medium | Simulated webhook with soft bounce payload |
+| Orphan webhook handling | Low | Webhook with unknown provider_message_id |
+| Forced DB failure retry | Medium | Action execution with invalid data to trigger failure paths |
 
-## Why Three Layers
+## Implementation: Single Test Edge Function
 
-1. **Restrictive RLS policies**: `AS RESTRICTIVE` ensures the deny is AND-ed with any future permissive policy, making it impossible to override without explicitly dropping the restrictive policy first.
-2. **Privilege revocation**: Even if RLS were somehow bypassed or disabled, the role itself lacks the SQL privilege to mutate. Defense in depth.
-3. **Service-role preservation**: `service_role` bypasses both RLS and privilege checks, so edge functions continue working without change.
+Create `supabase/functions/stress-test/index.ts` -- a HMAC-authenticated edge function that runs all six test scenarios in sequence and returns structured results. This keeps tests server-side where they have service_role access and can exercise the real code paths.
 
-## Tables and Operations
+### Test 1: Double-Submit Race Condition
 
-| Table | Missing Operations | Has `workspace_id`? |
-|---|---|---|
-| `suppression_list` | UPDATE, DELETE | Yes (direct) |
-| `message_events` | INSERT, UPDATE, DELETE | Yes (direct) |
-| `timeline_events` | UPDATE, DELETE | No (via accounts join) |
-| `scores` | INSERT, UPDATE, DELETE | No (via items/accounts join) |
-| `workspace_members` | UPDATE, DELETE | Yes (direct) |
-| `workspaces` | DELETE | Yes (is `id`) |
+**What it proves**: The atomic claim (`UPDATE ... WHERE status IN ('scheduled','approved')` returning affected rows) prevents two concurrent executions of the same action.
 
-## Migration SQL
+**Steps**:
+1. Create a test item + account in a test workspace
+2. Insert a test action with status `scheduled`
+3. Fire two parallel `executeActionCore()` calls for the same action ID
+4. Assert: exactly one succeeds, exactly one gets "already claimed"
+5. Clean up test data
 
-Single migration, two sections per table: restrictive RLS policies, then privilege revocation.
+### Test 2: Burst Scheduler Load
 
-```sql
--- ============================================================
--- suppression_list
--- Mutations only via suppression-admin edge function (service-role)
--- ============================================================
-CREATE POLICY "Deny update on suppression_list"
-  ON public.suppression_list FOR UPDATE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**What it proves**: Multiple scheduler invocations processing overlapping action sets do not produce duplicate executions due to the atomic claim gate.
 
-CREATE POLICY "Deny delete on suppression_list"
-  ON public.suppression_list FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Steps**:
+1. Insert 5 test actions with status `scheduled`, `scheduled_for` in the past
+2. Fire 3 parallel calls to `process-scheduled-actions` (via internal fetch with HMAC headers)
+3. Collect results: total `succeeded` + `failed` across all 3 invocations must equal exactly 5 (no duplicates, no misses)
+4. Verify each action has status `completed` or `failed` (not `running`)
+5. Clean up test data
 
-REVOKE UPDATE, DELETE ON TABLE public.suppression_list FROM anon, authenticated;
+### Test 3: Hard Bounce Suppression
 
--- ============================================================
--- message_events
--- Append-only via resend-webhook edge function (service-role)
--- No user INSERT, UPDATE, or DELETE
--- ============================================================
-CREATE POLICY "Deny insert on message_events"
-  ON public.message_events FOR INSERT
-  TO authenticated, anon
-  AS RESTRICTIVE
-  WITH CHECK (false);
+**What it proves**: A webhook with `email.bounced` and `bounce.type = "hard"` correctly inserts into `suppression_list`.
 
-CREATE POLICY "Deny update on message_events"
-  ON public.message_events FOR UPDATE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Steps**:
+1. Insert a test action with `provider = 'resend'` and a known `provider_message_id`
+2. Call `resend-webhook` with a crafted hard bounce payload (bypass signature verification by using the real HMAC with the configured `RESEND_WEBHOOK_SECRET`, or invoke the DB write path directly)
+3. Assert: `message_events` row exists with `event_type = 'bounced'`
+4. Assert: `suppression_list` row exists for the recipient email
+5. Clean up test data
 
-CREATE POLICY "Deny delete on message_events"
-  ON public.message_events FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Caveat**: Signature verification requires the `RESEND_WEBHOOK_SECRET`. The test will construct a valid HMAC signature using that secret, or alternatively exercise the DB write path directly via service_role to isolate the suppression logic from webhook auth.
 
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.message_events FROM anon, authenticated;
+### Test 4: Soft Bounce Handling
 
--- ============================================================
--- timeline_events
--- Append-only from user perspective (INSERT policy exists)
--- UPDATE and DELETE only via service-role
--- ============================================================
-CREATE POLICY "Deny update on timeline_events"
-  ON public.timeline_events FOR UPDATE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**What it proves**: A webhook with `email.bounced` and `bounce.type = "soft"` does NOT insert into `suppression_list` (only hard bounces suppress).
 
-CREATE POLICY "Deny delete on timeline_events"
-  ON public.timeline_events FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Steps**:
+1. Insert a test action with a known `provider_message_id`
+2. Exercise the bounce handling logic with `bounce.type = "soft"`
+3. Assert: `message_events` row exists (event was recorded)
+4. Assert: NO `suppression_list` row exists for the recipient email
+5. Clean up test data
 
-REVOKE UPDATE, DELETE ON TABLE public.timeline_events FROM anon, authenticated;
+### Test 5: Orphan Webhook
 
--- ============================================================
--- scores
--- Read-only for users, all writes via service-role
--- ============================================================
-CREATE POLICY "Deny insert on scores"
-  ON public.scores FOR INSERT
-  TO authenticated, anon
-  AS RESTRICTIVE
-  WITH CHECK (false);
+**What it proves**: A webhook referencing a `provider_message_id` that matches no action is logged but does not insert into `message_events` or `suppression_list`.
 
-CREATE POLICY "Deny update on scores"
-  ON public.scores FOR UPDATE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Steps**:
+1. Exercise the webhook path with a non-existent `provider_message_id`
+2. Assert: no `message_events` row created
+3. Assert: no `suppression_list` row created
+4. Verify structured log contains `webhook_orphan` event
 
-CREATE POLICY "Deny delete on scores"
-  ON public.scores FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+### Test 6: Forced Failure Retry Behavior
 
-REVOKE INSERT, UPDATE, DELETE ON TABLE public.scores FROM anon, authenticated;
+**What it proves**: An action that fails during execution transitions to `failed` status with error details in `result_json`, and a stuck-running action (claimed > 10 minutes ago) is recovered to `failed` status.
 
--- ============================================================
--- workspace_members
--- Self-insert only (existing INSERT policy), no UPDATE or DELETE
--- Future role management will require deliberate migration
--- ============================================================
-CREATE POLICY "Deny update on workspace_members"
-  ON public.workspace_members FOR UPDATE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+**Steps**:
+1. Insert a test action, then set it to `running` with `claimed_at` 15 minutes in the past
+2. Call `executeActionCore()` for this action
+3. Assert: action status becomes `failed` (stuck recovery)
+4. Assert: `result_json` contains timeout error
+5. Assert: timeline event records the failure
+6. Clean up test data
 
-CREATE POLICY "Deny delete on workspace_members"
-  ON public.workspace_members FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
+## Architecture
 
-REVOKE UPDATE, DELETE ON TABLE public.workspace_members FROM anon, authenticated;
-
--- ============================================================
--- workspaces
--- Has SELECT/INSERT/UPDATE policies. Missing DELETE only.
--- Workspace deletion is destructive, deny by default.
--- ============================================================
-CREATE POLICY "Deny delete on workspaces"
-  ON public.workspaces FOR DELETE
-  TO authenticated, anon
-  AS RESTRICTIVE
-  USING (false);
-
-REVOKE DELETE ON TABLE public.workspaces FROM anon, authenticated;
+```
+supabase/functions/stress-test/index.ts
 ```
 
-## Impact on Existing Policies
+- HMAC cron authentication (same pattern as other cron functions)
+- Each test is an independent function returning `{ name, passed, details }`
+- Tests run sequentially to avoid cross-contamination
+- All test data uses a dedicated prefix (e.g., `stress-test-*`) and is cleaned up after each test
+- Function returns aggregate results: total passed/failed with per-test details
 
-Existing permissive policies (e.g., `Members can insert suppression_list`, `Members can insert timeline_events`) are unaffected. Restrictive policies only AND-block the specific operations they target (UPDATE, DELETE, or INSERT as specified). Operations with existing permissive policies that are NOT covered by a new restrictive deny continue to work normally.
+## Authentication
 
-For `timeline_events`: the existing INSERT permissive policy continues to allow workspace-scoped inserts. The new restrictive UPDATE/DELETE policies block those operations independently.
+Same HMAC cron token pattern used by `process-scheduled-actions` and `cleanup-maintenance`. No JWT needed -- this is an infrastructure function.
 
-For `workspace_members`: the existing INSERT policy (`auth.uid() = user_id`) continues to allow self-registration. The new restrictive UPDATE/DELETE policies block those operations independently.
+## Test Data Isolation
 
-## What Does NOT Change
+All test entities (accounts, items, actions) will:
+- Use the first workspace found (or fail if none exists)
+- Use names prefixed with `[STRESS-TEST]`
+- Be deleted in a `finally` block regardless of test outcome
+- Never touch production data
 
-- All existing SELECT policies remain unchanged
-- All existing INSERT policies on `suppression_list`, `timeline_events`, `workspace_members` remain functional
-- All existing UPDATE policy on `workspaces` remains functional
-- Edge functions using service-role continue to bypass both RLS and privilege checks
-- No frontend code changes needed (no user-facing mutations exist on these tables)
+## What This Does NOT Test
 
-## Hardening Checklist
+- Actual Resend API delivery (requires live email infrastructure)
+- Real cron scheduling (tests invoke functions directly)
+- Frontend rendering (irrelevant to infrastructure integrity)
 
-- [x] All deny policies use `AS RESTRICTIVE` (AND-blocks, cannot be overridden)
-- [x] All deny policies target `TO authenticated, anon` (all non-service roles)
-- [x] Privilege layer enforced via `REVOKE` on each table
-- [x] Service-role paths verified unaffected (bypasses RLS + privileges)
-- [x] No user-facing code paths broken (no frontend mutations on these tables)
-- [x] Implementation matches governance claims (restrictive = AS RESTRICTIVE)
+## Success Criteria
 
-## Post-Migration
+All 6 tests must pass before:
+1. The institutional security posture report is regenerated
+2. Horizon 1 infrastructure hardening is declared complete
 
-1. Re-run security scan to confirm all warnings resolved
-2. Verify edge functions still work (service-role bypass unaffected)
-3. Confirm frontend operations unchanged
+## Execution Plan
+
+1. Create `supabase/functions/stress-test/index.ts`
+2. Deploy the function
+3. Invoke it via `curl_edge_functions` with HMAC cron headers
+4. Report results
+5. If any test fails: diagnose and fix before proceeding
+
+## Technical Details
+
+**Concurrency test timing**: The double-submit test uses `Promise.all()` to fire two `executeActionCore()` calls in the same event loop tick. This is the tightest race window achievable in a single-process environment.
+
+**Burst test parallelism**: Uses `Promise.all()` with 3 concurrent `fetch()` calls to `process-scheduled-actions`, each with valid HMAC headers. The atomic claim gate should prevent any action from being executed twice.
+
+**Cleanup strategy**: Each test wraps its logic in try/finally with explicit DELETE statements using service_role. Test data is identified by convention (`[STRESS-TEST]` prefix in names) so any orphaned test data can be manually cleaned.
 
