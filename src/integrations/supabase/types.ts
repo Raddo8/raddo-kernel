@@ -972,6 +972,60 @@ export type Database = {
           },
         ]
       }
+      usage_events: {
+        Row: {
+          action_id: string
+          billing_period: string
+          channel: string
+          event_type: string
+          id: string
+          metadata: Json
+          recorded_at: string
+          stripe_reported: boolean
+          unit_count: number
+          workspace_id: string
+        }
+        Insert: {
+          action_id: string
+          billing_period?: string
+          channel?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          recorded_at?: string
+          stripe_reported?: boolean
+          unit_count?: number
+          workspace_id: string
+        }
+        Update: {
+          action_id?: string
+          billing_period?: string
+          channel?: string
+          event_type?: string
+          id?: string
+          metadata?: Json
+          recorded_at?: string
+          stripe_reported?: boolean
+          unit_count?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "usage_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vertical_packs: {
         Row: {
           config: Json
