@@ -1,30 +1,47 @@
 
 
-# Remove CRON_SECRET and Finalize Security Cleanup
+# Fix rate_limits RLS and Enable Leaked Password Protection
 
-## Verification Summary (Completed)
+## Step 1: Enable RLS on rate_limits table
 
-All three cron-fired edge functions are returning HTTP 200 consistently with HMAC auth. The `internal_keys` table is confirmed inaccessible via PostgREST (RLS enabled, zero policies). No security regressions detected.
+Add a database migration that:
+- Enables Row Level Security on `public.rate_limits`
+- Creates a single `service_role_only` policy for ALL operations
+- Uses `auth.role() = 'service_role'` as both USING and WITH CHECK conditions
+- Idempotent creation via `pg_policies` existence check
 
-## Remaining Work
+This preserves the current access model (only edge functions using the service-role key can read/write rate limits) while resolving the linter finding.
 
-### 1. Remove CRON_SECRET environment variable
+```sql
+ALTER TABLE public.rate_limits ENABLE ROW LEVEL SECURITY;
 
-The `CRON_SECRET` secret is still configured but no longer referenced by any edge function. It should be removed to eliminate the orphaned credential.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'rate_limits'
+      AND policyname = 'service_role_only'
+  ) THEN
+    CREATE POLICY service_role_only
+    ON public.rate_limits
+    FOR ALL
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
+  END IF;
+END $$;
+```
 
-- Use the secrets management tool to delete the `CRON_SECRET` secret
+No code changes required -- the `check_rate_limit` RPC is called via service-role clients in edge functions, which bypass RLS by default. The policy is a safety net for direct PostgREST access.
 
-### 2. Confirm no code references remain
+## Step 2: Enable leaked password protection
 
-Verify that no edge function or shared code still imports or references `CRON_SECRET` or `X-CRON-SECRET`. Based on the changes already deployed, all four functions now use the HMAC path exclusively.
+Use the configure-auth tool to enable HIBP-style leaked password checking. This only affects new signups and password changes going forward; existing users are unaffected.
 
-### 3. Linter findings (context, not action items)
+## Impact
 
-- **RLS Enabled No Policy on `internal_keys`**: This is intentional -- zero policies means zero PostgREST access. No fix needed.
-- **RLS Disabled on `rate_limits`**: Pre-existing, not related to this change. Only accessed by service-role clients.
-- **Leaked Password Protection Disabled**: Auth configuration setting, unrelated to cron security.
-
-## Technical Details
-
-No code changes required. The only action is deleting the `CRON_SECRET` environment variable via the secrets tool.
+- Zero application behavior change
+- Resolves two remaining security linter findings
+- No edge function redeployment needed
 
