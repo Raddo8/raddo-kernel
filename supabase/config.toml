@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.stress-test]
 verify_jwt = false
+
+[functions.health-probe]
+verify_jwt = false
