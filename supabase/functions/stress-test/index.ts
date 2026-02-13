@@ -617,6 +617,122 @@ async function testStuckRecovery(supabase: SupabaseClient): Promise<TestResult> 
 }
 
 // ══════════════════════════════════════════════════════════════
+// TEST 7: Idempotency-Key Dedup Under Concurrent Insert
+// ══════════════════════════════════════════════════════════════
+
+async function testIdempotencyDedup(supabase: SupabaseClient): Promise<TestResult> {
+  const start = Date.now();
+  const ids: Parameters<typeof cleanup>[1] = {};
+
+  try {
+    const workspaceId = await getTestWorkspace(supabase);
+    const accountId = await createTestAccount(supabase, workspaceId);
+    ids.accountIds = [accountId];
+
+    const itemId = await createTestItem(supabase, workspaceId, accountId);
+    ids.itemIds = [itemId];
+    ids.timelineItemIds = [itemId];
+
+    const idempotencyKey = `stress-dedup:${workspaceId}:${itemId}:${Date.now()}`;
+
+    // Get HMAC cron headers for auth
+    const { data: cronHeaders } = await supabase.rpc("get_cron_headers");
+    if (!cronHeaders) throw new Error("Failed to get cron headers");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const endpoint = `${supabaseUrl}/functions/v1/execute-action-server`;
+
+    const payload = {
+      mode: "create",
+      params: {
+        itemId,
+        type: "send_message",
+        channel: "system",
+        idempotencyKey,
+        source: "stress-test",
+      },
+    };
+
+    // Fire two parallel creates with the same idempotency key
+    const [res1, res2] = await Promise.all([
+      fetch(endpoint, {
+        method: "POST",
+        headers: cronHeaders as Record<string, string>,
+        body: JSON.stringify(payload),
+      }),
+      fetch(endpoint, {
+        method: "POST",
+        headers: cronHeaders as Record<string, string>,
+        body: JSON.stringify(payload),
+      }),
+    ]);
+
+    const body1 = await res1.json();
+    const body2 = await res2.json();
+    const responses = [body1, body2];
+
+    // Collect created actionIds for cleanup
+    const createdIds = responses
+      .filter((r: any) => r.actionId)
+      .map((r: any) => r.actionId);
+    ids.actionIds = createdIds;
+
+    // Assert: exactly one winner, one dedup
+    const winners = responses.filter((r: any) => r.success && r.skipped === false);
+    const deduped = responses.filter((r: any) => r.success && r.skipped === true && r.reason === "duplicate");
+
+    assert(
+      winners.length === 1,
+      `Expected 1 winner, got ${winners.length}. r1=${JSON.stringify(body1)}, r2=${JSON.stringify(body2)}`
+    );
+    assert(
+      deduped.length === 1,
+      `Expected 1 dedup, got ${deduped.length}. r1=${JSON.stringify(body1)}, r2=${JSON.stringify(body2)}`
+    );
+
+    // Verify exactly 1 action row with this idempotency_key
+    const { data: actionRows, error: qErr } = await supabase
+      .from("actions")
+      .select("id")
+      .eq("idempotency_key", idempotencyKey);
+
+    if (qErr) throw new Error(`Action query failed: ${qErr.message}`);
+    assert(
+      actionRows?.length === 1,
+      `Expected 1 action row, got ${actionRows?.length}`
+    );
+
+    // Verify exactly 1 "Action queued" timeline event (no duplicate side effects)
+    const { data: timelineRows } = await supabase
+      .from("timeline_events")
+      .select("id")
+      .eq("item_id", itemId)
+      .ilike("summary", "%Action queued%");
+
+    assert(
+      timelineRows?.length === 1,
+      `Expected 1 timeline event, got ${timelineRows?.length}`
+    );
+
+    return {
+      name: "Idempotency-Key Dedup",
+      passed: true,
+      details: `2 concurrent creates → 1 action row, 1 dedup, 1 timeline event`,
+      duration_ms: Date.now() - start,
+    };
+  } catch (err) {
+    return {
+      name: "Idempotency-Key Dedup",
+      passed: false,
+      details: err instanceof Error ? err.message : String(err),
+      duration_ms: Date.now() - start,
+    };
+  } finally {
+    await cleanup(supabase, ids);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 // Main Handler
 // ══════════════════════════════════════════════════════════════
 
@@ -655,7 +771,7 @@ Deno.serve(async (req: Request) => {
   // ── Run all tests sequentially ──
   const results: TestResult[] = [];
 
-  console.log("[stress-test] Starting 6-test suite...");
+  console.log("[stress-test] Starting 7-test suite...");
 
   results.push(await testDoubleSubmitRace(supabase));
   console.log(`[stress-test] Test 1: ${results[0].passed ? "PASS" : "FAIL"} - ${results[0].name}`);
@@ -674,6 +790,9 @@ Deno.serve(async (req: Request) => {
 
   results.push(await testStuckRecovery(supabase));
   console.log(`[stress-test] Test 6: ${results[5].passed ? "PASS" : "FAIL"} - ${results[5].name}`);
+
+  results.push(await testIdempotencyDedup(supabase));
+  console.log(`[stress-test] Test 7: ${results[6].passed ? "PASS" : "FAIL"} - ${results[6].name}`);
 
   const passed = results.filter((r) => r.passed).length;
   const failed = results.filter((r) => !r.passed).length;

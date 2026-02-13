@@ -148,7 +148,7 @@ All `SECURITY DEFINER` functions owned by `postgres`. This prevents privilege-co
 
 All tests executed via `stress-test` edge function with HMAC cron authentication and service-role context.
 
-**Aggregate result: 6/6 PASS — runtime ~4.6s**
+**Aggregate result: 7/7 PASS — runtime ~7.3s**
 
 ### Test 1: Double-Submit Race Condition
 
@@ -192,6 +192,13 @@ All tests executed via `stress-test` edge function with HMAC cron authentication
 - **Result:** Action status = `failed`; `result_json` contains timeout error; timeline event records the failure.
 - **Verdict:** **PASS**
 
+### Test 7: Idempotency-Key Dedup Under Concurrent Insert
+
+- **What it proves:** The partial unique index `actions_idempotency_uq ON (workspace_id, idempotency_key) WHERE idempotency_key IS NOT NULL` prevents duplicate action rows. The `execute-action-server` create handler catches `23505` (PG_UNIQUE_VIOLATION) and returns `{ skipped: true, reason: "duplicate" }` without leaking an error.
+- **Method:** Two parallel `fetch()` calls to `execute-action-server` with `mode: "create"` and identical params including the same `idempotency_key`, using HMAC cron auth headers via `Promise.all()`.
+- **Result:** Exactly one response has `skipped: false` with an `actionId`; exactly one has `skipped: true, reason: "duplicate"`. DB query confirms 1 action row; 1 timeline event (no duplicate side effects).
+- **Verdict:** **PASS**
+
 ---
 
 ## 8. Current Residual Findings & Triage
@@ -230,10 +237,9 @@ No outstanding warning-level or error-level mutation findings remain.
 
 ## 10. Next Priorities
 
-1. **Idempotency-key dedup under concurrent insert** — 7th stress test proving policy-rule dual-fire produces exactly one action
-2. **Saturation load testing** — throughput, latency, and error budget under sustained heavy load
-3. **SLO-level dashboards** — per-function success rate, retries, latency percentiles, queue depth
-4. **Handoff documentation regeneration** — updated with stress-test evidence, reduced open obligations list
+1. **Saturation load testing** — throughput, latency, and error budget under sustained heavy load
+2. **SLO-level dashboards** — per-function success rate, retries, latency percentiles, queue depth
+3. **Handoff documentation regeneration** — updated with 7/7 stress-test evidence, reduced open obligations list
 
 ---
 
