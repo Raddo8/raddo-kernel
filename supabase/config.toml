@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.cleanup-maintenance]
 verify_jwt = false
+
+[functions.stress-test]
+verify_jwt = false
