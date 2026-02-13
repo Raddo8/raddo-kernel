@@ -109,7 +109,7 @@ export type Database = {
           {
             foreignKeyName: "action_responses_action_id_fkey"
             columns: ["action_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "actions"
             referencedColumns: ["id"]
           },
@@ -1073,6 +1073,10 @@ export type Database = {
         Returns: Json
       }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      get_action_response_status: {
+        Args: { p_action_id: string }
+        Returns: Json
+      }
       get_cron_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       is_workspace_member: {

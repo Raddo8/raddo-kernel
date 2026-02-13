@@ -71,22 +71,20 @@ export default function ActionInspectorDrawer({ action, open, onOpenChange }: Ac
 
   const fetchResponseStatus = async () => {
     if (!action) return;
-    const { data } = await supabase
-      .from("action_responses")
-      .select("selected_option, submitted_at, expires_at, options")
-      .eq("action_id", action.id)
-      .maybeSingle();
+    const { data, error } = await supabase
+      .rpc("get_action_response_status", { p_action_id: action.id });
 
-    if (!data) {
+    if (error || !data) {
       setResponseStatus({ state: "none" });
       return;
     }
 
-    if (data.submitted_at && data.selected_option) {
-      const options = data.options as Array<{ key: string; label: string }>;
-      const matched = options?.find((o) => o.key === data.selected_option);
-      setResponseStatus({ state: "responded", label: matched?.label || data.selected_option });
-    } else if (new Date(data.expires_at) <= new Date()) {
+    const resp = data as { selected_option: string | null; submitted_at: string | null; expires_at: string; options: Array<{ key: string; label: string }> };
+
+    if (resp.submitted_at && resp.selected_option) {
+      const matched = resp.options?.find((o) => o.key === resp.selected_option);
+      setResponseStatus({ state: "responded", label: matched?.label || resp.selected_option });
+    } else if (new Date(resp.expires_at) <= new Date()) {
       setResponseStatus({ state: "expired" });
     } else {
       setResponseStatus({ state: "awaiting" });
