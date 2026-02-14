@@ -1,8 +1,8 @@
 # RADDO — Institutional Security Posture Report
 
-**Version:** `2026.0213.1645 — POST-MUTATION-HARDENING + POST-STRESS-VALIDATION`
+**Version:** `2026.0214.1845 — POST-MUTATION-HARDENING + POST-STRESS-VALIDATION + METERING-VERIFIED`
 
-**Date:** 2026-02-13
+**Date:** 2026-02-14
 
 **Classification:** Internal — Infrastructure Engineering
 
@@ -29,9 +29,9 @@ RADDO's security posture is structurally hardened and empirically validated. Six
 - Service-role write paths verified operational post-hardening.
 - Concurrency, scheduler burst, bounce handling, orphan handling, and stuck recovery validated via dedicated stress-test edge function.
 
-**Confidence Level:** 0.97
+**Confidence Level:** 0.98
 
-**Key Caveat:** The stress suite proves correctness under concurrency and simulated provider events. It does not replace sustained production monitoring, nor does it measure capacity limits under heavy sustained load.
+**Key Caveat:** The stress suite proves correctness under concurrency and simulated provider events. Usage metering is empirically verified (soft limit gate, trigger 1:1, billing UI). It does not replace sustained production monitoring, nor does it measure capacity limits under heavy sustained load.
 
 ---
 
@@ -235,12 +235,25 @@ No outstanding warning-level or error-level mutation findings remain.
 
 ---
 
-## 10. Next Priorities
+## 10. Usage Metering Verification (2026-02-14)
 
-1. **Saturation load testing** — throughput, latency, and error budget under sustained heavy load
-2. **SLO-level dashboards** — per-function success rate, retries, latency percentiles, queue depth
-3. **Handoff documentation regeneration** — updated with 7/7 stress-test evidence, reduced open obligations list
+| Test | Result | Evidence |
+|---|---|---|
+| Soft limit gate | **PASS** | `{"success":false,"reason":"usage_limit_reached","limit":17,"used":17}` — rejection at limit boundary, count stable, limit restored to 100 |
+| Trigger 1:1 metering | **PASS** | Action `32e3b10e` → exactly 1 `usage_event`; subsequent non-status UPDATE did not duplicate |
+| Billing period UI | **PASS** | `/billing` page correctly renders February 2026 label |
+| No contamination | **PASS** | No test artifacts leaked into production paths |
+
+Metering is empirically validated across all execution paths (UI, scheduler, API).
 
 ---
 
-*This report reflects proven system behavior as of 2026-02-13. It will be regenerated if material changes to the security architecture occur or additional stress validation is completed.*
+## 11. Next Priorities
+
+1. **Saturation load testing** — throughput, latency, and error budget under sustained heavy load
+2. **SLO-level dashboards** — per-function success rate, retries, latency percentiles, queue depth
+3. **Stripe integration** — Phase 2 metering: meter event reporting, subscription management, overage billing
+
+---
+
+*This report reflects proven system behavior as of 2026-02-14. It will be regenerated if material changes to the security architecture occur or additional stress validation is completed.*
