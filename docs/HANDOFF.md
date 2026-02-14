@@ -1,6 +1,6 @@
 # RADDO — Master Institutional Handoff Document
 
-**HANDOFF VERSION:** `2026.0214.0330`
+**HANDOFF VERSION:** `2026.0214.1829`
 
 **Phase:** Infrastructure Hardening Phase (Billing/Metering Subphase — Phase 1 Complete, Empirically Verified)
 
@@ -134,7 +134,7 @@ Engine invariants:
 - Cron authentication must never rely on static shared secrets.
 - Sensitive tables must never expose token_hash or replayable credentials via PostgREST.
 - RLS must always be explicitly enabled on sensitive tables.
-- Institutional document versioning must follow YEAR.MonthDay.Time format (e.g., 2026.0213.1423) for strict chronological ordering.
+- Institutional document versioning must follow YEAR.MMDD.HHMM format (UTC, sourced from database `now() AT TIME ZONE 'UTC'`). No estimated or local timestamps permitted.
 - `stress-test` edge function is the canonical correctness regression suite (7/7). It must not be deleted or conflated with capacity testing.
 - Saturation load testing must use external tooling (k6). Edge functions must not be used to determine throughput ceilings.
 - `health-probe` is constrained to micro-benchmark role only (max 5 requests, no capacity measurement).
