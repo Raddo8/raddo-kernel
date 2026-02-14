@@ -15,6 +15,7 @@ import {
   Users,
   Plug,
   HeartPulse,
+  BarChart3,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -39,6 +40,7 @@ export default function AppSidebar() {
     { to: "/connectors", label: "Connectors", icon: Plug },
     { to: "/suppression", label: "Suppressions", icon: ShieldOff },
     { to: "/scheduler-health", label: "Health", icon: HeartPulse },
+    { to: "/billing", label: "Usage", icon: BarChart3 },
   ];
   return (
     <aside

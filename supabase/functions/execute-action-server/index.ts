@@ -147,6 +147,36 @@ async function handleCreate(
     if (!isMember) return jsonError("Not a workspace member", 403);
   }
 
+  // Usage soft limit check
+  const billingServiceClient = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
+  const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+  const { data: billing } = await billingServiceClient
+    .from("workspace_billing")
+    .select("plan, monthly_action_limit")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (billing) {
+    const { count: periodUsage } = await billingServiceClient
+      .from("usage_events")
+      .select("id", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .eq("billing_period", currentPeriod);
+
+    if ((periodUsage ?? 0) >= billing.monthly_action_limit && billing.plan === "free") {
+      return jsonOk({
+        success: false,
+        reason: "usage_limit_reached",
+        limit: billing.monthly_action_limit,
+        used: periodUsage,
+      });
+    }
+  }
+
   // Rate-limit check
   const limit = await getRateLimit(supabase, itemId as string, channel as string);
   const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();

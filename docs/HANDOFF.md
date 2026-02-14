@@ -1,17 +1,17 @@
 # RADDO — Master Institutional Handoff Document
 
-**HANDOFF VERSION:** `2026.0213.1730`
+**HANDOFF VERSION:** `2026.0214.1530`
 
-**Phase:** Infrastructure Hardening Phase (Correctness Proven, Capacity Pending)
+**Phase:** Infrastructure Hardening Phase (Billing/Metering Subphase — Phase 1 Complete)
 
 | Dimension | Maturity |
 |---|---|
 | Kernel Completion | ~97% |
-| SaaS Capability | ~45% |
-| Operational Infrastructure | ~76% |
-| **Blended Company Maturity** | **~76%** |
+| SaaS Capability | ~48% |
+| Operational Infrastructure | ~77% |
+| **Blended Company Maturity** | **~77%** |
 
-**Verified Date:** 2026-02-13 (America/Chicago)
+**Verified Date:** 2026-02-14 (America/Chicago)
 
 ---
 
@@ -218,6 +218,45 @@ Three layer defense applied across:
 
 ---
 
+## 📊 USAGE METERING ENGINE (PHASE 1 — LIVE)
+
+### Architecture
+
+Metering is a decoupled infrastructure layer that automatically records every completed action as a billable event. The execution core (`execute-action-core.ts`) remains unchanged — metering is a universal side effect via database trigger.
+
+### Components
+
+**`usage_events` table**
+- Populated by `record_usage_event()` SECURITY DEFINER trigger on `actions` status → `completed`
+- Columns: `workspace_id`, `action_id`, `event_type`, `channel`, `billing_period` (YYYY-MM), `unit_count`, `stripe_reported`, `metadata`
+- RLS: SELECT for workspace members; INSERT/UPDATE/DELETE denied via `AS RESTRICTIVE` policies
+- Privilege hardening: `REVOKE ALL` from PUBLIC/anon/authenticated; only service_role can write
+
+**`workspace_billing` table**
+- One row per workspace: `plan` (default: `free`), `monthly_action_limit` (default: 100), Stripe placeholders
+- RLS: SELECT + UPDATE for workspace members (WITH CHECK on UPDATE); INSERT/DELETE denied via `AS RESTRICTIVE`
+- Privilege hardening: `REVOKE ALL` then `GRANT SELECT, UPDATE` to authenticated
+- Auto-seeded for all existing workspaces
+
+**`billing-usage` edge function**
+- JWT-authenticated, workspace membership enforced
+- Returns: plan, limits, current period usage (total + by channel), 30-day daily breakdown
+- Service-role client for aggregation queries
+
+**Soft limit enforcement in `execute-action-server` create path**
+- Queries `workspace_billing` + `usage_events` before action insertion
+- Free plan workspaces at or above limit receive `{ success: false, reason: "usage_limit_reached" }`
+- Paid plans pass through (future overage billing)
+- Application-level check, not database constraint
+
+### What's NOT included (Phase 2 — Stripe deferred)
+- Stripe meter event reporting
+- Stripe subscription management
+- Plan upgrade/downgrade flows
+- Overage billing for paid plans
+
+---
+
 ## ✅ VERIFIED RUNTIME INTEGRITY (POST HARDENING)
 
 ### Service Role Write Paths — Verified ✓
@@ -320,8 +359,8 @@ Still **OPEN**:
 
 - ~~Load testing harness for saturation~~ -- **DONE** (k6 scripts + health-probe deployed). First quantified run pending.
 - SLO dashboards per function (success rate, retry rate, p95 latency, queue depth)
-- Billing integration
-- Usage metering
+- ~~Billing integration~~ -- **Phase 1 DONE** (usage metering, soft limits, UI dashboard). Stripe integration deferred.
+- ~~Usage metering~~ -- **Phase 1 DONE** (trigger-based recording, billing-usage edge function, /billing UI).
 - Admin remediation tooling
 - Cross workspace analytics
 - Production telemetry and alerting for provider anomalies
@@ -332,13 +371,13 @@ Still **OPEN**:
 
 When user types `PROGRESS?` output full 3 Horizon structure.
 
-**Composite maturity (updated): ~76%**
+**Composite maturity (updated): ~77%**
 
 | Dimension | Maturity |
 |---|---|
 | Kernel | ~97% |
-| SaaS | ~45% |
-| Infrastructure | ~76% |
+| SaaS | ~48% |
+| Infrastructure | ~77% |
 
 ---
 
@@ -382,6 +421,7 @@ When user types `PROGRESS?` output full 3 Horizon structure.
 | `cleanup-maintenance` | Prunes expired rate limits and stale data | HMAC cron | Yes (every 5 minutes) |
 | `stress-test` | Correctness regression suite (7/7 tests) | HMAC cron | No |
 | `health-probe` | Micro-benchmark health check (max 5 requests) | HMAC cron + confirm_load gate | No |
+| `billing-usage` | Usage dashboard data (plan, limits, channel breakdown, daily trends) | JWT + workspace membership | No |
 
 ---
 
