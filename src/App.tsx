@@ -22,6 +22,7 @@ import ContactsList from "@/pages/ContactsList";
 import ConnectorsList from "@/pages/ConnectorsList";
 import SuppressionList from "@/pages/SuppressionList";
 import SchedulerHealth from "@/pages/SchedulerHealth";
+import BillingUsage from "@/pages/BillingUsage";
 import Index from "@/pages/Index";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
@@ -76,6 +77,7 @@ const App = () => (
             <Route path="/connectors" element={<ConnectorsList />} />
             <Route path="/suppression" element={<SuppressionList />} />
             <Route path="/scheduler-health" element={<SchedulerHealth />} />
+            <Route path="/billing" element={<BillingUsage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
