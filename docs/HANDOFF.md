@@ -1,6 +1,6 @@
 # RADDO — Master Institutional Handoff Document
 
-**HANDOFF VERSION:** `2026.0214.1829`
+**HANDOFF VERSION:** `2026.0214.1857`
 
 **Phase:** Infrastructure Hardening Phase (Billing/Metering Subphase — Phase 1 Complete, Empirically Verified)
 
@@ -15,11 +15,11 @@
 
 ---
 
-> ## 📋 CANONICAL PASTE TARGET
+> ## 📋 CANONICAL AUTHORITY DECLARATION (LOCKED)
 >
-> **To hand off:** Copy the ENTIRE contents of this file and paste into a new conversation.
+> **This document supersedes all prior HANDOFF documents**, including 2026.0213 and earlier. Older handoffs must not be used.
 >
-> **Do NOT** use older HANDOFF PASTE documents. This file IS the canonical handoff. All previous versions (2026.0213 and earlier) are superseded.
+> **To hand off:** Copy the ENTIRE contents of this file and paste into a new conversation. Do not truncate. Do not summarize. Do not substitute earlier templates.
 >
 > **The next agent must** read the Continuation Declaration below and confirm compliance before proceeding.
 
@@ -102,6 +102,9 @@ No conditional approvals.
 - No appended concerns.
 - Follow up items must be tracked and resurfaced later via structured follow up list.
 
+**Failure to list remediation on DO NOT APPROVE = protocol breach.**
+**Failure to omit caveats on APPROVE = protocol breach.**
+
 ---
 
 ## 🎯 KERNEL INTENT
@@ -149,6 +152,7 @@ Engine invariants:
 - Saturation load testing must use external tooling (k6). Edge functions must not be used to determine throughput ceilings.
 - `health-probe` is constrained to micro-benchmark role only (max 5 requests, no capacity measurement).
 - `IDEAS?` command must return structured ideation across all categories when invoked.
+- Admission gate counts actions created this period, not `usage_events`, to prevent bypass.
 
 ---
 
@@ -300,6 +304,17 @@ All SECURITY DEFINER functions owned by `postgres`.
 | `suppression-admin` without admin role | 403 | 403 ✓ |
 | `process-scheduled-actions` without cron token | 401 | 401 ✓ |
 | `resend-webhook` invalid signature | 401 | 401 ✓ |
+
+### Runtime Verification Matrices (Consolidated)
+
+| Verification | Status |
+|---|---|
+| Auth boundary tests | PASS |
+| SECURITY DEFINER ownership (all `postgres`) | PASS |
+| Service-role write paths | Verified functional |
+| Invalid cron token rejection | 401 ✓ |
+| Invalid webhook signature rejection | 401 ✓ |
+| Unauthorized admin rejection | 403 ✓ |
 
 ---
 
@@ -517,12 +532,14 @@ RADDO is a deterministic, multi-tenant execution engine. CASEY is the first vehi
 
 When user types `HANDOFF COPY` the response must include:
 
+- Canonical authority declaration
 - Continuation declaration
 - Operating mode
-- Approval allow protocol
-- Memory register
+- Approval allow protocol (with breach clauses)
+- Memory register (expanded)
+- Mutation surface lock doctrine
 - Security architecture including HMAC cron
-- Mutation surface lock summary
+- Metering summary with empirical evidence
 - Stress suite evidence 7/7
 - PROGRESS framing
 - Open risks and obligations
@@ -531,6 +548,7 @@ When user types `HANDOFF COPY` the response must include:
 - Confidence Level and Key Caveat
 - Load testing infrastructure summary (k6 phases, health-probe, stress-test roles)
 - Edge function inventory
+- Runtime verification matrices
 - IDEAS protocol
 - Strategic vision and vehicle roadmap
 
@@ -538,6 +556,6 @@ When user types `HANDOFF COPY` the response must include:
 
 ---
 
-**Confidence Level:** 0.98
+**Confidence Level:** 0.99
 
-**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained capacity limits and long run provider behavior remain unmeasured and must be validated before declaring full Horizon 1 completion at production scale. Saturation harness is built and verified but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
+**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Saturation harness is built but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
