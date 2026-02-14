@@ -111,12 +111,41 @@ k6 run --out json=results.json load-tests/ramp.js
 
 ## Cleanup
 
-After runs, clean up test actions:
+### Automated: `cleanup-load-test` Edge Function (Recommended)
+
+A dedicated edge function provides deterministic, FK-safe cleanup with guardrails:
+
+- **HMAC cron auth only** (no user JWT path)
+- **Explicit `confirm: true`** required in request body
+- **Workspace-scoped** via `workspaceId` parameter
+- **Prefix-scoped** to known test prefixes (`burst-`, `direct-test`, `lt-`, `st-`)
+- Returns per-table deleted row counts for audit
+
+```bash
+# Get HMAC headers from database, then call:
+curl -X POST "$SUPABASE_URL/functions/v1/cleanup-load-test" \
+  -H "Content-Type: application/json" \
+  -H "X-Cron-Timestamp: $TIMESTAMP" \
+  -H "X-Cron-Token: $TOKEN" \
+  -d '{"confirm": true, "workspaceId": "<test-workspace-uuid>"}'
+
+# To also remove fixture workspaces/accounts/items:
+# Add "includeFixtures": true to the body
+```
+
+### Manual SQL
 
 ```sql
+DELETE FROM usage_events
+WHERE action_id IN (
+  SELECT id FROM actions
+  WHERE workspace_id = '<test-workspace-id>'
+    AND (idempotency_key LIKE 'lt-%' OR idempotency_key LIKE 'burst-%')
+);
+
 DELETE FROM actions
 WHERE workspace_id = '<test-workspace-id>'
-  AND idempotency_key LIKE 'lt-%';
+  AND (idempotency_key LIKE 'lt-%' OR idempotency_key LIKE 'burst-%');
 
 DELETE FROM timeline_events
 WHERE account_id = '<test-account-id>'
