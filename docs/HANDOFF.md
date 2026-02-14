@@ -556,6 +556,34 @@ When user types `HANDOFF COPY` the response must include:
 
 ---
 
+---
+
+## 📊 CAPACITY QUANTIFICATION — Phase 1 Ramp Results
+
+> **Status:** PENDING — First run not yet executed.
+
+| Metric | Value |
+|---|---|
+| Run date (UTC) | _pending_ |
+| k6 version | _pending_ |
+| Error rate | _pending_ |
+| p50 latency | _pending_ |
+| p95 latency | _pending_ |
+| p99 latency | _pending_ |
+| Peak RPS | _pending_ |
+| Total requests | _pending_ |
+| Dedup verification | _pending_ |
+| Usage 1:1 verification | _pending_ |
+| Stuck actions | _pending_ |
+| DB CPU peak | _pending_ |
+| Active connections peak | _pending_ |
+| Ungranted locks | _pending_ |
+| **Pass/Fail** | **_pending_** |
+
+Post-run, fill in values from `load-tests/POST_RUN_CHECKLIST.md` and update maturity percentage.
+
+---
+
 **Confidence Level:** 0.99
 
 **Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Saturation harness is built but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
