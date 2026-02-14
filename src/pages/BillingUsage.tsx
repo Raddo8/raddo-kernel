@@ -63,7 +63,7 @@ export default function BillingUsage() {
   }
 
   const periodLabel = data
-    ? format(new Date(data.current_period + "-01"), "MMMM yyyy")
+    ? format(new Date(data.current_period + "-01T00:00:00"), "MMMM yyyy")
     : "";
 
   const usagePercent = data
