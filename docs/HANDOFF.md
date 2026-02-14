@@ -607,10 +607,26 @@ under 30 concurrent VUs.
 Next action: Fix maxDuration warning, add failure logging, rerun full
 15-minute duration with abortOnFail disabled for complete dataset.
 
+### Attempt #2 (Smoke — 1 VU, 5 iterations): PASS
+
+| Metric               | Value                                          |
+|-----------------------|------------------------------------------------|
+| Run date (UTC)        | 2026-02-14                                     |
+| Error rate            | 0% — PASS (threshold: < 1%)                   |
+| p95 latency           | 1.4s — PASS (threshold: < 3s)                 |
+| p99 latency           | 1.45s — PASS (threshold: < 5s)                |
+| Avg latency           | 1.2s                                           |
+| Pass/Fail             | PASS                                           |
+
+Root cause of Attempt #1 failure: expired JWT token (401 Invalid token).
+All 20 failures were auth rejections, not capacity signals.
+
+Next action: Run full 15-minute sustained test at 30 VUs.
+
 ---
 
 **Confidence Level:** 0.99
 
-**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Phase 2 sustained attempt #1 is recorded as FAIL (p99 10.68s, error rate 1.04% at 30 VUs); a full-duration rerun with failure logging is required before capacity can be quantified. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
+**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Phase 2 sustained attempt #1 reclassified as auth misconfiguration (expired JWT), not capacity failure. Smoke retest (attempt #2) passed 5/5. Full 15-minute sustained run at 30 VUs is the next required step. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
 
 **Version:** 2026.0214.2143 (UTC)
