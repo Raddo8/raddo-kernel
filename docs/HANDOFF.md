@@ -348,6 +348,23 @@ Stress test edge function deployed and executed under HMAC cron auth with servic
 | Capacity Quantification | k6 external scripts | RPS ceiling, p50/p95/p99, error budgets | `load-tests/ramp.js`, `sustained.js`, `burst.js` |
 | Micro Health Probe | `health-probe` edge function | Binary create-path responsiveness (max 5 requests) | `supabase/functions/health-probe/` |
 
+### Load-Test Authentication (Isolated HMAC)
+
+Load tests use a **dedicated HMAC auth path** that is cryptographically isolated from the production cron system:
+
+- **Separate signing key**: `load_test_auth` in `internal_keys` (distinct from `cron_auth`)
+- **Mint endpoint**: `mint-load-test-headers` — JWT-gated + `X-LoadTest-Secret` + user allowlist + rate limit (200/min/user)
+- **Execution guards**: `execute-action-server` enforces 5 guards for load-test auth:
+  1. `LOAD_TEST_AUTH_ENABLED` env var must equal `"true"`
+  2. Only `mode: "create"` allowed
+  3. `params.workspaceId` required and must match item's workspace
+  4. `params.idempotencyKey` must start with `lt-`
+  5. Edge rate limiter: 500 req/10s per workspace (`lt-edge:{workspace_id}`)
+- **Header rotation**: Per-VU, jittered 45-75s refresh interval
+- **Preflight**: `setup()` validates fixtures before VUs start; hard abort on failure
+
+A compromised load-test path cannot forge production scheduler auth.
+
 ### k6 Phases
 
 - **Phase 1 (Ramp):** 1–50 VUs, finds safe RPS ceiling, 10% dedup subtest (shared idempotency keys under concurrency)
@@ -357,9 +374,10 @@ Stress test edge function deployed and executed under HMAC cron auth with servic
 ### Safety Guardrails
 
 - Dedicated test workspace required (`K6_TEST_WORKSPACE_ID`). Scripts refuse to run without it.
-- Hard VU caps per script (ramp: 50, sustained: 40, burst: 100)
-- Hard duration caps per script (ramp: 5m, sustained: 30m, burst: 2m)
+- `setup()` preflight validates workspace + item fixtures before VUs start
+- All idempotency keys enforced to start with `lt-` (server-side guard)
 - All test data uses `[LOAD-TEST]` / `[HEALTH-PROBE]` prefixes with cleanup
+- Mint failure = hard abort (no stale headers ever used)
 - health-probe requires `confirm_load: true` safety gate in request body
 
 ### Metrics Scope
@@ -448,7 +466,7 @@ When user types `PROGRESS?` output full 3 Horizon structure.
 
 | Function | Role | Auth | Cron |
 |---|---|---|---|
-| `execute-action-server` | Action creation (create mode) and execution (execute mode) | HMAC cron (create) / JWT (execute) | Yes (via process-scheduled-actions) |
+| `execute-action-server` | Action creation (create mode) and execution (execute mode) | HMAC cron (create) / Load-test HMAC (create) / JWT (execute) | Yes (via process-scheduled-actions) |
 | `process-scheduled-actions` | Scheduler sweep — claims and executes due actions | HMAC cron | Yes (every minute) |
 | `process-policy-rules` | Evaluates policy rules and queues resulting actions | HMAC cron | Yes (every minute) |
 | `resend-webhook` | Processes inbound Resend webhook events (delivery, bounce, complaint) | Resend HMAC signature | No |
@@ -459,6 +477,8 @@ When user types `PROGRESS?` output full 3 Horizon structure.
 | `stress-test` | Correctness regression suite (7/7 tests) | HMAC cron | No |
 | `health-probe` | Micro-benchmark health check (max 5 requests) | HMAC cron + confirm_load gate | No |
 | `billing-usage` | Usage dashboard data (plan, limits, channel breakdown, daily trends) | JWT + workspace membership | No |
+| `mint-load-test-headers` | Mints short-lived HMAC headers for k6 load tests | JWT + X-LoadTest-Secret + user allowlist | No |
+| `cleanup-load-test` | Deterministic FK-safe cleanup of test artifacts | HMAC cron | No |
 
 ---
 
@@ -623,10 +643,38 @@ All 20 failures were auth rejections, not capacity signals.
 
 Next action: Run full 15-minute sustained test at 30 VUs.
 
+### Attempt #3 (30 VUs, 16m) -- FAIL (INVALID TEST INTEGRITY)
+
+| Metric               | Value                                          |
+|-----------------------|------------------------------------------------|
+| Duration              | 16m00.4s                                       |
+| Total requests        | 15,012                                         |
+| RPS                   | ~15.63 req/s                                   |
+| Error rate            | 4.94% (742/15012) -- FAIL                     |
+| p50 latency           | 1.25s                                          |
+| p95 latency           | 4.83s -- FAIL                                  |
+| p99 latency           | 7.75s -- FAIL                                  |
+| Max latency           | 29.48s                                         |
+| Pass/Fail             | FAIL (INVALID TEST INTEGRITY)                  |
+
+Failure classification:
+- 404 Item not found (fixture/visibility)
+- 403 Not a workspace member (auth/RLS mismatch)
+- 401 Invalid token (JWT expired mid-run)
+- Some 500/502/timeout (mixed, not isolatable)
+
+Interpretation: Not an authoritative capacity signal. Failures
+dominated by auth expiration and fixture/RLS inconsistency.
+Cannot be used as capacity evidence. Only a clean run with
+stable auth and valid fixtures counts.
+
+Auth strategy changed to isolated load-test HMAC with dedicated
+mint endpoint and explicit preflight validation.
+
 ---
 
 **Confidence Level:** 0.99
 
-**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Phase 2 sustained attempt #1 reclassified as auth misconfiguration (expired JWT), not capacity failure. Smoke retest (attempt #2) passed 5/5. Full 15-minute sustained run at 30 VUs is the next required step. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
+**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Load-test authentication is now cryptographically isolated from production cron via a dedicated `load_test_auth` signing key, a JWT+secret-gated mint endpoint, and server-side guards (workspace allowlist, `lt-` prefix enforcement, edge rate limiting). Phase 2 attempts #1-#3 are all classified as invalid due to auth or fixture integrity failures. The next run requires the isolated HMAC auth path with valid fixtures to produce actionable capacity data. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
 
 **Version:** 2026.0214.2143 (UTC)
