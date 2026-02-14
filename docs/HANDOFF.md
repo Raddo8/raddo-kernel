@@ -582,8 +582,35 @@ When user types `HANDOFF COPY` the response must include:
 
 Post-run, fill in values from `load-tests/POST_RUN_CHECKLIST.md` and update maturity percentage.
 
+## CAPACITY QUANTIFICATION -- Phase 2 Sustained Results
+
+### Attempt #1 (30 VUs) -- FAIL
+
+| Metric               | Value                                          |
+|-----------------------|------------------------------------------------|
+| Run date (UTC)        | 2026-02-14                                     |
+| Duration before abort | 01m52s (aborted by threshold breach)           |
+| Error rate            | 1.04% (20/1909) -- FAIL (threshold: < 1%)     |
+| p50 latency           | 1.02s                                          |
+| p95 latency           | 1.42s -- PASS (threshold: < 3s)                |
+| p99 latency           | 10.68s -- FAIL (threshold: < 5s)               |
+| Max latency           | 24.61s                                         |
+| RPS achieved          | ~17 req/s                                      |
+| Total requests        | 1,909                                          |
+| Pass/Fail             | FAIL                                           |
+
+Failure classification: 20 requests failed; root cause not yet classified
+(status codes pending jq extraction from results/sustained-phase2.json).
+Long p99 tail suggests connection pool saturation or cold-start queuing
+under 30 concurrent VUs.
+
+Next action: Fix maxDuration warning, add failure logging, rerun full
+15-minute duration with abortOnFail disabled for complete dataset.
+
 ---
 
 **Confidence Level:** 0.99
 
-**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Saturation harness is built but first quantified capacity run has not yet been executed. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
+**Key Caveat:** Concurrency correctness (7/7), deduplication, and usage metering (soft limits, trigger 1:1, billing UI) are all empirically proven. Sustained throughput ceiling and long run provider behavior remain unmeasured at production scale and must be validated before declaring full Horizon 1 operational maturity. Phase 2 sustained attempt #1 is recorded as FAIL (p99 10.68s, error rate 1.04% at 30 VUs); a full-duration rerun with failure logging is required before capacity can be quantified. IDEAS protocol and strategic vehicle roadmap are documented for planning purposes and do not represent committed deliverables.
+
+**Version:** 2026.0214.2143 (UTC)

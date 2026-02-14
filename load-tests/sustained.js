@@ -43,11 +43,10 @@ export const options = {
     { duration: "30s", target: 0 },     // ramp down
   ],
   thresholds: {
-    error_rate: [{ threshold: "rate<0.01", abortOnFail: true }],
+    error_rate: [{ threshold: "rate<0.01", abortOnFail: false }],
     http_req_duration: ["p(95)<3000", "p(99)<5000"],
   },
   maxVUs: 40,
-  maxDuration: "30m",
 };
 
 export default function () {
@@ -87,4 +86,10 @@ export default function () {
 
   errorRate.add(!success);
   createLatency.add(res.timings.duration);
+
+  if (!success) {
+    console.warn(
+      `[FAIL] VU=${__VU} ITER=${__ITER} status=${res.status} body=${(res.body || "").substring(0, 200)}`
+    );
+  }
 }
