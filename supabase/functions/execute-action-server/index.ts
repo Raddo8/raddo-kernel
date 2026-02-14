@@ -161,11 +161,13 @@ async function handleCreate(
     .maybeSingle();
 
   if (billing) {
+    const periodStart = currentPeriod + "-01T00:00:00Z";
     const { count: periodUsage } = await billingServiceClient
-      .from("usage_events")
+      .from("actions")
       .select("id", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
-      .eq("billing_period", currentPeriod);
+      .gte("created_at", periodStart)
+      .neq("status", "canceled");
 
     if ((periodUsage ?? 0) >= billing.monthly_action_limit && billing.plan === "free") {
       return jsonOk({
