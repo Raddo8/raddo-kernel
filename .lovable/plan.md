@@ -1,62 +1,36 @@
 
 
-# Corrections: Version String + Soft Limit Metric
+# Fix: Billing Period Label Timezone Bug
 
-## Issue 1: HANDOFF Version String
+## Problem
 
-The version `2026.0214.1530` is wrong -- today is Feb 13, not Feb 14. The corrected version is `2026.0213.1530`. This appears only in `docs/HANDOFF.md` line 3 and the "Verified Date" on line 14.
+The `/billing` page shows "January 2026" instead of "February 2026" because `new Date("2026-02-01")` is parsed as UTC midnight, which rolls back to January 31 in US Central timezone. The `date-fns` `format()` function then outputs "January 2026".
 
-**Fix:**
-- Line 3: Change `2026.0214.1530` to `2026.0213.1530`
-- Line 14: Change `2026-02-14` to `2026-02-13`
+## Fix
 
----
-
-## Issue 2: Soft Limit Counts Completed, Not Created
-
-The current soft limit in `execute-action-server` counts `usage_events` (which are only recorded on action *completion* via the `after_action_completed` trigger). This means a free workspace can queue unlimited actions as long as prior ones haven't completed yet -- a bypass.
-
-**Recommended fix:** Change the enforcement metric to count `actions` rows created this billing period, not `usage_events`. This counts intent (creation) rather than outcome (completion).
-
-**Change in `supabase/functions/execute-action-server/index.ts` (lines 163-168):**
-
-Replace the `usage_events` count query with a count against the `actions` table:
+In `src/pages/BillingUsage.tsx`, line 66, change the date construction to force local-time parsing:
 
 ```text
-// Before (counts completed only):
-const { count: periodUsage } = await billingServiceClient
-  .from("usage_events")
-  .select("id", { count: "exact", head: true })
-  .eq("workspace_id", workspaceId)
-  .eq("billing_period", currentPeriod);
+// Before:
+format(new Date(data.current_period + "-01"), "MMMM yyyy")
 
-// After (counts all non-canceled actions created this period):
-const periodStart = currentPeriod + "-01T00:00:00Z";
-const { count: periodUsage } = await billingServiceClient
-  .from("actions")
-  .select("id", { count: "exact", head: true })
-  .eq("workspace_id", workspaceId)
-  .gte("created_at", periodStart)
-  .neq("status", "canceled");
+// After:
+format(new Date(data.current_period + "-01T00:00:00"), "MMMM yyyy")
 ```
 
-This ensures the limit reflects queued intent. Canceled actions are excluded so users aren't penalized for cleanup. The `usage_events` table remains the source of truth for the billing/reporting dashboard (actual consumption), while the `actions` table governs the admission gate.
+By appending `T00:00:00` (no `Z` suffix), the string is parsed as local time instead of UTC, preventing the off-by-one day rollback in negative-offset timezones.
 
-**No change to `billing-usage` edge function or the `/billing` UI** -- those correctly report on completed usage via `usage_events`.
-
----
-
-## Verification Steps (Post-Implementation)
-
-1. **Trigger test:** Complete an action and confirm exactly 1 `usage_events` row appears.
-2. **`/billing` page:** Navigate to `/billing`, confirm membership gating and data rendering.
-3. **Soft limit:** Confirm that creating actions (even before completion) increments toward the limit for free workspaces.
-
----
-
-## Summary of Files Changed
+## Files Changed
 
 | File | Change |
 |---|---|
-| `docs/HANDOFF.md` | Fix version `0214` to `0213`, fix verified date |
-| `supabase/functions/execute-action-server/index.ts` | Soft limit: count `actions` created this period instead of `usage_events` |
+| `src/pages/BillingUsage.tsx` | Line 66: append `T00:00:00` to date string |
+
+## Verification After Fix
+
+- `/billing` should display "February 2026" as the billing period
+- No other behavior changes
+
+## Still Pending (Requires DB Write Access)
+
+To complete the soft-limit destructive test, the `monthly_action_limit` needs to be lowered to current usage level (17) and a create call issued. This requires a migration or direct DB access.
