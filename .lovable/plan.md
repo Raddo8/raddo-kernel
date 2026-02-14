@@ -1,192 +1,159 @@
 
 
-# ST1 Phase 1: Usage Metering Engine (No Stripe)
+# ST1 Phase 1: Remaining Implementation (Steps 4-8)
 
-## Strategic Framing
+## Overview
 
-This is engine-level infrastructure only. We build the fuel gauge, not the cash register.
-
-- Metering layer: YES (measure every completed action)
-- Workspace billing config: YES (pricing-agnostic plan limits in DB)
-- Internal usage dashboard: YES (visibility into engine throughput)
-- Stripe integration: NO (deferred to Phase 2 when revenue trigger arrives)
-
-The execution core (`execute-action-core.ts`) remains untouched. Metering is a side effect via database trigger.
+Three deliverables remain: the `billing-usage` edge function, the `/billing` UI page with sidebar link, the soft limit check in `execute-action-server`, and the HANDOFF update.
 
 ---
 
-## Database Changes
+## Step 1: Edge Function `billing-usage`
 
-### Migration 1: `usage_events` table + trigger
+New file: `supabase/functions/billing-usage/index.ts`
 
-**Table: `usage_events`**
-
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid | PK, gen_random_uuid() |
-| workspace_id | uuid | NOT NULL |
-| action_id | uuid | NOT NULL |
-| event_type | text | NOT NULL (e.g. 'action_executed') |
-| channel | text | NOT NULL (email, sms, system, portal) |
-| unit_count | integer | NOT NULL, default 1 |
-| recorded_at | timestamptz | NOT NULL, default now() |
-| billing_period | text | NOT NULL (e.g. '2026-02') |
-| stripe_reported | boolean | NOT NULL, default false (future-proofed for Phase 2) |
-| metadata | jsonb | default '{}' |
-
-**RLS:**
-- SELECT: workspace members only (`is_workspace_member(auth.uid(), workspace_id)`)
-- INSERT/UPDATE/DELETE: denied for authenticated/anon (trigger writes via SECURITY DEFINER)
-
-**Trigger: `after_action_completed`**
-
-Fires on UPDATE of `actions` when status transitions to 'completed'. Inserts one row into `usage_events`. Uses `SECURITY DEFINER` so the trigger function can write to the table even though authenticated users cannot.
-
-```sql
-CREATE OR REPLACE FUNCTION record_usage_event()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = 'public'
-AS $$
-BEGIN
-  IF NEW.status = 'completed' AND (OLD.status IS DISTINCT FROM 'completed') THEN
-    INSERT INTO usage_events (workspace_id, action_id, event_type, channel, billing_period)
-    VALUES (
-      NEW.workspace_id,
-      NEW.id,
-      'action_executed',
-      COALESCE(NEW.channel, 'system'),
-      to_char(now(), 'YYYY-MM')
-    );
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER after_action_completed
-  AFTER UPDATE ON actions
-  FOR EACH ROW
-  EXECUTE FUNCTION record_usage_event();
+Config addition in `supabase/config.toml`:
+```text
+[functions.billing-usage]
+verify_jwt = false
 ```
 
-This is the key architectural decision: metering at the database layer, not application code. Every completed action is automatically metered regardless of execution path (UI, scheduler, API, future channels).
+**Behavior (POST, authenticated via JWT):**
 
-### Migration 2: `workspace_billing` table
+1. Extract workspace_id from request body
+2. Validate JWT, extract user, verify workspace membership via `is_workspace_member` RPC
+3. Use service-role client to query:
+   - `workspace_billing` row for the workspace (plan, monthly_action_limit)
+   - Current billing period (`YYYY-MM` of now): `SELECT count(*), channel FROM usage_events WHERE workspace_id = $1 AND billing_period = $2 GROUP BY channel`
+   - Daily breakdown (last 30 days): `SELECT recorded_at::date as day, count(*) FROM usage_events WHERE workspace_id = $1 AND recorded_at > now() - interval '30 days' GROUP BY day ORDER BY day`
+4. Return JSON:
 
-**Table: `workspace_billing`**
+```text
+{
+  plan: string,
+  monthly_action_limit: number,
+  current_period: string,
+  total_used: number,
+  remaining: number,
+  by_channel: { email: N, sms: N, system: N, portal: N },
+  daily: [ { date: "2026-02-01", count: N }, ... ]
+}
+```
 
-| Column | Type | Notes |
-|---|---|---|
-| id | uuid | PK, gen_random_uuid() |
-| workspace_id | uuid | NOT NULL, unique |
-| plan | text | NOT NULL, default 'free' |
-| monthly_action_limit | integer | NOT NULL, default 100 |
-| overage_rate_cents | integer | NOT NULL, default 0 |
-| billing_email | text | nullable |
-| current_period_start | timestamptz | nullable |
-| current_period_end | timestamptz | nullable |
-| stripe_customer_id | text | nullable (reserved for Phase 2) |
-| stripe_subscription_id | text | nullable (reserved for Phase 2) |
-| created_at | timestamptz | default now() |
-| updated_at | timestamptz | default now() |
-
-**RLS:**
-- SELECT: workspace members
-- UPDATE: workspace members (owner-only enforcement deferred to RPC later)
-- INSERT/DELETE: denied for authenticated
-
-Note: Stripe columns are nullable placeholders. No Stripe logic touches them in Phase 1.
-
-### Seed existing workspaces
-
-Insert a `free` plan row for every existing workspace that does not yet have a `workspace_billing` row.
+**Security:** JWT validation in code (verify_jwt=false pattern consistent with other functions). Service-role client for aggregation queries. Workspace membership enforced before any data returned.
 
 ---
 
-## Edge Function: `billing-usage` (new)
+## Step 2: Frontend `/billing` Page
 
-Single new edge function. No Stripe. Returns usage data only.
+New file: `src/pages/BillingUsage.tsx`
 
-**GET** (authenticated, workspace member):
-- Current billing period usage total
-- Breakdown by channel
-- Breakdown by day (last 30 days)
-- Plan limits from `workspace_billing`
-- Remaining quota
+**Layout** (follows SchedulerHealth.tsx pattern):
+- `PageHeader` with title "Usage" and subtitle "Billing period metrics"
+- Fetches data from `billing-usage` edge function on mount
+- Loading / error / access_denied states (same pattern as SchedulerHealth)
 
-This uses a service-role client internally to query `usage_events` (since it needs aggregation across the table efficiently).
+**Sections:**
+1. **Plan card**: Shows current plan name and billing period (e.g., "Free -- February 2026")
+2. **Usage meter**: Progress bar component showing `total_used / monthly_action_limit` with numeric label (e.g., "42 / 100 actions")
+3. **Channel breakdown**: Small table with columns Channel | Count (email, sms, system, portal -- only rows with count > 0)
+4. **Daily usage chart**: Recharts `LineChart` using existing `ChartContainer` component, last 30 days, single line showing daily action count
 
----
-
-## Frontend Changes
-
-### New Page: `/billing`
-
-Internal-only usage dashboard. No payment flows.
-
-- Current plan display (Free / Starter / Growth / Enterprise -- labels only, no purchase flow)
-- Usage meter: progress bar showing X / Y actions consumed this period
-- Usage by channel: small table (email, sms, system, portal)
-- Usage over time: recharts line chart, last 30 days, daily granularity
-- Billing period dates
-
-Uses the existing recharts dependency (already installed) and the existing chart components (`src/components/ui/chart.tsx`).
-
-### Sidebar Addition
-
-- Add "Usage" nav item with `BarChart3` icon from lucide-react
-- Position after "Health" in the nav list
+**Dependencies:** All already installed (recharts, date-fns, existing UI components).
 
 ---
 
-## Soft Limit Check (Optional Enforcement)
+## Step 3: Sidebar Link
 
-Add a lightweight check in `execute-action-server` create mode:
-- Before inserting a new action, query current period usage count vs workspace limit
-- If over limit and plan = 'free': return `{ success: false, reason: 'usage_limit_reached' }`
-- If over limit and plan has overage configured: allow (future Stripe billing handles cost)
-- This is a SELECT query, not a constraint -- does not block the execution path
+Edit: `src/components/AppSidebar.tsx`
 
-This is the only change to an existing edge function, and it is in the create path only (not the execution core).
+Add nav item after the "Health" entry:
+```text
+{ to: "/billing", label: "Usage", icon: BarChart3 }
+```
 
----
-
-## Implementation Sequence
-
-1. Database migration: `usage_events` table + RLS + trigger
-2. Database migration: `workspace_billing` table + RLS
-3. Seed `workspace_billing` for existing workspaces
-4. Edge function: `billing-usage` (usage query endpoint)
-5. Frontend: `/billing` page with usage dashboard
-6. Sidebar: add "Usage" nav link
-7. Soft limit check in `execute-action-server` create mode
-8. Update `docs/HANDOFF.md` with metering architecture
+Import `BarChart3` from lucide-react.
 
 ---
 
-## What Is NOT Built (Deferred to Phase 2)
+## Step 4: Route Registration
 
-- Stripe products, prices, subscriptions
-- Stripe webhooks (`billing-webhook`)
-- Stripe billing portal (`billing-portal`)
-- Overage billing sync
-- Plan upgrade/downgrade flows
-- Payment method management
-- Invoice generation
+Edit: `src/App.tsx`
 
-## What Is NOT Changed
+- Import `BillingUsage` page
+- Add route: `<Route path="/billing" element={<BillingUsage />} />`
 
-- `execute-action-core.ts` is NOT modified
-- `stress-test` edge function preserved (7/7)
-- `health-probe` edge function preserved
-- All existing RLS policies unchanged
-- All existing edge functions unchanged (except soft limit addition to `execute-action-server` create mode)
+---
 
-## Security
+## Step 5: Soft Limit Check in `execute-action-server`
 
-- `usage_events` write-only for service_role (trigger runs as SECURITY DEFINER)
-- `workspace_billing` update restricted to workspace members
-- No Stripe keys needed in Phase 1
-- Plan limits enforced server-side only
+Edit: `supabase/functions/execute-action-server/index.ts`
+
+In `handleCreate`, after the workspace membership check (line ~148) and before the rate-limit check (line ~150), add:
+
+```text
+// Usage soft limit check
+const serviceClient = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+);
+const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+const { data: billing } = await serviceClient
+  .from("workspace_billing")
+  .select("plan, monthly_action_limit")
+  .eq("workspace_id", workspaceId)
+  .maybeSingle();
+
+if (billing) {
+  const { count: periodUsage } = await serviceClient
+    .from("usage_events")
+    .select("id", { count: "exact", head: true })
+    .eq("workspace_id", workspaceId)
+    .eq("billing_period", currentPeriod);
+
+  if ((periodUsage ?? 0) >= billing.monthly_action_limit && billing.plan === "free") {
+    return jsonOk({
+      success: false,
+      reason: "usage_limit_reached",
+      limit: billing.monthly_action_limit,
+      used: periodUsage,
+    });
+  }
+}
+```
+
+**Key design decisions:**
+- Uses service-role client for the check (usage_events has no INSERT for authenticated)
+- Only blocks `free` plan workspaces at limit; paid plans pass through for future overage billing
+- Returns `success: false` (not an HTTP error) so callers can handle gracefully
+- Adds ~2 queries to the create path (acceptable for non-hot path)
+
+---
+
+## Step 6: HANDOFF Update
+
+Edit: `docs/HANDOFF.md`
+
+- Bump version to `2026.0214.HHMM` (current time)
+- Update maturity numbers: Operational Infrastructure ~77%, Blended ~77%
+- Add "Usage Metering" section under Security Architecture documenting:
+  - `usage_events` table + trigger architecture
+  - `workspace_billing` table + RLS hardening
+  - `billing-usage` edge function
+  - Soft limit enforcement in create path
+- Update Infrastructure Still Required: mark "Billing integration" and "Usage metering" as partially done (Phase 1 complete, Stripe deferred)
+- Add `billing-usage` to Edge Function Inventory table
+
+---
+
+## Implementation Order
+
+1. Create `billing-usage` edge function + config.toml entry
+2. Create `BillingUsage.tsx` page
+3. Update `App.tsx` with route
+4. Update `AppSidebar.tsx` with nav link
+5. Update `execute-action-server/index.ts` with soft limit
+6. Deploy edge functions
+7. Update `docs/HANDOFF.md`
 
