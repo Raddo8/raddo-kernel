@@ -5,7 +5,7 @@ import { executeActionCore } from "../_shared/execute-action-core.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-cron-timestamp, x-cron-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "authorization, x-client-info, apikey, content-type, x-cron-timestamp, x-cron-token, x-loadtest-timestamp, x-loadtest-token, x-loadtest-secret, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // ── Constants ──
@@ -16,7 +16,7 @@ const DEFAULT_RATE_LIMIT = 10; // per hour per item+channel
 // ── Auth helpers ──
 
 interface AuthResult {
-  mode: "scheduler" | "ui";
+  mode: "scheduler" | "ui" | "load-test";
   supabase: ReturnType<typeof createClient>;
   userId: string | null;
   source: string;
@@ -27,7 +27,7 @@ async function authenticate(req: Request, requestMode: string): Promise<AuthResu
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // Check HMAC cron token first
+  // ── Path 1: HMAC cron token ──
   const cronTimestamp = req.headers.get("X-Cron-Timestamp") || req.headers.get("x-cron-timestamp");
   const cronToken = req.headers.get("X-Cron-Token") || req.headers.get("x-cron-token");
   if (cronTimestamp && cronToken) {
@@ -39,14 +39,36 @@ async function authenticate(req: Request, requestMode: string): Promise<AuthResu
     if (!isValid) {
       return jsonError("Unauthorized", 401);
     }
-    // Cron auth is strictly scoped to create mode only
     if (requestMode === "execute") {
       return jsonError("Cron auth not allowed for execute mode", 403);
     }
     return { mode: "scheduler", supabase: serviceClient, userId: null, source: "scheduler" };
   }
 
-  // Fall back to user JWT
+  // ── Path 2: Load-test HMAC token ──
+  const ltTimestamp = req.headers.get("X-LoadTest-Timestamp") || req.headers.get("x-loadtest-timestamp");
+  const ltToken = req.headers.get("X-LoadTest-Token") || req.headers.get("x-loadtest-token");
+  if (ltTimestamp && ltToken) {
+    // Environment gate
+    if (Deno.env.get("LOAD_TEST_AUTH_ENABLED") !== "true") {
+      return jsonError("Load test auth is not enabled", 403);
+    }
+    // Mode restriction
+    if (requestMode !== "create") {
+      return jsonError("Load test auth only allowed for create mode", 403);
+    }
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey);
+    const { data: isValid } = await serviceClient.rpc("verify_load_test_token", {
+      p_timestamp: ltTimestamp,
+      p_token: ltToken,
+    });
+    if (!isValid) {
+      return jsonError("Invalid load test token", 401);
+    }
+    return { mode: "load-test", supabase: serviceClient, userId: null, source: "load-test" };
+  }
+
+  // ── Path 3: User JWT ──
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) {
     return jsonError("Unauthorized", 401);
@@ -137,6 +159,13 @@ async function handleCreate(
 
   const workspaceId = item.workspace_id;
   const accountId = item.account_id;
+
+  // Load-test mode: verify explicit workspaceId matches item's workspace
+  if (authResult.mode === "load-test" && params.workspaceId) {
+    if (params.workspaceId !== workspaceId) {
+      return jsonError("workspaceId does not match item's workspace", 400);
+    }
+  }
 
   // UI mode: verify workspace membership
   if (authResult.mode === "ui" && authResult.userId) {
@@ -281,6 +310,34 @@ Deno.serve(async (req: Request) => {
     // ── Create mode ──
     if (mode === "create") {
       const params = body.params || {};
+
+      // Load-test auth: enforce additional guards
+      if (authResult.mode === "load-test") {
+        // Guard: explicit workspaceId required
+        if (!params.workspaceId) {
+          return jsonError("workspaceId is required for load-test auth", 400);
+        }
+        // Guard: idempotency prefix
+        if (!params.idempotencyKey || !String(params.idempotencyKey).startsWith("lt-")) {
+          return jsonError("idempotencyKey must start with 'lt-' for load-test auth", 400);
+        }
+        // Guard: edge rate limiter (500 req / 10s per workspace)
+        const { data: edgeRate } = await supabase.rpc("check_rate_limit", {
+          p_key: `lt-edge:${params.workspaceId}`,
+          p_max_requests: 500,
+          p_window_ms: 10000,
+        });
+        if (edgeRate && !edgeRate.allowed) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Load test rate limit exceeded" }),
+            {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(edgeRate.retry_after || 5) },
+            }
+          );
+        }
+      }
+
       return await handleCreate(supabase, authResult, params);
     }
 

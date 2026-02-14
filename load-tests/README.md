@@ -8,7 +8,19 @@
 
 1. [k6](https://k6.io/docs/getting-started/installation/) installed locally or in CI
 2. A dedicated test workspace ID (never use production)
-3. HMAC cron auth credentials OR a valid user JWT
+3. `LOAD_TEST_AUTH_ENABLED` must be set to `"true"` in backend secrets
+4. `LOAD_TEST_SECRET` must be set in backend secrets
+
+## Authentication Architecture
+
+Load tests use a **dedicated HMAC auth path** that is cryptographically isolated from the production cron system:
+
+1. **Minting**: k6 calls `mint-load-test-headers` with a user JWT + `X-LoadTest-Secret` header
+2. **The mint endpoint** validates the JWT, checks the user allowlist, rate-limits, then returns short-lived HMAC headers (`X-LoadTest-Timestamp`, `X-LoadTest-Token`) with a 120-second validity window
+3. **Load requests** use these HMAC headers (not JWT) to authenticate against `execute-action-server`
+4. **Header rotation**: Each VU refreshes headers every 45-75 seconds (jittered to prevent thundering herd)
+
+The signing key (`load_test_auth`) is separate from the cron signing key. A compromised load-test path cannot forge production scheduler auth.
 
 ## Environment Variables
 
@@ -17,18 +29,34 @@
 | `K6_BASE_URL` | Yes | Supabase project URL (e.g., `https://vacpgxxgdfhgvkduljgs.supabase.co`) |
 | `K6_ANON_KEY` | Yes | Supabase anon key |
 | `K6_TEST_WORKSPACE_ID` | Yes | Dedicated test workspace UUID. Scripts refuse to run without this. |
-| `K6_TEST_ACCOUNT_ID` | Yes | Test account UUID within the workspace |
-| `K6_TEST_ITEM_ID` | Yes | Test item UUID within the account |
-| `K6_AUTH_TOKEN` | Yes | Bearer token (user JWT) for authentication |
+| `K6_TEST_ITEM_ID` | Yes | Test item UUID within the workspace |
+| `K6_AUTH_TOKEN` | Yes | User JWT — used **only for minting** load-test HMAC headers, never sent with load requests |
+| `K6_LOADTEST_SECRET` | Yes | Gate secret for mint-load-test-headers endpoint |
 
 ## Setup
 
-Before running any script, create test fixtures in your test workspace:
+Before running any script:
 
-1. Create a workspace with `[LOAD-TEST]` prefix in name
-2. Create an account within it
-3. Create an item within the account
-4. Set the environment variables above
+1. Set `LOAD_TEST_AUTH_ENABLED` to `"true"` in backend secrets
+2. Set `LOAD_TEST_SECRET` in backend secrets
+3. Add your user ID to the `ALLOWED_USER_IDS` array in `mint-load-test-headers/index.ts`
+4. Create test fixtures in your test workspace:
+   - Create a workspace with `[LOAD-TEST]` prefix in name
+   - Create an account within it
+   - Create an item within the account
+5. Set the environment variables above
+6. Get a fresh JWT from your browser (Local Storage → `sb-*-auth-token`)
+
+## Preflight
+
+All scripts run a `setup()` preflight that:
+
+1. Mints HMAC headers (validates JWT → mint → HMAC chain)
+2. Validates workspace exists (via REST with JWT)
+3. Validates item exists and belongs to workspace (via REST with JWT)
+4. Sends one create request with minted HMAC headers (validates load-test auth path end-to-end)
+
+If any step fails, `fail()` is called and the entire run aborts before VUs start.
 
 ## Scripts
 
@@ -40,7 +68,7 @@ Determines the safe RPS ceiling by ramping virtual users from 1 to 50.
 k6 run load-tests/ramp.js
 ```
 
-**Pass criteria**: error rate < 1%, p99 < 3× baseline p99 from first stage.
+**Pass criteria**: error rate < 1%, p99 < 5s.
 
 **Dedup subtest**: 10% of requests intentionally reuse idempotency keys in pairs.
 Post-run, query the database to verify exactly one action row per shared key.
@@ -61,6 +89,17 @@ Applies a 5× spike for 60 seconds after a warm-up period.
 ```bash
 k6 run load-tests/burst.js
 ```
+
+## Rate Limits
+
+Two separate rate limiters protect the load-test path:
+
+| Limiter | Scope | Limit | Key |
+|---|---|---|---|
+| Mint rate limit | Per user | 200 mints / 60s | `mint-lt:{userId}` |
+| Edge rate limit | Per workspace | 500 req / 10s | `lt-edge:{workspaceId}` |
+
+These are separate from public endpoint rate limits and sized for the test profiles (30 VUs sustained, 100 VUs burst).
 
 ## Metric Interpretation
 
@@ -104,10 +143,12 @@ k6 run --out json=results.json load-tests/ramp.js
 ## Safety Guardrails
 
 - All scripts refuse to start without `K6_TEST_WORKSPACE_ID`
-- Hard caps on VUs and duration per script (see source)
+- `setup()` preflight validates fixtures before VUs start
+- All idempotency keys are prefixed with `lt-` (enforced server-side for load-test auth)
 - All test data uses `[LOAD-TEST]` prefix
 - No script modifies production data outside the test workspace
-- Idempotency keys are prefixed with `lt-{runId}-` for easy cleanup
+- Mint failure = hard abort (no stale headers ever used)
+- Header rotation uses random jitter (45-75s) to prevent mint stampedes
 
 ## Cleanup
 

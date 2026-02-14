@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.health-probe]
 verify_jwt = false
+
+[functions.mint-load-test-headers]
+verify_jwt = false
