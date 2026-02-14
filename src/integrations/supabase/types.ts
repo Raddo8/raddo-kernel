@@ -1173,12 +1173,17 @@ export type Database = {
         Returns: Json
       }
       get_cron_headers: { Args: never; Returns: Json }
+      get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
       verify_cron_token: {
+        Args: { p_timestamp: string; p_token: string }
+        Returns: boolean
+      }
+      verify_load_test_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
       }
