@@ -1,114 +1,83 @@
 
 
-# Corrected Plan: Cleanup Function + Sustained k6 + HANDOFF Documentation
+# Plan: Fix sustained.js Script + Record Phase 2 Attempt #1 in HANDOFF
 
 ## Overview
 
-Three steps executed in strict order. The key correction from the rejected plan: k6 remains the sole authority for capacity measurement. Edge function calls are never used as a substitute for sustained load testing.
+Two focused changes: fix the k6 script for compatibility and failure visibility, then record the empirical FAIL result in the handoff document as institutional evidence.
 
 ---
 
-## Step 1: Create `cleanup-load-test` Edge Function (with guardrails)
+## Step 1: Fix `load-tests/sustained.js`
 
-Create `supabase/functions/cleanup-load-test/index.ts` with the following safety mechanisms:
+Three changes to the script:
 
-- **HMAC cron auth only** (same pattern as stress-test) -- no user JWT path
-- **Explicit confirm flag**: Refuses execution unless `{ "confirm": true }` is in the request body
-- **Workspace scoping**: Requires `workspaceId` in the request body; only deletes rows matching that workspace
-- **Prefix scoping**: Only deletes rows where `idempotency_key` matches known test prefixes (`burst-`, `direct-test`, `lt-`, `st-`)
-- **Audit response**: Returns JSON with per-table deleted row counts
-- **Deletion order** (FK-safe): usage_events, timeline_events, actions, items, contacts, accounts, workspace_members, workspaces
-- **Name-based scoping for fixtures**: Only deletes workspaces/accounts/items where name contains `[LOAD-TEST]` or `[STRESS-TEST]`
+### 1a. Remove `maxDuration` (fixes the warning)
 
-Add to `supabase/config.toml`:
-```text
-[functions.cleanup-load-test]
-verify_jwt = false
-```
+Remove the `maxDuration: "30m"` line from the options object (line 50). The scenario stages already define the total duration. The `maxVUs` field is valid and stays.
 
-After deployment, execute it once to clean the 9 orphaned burst/direct-test actions and associated usage_events/timeline_events. Verify zero remaining artifacts via database query.
+### 1b. Add failure logging
+
+After the `check()` block, add a conditional that logs `res.status` and first 200 chars of `res.body` when the request fails. This surfaces whether failures are 429s, 401s, 5xx, or timeouts without adding noise on success.
+
+### 1c. Disable `abortOnFail` for data collection run
+
+Change `abortOnFail: true` to `abortOnFail: false` on the `error_rate` threshold. This allows a full 15-minute run to collect complete data. The thresholds still evaluate PASS/FAIL at the end -- the test just won't stop early. After a successful full-duration run is recorded, `abortOnFail` can be re-enabled.
 
 ---
 
-## Step 2: Sustained k6 Test (Phase 2) -- k6 remains authoritative
+## Step 2: Update `docs/HANDOFF.md`
 
-k6 is the only tool used for capacity measurement. This step provides the terminal commands with pre-filled environment variables so you can run it locally.
+### 2a. Record Phase 2 Attempt #1 results
 
-**What I will provide (not execute):**
-
-1. Fresh auth token extraction instructions (the previous token has expired)
-2. Pre-filled export commands for all 6 environment variables
-3. The exact command: `k6 run load-tests/sustained.js`
-4. Instructions to paste results back here
-
-**What k6 sustained.js measures:**
-- 30 VUs held for 15 minutes
-- p50/p95/p99 client-observed latency
-- Error rate (threshold: < 1%, auto-abort)
-- Total RPS achieved under sustained pressure
-
-**What you must monitor separately during the run:**
-- DB CPU/memory via Cloud dashboard
-- Active connections: `SELECT count(*) FROM pg_stat_activity`
-- Lock contention: `SELECT count(*) FROM pg_locks WHERE NOT granted`
-- Edge function logs for cold starts and errors
-
-**Required output artifacts:**
-- JSON results file: `k6 run --out json=results/sustained-phase2.json load-tests/sustained.js`
-- Terminal summary pasted back here for documentation
-- UTC timestamp from database: `SELECT now() AT TIME ZONE 'UTC'`
-- k6 version: `k6 version`
-
----
-
-## Step 3: Document Results into HANDOFF
-
-Only after k6 sustained results exist, update `docs/HANDOFF.md`:
-
-- Lines 561-583: Replace "PENDING" values with actual k6 metrics
-- Add a new section for Phase 2 sustained results (separate from Phase 1 ramp)
-- Document cleanup function existence and usage
-- Record stress-test 7/7 pass and burst test results as correctness evidence (not capacity evidence)
-- Do NOT upgrade maturity percentage until sustained metrics are documented
-- Version timestamp sourced from `SELECT now() AT TIME ZONE 'UTC'`
-
-The "PENDING" language and current key caveat (line 589) remain unchanged until real sustained k6 metrics exist.
-
----
-
-## Technical Details
-
-### cleanup-load-test function structure
+Add a new section after the existing "Phase 1 Ramp Results" section (after line 583) titled "Phase 2 Sustained Results". Content:
 
 ```text
-supabase/functions/cleanup-load-test/index.ts
+## CAPACITY QUANTIFICATION -- Phase 2 Sustained Results
+
+### Attempt #1 (30 VUs) -- FAIL
+
+| Metric               | Value                                          |
+|-----------------------|------------------------------------------------|
+| Run date (UTC)        | 2026-02-14                                     |
+| Duration before abort | 01m52s (aborted by threshold breach)           |
+| Error rate            | 1.04% (20/1909) -- FAIL (threshold: < 1%)     |
+| p50 latency           | 1.02s                                          |
+| p95 latency           | 1.42s -- PASS (threshold: < 3s)                |
+| p99 latency           | 10.68s -- FAIL (threshold: < 5s)               |
+| Max latency           | 24.61s                                         |
+| RPS achieved          | ~17 req/s                                      |
+| Total requests        | 1,909                                          |
+| Pass/Fail             | FAIL                                           |
+
+Failure classification: 20 requests failed; root cause not yet classified
+(status codes pending jq extraction from results/sustained-phase2.json).
+Long p99 tail suggests connection pool saturation or cold-start queuing
+under 30 concurrent VUs.
+
+Next action: Fix maxDuration warning, add failure logging, rerun full
+15-minute duration with abortOnFail disabled for complete dataset.
 ```
 
-Auth: HMAC cron token via verify_cron_token RPC (same as stress-test, process-scheduled-actions)
+### 2b. Update Key Caveat (line 589)
 
-Request body schema:
-- `confirm: boolean` (required, must be `true`)
-- `workspaceId: string` (required UUID)
-- `prefixes: string[]` (optional, defaults to `["burst-", "direct-test", "lt-", "st-"]`)
-- `includeFixtures: boolean` (optional, defaults to `false` -- when true, also deletes `[LOAD-TEST]`/`[STRESS-TEST]` named fixtures)
+Append to the existing caveat text that Phase 2 sustained attempt #1 is recorded as FAIL, and a full-duration rerun is required before capacity can be quantified.
 
-Response: `{ success: true, deleted: { usage_events: N, timeline_events: N, actions: N, ... } }`
+### 2c. Version timestamp
 
-Rejection cases:
-- Missing/invalid HMAC token: 401
-- `confirm !== true`: 400 with message "Explicit confirm:true required"
-- Missing workspaceId: 400
+Source from `SELECT now() AT TIME ZONE 'UTC'` per documentation standards.
 
-### Files created/modified
+---
 
-1. NEW: `supabase/functions/cleanup-load-test/index.ts`
-2. MODIFIED: `docs/HANDOFF.md` (lines 561-589, only after Step 2 completes)
-3. MODIFIED: `load-tests/README.md` (add cleanup function reference to Cleanup section)
+## Files Modified
 
-### What this plan does NOT do
+1. `load-tests/sustained.js` -- remove `maxDuration`, add failure logging, disable `abortOnFail`
+2. `docs/HANDOFF.md` -- add Phase 2 Attempt #1 results section, update caveat
 
-- Does not use edge function calls to simulate sustained load
-- Does not replace k6 as the capacity measurement authority
-- Does not upgrade HANDOFF maturity until k6 sustained metrics are documented
-- Does not conflate stress-test correctness results with capacity quantification
+## What This Does NOT Do
+
+- Does not change thresholds (they remain the same PASS/FAIL criteria)
+- Does not upgrade maturity percentages
+- Does not mark capacity as proven
+- Does not re-run the test (that's your next terminal step after these changes)
 
