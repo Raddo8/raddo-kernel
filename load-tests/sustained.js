@@ -46,7 +46,6 @@ export const options = {
     error_rate: [{ threshold: "rate<0.01", abortOnFail: false }],
     http_req_duration: ["p(95)<3000", "p(99)<5000"],
   },
-  maxVUs: 40,
 };
 
 export default function () {
