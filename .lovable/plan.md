@@ -1,34 +1,39 @@
 
-# Add Interrupt Detection to Acceptance Gate
 
-## Goal
+# Fix Init-Context Log Spam in sustained.js
 
-Prevent aborted/interrupted k6 runs from being classified as CANONICAL. Currently, a Ctrl+C'd run with good metrics falsely passes.
+## Problem
+
+Lines 71-72 contain `console.log` calls at module scope (init context). In k6, the init context runs once **per VU**, so at 60 VUs these two lines produce 120 log lines of noise before the test even starts.
 
 ## Change
 
-### File: `load-tests/sustained.js`
+### File: `load-tests/sustained.js` (lines 70-72)
 
-**In `handleSummary()`, insert two interrupt gates after `const gates = [];` (line 362) and before the existing `vuMax` check (line 363):**
+Remove the two `console.log` lines from module scope. They are already redundant because `setup()` (line 215) already logs the same information:
 
 ```javascript
-const gates = [];
-
-// Gate: interrupted run (Ctrl+C / SIGINT / SIGTERM)
-if (data.state?.isInterrupted) {
-  gates.push("FAIL: run was interrupted (signal/abort)");
-}
-const iterInterrupted = metrics.iterations_interrupted?.values?.count || 0;
-if (iterInterrupted > 0) {
-  gates.push(`FAIL: iterations_interrupted=${iterInterrupted}`);
-}
-
-const vuMax = metrics.vus_max?.values?.max || 0;
-// ... rest unchanged
+console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}`);
 ```
 
-Key details:
-- Uses `data.state?.isInterrupted` (safe if field is missing)
-- Uses `metrics.iterations_interrupted?.values?.count` (the real k6 summary metric name, not `metrics.iterations?.values?.interrupted`)
-- Both gates produce `FAIL:` lines, so the existing `canonical = gates.filter(g => g.startsWith("FAIL")).length === 0` automatically classifies as INVALID
-- No other files or functions change
+**Before (lines 70-72):**
+```javascript
+// -- Startup logging --
+console.log(`ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
+console.log(`SUSTAINED_VUS=${SUSTAINED_VUS}`);
+```
+
+**After:**
+```javascript
+// Startup logging moved to setup() to avoid per-VU init-context spam.
+```
+
+The existing `setup()` function already logs the target VUs. If the raw env value is also desired, add one line to `setup()`:
+
+```javascript
+console.log(`[sustained] ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
+console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}`);
+```
+
+This reduces 120 lines of init noise to 2 lines in setup, with zero behavioral change.
+
