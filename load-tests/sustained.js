@@ -22,7 +22,7 @@
 
 import http from "k6/http";
 import { check, fail, sleep } from "k6";
-import { Rate, Trend } from "k6/metrics";
+import { Counter, Rate, Trend } from "k6/metrics";
 import { textSummary } from "https://jslib.k6.io/k6-summary/0.1.0/index.js";
 
 const BASE_URL = __ENV.K6_BASE_URL;
@@ -55,7 +55,15 @@ const errorRate = new Rate("error_rate");
 const createLatency = new Trend("create_latency", true);
 const mintRefreshFailed = new Rate("mint_refresh_failed");
 const vuSkippedNoHeaders = new Rate("vu_skipped_no_headers");
+const failStatus401 = new Counter("fail_status_401");
+const failStatus429 = new Counter("fail_status_429");
+const failStatus5xx = new Counter("fail_status_5xx");
+const failStatusOther = new Counter("fail_status_other");
 const RUN_ID = `lt-sus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+// Per-VU fail-log sampling (default: 3 per VU)
+const FAIL_LOG_LIMIT = parseInt(__ENV.K6_FAIL_LOG_LIMIT || "3", 10);
+let failLogCount = 0;
 
 const SUSTAINED_VUS = parseInt(__ENV.K6_SUSTAINED_VUS || "30", 10);
 
@@ -329,9 +337,20 @@ export default function (data) {
   createLatency.add(res.timings.duration);
 
   if (!success) {
-    console.warn(
-      `[FAIL] VU=${__VU} ITER=${__ITER} status=${res.status} body=${(res.body || "").substring(0, 200)}`
-    );
+    // Increment globally-aggregated status counters
+    const s = res.status;
+    if (s === 401) failStatus401.add(1);
+    else if (s === 429) failStatus429.add(1);
+    else if (s >= 500 && s <= 599) failStatus5xx.add(1);
+    else failStatusOther.add(1);
+
+    // Per-VU capped sampling (default: 3 per VU)
+    if (failLogCount < FAIL_LOG_LIMIT) {
+      failLogCount++;
+      console.warn(
+        `[FAIL] VU=${__VU} #${failLogCount} status=${res.status} body=${(res.body || "").substring(0, 200)}`
+      );
+    }
   }
 }
 
@@ -361,6 +380,21 @@ export function handleSummary(data) {
   const p99 = metrics.http_req_duration?.values?.["p(99)"] || 0;
   if (p95 >= 3000) gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
   if (p99 >= 5000) gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
+
+  // Status code breakdown (globally aggregated Counters)
+  const s401 = metrics.fail_status_401?.values?.count || 0;
+  const s429 = metrics.fail_status_429?.values?.count || 0;
+  const s5xx = metrics.fail_status_5xx?.values?.count || 0;
+  const sOther = metrics.fail_status_other?.values?.count || 0;
+  const totalFails = s401 + s429 + s5xx + sOther;
+
+  if (totalFails > 0) {
+    gates.push(`INFO: Failure breakdown (total=${totalFails}):`);
+    if (s401 > 0) gates.push(`  401: ${s401} (${(s401/totalFails*100).toFixed(1)}%)`);
+    if (s429 > 0) gates.push(`  429: ${s429} (${(s429/totalFails*100).toFixed(1)}%)`);
+    if (s5xx > 0) gates.push(`  5xx: ${s5xx} (${(s5xx/totalFails*100).toFixed(1)}%)`);
+    if (sOther > 0) gates.push(`  other: ${sOther} (${(sOther/totalFails*100).toFixed(1)}%)`);
+  }
 
   const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
 
