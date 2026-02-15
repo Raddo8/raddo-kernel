@@ -72,7 +72,6 @@ export const options = {
         { duration: "15m", target: SUSTAINED_VUS },
         { duration: "30s", target: 0 },
       ],
-      maxVUs: SUSTAINED_VUS,
       gracefulRampDown: "30s",
       gracefulStop: "30s",
     },
