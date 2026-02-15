@@ -1,80 +1,104 @@
 
 
-# Remove JWT Dependency from Load-Test Minting
+# Add Failure Diagnostics to sustained.js (Counter Metrics + Safe Logging)
 
-## Problem
+## Goal
 
-The `AUTH_TOKEN` (a short-lived Supabase JWT) expires mid-run (~11 minutes), causing `mint-load-test-headers` to return 401 for the remainder of the sustained test. This collapses header rotation and invalidates the run.
+Determine **which HTTP status codes** cause the 56% error rate at 60 VUs, using globally aggregated k6 Counter metrics and bounded fail-log sampling.
 
-The existing security gates on the mint endpoint are already sufficient without JWT:
-- Gate 1: Environment guard (`LOAD_TEST_ENABLED`)
-- Gate 2: `X-LoadTest-Secret` (high-entropy shared secret)
-- Gate 4: Hardcoded user-ID allowlist
-- Gate 5: Rate limit (200/60s per key)
+## Changes (single file: `load-tests/sustained.js`)
 
-The JWT (Gate 3) adds no meaningful security given the other gates, but introduces a time-bomb that kills long runs.
+### 1. Add Counter imports and metrics (line 25, line 54-57 area)
 
-## Changes
+Add `Counter` to the import from `k6/metrics`, then declare four Counter metrics:
 
-### 1. Edge Function: `supabase/functions/mint-load-test-headers/index.ts`
+```javascript
+import { Counter, Rate, Trend } from "k6/metrics";
 
-Replace Gate 3 (JWT validation + user extraction) with a new `X-LoadTest-Operator` header that the k6 script provides. This header carries the operator's user ID, which is then validated against the existing allowlist (Gate 4).
-
-**Before (lines 40-61):** Validates JWT via `getUser()`, extracts `user.id`
-**After:** Reads `X-LoadTest-Operator` header, validates it's in `ALLOWED_USER_IDS`
-
-- Remove the `userClient` creation and `getUser()` call entirely
-- Read operator ID from `req.headers.get("X-LoadTest-Operator")`
-- Reject if missing or not in allowlist
-- Rate-limit key becomes `mint-lt:${operatorId}` (same as before, just sourced differently)
-- Update CORS `Access-Control-Allow-Headers` to include `x-loadtest-operator`
-
-### 2. k6 Scripts: Remove `Authorization` from mint requests
-
-**Files:** `load-tests/sustained.js`, `load-tests/burst.js`, `load-tests/ramp.js`
-
-In each script's `mintHeadersRaw()` function, replace:
-```
-Authorization: `Bearer ${AUTH_TOKEN}`,
-```
-with:
-```
-"X-LoadTest-Operator": OPERATOR_ID,
+// ... existing metrics ...
+const failStatus401 = new Counter("fail_status_401");
+const failStatus429 = new Counter("fail_status_429");
+const failStatus5xx = new Counter("fail_status_5xx");
+const failStatusOther = new Counter("fail_status_other");
 ```
 
-Add a new env var `K6_OPERATOR_ID` (the operator's user UUID) and remove `AUTH_TOKEN` from the mint request headers.
+These aggregate across all VUs automatically -- no per-VU state issues.
 
-**Keep `AUTH_TOKEN` for preflight only:** The `setup()` function still uses JWT to validate workspace/item via PostgREST REST API (RLS-gated reads). This is fine because `setup()` runs once at the start before the JWT expires.
+### 2. Add fail-log sampling variable (module scope)
 
-### 3. k6 Scripts: Update env var validation
+```javascript
+const FAIL_LOG_LIMIT = parseInt(__ENV.K6_FAIL_LOG_LIMIT || "3", 10);
+let failLogCount = 0;
+```
 
-- Add `OPERATOR_ID = __ENV.K6_OPERATOR_ID` 
-- Keep `AUTH_TOKEN` as required (still used in `setup()` for preflight RLS queries)
-- Update the `fail()` guard to check for `OPERATOR_ID`
-- Add placeholder guard for `OPERATOR_ID`
+Default is **3 per VU**. At 60 VUs worst case = 180 lines. This is acceptable and documented as per-VU. Low default keeps output readable.
 
-### 4. Documentation: `load-tests/README.md`
+### 3. Replace fail block in `default()` (lines 331-335)
 
-Update the env var table:
-- Add `K6_OPERATOR_ID`: Operator user UUID (from allowlist in mint-load-test-headers)
-- Update `K6_AUTH_TOKEN` description: Used only for preflight fixture validation, not for minting
+Replace the current unconditional `console.warn` with status-code counting and capped logging:
 
-## Security Analysis
+```javascript
+if (!success) {
+  // Increment globally-aggregated status counters
+  const s = res.status;
+  if (s === 401) failStatus401.add(1);
+  else if (s === 429) failStatus429.add(1);
+  else if (s >= 500 && s <= 599) failStatus5xx.add(1);
+  else failStatusOther.add(1);
 
-| Gate | Before | After |
-|------|--------|-------|
-| Environment guard | Same | Same |
-| `X-LoadTest-Secret` | Same | Same |
-| Operator identity | JWT `getUser()` -> allowlist | `X-LoadTest-Operator` header -> allowlist |
-| Rate limit | Per user ID | Per operator ID (same) |
+  // Per-VU capped sampling (default: 3 per VU)
+  if (failLogCount < FAIL_LOG_LIMIT) {
+    failLogCount++;
+    console.warn(
+      `[FAIL] VU=${__VU} #${failLogCount} status=${res.status} body=${(res.body || "").substring(0, 200)}`
+    );
+  }
+}
+```
 
-The allowlist is hardcoded in source code. An attacker would need both the `LOAD_TEST_SECRET` AND a valid operator UUID from the allowlist to mint. The JWT added no practical security beyond what the secret + allowlist already provide.
+### 4. Add status breakdown to `handleSummary()` (after line 363, before the `canonical` check)
 
-## Files Changed
+Read counts from `data.metrics` only -- no local JS state:
 
-1. `supabase/functions/mint-load-test-headers/index.ts` -- remove JWT auth, add operator header
-2. `load-tests/sustained.js` -- use `X-LoadTest-Operator` instead of `Authorization` in mint
-3. `load-tests/burst.js` -- same
-4. `load-tests/ramp.js` -- same
-5. `load-tests/README.md` -- update env var docs
+```javascript
+// Status code breakdown (globally aggregated Counters)
+const s401 = metrics.fail_status_401?.values?.count || 0;
+const s429 = metrics.fail_status_429?.values?.count || 0;
+const s5xx = metrics.fail_status_5xx?.values?.count || 0;
+const sOther = metrics.fail_status_other?.values?.count || 0;
+const totalFails = s401 + s429 + s5xx + sOther;
+
+if (totalFails > 0) {
+  gates.push(`INFO: Failure breakdown (total=${totalFails}):`);
+  if (s401 > 0) gates.push(`  401: ${s401} (${(s401/totalFails*100).toFixed(1)}%)`);
+  if (s429 > 0) gates.push(`  429: ${s429} (${(s429/totalFails*100).toFixed(1)}%)`);
+  if (s5xx > 0) gates.push(`  5xx: ${s5xx} (${(s5xx/totalFails*100).toFixed(1)}%)`);
+  if (sOther > 0) gates.push(`  other: ${sOther} (${(sOther/totalFails*100).toFixed(1)}%)`);
+}
+```
+
+## What is NOT included
+
+- No per-VU `statusTally` object -- removed entirely per your feedback
+- No attempt to read module-scope variables in `handleSummary()` -- all reads are from `data.metrics`
+- No changes to mint, setup, or any other functions
+
+## Expected output at 60 VUs
+
+```
+ATTEMPT CLASSIFICATION: INVALID
+  Target VUs: 60  |  Actual vus_max: 60
+  FAIL: error_rate=55.96% (threshold: <1%)
+  INFO: Failure breakdown (total=59939):
+    429: 58200 (97.1%)
+    5xx: 1739 (2.9%)
+```
+
+Plus ~180 sampled `[FAIL]` lines showing actual response bodies, which will confirm the dominant failure mode.
+
+## Run command
+
+```bash
+K6_FAIL_LOG_LIMIT=3 K6_SUSTAINED_VUS=60 k6 run "$(pwd)/load-tests/sustained.js"
+```
 
