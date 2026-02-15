@@ -426,6 +426,12 @@ export function handleSummary(data) {
   const totalFails = s401 + s429 + s5xx + sOther;
   gates.push(`INFO: Failure breakdown (total=${totalFails}): 401=${s401} 429=${s429} 5xx=${s5xx} other=${sOther}`);
 
+  // Gate: 401s (de minimis threshold)
+  if (s401 > 5) {
+    isCanonical = false;
+    gates.push(`FAIL: fail_status_401=${s401} (threshold: <= 5)`);
+  }
+
   // Gate: item_lookup_failed (hard zero requirement)
   const itemLookupFails = counterVal(metrics.fail_item_lookup);
   if (itemLookupFails > 0) {
