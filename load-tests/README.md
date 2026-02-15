@@ -15,8 +15,8 @@
 
 Load tests use a **dedicated HMAC auth path** that is cryptographically isolated from the production cron system:
 
-1. **Minting**: k6 calls `mint-load-test-headers` with a user JWT + `X-LoadTest-Secret` header
-2. **The mint endpoint** validates the JWT, checks the user allowlist, rate-limits, then returns short-lived HMAC headers (`X-LoadTest-Timestamp`, `X-LoadTest-Token`) with a 120-second validity window
+1. **Minting**: k6 calls `mint-load-test-headers` with `X-LoadTest-Operator` (operator UUID) + `X-LoadTest-Secret` header
+2. **The mint endpoint** validates the operator against the hardcoded allowlist, rate-limits, then returns short-lived HMAC headers (`X-LoadTest-Timestamp`, `X-LoadTest-Token`) with a 120-second validity window
 3. **Load requests** use these HMAC headers (not JWT) to authenticate against `execute-action-server`
 4. **Header rotation**: Each VU refreshes headers every 45-75 seconds (jittered to prevent thundering herd)
 
@@ -30,8 +30,9 @@ The signing key (`load_test_auth`) is separate from the cron signing key. A comp
 | `K6_ANON_KEY` | Yes | Supabase anon key |
 | `K6_TEST_WORKSPACE_ID` | Yes | Dedicated test workspace UUID. Scripts refuse to run without this. |
 | `K6_TEST_ITEM_ID` | Yes | Test item UUID within the workspace |
-| `K6_AUTH_TOKEN` | Yes | User JWT — used **only for minting** load-test HMAC headers, never sent with load requests |
+| `K6_AUTH_TOKEN` | Yes | User JWT — used **only in preflight** for RLS-gated fixture validation, not for minting |
 | `K6_LOADTEST_SECRET` | Yes | Gate secret for mint-load-test-headers endpoint |
+| `K6_OPERATOR_ID` | Yes | Operator user UUID (must be in `ALLOWED_USER_IDS` in mint-load-test-headers) |
 
 ## Setup
 

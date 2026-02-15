@@ -12,7 +12,8 @@
  * Default: 30 VUs for 15 minutes (configurable via K6_SUSTAINED_VUS).
  *
  * Auth: Uses isolated load-test HMAC headers minted from
- * mint-load-test-headers endpoint. JWT is used ONLY for minting.
+ * mint-load-test-headers endpoint. Minting uses X-LoadTest-Operator + secret
+ * (no JWT). JWT is used only in setup() for preflight RLS queries.
  * Headers are rotated every 20-40s (jittered) per VU with 60s expiry margin.
  *
  * This measures CLIENT-OBSERVED latency only.
@@ -30,11 +31,12 @@ const WORKSPACE_ID = __ENV.K6_TEST_WORKSPACE_ID;
 const ITEM_ID = __ENV.K6_TEST_ITEM_ID;
 const AUTH_TOKEN = __ENV.K6_AUTH_TOKEN;
 const LOADTEST_SECRET = __ENV.K6_LOADTEST_SECRET;
+const OPERATOR_ID = __ENV.K6_OPERATOR_ID;
 
 if (!WORKSPACE_ID) {
   fail("K6_TEST_WORKSPACE_ID is required. Never run against production.");
 }
-if (!BASE_URL || !ANON_KEY || !ITEM_ID || !AUTH_TOKEN || !LOADTEST_SECRET) {
+if (!BASE_URL || !ANON_KEY || !ITEM_ID || !AUTH_TOKEN || !LOADTEST_SECRET || !OPERATOR_ID) {
   fail("Missing required environment variables. See load-tests/README.md.");
 }
 
@@ -42,7 +44,7 @@ if (!BASE_URL || !ANON_KEY || !ITEM_ID || !AUTH_TOKEN || !LOADTEST_SECRET) {
 function looksLikePlaceholder(v) {
   return !v || v.includes("<") || v.includes(">") || v.startsWith("your-");
 }
-if (looksLikePlaceholder(WORKSPACE_ID) || looksLikePlaceholder(ITEM_ID)) {
+if (looksLikePlaceholder(WORKSPACE_ID) || looksLikePlaceholder(ITEM_ID) || looksLikePlaceholder(OPERATOR_ID)) {
   fail(
     "K6_TEST_WORKSPACE_ID or K6_TEST_ITEM_ID contains a placeholder value. " +
     "Set real UUIDs. See load-tests/README.md."
@@ -99,7 +101,7 @@ function mintHeadersRaw() {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${AUTH_TOKEN}`,
+          "X-LoadTest-Operator": OPERATOR_ID,
           apikey: ANON_KEY,
           "X-LoadTest-Secret": LOADTEST_SECRET,
         },
