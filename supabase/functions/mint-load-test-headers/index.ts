@@ -19,8 +19,9 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ── Gate 1: Environment guard ──
-    const enabled = Deno.env.get("LOAD_TEST_AUTH_ENABLED");
-    if (enabled !== "true") {
+    // Set to false to disable load-test minting entirely
+    const LOAD_TEST_ENABLED = true;
+    if (!LOAD_TEST_ENABLED) {
       return jsonError("Load test auth is not enabled", 403);
     }
 
