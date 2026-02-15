@@ -1,82 +1,80 @@
 
 
-# Diagnose and Fix `maxVUs` k6 Parse Error
-
-## Confirmed Ground Truth
-
-The repository version of `load-tests/sustained.js` (lines 65-83) contains **no `maxVUs:` property** in the options object. The only `maxVUs` references are:
-- Line 64: a comment (`// Scenario-driven options with explicit maxVUs`)
-- Line 198: a log string inside `setup()`
-
-Neither of these can cause `json: unknown field "maxVUs"`. **No code change is needed in the repository.**
+# Remove JWT Dependency from Load-Test Minting
 
 ## Problem
 
-The user's local k6 is still erroring with `json: unknown field "maxVUs"`, which means k6 is either:
-1. Executing a stale local copy that was never synced, or
-2. Executing a different file entirely
+The `AUTH_TOKEN` (a short-lived Supabase JWT) expires mid-run (~11 minutes), causing `mint-load-test-headers` to return 401 for the remainder of the sustained test. This collapses header rotation and invalidates the run.
 
-## Required Diagnostic Sequence (user must run locally)
+The existing security gates on the mint endpoint are already sufficient without JWT:
+- Gate 1: Environment guard (`LOAD_TEST_ENABLED`)
+- Gate 2: `X-LoadTest-Secret` (high-entropy shared secret)
+- Gate 4: Hardcoded user-ID allowlist
+- Gate 5: Rate limit (200/60s per key)
 
-### Step 1: Capture ground truth of the local file
+The JWT (Gate 3) adds no meaningful security given the other gates, but introduces a time-bomb that kills long runs.
 
-```bash
-sed -n '55,95p' load-tests/sustained.js
+## Changes
+
+### 1. Edge Function: `supabase/functions/mint-load-test-headers/index.ts`
+
+Replace Gate 3 (JWT validation + user extraction) with a new `X-LoadTest-Operator` header that the k6 script provides. This header carries the operator's user ID, which is then validated against the existing allowlist (Gate 4).
+
+**Before (lines 40-61):** Validates JWT via `getUser()`, extracts `user.id`
+**After:** Reads `X-LoadTest-Operator` header, validates it's in `ALLOWED_USER_IDS`
+
+- Remove the `userClient` creation and `getUser()` call entirely
+- Read operator ID from `req.headers.get("X-LoadTest-Operator")`
+- Reject if missing or not in allowlist
+- Rate-limit key becomes `mint-lt:${operatorId}` (same as before, just sourced differently)
+- Update CORS `Access-Control-Allow-Headers` to include `x-loadtest-operator`
+
+### 2. k6 Scripts: Remove `Authorization` from mint requests
+
+**Files:** `load-tests/sustained.js`, `load-tests/burst.js`, `load-tests/ramp.js`
+
+In each script's `mintHeadersRaw()` function, replace:
+```
+Authorization: `Bearer ${AUTH_TOKEN}`,
+```
+with:
+```
+"X-LoadTest-Operator": OPERATOR_ID,
 ```
 
-This prints the options block. If `maxVUs:` appears as an actual key (not in a comment or string), the local file is stale.
+Add a new env var `K6_OPERATOR_ID` (the operator's user UUID) and remove `AUTH_TOKEN` from the mint request headers.
 
-### Step 2: Verify file identity and location
+**Keep `AUTH_TOKEN` for preflight only:** The `setup()` function still uses JWT to validate workspace/item via PostgREST REST API (RLS-gated reads). This is fine because `setup()` runs once at the start before the JWT expires.
 
-```bash
-ls -l load-tests/sustained.js && pwd
-```
+### 3. k6 Scripts: Update env var validation
 
-Confirms timestamp, size, and working directory.
+- Add `OPERATOR_ID = __ENV.K6_OPERATOR_ID` 
+- Keep `AUTH_TOKEN` as required (still used in `setup()` for preflight RLS queries)
+- Update the `fail()` guard to check for `OPERATOR_ID`
+- Add placeholder guard for `OPERATOR_ID`
 
-### Step 3: Run k6 against an absolute path
+### 4. Documentation: `load-tests/README.md`
 
-```bash
-K6_SUSTAINED_VUS=20 k6 run "$(pwd)/load-tests/sustained.js"
-```
+Update the env var table:
+- Add `K6_OPERATOR_ID`: Operator user UUID (from allowlist in mint-load-test-headers)
+- Update `K6_AUTH_TOKEN` description: Used only for preflight fixture validation, not for minting
 
-Eliminates any possibility of k6 resolving a different file.
+## Security Analysis
 
-### Step 4: If error persists, force-replace (last resort)
+| Gate | Before | After |
+|------|--------|-------|
+| Environment guard | Same | Same |
+| `X-LoadTest-Secret` | Same | Same |
+| Operator identity | JWT `getUser()` -> allowlist | `X-LoadTest-Operator` header -> allowlist |
+| Rate limit | Per user ID | Per operator ID (same) |
 
-Only after Steps 1-3 confirm we are editing and executing the same file, and the options block still contains a `maxVUs:` key:
+The allowlist is hardcoded in source code. An attacker would need both the `LOAD_TEST_SECRET` AND a valid operator UUID from the allowlist to mint. The JWT added no practical security beyond what the secret + allowlist already provide.
 
-```bash
-git fetch origin main
-git checkout origin/main -- load-tests/sustained.js
-```
+## Files Changed
 
-Then re-verify:
-
-```bash
-sed -n '55,95p' load-tests/sustained.js
-/usr/bin/grep -n "maxVUs" load-tests/sustained.js
-K6_SUSTAINED_VUS=20 k6 run "$(pwd)/load-tests/sustained.js"
-```
-
-## Optional Cleanup (after successful run)
-
-Update the stale comment on line 64 from:
-```
-// -- Scenario-driven options with explicit maxVUs --
-```
-to:
-```
-// -- Scenario-driven options --
-```
-
-And update the log string on line 198 that references `maxVUs` to remove the now-irrelevant field name.
-
-These are cosmetic and can be done after the canonical run is confirmed.
-
-## Expected Outcome
-
-- k6 banner shows the `sustained` scenario with `20 max VUs`
-- End stats show `vus_max: 20`
-- `handleSummary` prints `ATTEMPT CLASSIFICATION: CANONICAL` or `INVALID`
+1. `supabase/functions/mint-load-test-headers/index.ts` -- remove JWT auth, add operator header
+2. `load-tests/sustained.js` -- use `X-LoadTest-Operator` instead of `Authorization` in mint
+3. `load-tests/burst.js` -- same
+4. `load-tests/ramp.js` -- same
+5. `load-tests/README.md` -- update env var docs
 
