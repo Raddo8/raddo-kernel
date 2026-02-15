@@ -197,59 +197,62 @@ async function handleCreate(
     if (!isMember) return jsonError("Not a workspace member", 403);
   }
 
-  // Usage soft limit check
-  const billingServiceClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
-  const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  // Skip billing + rate-limit checks for load-test mode (fast-path: 3 DB calls instead of 9)
+  if (authResult.mode !== "load-test") {
+    // Usage soft limit check
+    const billingServiceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const currentPeriod = new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
-  const { data: billing } = await billingServiceClient
-    .from("workspace_billing")
-    .select("plan, monthly_action_limit")
-    .eq("workspace_id", workspaceId)
-    .maybeSingle();
+    const { data: billing } = await billingServiceClient
+      .from("workspace_billing")
+      .select("plan, monthly_action_limit")
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
 
-  if (billing) {
-    const periodStart = currentPeriod + "-01T00:00:00Z";
-    const { count: periodUsage } = await billingServiceClient
+    if (billing) {
+      const periodStart = currentPeriod + "-01T00:00:00Z";
+      const { count: periodUsage } = await billingServiceClient
+        .from("actions")
+        .select("id", { count: "exact", head: true })
+        .eq("workspace_id", workspaceId)
+        .gte("created_at", periodStart)
+        .neq("status", "canceled");
+
+      if ((periodUsage ?? 0) >= billing.monthly_action_limit && billing.plan === "free") {
+        return jsonOk({
+          success: false,
+          reason: "usage_limit_reached",
+          limit: billing.monthly_action_limit,
+          used: periodUsage,
+        });
+      }
+    }
+
+    // Rate-limit check
+    const limit = await getRateLimit(supabase, itemId as string, channel as string);
+    const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
+
+    const { count } = await supabase
       .from("actions")
       .select("id", { count: "exact", head: true })
-      .eq("workspace_id", workspaceId)
-      .gte("created_at", periodStart)
-      .neq("status", "canceled");
+      .eq("item_id", itemId as string)
+      .eq("channel", channel as string)
+      .gte("created_at", oneHourAgo)
+      .not("status", "eq", "canceled" as any);
 
-    if ((periodUsage ?? 0) >= billing.monthly_action_limit && billing.plan === "free") {
+    if ((count ?? 0) >= limit) {
+      console.warn(
+        `[execute-action-server] Rate limit hit: ${count}/${limit} for item=${itemId} channel=${channel}`
+      );
       return jsonOk({
-        success: false,
-        reason: "usage_limit_reached",
-        limit: billing.monthly_action_limit,
-        used: periodUsage,
+        success: true,
+        skipped: true,
+        reason: "rate_limited",
       });
     }
-  }
-
-  // Rate-limit check
-  const limit = await getRateLimit(supabase, itemId as string, channel as string);
-  const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
-
-  const { count } = await supabase
-    .from("actions")
-    .select("id", { count: "exact", head: true })
-    .eq("item_id", itemId as string)
-    .eq("channel", channel as string)
-    .gte("created_at", oneHourAgo)
-    .not("status", "eq", "canceled" as any);
-
-  if ((count ?? 0) >= limit) {
-    console.warn(
-      `[execute-action-server] Rate limit hit: ${count}/${limit} for item=${itemId} channel=${channel}`
-    );
-    return jsonOk({
-      success: true,
-      skipped: true,
-      reason: "rate_limited",
-    });
   }
 
   // Insert action row
@@ -288,14 +291,17 @@ async function handleCreate(
     return jsonError(insertErr.message, 500);
   }
 
-  // Write queue-stage timeline event
-  await writeTimeline(supabase, {
-    accountId,
-    itemId: itemId as string,
-    direction: "system",
-    channel: "system",
-    summary: `Action queued: ${type} via ${channel}`,
-  });
+  // Skip timeline write for load-test mode (cleaned up anyway)
+  if (authResult.mode !== "load-test") {
+    // Write queue-stage timeline event
+    await writeTimeline(supabase, {
+      accountId,
+      itemId: itemId as string,
+      direction: "system",
+      channel: "system",
+      summary: `Action queued: ${type} via ${channel}`,
+    });
+  }
 
   return jsonOk({
     success: true,
