@@ -360,6 +360,16 @@ export function handleSummary(data) {
   const metrics = data.metrics;
 
   const gates = [];
+
+  // Gate: interrupted run (Ctrl+C / SIGINT / SIGTERM)
+  if (data.state?.isInterrupted) {
+    gates.push("FAIL: run was interrupted (signal/abort)");
+  }
+  const iterInterrupted = metrics.iterations_interrupted?.values?.count || 0;
+  if (iterInterrupted > 0) {
+    gates.push(`FAIL: iterations_interrupted=${iterInterrupted}`);
+  }
+
   const vuMax = metrics.vus_max?.values?.max || 0;
   if (vuMax !== SUSTAINED_VUS) {
     gates.push(`FAIL: vus_max=${vuMax}, expected=${SUSTAINED_VUS}`);
