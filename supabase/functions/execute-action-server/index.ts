@@ -351,21 +351,26 @@ Deno.serve(async (req: Request) => {
         if (!params.idempotencyKey || !String(params.idempotencyKey).startsWith("lt-")) {
           return jsonError("idempotencyKey must start with 'lt-' for load-test auth", 400);
         }
-        // Guard: edge rate limiter (500 req / 10s per workspace)
-        const { data: edgeRate } = await supabase.rpc("check_rate_limit", {
-          p_key: `lt-edge:${params.workspaceId}`,
-          p_max_requests: 500,
-          p_window_ms: 10000,
-        });
-        if (edgeRate && !edgeRate.allowed) {
-          return new Response(
-            JSON.stringify({ success: false, error: "Load test rate limit exceeded" }),
-            {
-              status: 429,
-              headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(edgeRate.retry_after || 5) },
-            }
-          );
-        }
+        // Edge rate limiter bypassed for load-test mode to allow
+        // capacity testing to measure real system ceilings (DB pool,
+        // function concurrency) rather than a synthetic gate.
+        // Production traffic never enters this code path.
+        // To re-enable: uncomment the check_rate_limit RPC block below.
+        //
+        // const { data: edgeRate } = await supabase.rpc("check_rate_limit", {
+        //   p_key: `lt-edge:${params.workspaceId}`,
+        //   p_max_requests: 500,
+        //   p_window_ms: 10000,
+        // });
+        // if (edgeRate && !edgeRate.allowed) {
+        //   return new Response(
+        //     JSON.stringify({ success: false, error: "Load test rate limit exceeded" }),
+        //     {
+        //       status: 429,
+        //       headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(edgeRate.retry_after || 5) },
+        //     }
+        //   );
+        // }
       }
 
       return await handleCreate(supabase, authResult, params);
