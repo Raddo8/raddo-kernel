@@ -1,56 +1,76 @@
 
 
-# Fix Missing Failure Breakdown in handleSummary
+# Fix Test-Harness Governance: 3 Classification Bugs
 
-## Root Cause
+## Summary
 
-The counter increment logic in the VU function is correct: non-200 responses fail `check()`, and status codes are categorized into `failStatus401/429/5xx/other` Counters. The bug is in `handleSummary` -- we are reading `metrics.fail_status_5xx?.values?.count` but have no confirmation this is the correct property path for k6 Counter metrics in the summary data object. If k6 uses a different key (e.g., `value` instead of `count`), all four counters silently return `0` via the `|| 0` fallback, and `totalFails` evaluates to `0`, hiding the entire breakdown block.
+The `handleSummary` gate declared CANONICAL while violating its own stated acceptance criteria. Three precise fixes are needed -- all in `load-tests/sustained.js`.
 
-## Changes
+---
 
-### File: `load-tests/sustained.js`
+## Fix 1: Add `fail_item_lookup` Counter and enforce it in the gate
 
-**1. Add a one-time diagnostic dump (lines ~393-398)**
+**Problem:** The gate prints "Required: zero Item lookup failed" but never actually checks for it. A 500 response containing "Item lookup failed" passes as CANONICAL.
 
-Before reading the counter values, dump the raw metric shape so we can see the actual structure:
+**Changes:**
+
+- Declare a new Counter at module scope (near line 61):
+  ```javascript
+  const failItemLookup = new Counter("fail_item_lookup");
+  ```
+
+- In the VU failure block (inside `if (!success)`, around line 338), after the status counter increment, parse the body for the known error signature and increment:
+  ```javascript
+  const bodyStr = (res.body || "").substring(0, 300);
+  if (bodyStr.includes("Item lookup failed")) {
+    failItemLookup.add(1);
+  }
+  ```
+
+- In `handleSummary`, read the counter and hard-fail classification:
+  ```javascript
+  const itemLookupFails = counterVal(metrics.fail_item_lookup);
+  if (itemLookupFails > 0) {
+    gates.push(`FAIL: item_lookup_failed=${itemLookupFails} (required: 0)`);
+  }
+  ```
+
+---
+
+## Fix 2: Fix interrupt gating -- use `data.state.isInterrupted` only
+
+**Problem:** Normal end-of-stage ramp-down causes k6 to report a small number of `iterations_interrupted`. The current gate treats any non-zero value as FAIL, which incorrectly disqualifies clean runs.
+
+**Change (lines 363-370):** Keep the `data.state.isInterrupted` check (true signal/abort). Remove or downgrade the `iterations_interrupted` counter check to INFO-only:
 
 ```javascript
-// Diagnostic: dump raw counter shape (remove after one run)
-const rawCounter = metrics.fail_status_5xx;
-if (rawCounter) {
-  gates.push(`DEBUG: fail_status_5xx raw keys=${JSON.stringify(Object.keys(rawCounter.values || {}))}`);
+// Gate: manual abort (Ctrl+C / SIGINT / SIGTERM)
+if (data.state?.isInterrupted) {
+  gates.push("FAIL: run was interrupted (signal/abort)");
+}
+const iterInterrupted = counterVal(metrics.iterations_interrupted);
+if (iterInterrupted > 0) {
+  gates.push(`INFO: iterations_interrupted=${iterInterrupted} (normal ramp-down)`);
 }
 ```
 
-**2. Read both possible property names (lines 394-397)**
+---
 
-Defensively read `count` OR `value` (the two known k6 Counter summary shapes):
+## Fix 3: Remove leftover init-scope log spam
 
-```javascript
-function counterVal(m) {
-  if (!m?.values) return 0;
-  return m.values.count ?? m.values.value ?? 0;
-}
+**Problem:** Despite the earlier fix attempt, the comment at line 70 replaced the logs but the user reports the ENV lines are still printing per-VU. Looking at the code, the logs are correctly in `setup()` now (lines 206-207), so the init-scope is clean. However, the `setup()` acceptance-gate banner (lines 285-289) prints rules the gate does not enforce -- this is now addressed by Fix 1.
 
-const s401 = counterVal(metrics.fail_status_401);
-const s429 = counterVal(metrics.fail_status_429);
-const s5xx = counterVal(metrics.fail_status_5xx);
-const sOther = counterVal(metrics.fail_status_other);
-```
+No additional change needed for log spam -- the prior fix is correct. The repeated lines the user saw were from a run before that fix was deployed.
 
-**3. Always print the breakdown line (line 400)**
+---
 
-Change `if (totalFails > 0)` to unconditional so we always see the output, even when counts are zero (confirms the metrics are being read):
+## Technical Detail: Exact locations
 
-```javascript
-gates.push(`INFO: Failure breakdown (total=${totalFails}): 401=${s401} 429=${s429} 5xx=${s5xx} other=${sOther}`);
-```
-
-This replaces the multi-line conditional block with a single always-visible line.
-
-## Outcome
-
-- After one run, the `DEBUG` line reveals the actual Counter values structure
-- The breakdown line always appears, confirming counts are read (even if zero)
-- Once confirmed, the `DEBUG` line can be removed in a follow-up
+| What | Where | Action |
+|---|---|---|
+| New `failItemLookup` Counter | Line 61 (after `failStatusOther`) | Add declaration |
+| Body parsing + counter increment | Lines 338-352 (failure block) | Add body check |
+| Item lookup gate in `handleSummary` | After line 411 (after status breakdown) | Add FAIL gate |
+| `iterations_interrupted` gate | Lines 367-370 | Change FAIL to INFO |
+| DEBUG diagnostic line | Lines 393-397 | Remove (served its purpose) |
 
