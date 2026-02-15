@@ -70,18 +70,27 @@ Deno.serve(async (req: Request) => {
 
     // ── Gate 5: Rate limit (200 mints per 60 seconds per user) ──
     const serviceClient = createClient(supabaseUrl, serviceRoleKey);
-    const { data: rateResult } = await serviceClient.rpc("check_rate_limit", {
+    const { data: rateResult, error: rateErr } = await serviceClient.rpc("check_rate_limit", {
       p_key: `mint-lt:${user.id}`,
       p_max_requests: 200,
       p_window_ms: 60000,
     });
 
-    if (rateResult && !rateResult.allowed) {
+    // RPC failure or null result = infrastructure issue, not a code bug
+    if (rateErr || rateResult === null || rateResult === undefined) {
+      console.error("[mint-load-test-headers] Rate limit RPC unavailable:", rateErr?.message || "null result");
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Rate limit exceeded",
-        }),
+        JSON.stringify({ success: false, error: "rate_limit_unavailable" }),
+        {
+          status: 503,
+          headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": "5" },
+        }
+      );
+    }
+
+    if (!rateResult.allowed) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Rate limit exceeded" }),
         {
           status: 429,
           headers: {

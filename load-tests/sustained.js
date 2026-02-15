@@ -9,18 +9,18 @@
  *   - Retry amplification
  *
  * Run at 80% of the safe RPS ceiling found by ramp.js.
- * Default: 30 VUs for 15 minutes.
+ * Default: 30 VUs for 15 minutes (configurable via K6_SUSTAINED_VUS).
  *
  * Auth: Uses isolated load-test HMAC headers minted from
  * mint-load-test-headers endpoint. JWT is used ONLY for minting.
- * Headers are rotated every 45-75s (jittered) per VU.
+ * Headers are rotated every 20-40s (jittered) per VU with 60s expiry margin.
  *
  * This measures CLIENT-OBSERVED latency only.
  * Monitor DB CPU, locks, and connections separately.
  */
 
 import http from "k6/http";
-import { check, fail } from "k6";
+import { check, fail, sleep } from "k6";
 import { Rate, Trend } from "k6/metrics";
 
 const BASE_URL = __ENV.K6_BASE_URL;
@@ -37,15 +37,28 @@ if (!BASE_URL || !ANON_KEY || !ITEM_ID || !AUTH_TOKEN || !LOADTEST_SECRET) {
   fail("Missing required environment variables. See load-tests/README.md.");
 }
 
+// ── Placeholder guard ──
+function looksLikePlaceholder(v) {
+  return !v || v.includes("<") || v.includes(">") || v.startsWith("your-");
+}
+if (looksLikePlaceholder(WORKSPACE_ID) || looksLikePlaceholder(ITEM_ID)) {
+  fail(
+    "K6_TEST_WORKSPACE_ID or K6_TEST_ITEM_ID contains a placeholder value. " +
+    "Set real UUIDs. See load-tests/README.md."
+  );
+}
+
 const errorRate = new Rate("error_rate");
 const createLatency = new Trend("create_latency", true);
 const RUN_ID = `lt-sus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+const SUSTAINED_VUS = parseInt(__ENV.K6_SUSTAINED_VUS || "30", 10);
+
 export const options = {
   stages: [
-    { duration: "30s", target: 30 },   // ramp up
-    { duration: "15m", target: 30 },    // sustained
-    { duration: "30s", target: 0 },     // ramp down
+    { duration: "30s", target: SUSTAINED_VUS },   // ramp up
+    { duration: "15m", target: SUSTAINED_VUS },    // sustained
+    { duration: "30s", target: 0 },                // ramp down
   ],
   thresholds: {
     error_rate: [{ threshold: "rate<0.01", abortOnFail: false }],
@@ -53,44 +66,71 @@ export const options = {
   },
 };
 
-// ── Mint function ──
+// ── Mint function with jittered retries ──
 
-function mintHeaders() {
-  const res = http.post(
-    `${BASE_URL}/functions/v1/mint-load-test-headers`,
-    JSON.stringify({}),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${AUTH_TOKEN}`,
-        apikey: ANON_KEY,
-        "X-LoadTest-Secret": LOADTEST_SECRET,
-      },
+function mintHeadersRaw() {
+  const backoffs = [0.25, 0.75, 1.5];
+  let lastRes;
+
+  for (let attempt = 0; attempt <= backoffs.length; attempt++) {
+    if (attempt > 0) {
+      const jitter = 0.8 + Math.random() * 0.4;
+      sleep(backoffs[attempt - 1] * jitter);
     }
-  );
-  if (res.status !== 200) {
-    fail(`Mint FAILED: status=${res.status} body=${res.body}`);
+    lastRes = http.post(
+      `${BASE_URL}/functions/v1/mint-load-test-headers`,
+      JSON.stringify({}),
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${AUTH_TOKEN}`,
+          apikey: ANON_KEY,
+          "X-LoadTest-Secret": LOADTEST_SECRET,
+        },
+      }
+    );
+    if (lastRes.status === 200) {
+      const body = JSON.parse(lastRes.body);
+      return {
+        ts: body["X-LoadTest-Timestamp"],
+        token: body["X-LoadTest-Token"],
+        expiresAt: body.expiresAt,
+        mintedAt: Date.now(),
+      };
+    }
+    console.warn(
+      `[mint] Attempt ${attempt + 1} failed: status=${lastRes.status} body=${(lastRes.body || "").substring(0, 200)}`
+    );
   }
-  const body = JSON.parse(res.body);
-  return {
-    ts: body["X-LoadTest-Timestamp"],
-    token: body["X-LoadTest-Token"],
-    expiresAt: body.expiresAt,
-    mintedAt: Date.now(),
-  };
+  return null;
 }
 
-// ── Header rotation with jitter (per-VU state) ──
+function mintHeadersOrFail() {
+  const result = mintHeadersRaw();
+  if (!result) {
+    fail("Mint FAILED after 4 attempts in preflight");
+  }
+  return result;
+}
+
+// ── Header rotation with expiry-aware refresh ──
 
 let cached = null;
-const JITTER_MIN = 45000;
-const JITTER_MAX = 75000;
+const JITTER_MIN = 20000;
+const JITTER_MAX = 40000;
 let refreshInterval = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
 
 function getHeaders() {
   const now = Date.now();
-  if (!cached || now - cached.mintedAt > refreshInterval) {
-    cached = mintHeaders();
+  const expiredByTime = now - (cached?.mintedAt || 0) > refreshInterval;
+  const expiredByToken = cached && (now / 1000) > (cached.expiresAt - 60);
+
+  if (!cached || expiredByTime || expiredByToken) {
+    const minted = mintHeadersRaw();
+    if (!minted) {
+      return null;
+    }
+    cached = minted;
     refreshInterval = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
   }
   return {
@@ -105,7 +145,7 @@ function getHeaders() {
 
 export function setup() {
   console.log(`[sustained] Preflight: minting headers...`);
-  const minted = mintHeaders();
+  const minted = mintHeadersOrFail();
   console.log(`[sustained] Mint OK. expiresAt=${minted.expiresAt}`);
 
   // Validate workspace via REST (JWT auth — reads RLS-gated data)
@@ -184,6 +224,13 @@ export function setup() {
 // ── Main VU function ──
 
 export default function () {
+  const headers = getHeaders();
+  if (!headers) {
+    errorRate.add(true);
+    console.warn(`[SKIP] VU=${__VU} ITER=${__ITER} reason=mint_exhausted`);
+    return;
+  }
+
   const idempotencyKey = `lt-${RUN_ID}-${__VU}-${__ITER}`;
 
   const payload = JSON.stringify({
@@ -199,8 +246,6 @@ export default function () {
       payloadJson: { loadTest: true, runId: RUN_ID, tag: "[LOAD-TEST]" },
     },
   });
-
-  const headers = getHeaders();
 
   const res = http.post(
     `${BASE_URL}/functions/v1/execute-action-server`,
