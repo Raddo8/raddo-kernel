@@ -22,6 +22,7 @@
 import http from "k6/http";
 import { check, fail, sleep } from "k6";
 import { Rate, Trend } from "k6/metrics";
+import { textSummary } from "https://jslib.k6.io/k6-summary/0.1.0/index.js";
 
 const BASE_URL = __ENV.K6_BASE_URL;
 const ANON_KEY = __ENV.K6_ANON_KEY;
@@ -50,16 +51,32 @@ if (looksLikePlaceholder(WORKSPACE_ID) || looksLikePlaceholder(ITEM_ID)) {
 
 const errorRate = new Rate("error_rate");
 const createLatency = new Trend("create_latency", true);
+const mintRefreshFailed = new Rate("mint_refresh_failed");
+const vuSkippedNoHeaders = new Rate("vu_skipped_no_headers");
 const RUN_ID = `lt-sus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 const SUSTAINED_VUS = parseInt(__ENV.K6_SUSTAINED_VUS || "30", 10);
 
+// ── Startup logging ──
+console.log(`ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
+console.log(`SUSTAINED_VUS=${SUSTAINED_VUS}`);
+
+// ── Scenario-driven options with explicit maxVUs ──
 export const options = {
-  stages: [
-    { duration: "30s", target: SUSTAINED_VUS },   // ramp up
-    { duration: "15m", target: SUSTAINED_VUS },    // sustained
-    { duration: "30s", target: 0 },                // ramp down
-  ],
+  scenarios: {
+    sustained: {
+      executor: "ramping-vus",
+      startVUs: 0,
+      stages: [
+        { duration: "30s", target: SUSTAINED_VUS },
+        { duration: "15m", target: SUSTAINED_VUS },
+        { duration: "30s", target: 0 },
+      ],
+      maxVUs: SUSTAINED_VUS,
+      gracefulRampDown: "30s",
+      gracefulStop: "30s",
+    },
+  },
   thresholds: {
     error_rate: [{ threshold: "rate<0.01", abortOnFail: false }],
     http_req_duration: ["p(95)<3000", "p(99)<5000"],
@@ -105,32 +122,60 @@ function mintHeadersRaw() {
   return null;
 }
 
-function mintHeadersOrFail() {
+// Setup-only mint helper. NEVER call from default() or getHeaders().
+function mintHeadersForSetup() {
   const result = mintHeadersRaw();
   if (!result) {
-    fail("Mint FAILED after 4 attempts in preflight");
+    fail("Mint FAILED after 4 attempts in setup preflight");
   }
   return result;
 }
 
-// ── Header rotation with expiry-aware refresh ──
+// ── Header rotation with expiry-aware refresh and bounded backoff ──
 
 let cached = null;
 const JITTER_MIN = 20000;
 const JITTER_MAX = 40000;
 let refreshInterval = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
 
+const TOKEN_SAFETY_MARGIN_S = 30;
+let mintBackoffMs = 500;
+const MINT_BACKOFF_MAX_MS = 5000;
+
 function getHeaders() {
   const now = Date.now();
+  const nowSec = now / 1000;
   const expiredByTime = now - (cached?.mintedAt || 0) > refreshInterval;
-  const expiredByToken = cached && (now / 1000) > (cached.expiresAt - 60);
+  const expiredByToken = cached && nowSec > (cached.expiresAt - 60);
 
   if (!cached || expiredByTime || expiredByToken) {
     const minted = mintHeadersRaw();
     if (!minted) {
+      mintRefreshFailed.add(true);
+      // Bounded exponential backoff with jitter
+      const jitter = 0.8 + Math.random() * 0.4;
+      sleep((mintBackoffMs / 1000) * jitter);
+      mintBackoffMs = Math.min(mintBackoffMs * 2, MINT_BACKOFF_MAX_MS);
+
+      // Only reuse cached if it has not expired past safety margin
+      if (cached && nowSec < (cached.expiresAt - TOKEN_SAFETY_MARGIN_S)) {
+        console.warn(
+          `[mint-refresh] Failed, reusing cached headers ` +
+          `(age=${now - cached.mintedAt}ms, ttl=${Math.round(cached.expiresAt - nowSec)}s)`
+        );
+        return {
+          "Content-Type": "application/json",
+          "X-LoadTest-Timestamp": cached.ts,
+          "X-LoadTest-Token": cached.token,
+          apikey: ANON_KEY,
+        };
+      }
+      // Cached headers are expired or don't exist -- skip iteration
       return null;
     }
     cached = minted;
+    mintRefreshFailed.add(false);
+    mintBackoffMs = 500; // reset backoff on success
     refreshInterval = JITTER_MIN + Math.random() * (JITTER_MAX - JITTER_MIN);
   }
   return {
@@ -144,8 +189,17 @@ function getHeaders() {
 // ── Preflight: validate fixtures using load-test auth ──
 
 export function setup() {
+  // Hard guard: abort if K6_SUSTAINED_VUS env doesn't match parsed value
+  if (__ENV.K6_SUSTAINED_VUS) {
+    const envVal = parseInt(__ENV.K6_SUSTAINED_VUS, 10);
+    if (SUSTAINED_VUS !== envVal) {
+      fail(`VU mismatch: parsed SUSTAINED_VUS=${SUSTAINED_VUS} but K6_SUSTAINED_VUS=${envVal}`);
+    }
+  }
+  console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}, maxVUs: ${SUSTAINED_VUS}`);
+
   console.log(`[sustained] Preflight: minting headers...`);
-  const minted = mintHeadersOrFail();
+  const minted = mintHeadersForSetup();
   console.log(`[sustained] Mint OK. expiresAt=${minted.expiresAt}`);
 
   // Validate workspace via REST (JWT auth — reads RLS-gated data)
@@ -218,32 +272,42 @@ export function setup() {
   }
 
   console.log(`[sustained] Preflight PASSED. actionId=${testBody.actionId}`);
-  return { runId: RUN_ID };
+
+  // Log acceptance gate criteria
+  console.log(`[sustained] === ATTEMPT ACCEPTANCE GATE ===`);
+  console.log(`[sustained] Required: vus_max=${SUSTAINED_VUS}`);
+  console.log(`[sustained] Required: zero GoError/fail() stack traces`);
+  console.log(`[sustained] Required: zero "Item lookup failed"`);
+  console.log(`[sustained] Required: "Invalid load test token" <= 5 (de minimis)`);
+
+  return { runId: RUN_ID, itemId: ITEM_ID, workspaceId: WORKSPACE_ID };
 }
 
 // ── Main VU function ──
 
-export default function () {
+export default function (data) {
   const headers = getHeaders();
   if (!headers) {
     errorRate.add(true);
-    console.warn(`[SKIP] VU=${__VU} ITER=${__ITER} reason=mint_exhausted`);
+    vuSkippedNoHeaders.add(true);
+    console.warn(`[SKIP] VU=${__VU} ITER=${__ITER} reason=no_valid_headers`);
     return;
   }
+  vuSkippedNoHeaders.add(false);
 
-  const idempotencyKey = `lt-${RUN_ID}-${__VU}-${__ITER}`;
+  const idempotencyKey = `lt-${data.runId}-${__VU}-${__ITER}`;
 
   const payload = JSON.stringify({
     mode: "create",
     params: {
-      itemId: ITEM_ID,
-      workspaceId: WORKSPACE_ID,
+      itemId: data.itemId,
+      workspaceId: data.workspaceId,
       type: "send_notice",
       channel: "email",
       scheduledFor: new Date().toISOString(),
       idempotencyKey,
       source: "system",
-      payloadJson: { loadTest: true, runId: RUN_ID, tag: "[LOAD-TEST]" },
+      payloadJson: { loadTest: true, runId: data.runId, tag: "[LOAD-TEST]" },
     },
   });
 
@@ -268,4 +332,48 @@ export default function () {
       `[FAIL] VU=${__VU} ITER=${__ITER} status=${res.status} body=${(res.body || "").substring(0, 200)}`
     );
   }
+}
+
+// ── Post-run acceptance gate ──
+
+export function handleSummary(data) {
+  const metrics = data.metrics;
+
+  const gates = [];
+  const vuMax = metrics.vus_max?.values?.max || 0;
+  if (vuMax !== SUSTAINED_VUS) {
+    gates.push(`FAIL: vus_max=${vuMax}, expected=${SUSTAINED_VUS}`);
+  }
+
+  const mintFails = metrics.mint_refresh_failed?.values?.rate || 0;
+  const skipRate = metrics.vu_skipped_no_headers?.values?.rate || 0;
+
+  gates.push(`INFO: mint_refresh_failed rate=${(mintFails * 100).toFixed(2)}%`);
+  gates.push(`INFO: vu_skipped_no_headers rate=${(skipRate * 100).toFixed(2)}%`);
+
+  const errRate = metrics.error_rate?.values?.rate || 0;
+  if (errRate >= 0.01) {
+    gates.push(`FAIL: error_rate=${(errRate * 100).toFixed(2)}% (threshold: <1%)`);
+  }
+
+  const p95 = metrics.http_req_duration?.values?.["p(95)"] || 0;
+  const p99 = metrics.http_req_duration?.values?.["p(99)"] || 0;
+  if (p95 >= 3000) gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
+  if (p99 >= 5000) gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
+
+  const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
+
+  const summary = [
+    "",
+    "═══════════════════════════════════════",
+    `  ATTEMPT CLASSIFICATION: ${canonical ? "CANONICAL" : "INVALID"}`,
+    `  Target VUs: ${SUSTAINED_VUS}  |  Actual vus_max: ${vuMax}`,
+    ...gates.map(g => `  ${g}`),
+    "═══════════════════════════════════════",
+    "",
+  ].join("\n");
+
+  return {
+    stdout: summary + textSummary(data, { indent: "  " }),
+  };
 }
