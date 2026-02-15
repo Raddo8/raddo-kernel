@@ -20,7 +20,6 @@ Deno.serve(async (req: Request) => {
   try {
     // ── Gate 1: Environment guard ──
     const enabled = Deno.env.get("LOAD_TEST_AUTH_ENABLED");
-    console.log("[mint-load-test-headers] LOAD_TEST_AUTH_ENABLED =", JSON.stringify(enabled));
     if (enabled !== "true") {
       return jsonError("Load test auth is not enabled", 403);
     }
