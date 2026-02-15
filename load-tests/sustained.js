@@ -67,9 +67,7 @@ let failLogCount = 0;
 
 const SUSTAINED_VUS = parseInt(__ENV.K6_SUSTAINED_VUS || "30", 10);
 
-// ── Startup logging ──
-console.log(`ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
-console.log(`SUSTAINED_VUS=${SUSTAINED_VUS}`);
+// Startup logging moved to setup() to avoid per-VU init-context spam.
 
 // ── Scenario-driven options ──
 export const options = {
@@ -205,6 +203,7 @@ export function setup() {
       fail(`VU mismatch: parsed SUSTAINED_VUS=${SUSTAINED_VUS} but K6_SUSTAINED_VUS=${envVal}`);
     }
   }
+  console.log(`[sustained] ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
   console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}`);
 
   console.log(`[sustained] Preflight: minting headers...`);
