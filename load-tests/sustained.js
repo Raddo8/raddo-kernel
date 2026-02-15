@@ -372,14 +372,14 @@ export function handleSummary(data) {
     return m.values.count ?? m.values.value ?? 0;
   }
 
-  // ── One-time diagnostic dumps (remove after shapes confirmed) ──
-  gates.push(`DEBUG: data.state=${JSON.stringify(data.state || null)}`);
-  gates.push(`DEBUG: fail_item_lookup.values=${JSON.stringify(metrics.fail_item_lookup?.values || null)}`);
-
-  // Gate: manual abort (Ctrl+C / SIGINT / SIGTERM)
-  if (data.state?.isInterrupted) {
+  // Gate: wall-clock duration (detects Ctrl+C / SIGINT / early abort)
+  const expectedDurationMs = (30 + 900 + 30) * 1000; // 960s from scenario stages
+  const actualDurationMs = data.state?.testRunDurationMs || 0;
+  if (actualDurationMs < expectedDurationMs * 0.90) {
     isCanonical = false;
-    gates.push("FAIL: run was interrupted (signal/abort)");
+    gates.push(
+      `FAIL: run duration ${(actualDurationMs / 1000).toFixed(1)}s < 90% of expected ${expectedDurationMs / 1000}s (likely interrupted)`
+    );
   }
   const iterInterrupted = counterVal(metrics.iterations_interrupted);
   if (iterInterrupted > 0) {
