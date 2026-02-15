@@ -61,7 +61,7 @@ const SUSTAINED_VUS = parseInt(__ENV.K6_SUSTAINED_VUS || "30", 10);
 console.log(`ENV K6_SUSTAINED_VUS=${__ENV.K6_SUSTAINED_VUS || "(unset)"}`);
 console.log(`SUSTAINED_VUS=${SUSTAINED_VUS}`);
 
-// ── Scenario-driven options with explicit maxVUs ──
+// ── Scenario-driven options ──
 export const options = {
   scenarios: {
     sustained: {
@@ -195,7 +195,7 @@ export function setup() {
       fail(`VU mismatch: parsed SUSTAINED_VUS=${SUSTAINED_VUS} but K6_SUSTAINED_VUS=${envVal}`);
     }
   }
-  console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}, maxVUs: ${SUSTAINED_VUS}`);
+  console.log(`[sustained] Scenario target VUs: ${SUSTAINED_VUS}`);
 
   console.log(`[sustained] Preflight: minting headers...`);
   const minted = mintHeadersForSetup();
