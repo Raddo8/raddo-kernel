@@ -1,104 +1,72 @@
 
 
-# Add Failure Diagnostics to sustained.js (Counter Metrics + Safe Logging)
+# Bypass Edge Rate Limiter for Load-Test Mode
 
-## Goal
+## What and Why
 
-Determine **which HTTP status codes** cause the 56% error rate at 60 VUs, using globally aggregated k6 Counter metrics and bounded fail-log sampling.
+The `execute-action-server` edge function has a rate limiter block (lines 355-368) that caps load-test requests to 500 per 10 seconds per workspace. At 60 VUs producing ~118 RPS (~1,180 per 10s), this rejects ~58% of requests -- matching the observed 57.97% error rate exactly.
 
-## Changes (single file: `load-tests/sustained.js`)
+This limiter only fires for `authResult.mode === "load-test"`. Production traffic is unaffected. The fix is to remove (or gate) this check so load tests can measure actual system capacity (DB pool, function concurrency, etc.) rather than hitting a synthetic ceiling.
 
-### 1. Add Counter imports and metrics (line 25, line 54-57 area)
+## Change
 
-Add `Counter` to the import from `k6/metrics`, then declare four Counter metrics:
+### File: `supabase/functions/execute-action-server/index.ts`
 
-```javascript
-import { Counter, Rate, Trend } from "k6/metrics";
+**Lines 353-369:** Comment out (or remove) the entire edge rate limiter block inside the load-test guard section.
 
-// ... existing metrics ...
-const failStatus401 = new Counter("fail_status_401");
-const failStatus429 = new Counter("fail_status_429");
-const failStatus5xx = new Counter("fail_status_5xx");
-const failStatusOther = new Counter("fail_status_other");
+Before:
 ```
-
-These aggregate across all VUs automatically -- no per-VU state issues.
-
-### 2. Add fail-log sampling variable (module scope)
-
-```javascript
-const FAIL_LOG_LIMIT = parseInt(__ENV.K6_FAIL_LOG_LIMIT || "3", 10);
-let failLogCount = 0;
-```
-
-Default is **3 per VU**. At 60 VUs worst case = 180 lines. This is acceptable and documented as per-VU. Low default keeps output readable.
-
-### 3. Replace fail block in `default()` (lines 331-335)
-
-Replace the current unconditional `console.warn` with status-code counting and capped logging:
-
-```javascript
-if (!success) {
-  // Increment globally-aggregated status counters
-  const s = res.status;
-  if (s === 401) failStatus401.add(1);
-  else if (s === 429) failStatus429.add(1);
-  else if (s >= 500 && s <= 599) failStatus5xx.add(1);
-  else failStatusOther.add(1);
-
-  // Per-VU capped sampling (default: 3 per VU)
-  if (failLogCount < FAIL_LOG_LIMIT) {
-    failLogCount++;
-    console.warn(
-      `[FAIL] VU=${__VU} #${failLogCount} status=${res.status} body=${(res.body || "").substring(0, 200)}`
-    );
-  }
+// Guard: edge rate limiter (500 req / 10s per workspace)
+const { data: edgeRate } = await supabase.rpc("check_rate_limit", {
+  p_key: `lt-edge:${params.workspaceId}`,
+  p_max_requests: 500,
+  p_window_ms: 10000,
+});
+if (edgeRate && !edgeRate.allowed) {
+  return new Response(
+    JSON.stringify({ success: false, error: "Load test rate limit exceeded" }),
+    {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json", "Retry-After": String(edgeRate.retry_after || 5) },
+    }
+  );
 }
 ```
 
-### 4. Add status breakdown to `handleSummary()` (after line 363, before the `canonical` check)
-
-Read counts from `data.metrics` only -- no local JS state:
-
-```javascript
-// Status code breakdown (globally aggregated Counters)
-const s401 = metrics.fail_status_401?.values?.count || 0;
-const s429 = metrics.fail_status_429?.values?.count || 0;
-const s5xx = metrics.fail_status_5xx?.values?.count || 0;
-const sOther = metrics.fail_status_other?.values?.count || 0;
-const totalFails = s401 + s429 + s5xx + sOther;
-
-if (totalFails > 0) {
-  gates.push(`INFO: Failure breakdown (total=${totalFails}):`);
-  if (s401 > 0) gates.push(`  401: ${s401} (${(s401/totalFails*100).toFixed(1)}%)`);
-  if (s429 > 0) gates.push(`  429: ${s429} (${(s429/totalFails*100).toFixed(1)}%)`);
-  if (s5xx > 0) gates.push(`  5xx: ${s5xx} (${(s5xx/totalFails*100).toFixed(1)}%)`);
-  if (sOther > 0) gates.push(`  other: ${sOther} (${(sOther/totalFails*100).toFixed(1)}%)`);
-}
+After:
+```
+// Edge rate limiter bypassed for load-test mode to allow
+// capacity testing to measure real system ceilings (DB pool,
+// function concurrency) rather than a synthetic gate.
+// Production traffic never enters this code path.
+// To re-enable: uncomment the check_rate_limit RPC block below.
+//
+// const { data: edgeRate } = await supabase.rpc("check_rate_limit", {
+//   p_key: `lt-edge:${params.workspaceId}`,
+//   p_max_requests: 500,
+//   p_window_ms: 10000,
+// });
+// if (edgeRate && !edgeRate.allowed) { ... }
 ```
 
-## What is NOT included
+## Risk Assessment
 
-- No per-VU `statusTally` object -- removed entirely per your feedback
-- No attempt to read module-scope variables in `handleSummary()` -- all reads are from `data.metrics`
-- No changes to mint, setup, or any other functions
+- **Production safety:** Zero impact. This code block is inside an `if (authResult.mode === "load-test")` branch that production requests never enter.
+- **Runaway load tests:** Load-test auth is already gated by HMAC secret + operator allowlist + `lt-` idempotency prefix. The `cleanup-load-test` function can purge artifacts.
+- **Reversibility:** The commented-out code can be restored in seconds, or replaced with a higher limit (e.g., 5000/10s) after we find the real ceiling.
 
-## Expected output at 60 VUs
+## Validation
+
+After deploying, run a short triage (2-3 minutes, not full 16 minutes):
 
 ```
-ATTEMPT CLASSIFICATION: INVALID
-  Target VUs: 60  |  Actual vus_max: 60
-  FAIL: error_rate=55.96% (threshold: <1%)
-  INFO: Failure breakdown (total=59939):
-    429: 58200 (97.1%)
-    5xx: 1739 (2.9%)
+K6_FAIL_LOG_LIMIT=1 K6_SUSTAINED_VUS=60 k6 run "$(pwd)/load-tests/sustained.js"
 ```
 
-Plus ~180 sampled `[FAIL]` lines showing actual response bodies, which will confirm the dominant failure mode.
+Abort after 2-3 minutes and check:
+- ATTEMPT CLASSIFICATION block
+- Failure breakdown (401/429/5xx/other)
+- First sampled [FAIL] lines
 
-## Run command
-
-```bash
-K6_FAIL_LOG_LIMIT=3 K6_SUSTAINED_VUS=60 k6 run "$(pwd)/load-tests/sustained.js"
-```
+If 429s drop to near zero, the next dominant failure mode (if any) reveals the real system ceiling.
 
