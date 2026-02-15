@@ -49,8 +49,9 @@ async function authenticate(req: Request, requestMode: string): Promise<AuthResu
   const ltTimestamp = req.headers.get("X-LoadTest-Timestamp") || req.headers.get("x-loadtest-timestamp");
   const ltToken = req.headers.get("X-LoadTest-Token") || req.headers.get("x-loadtest-token");
   if (ltTimestamp && ltToken) {
-    // Environment gate
-    if (Deno.env.get("LOAD_TEST_AUTH_ENABLED") !== "true") {
+    // Environment gate (hardcoded — set to false to disable load-test path)
+    const LOAD_TEST_ENABLED = true;
+    if (!LOAD_TEST_ENABLED) {
       return jsonError("Load test auth is not enabled", 403);
     }
     // Mode restriction
