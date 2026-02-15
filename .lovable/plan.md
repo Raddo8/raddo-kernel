@@ -1,41 +1,82 @@
 
 
-# Remove `maxVUs` for k6 Compatibility
+# Diagnose and Fix `maxVUs` k6 Parse Error
+
+## Confirmed Ground Truth
+
+The repository version of `load-tests/sustained.js` (lines 65-83) contains **no `maxVUs:` property** in the options object. The only `maxVUs` references are:
+- Line 64: a comment (`// Scenario-driven options with explicit maxVUs`)
+- Line 198: a log string inside `setup()`
+
+Neither of these can cause `json: unknown field "maxVUs"`. **No code change is needed in the repository.**
 
 ## Problem
 
-The installed k6 version does not recognize `maxVUs` as a valid field in the `ramping-vus` executor schema, causing a parse error. The VU cap is still enforced correctly because k6 infers `maxVUs` from the highest `target` in the `stages` array, which is already `SUSTAINED_VUS`.
+The user's local k6 is still erroring with `json: unknown field "maxVUs"`, which means k6 is either:
+1. Executing a stale local copy that was never synced, or
+2. Executing a different file entirely
 
-## Change
+## Required Diagnostic Sequence (user must run locally)
 
-**File:** `load-tests/sustained.js` (lines 64-75)
+### Step 1: Capture ground truth of the local file
 
-Remove the `maxVUs: SUSTAINED_VUS` line from the scenario config:
-
-```js
-// ── Scenario-driven options ──
-export const options = {
-  scenarios: {
-    sustained: {
-      executor: "ramping-vus",
-      startVUs: 0,
-      stages: [
-        { duration: "30s", target: SUSTAINED_VUS },
-        { duration: "15m", target: SUSTAINED_VUS },
-        { duration: "30s", target: 0 },
-      ],
-      gracefulRampDown: "30s",
-      gracefulStop: "30s",
-    },
-  },
-  thresholds: {
-    error_rate: [{ threshold: "rate<0.01", abortOnFail: false }],
-    http_req_duration: ["p(95)<3000", "p(99)<5000"],
-  },
-};
+```bash
+sed -n '55,95p' load-tests/sustained.js
 ```
 
-The existing acceptance gate (`handleSummary` checking `vus_max === SUSTAINED_VUS`) and the `setup()` hard guard remain unchanged -- they still enforce correctness without relying on the `maxVUs` field.
+This prints the options block. If `maxVUs:` appears as an actual key (not in a comment or string), the local file is stale.
 
-One line removed. No other files affected.
+### Step 2: Verify file identity and location
+
+```bash
+ls -l load-tests/sustained.js && pwd
+```
+
+Confirms timestamp, size, and working directory.
+
+### Step 3: Run k6 against an absolute path
+
+```bash
+K6_SUSTAINED_VUS=20 k6 run "$(pwd)/load-tests/sustained.js"
+```
+
+Eliminates any possibility of k6 resolving a different file.
+
+### Step 4: If error persists, force-replace (last resort)
+
+Only after Steps 1-3 confirm we are editing and executing the same file, and the options block still contains a `maxVUs:` key:
+
+```bash
+git fetch origin main
+git checkout origin/main -- load-tests/sustained.js
+```
+
+Then re-verify:
+
+```bash
+sed -n '55,95p' load-tests/sustained.js
+/usr/bin/grep -n "maxVUs" load-tests/sustained.js
+K6_SUSTAINED_VUS=20 k6 run "$(pwd)/load-tests/sustained.js"
+```
+
+## Optional Cleanup (after successful run)
+
+Update the stale comment on line 64 from:
+```
+// -- Scenario-driven options with explicit maxVUs --
+```
+to:
+```
+// -- Scenario-driven options --
+```
+
+And update the log string on line 198 that references `maxVUs` to remove the now-irrelevant field name.
+
+These are cosmetic and can be done after the canonical run is confirmed.
+
+## Expected Outcome
+
+- k6 banner shows the `sustained` scenario with `20 max VUs`
+- End stats show `vus_max: 20`
+- `handleSummary` prints `ATTEMPT CLASSIFICATION: CANONICAL` or `INVALID`
 
