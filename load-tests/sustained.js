@@ -363,11 +363,22 @@ export default function (data) {
 
 export function handleSummary(data) {
   const metrics = data.metrics;
-
   const gates = [];
+  let isCanonical = true;
+
+  // Helper (defined before any usage — no goja hoisting ambiguity)
+  function counterVal(m) {
+    if (!m?.values) return 0;
+    return m.values.count ?? m.values.value ?? 0;
+  }
+
+  // ── One-time diagnostic dumps (remove after shapes confirmed) ──
+  gates.push(`DEBUG: data.state=${JSON.stringify(data.state || null)}`);
+  gates.push(`DEBUG: fail_item_lookup.values=${JSON.stringify(metrics.fail_item_lookup?.values || null)}`);
 
   // Gate: manual abort (Ctrl+C / SIGINT / SIGTERM)
   if (data.state?.isInterrupted) {
+    isCanonical = false;
     gates.push("FAIL: run was interrupted (signal/abort)");
   }
   const iterInterrupted = counterVal(metrics.iterations_interrupted);
@@ -375,53 +386,60 @@ export function handleSummary(data) {
     gates.push(`INFO: iterations_interrupted=${iterInterrupted} (normal ramp-down)`);
   }
 
+  // Gate: vus_max
   const vuMax = metrics.vus_max?.values?.max || 0;
   if (vuMax !== SUSTAINED_VUS) {
+    isCanonical = false;
     gates.push(`FAIL: vus_max=${vuMax}, expected=${SUSTAINED_VUS}`);
   }
 
+  // INFO: mint / skip rates
   const mintFails = metrics.mint_refresh_failed?.values?.rate || 0;
   const skipRate = metrics.vu_skipped_no_headers?.values?.rate || 0;
-
   gates.push(`INFO: mint_refresh_failed rate=${(mintFails * 100).toFixed(2)}%`);
   gates.push(`INFO: vu_skipped_no_headers rate=${(skipRate * 100).toFixed(2)}%`);
 
+  // Gate: error_rate
   const errRate = metrics.error_rate?.values?.rate || 0;
   if (errRate >= 0.01) {
+    isCanonical = false;
     gates.push(`FAIL: error_rate=${(errRate * 100).toFixed(2)}% (threshold: <1%)`);
   }
 
+  // Gate: p95, p99
   const p95 = metrics.http_req_duration?.values?.["p(95)"] || 0;
   const p99 = metrics.http_req_duration?.values?.["p(99)"] || 0;
-  if (p95 >= 3000) gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
-  if (p99 >= 5000) gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
-
-  // Status code breakdown (globally aggregated Counters)
-  // Defensively read both `count` and `value` — k6 Counter summary shape is underdocumented
-  function counterVal(m) {
-    if (!m?.values) return 0;
-    return m.values.count ?? m.values.value ?? 0;
+  if (p95 >= 3000) {
+    isCanonical = false;
+    gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
+  }
+  if (p99 >= 5000) {
+    isCanonical = false;
+    gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
   }
 
+  // INFO: status code breakdown
   const s401 = counterVal(metrics.fail_status_401);
   const s429 = counterVal(metrics.fail_status_429);
   const s5xx = counterVal(metrics.fail_status_5xx);
   const sOther = counterVal(metrics.fail_status_other);
   const totalFails = s401 + s429 + s5xx + sOther;
-
   gates.push(`INFO: Failure breakdown (total=${totalFails}): 401=${s401} 429=${s429} 5xx=${s5xx} other=${sOther}`);
 
+  // Gate: item_lookup_failed (hard zero requirement)
   const itemLookupFails = counterVal(metrics.fail_item_lookup);
   if (itemLookupFails > 0) {
+    isCanonical = false;
     gates.push(`FAIL: item_lookup_failed=${itemLookupFails} (required: 0)`);
   }
 
-  const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
+  // ── Final classification (impossible to misclassify) ──
+  const label = isCanonical ? "CANONICAL" : "INVALID";
 
   const summary = [
     "",
     "═══════════════════════════════════════",
-    `  ATTEMPT CLASSIFICATION: ${canonical ? "CANONICAL" : "INVALID"}`,
+    `  ATTEMPT CLASSIFICATION: ${label}`,
     `  Target VUs: ${SUSTAINED_VUS}  |  Actual vus_max: ${vuMax}`,
     ...gates.map(g => `  ${g}`),
     "═══════════════════════════════════════",
