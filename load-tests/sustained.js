@@ -390,20 +390,26 @@ export function handleSummary(data) {
   if (p95 >= 3000) gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
   if (p99 >= 5000) gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
 
+  // Diagnostic: dump raw counter shape (remove after one run)
+  const rawCounter = metrics.fail_status_5xx;
+  if (rawCounter) {
+    gates.push(`DEBUG: fail_status_5xx raw keys=${JSON.stringify(Object.keys(rawCounter.values || {}))}`);
+  }
+
   // Status code breakdown (globally aggregated Counters)
-  const s401 = metrics.fail_status_401?.values?.count || 0;
-  const s429 = metrics.fail_status_429?.values?.count || 0;
-  const s5xx = metrics.fail_status_5xx?.values?.count || 0;
-  const sOther = metrics.fail_status_other?.values?.count || 0;
+  // Defensively read both `count` and `value` — k6 Counter summary shape is underdocumented
+  function counterVal(m) {
+    if (!m?.values) return 0;
+    return m.values.count ?? m.values.value ?? 0;
+  }
+
+  const s401 = counterVal(metrics.fail_status_401);
+  const s429 = counterVal(metrics.fail_status_429);
+  const s5xx = counterVal(metrics.fail_status_5xx);
+  const sOther = counterVal(metrics.fail_status_other);
   const totalFails = s401 + s429 + s5xx + sOther;
 
-  if (totalFails > 0) {
-    gates.push(`INFO: Failure breakdown (total=${totalFails}):`);
-    if (s401 > 0) gates.push(`  401: ${s401} (${(s401/totalFails*100).toFixed(1)}%)`);
-    if (s429 > 0) gates.push(`  429: ${s429} (${(s429/totalFails*100).toFixed(1)}%)`);
-    if (s5xx > 0) gates.push(`  5xx: ${s5xx} (${(s5xx/totalFails*100).toFixed(1)}%)`);
-    if (sOther > 0) gates.push(`  other: ${sOther} (${(sOther/totalFails*100).toFixed(1)}%)`);
-  }
+  gates.push(`INFO: Failure breakdown (total=${totalFails}): 401=${s401} 429=${s429} 5xx=${s5xx} other=${sOther}`);
 
   const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
 
