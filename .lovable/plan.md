@@ -1,76 +1,94 @@
 
 
-# Fix Test-Harness Governance: 3 Classification Bugs
+# Fix Classification Wiring: Make the Gate Impossible to Lie
 
-## Summary
+## Problem
 
-The `handleSummary` gate declared CANONICAL while violating its own stated acceptance criteria. Three precise fixes are needed -- all in `load-tests/sustained.js`.
+The `handleSummary` gate prints `CANONICAL` even when:
+- The run was Ctrl+C interrupted
+- "Item lookup failed" errors occurred
 
----
+Two root causes:
+1. `data.state?.isInterrupted` may not exist in k6's goja runtime -- the interrupt signal may need to be detected differently
+2. `counterVal()` is called at line 373 (for `iterations_interrupted`) before its definition at line 401 -- k6's goja engine may not hoist inner function declarations like V8 does, causing it to silently return `undefined` and skip gates
 
-## Fix 1: Add `fail_item_lookup` Counter and enforce it in the gate
+## Changes (all in `load-tests/sustained.js`)
 
-**Problem:** The gate prints "Required: zero Item lookup failed" but never actually checks for it. A 500 response containing "Item lookup failed" passes as CANONICAL.
+### 1. Move `counterVal` to the top of `handleSummary` (before any usage)
 
-**Changes:**
+Move the function definition from line 401 to immediately after `const gates = [];` (line 367). This eliminates any hoisting ambiguity in goja.
 
-- Declare a new Counter at module scope (near line 61):
-  ```javascript
-  const failItemLookup = new Counter("fail_item_lookup");
-  ```
+### 2. Replace the filter-based classification with an explicit boolean
 
-- In the VU failure block (inside `if (!success)`, around line 338), after the status counter increment, parse the body for the known error signature and increment:
-  ```javascript
-  const bodyStr = (res.body || "").substring(0, 300);
-  if (bodyStr.includes("Item lookup failed")) {
-    failItemLookup.add(1);
-  }
-  ```
-
-- In `handleSummary`, read the counter and hard-fail classification:
-  ```javascript
-  const itemLookupFails = counterVal(metrics.fail_item_lookup);
-  if (itemLookupFails > 0) {
-    gates.push(`FAIL: item_lookup_failed=${itemLookupFails} (required: 0)`);
-  }
-  ```
-
----
-
-## Fix 2: Fix interrupt gating -- use `data.state.isInterrupted` only
-
-**Problem:** Normal end-of-stage ramp-down causes k6 to report a small number of `iterations_interrupted`. The current gate treats any non-zero value as FAIL, which incorrectly disqualifies clean runs.
-
-**Change (lines 363-370):** Keep the `data.state.isInterrupted` check (true signal/abort). Remove or downgrade the `iterations_interrupted` counter check to INFO-only:
-
+Replace:
 ```javascript
-// Gate: manual abort (Ctrl+C / SIGINT / SIGTERM)
-if (data.state?.isInterrupted) {
-  gates.push("FAIL: run was interrupted (signal/abort)");
-}
-const iterInterrupted = counterVal(metrics.iterations_interrupted);
-if (iterInterrupted > 0) {
-  gates.push(`INFO: iterations_interrupted=${iterInterrupted} (normal ramp-down)`);
-}
+const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
 ```
 
----
+With a pattern that cannot lie:
+```javascript
+let isCanonical = true;
+// ... each gate sets isCanonical = false when pushing FAIL
+```
 
-## Fix 3: Remove leftover init-scope log spam
+Every `gates.push("FAIL: ...")` line will be preceded by `isCanonical = false;`. This makes classification an explicit state machine rather than a string-parsing heuristic.
 
-**Problem:** Despite the earlier fix attempt, the comment at line 70 replaced the logs but the user reports the ENV lines are still printing per-VU. Looking at the code, the logs are correctly in `setup()` now (lines 206-207), so the init-scope is clean. However, the `setup()` acceptance-gate banner (lines 285-289) prints rules the gate does not enforce -- this is now addressed by Fix 1.
+### 3. Add diagnostic dumps (one-time, remove after confirmation)
 
-No additional change needed for log spam -- the prior fix is correct. The repeated lines the user saw were from a run before that fix was deployed.
+Add two diagnostic lines to the summary output:
+```javascript
+gates.push(`DEBUG: data.state=${JSON.stringify(data.state || null)}`);
+gates.push(`DEBUG: fail_item_lookup.values=${JSON.stringify(metrics.fail_item_lookup?.values || null)}`);
+```
 
----
+These reveal:
+- Whether `data.state.isInterrupted` exists at all in k6's runtime
+- Whether the `fail_item_lookup` counter has `count`, `value`, or something else
 
-## Technical Detail: Exact locations
+### 4. Remove init-scope log spam
 
-| What | Where | Action |
-|---|---|---|
-| New `failItemLookup` Counter | Line 61 (after `failStatusOther`) | Add declaration |
-| Body parsing + counter increment | Lines 338-352 (failure block) | Add body check |
-| Item lookup gate in `handleSummary` | After line 411 (after status breakdown) | Add FAIL gate |
-| `iterations_interrupted` gate | Lines 367-370 | Change FAIL to INFO |
-| DEBUG diagnostic line | Lines 393-397 | Remove (served its purpose) |
+Move the two environment variable log lines from module scope to inside `setup()` (if not already there -- verify current placement).
+
+## Resulting `handleSummary` structure
+
+```text
+export function handleSummary(data) {
+  const metrics = data.metrics;
+  const gates = [];
+  let isCanonical = true;
+
+  // Helper (defined first, no hoisting risk)
+  function counterVal(m) { ... }
+
+  // DEBUG dumps (remove after one run)
+  gates.push(`DEBUG: data.state=...`);
+  gates.push(`DEBUG: fail_item_lookup.values=...`);
+
+  // Gate: manual abort
+  if (data.state?.isInterrupted) {
+    isCanonical = false;
+    gates.push("FAIL: run was interrupted");
+  }
+
+  // Gate: vus_max
+  if (vuMax !== SUSTAINED_VUS) {
+    isCanonical = false;
+    gates.push("FAIL: ...");
+  }
+
+  // Gate: error_rate
+  // Gate: p95, p99
+  // Gate: item_lookup_failed
+  // ... each sets isCanonical = false on FAIL
+
+  // Final: impossible to misclassify
+  const label = isCanonical ? "CANONICAL" : "INVALID";
+```
+
+## Verification sequence
+
+1. Run short test, Ctrl+C it -- must print `INVALID` + the DEBUG lines
+2. Run short test provoking one lookup failure -- must print `INVALID`
+3. Remove DEBUG lines once metric shapes are confirmed
+4. Clean 16-minute run for true CANONICAL
 
