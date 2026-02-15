@@ -9,7 +9,7 @@ const corsHeaders = {
 // ── Hardcoded allowlist of user IDs permitted to mint load-test headers ──
 // Add operator user IDs here. Empty array = nobody can mint.
 const ALLOWED_USER_IDS: string[] = [
-  // "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",  // Add load-test operator user IDs
+  "760b2da9-f507-47f1-9dd3-e205446bd3da",  // jdb1203@gmail.com - load-test operator
 ];
 
 Deno.serve(async (req: Request) => {
@@ -37,8 +37,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Gate 3: Validate JWT and extract user ID ──
-    // verify_jwt = true in config.toml ensures platform-level JWT enforcement.
-    // We still call getUser() to extract the user ID for allowlist + rate limiting.
+    // verify_jwt = false in config.toml; JWT is validated in-code via getUser().
+    // This allows the curl tool and k6 scripts to call without platform-level JWT enforcement.
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
