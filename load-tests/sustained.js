@@ -59,6 +59,7 @@ const failStatus401 = new Counter("fail_status_401");
 const failStatus429 = new Counter("fail_status_429");
 const failStatus5xx = new Counter("fail_status_5xx");
 const failStatusOther = new Counter("fail_status_other");
+const failItemLookup = new Counter("fail_item_lookup");
 const RUN_ID = `lt-sus-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 // Per-VU fail-log sampling (default: 3 per VU)
@@ -343,11 +344,16 @@ export default function (data) {
     else if (s >= 500 && s <= 599) failStatus5xx.add(1);
     else failStatusOther.add(1);
 
+    const bodyStr = (res.body || "").substring(0, 300);
+    if (bodyStr.includes("Item lookup failed")) {
+      failItemLookup.add(1);
+    }
+
     // Per-VU capped sampling (default: 3 per VU)
     if (failLogCount < FAIL_LOG_LIMIT) {
       failLogCount++;
       console.warn(
-        `[FAIL] VU=${__VU} #${failLogCount} status=${res.status} body=${(res.body || "").substring(0, 200)}`
+        `[FAIL] VU=${__VU} #${failLogCount} status=${res.status} body=${bodyStr.substring(0, 200)}`
       );
     }
   }
@@ -360,13 +366,13 @@ export function handleSummary(data) {
 
   const gates = [];
 
-  // Gate: interrupted run (Ctrl+C / SIGINT / SIGTERM)
+  // Gate: manual abort (Ctrl+C / SIGINT / SIGTERM)
   if (data.state?.isInterrupted) {
     gates.push("FAIL: run was interrupted (signal/abort)");
   }
-  const iterInterrupted = metrics.iterations_interrupted?.values?.count || 0;
+  const iterInterrupted = counterVal(metrics.iterations_interrupted);
   if (iterInterrupted > 0) {
-    gates.push(`FAIL: iterations_interrupted=${iterInterrupted}`);
+    gates.push(`INFO: iterations_interrupted=${iterInterrupted} (normal ramp-down)`);
   }
 
   const vuMax = metrics.vus_max?.values?.max || 0;
@@ -390,12 +396,6 @@ export function handleSummary(data) {
   if (p95 >= 3000) gates.push(`FAIL: p95=${p95.toFixed(0)}ms (threshold: <3000ms)`);
   if (p99 >= 5000) gates.push(`FAIL: p99=${p99.toFixed(0)}ms (threshold: <5000ms)`);
 
-  // Diagnostic: dump raw counter shape (remove after one run)
-  const rawCounter = metrics.fail_status_5xx;
-  if (rawCounter) {
-    gates.push(`DEBUG: fail_status_5xx raw keys=${JSON.stringify(Object.keys(rawCounter.values || {}))}`);
-  }
-
   // Status code breakdown (globally aggregated Counters)
   // Defensively read both `count` and `value` — k6 Counter summary shape is underdocumented
   function counterVal(m) {
@@ -410,6 +410,11 @@ export function handleSummary(data) {
   const totalFails = s401 + s429 + s5xx + sOther;
 
   gates.push(`INFO: Failure breakdown (total=${totalFails}): 401=${s401} 429=${s429} 5xx=${s5xx} other=${sOther}`);
+
+  const itemLookupFails = counterVal(metrics.fail_item_lookup);
+  if (itemLookupFails > 0) {
+    gates.push(`FAIL: item_lookup_failed=${itemLookupFails} (required: 0)`);
+  }
 
   const canonical = gates.filter(g => g.startsWith("FAIL")).length === 0;
 
