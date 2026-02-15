@@ -148,25 +148,45 @@ async function handleCreate(
   }
 
   // Fetch item row to get account_id and workspace_id (always server-derived)
-  const { data: item, error: itemErr } = await supabase
-    .from("items")
-    .select("id, account_id, workspace_id")
-    .eq("id", itemId as string)
-    .maybeSingle();
+  const requestWorkspaceId = params.workspaceId as string | undefined;
 
-  if (itemErr || !item) {
+  let itemQuery = supabase
+    .from("items")
+    .select("account_id, workspace_id")
+    .eq("id", itemId as string);
+
+  // LT mode: scope query by workspace so 404 = definitive "wrong ID or wrong workspace"
+  if (authResult.mode === "load-test") {
+    // requestWorkspaceId is guaranteed non-null here (LT-GUARD fires earlier in create path)
+    itemQuery = itemQuery.eq("workspace_id", requestWorkspaceId!);
+  }
+
+  const { data: item, error: itemErr } = await itemQuery.maybeSingle();
+
+  // Branch 1: DB-level error (timeout, connection drop)
+  if (itemErr) {
+    if (authResult.mode === "load-test") {
+      console.error(
+        `[execute-action-server] LT-DB-ERROR: itemId=${itemId} workspaceId=${requestWorkspaceId} ` +
+        `idempotencyKey=${params.idempotencyKey || "none"} reason=db_error err=${itemErr.message}`
+      );
+    }
+    return jsonError("Item lookup failed", 500);
+  }
+
+  // Branch 2: 0 rows returned
+  if (!item) {
+    if (authResult.mode === "load-test") {
+      console.error(
+        `[execute-action-server] LT-404: itemId=${itemId} workspaceId=${requestWorkspaceId} ` +
+        `idempotencyKey=${params.idempotencyKey || "none"} reason=item_not_found`
+      );
+    }
     return jsonError("Item not found", 404);
   }
 
   const workspaceId = item.workspace_id;
   const accountId = item.account_id;
-
-  // Load-test mode: verify explicit workspaceId matches item's workspace
-  if (authResult.mode === "load-test" && params.workspaceId) {
-    if (params.workspaceId !== workspaceId) {
-      return jsonError("workspaceId does not match item's workspace", 400);
-    }
-  }
 
   // UI mode: verify workspace membership
   if (authResult.mode === "ui" && authResult.userId) {
@@ -316,6 +336,9 @@ Deno.serve(async (req: Request) => {
       if (authResult.mode === "load-test") {
         // Guard: explicit workspaceId required
         if (!params.workspaceId) {
+          console.error(
+            `[execute-action-server] LT-GUARD: idempotencyKey=${params.idempotencyKey || "none"} reason=missing_workspaceId`
+          );
           return jsonError("workspaceId is required for load-test auth", 400);
         }
         // Guard: idempotency prefix
