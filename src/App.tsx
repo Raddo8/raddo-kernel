@@ -24,6 +24,7 @@ import SuppressionList from "@/pages/SuppressionList";
 import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import Index from "@/pages/Index";
+import { Hero } from "@/components/Hero";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
 import { useEffect, useState } from "react";
