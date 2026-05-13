@@ -65,8 +65,8 @@ export default function AppSidebar() {
       </div>
 
       <nav className="flex-1 py-2 space-y-0.5">
-        {navItems.map(({ to, label, icon: Icon }) => {
-          const active = location.pathname.startsWith(to);
+        {navItems.map(({ to, label, icon: Icon, end }) => {
+          const active = end ? location.pathname === to : location.pathname.startsWith(to);
           return (
             <NavLink
               key={to}
