@@ -28,19 +28,20 @@ export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
-    { to: "/accounts", label: labels.accounts, icon: Building2 },
-    { to: "/contacts", label: "Contacts", icon: Users },
-    { to: "/items", label: labels.items, icon: FileText },
-    { to: "/actions", label: "Actions", icon: Zap },
-    { to: "/timeline", label: "Timeline", icon: Clock },
-    { to: "/policies", label: "Policies", icon: Shield },
-    { to: "/policy-rules", label: "Rules", icon: ListFilter },
-    { to: "/playbooks", label: "Playbooks", icon: BookOpen },
-    { to: "/templates", label: "Templates", icon: LayoutTemplate },
-    { to: "/connectors", label: "Connectors", icon: Plug },
-    { to: "/suppression", label: "Suppressions", icon: ShieldOff },
-    { to: "/scheduler-health", label: "Health", icon: HeartPulse },
-    { to: "/billing", label: "Usage", icon: BarChart3 },
+    { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
+    { to: "/app/accounts", label: labels.accounts, icon: Building2 },
+    { to: "/app/contacts", label: "Contacts", icon: Users },
+    { to: "/app/items", label: labels.items, icon: FileText },
+    { to: "/app/actions", label: "Actions", icon: Zap },
+    { to: "/app/timeline", label: "Timeline", icon: Clock },
+    { to: "/app/policies", label: "Policies", icon: Shield },
+    { to: "/app/policy-rules", label: "Rules", icon: ListFilter },
+    { to: "/app/playbooks", label: "Playbooks", icon: BookOpen },
+    { to: "/app/templates", label: "Templates", icon: LayoutTemplate },
+    { to: "/app/connectors", label: "Connectors", icon: Plug },
+    { to: "/app/suppression", label: "Suppressions", icon: ShieldOff },
+    { to: "/app/scheduler-health", label: "Health", icon: HeartPulse },
+    { to: "/app/billing", label: "Usage", icon: BarChart3 },
   ];
   return (
     <aside
@@ -64,8 +65,8 @@ export default function AppSidebar() {
       </div>
 
       <nav className="flex-1 py-2 space-y-0.5">
-        {navItems.map(({ to, label, icon: Icon }) => {
-          const active = location.pathname.startsWith(to);
+        {navItems.map(({ to, label, icon: Icon, end }) => {
+          const active = end ? location.pathname === to : location.pathname.startsWith(to);
           return (
             <NavLink
               key={to}

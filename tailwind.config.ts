@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        display: ['Fraunces', 'Georgia', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -70,6 +71,18 @@ export default {
           "red-foreground": "hsl(var(--status-red-foreground))",
           blue: "hsl(var(--status-blue))",
           "blue-foreground": "hsl(var(--status-blue-foreground))",
+        },
+        raddo: {
+          ink: "hsl(var(--raddo-ink))",
+          "ink-deep": "hsl(var(--raddo-ink-deep))",
+          "ink-soft": "hsl(var(--raddo-ink-soft))",
+          paper: "hsl(var(--raddo-paper))",
+          "paper-edge": "hsl(var(--raddo-paper-edge))",
+          brass: "hsl(var(--raddo-brass))",
+          "brass-deep": "hsl(var(--raddo-brass-deep))",
+          ash: "hsl(var(--raddo-ash))",
+          charcoal: "hsl(var(--raddo-charcoal))",
+          night: "hsl(var(--raddo-night))",
         },
       },
       borderRadius: {
