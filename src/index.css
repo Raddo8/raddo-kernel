@@ -55,6 +55,18 @@
     --sidebar-accent-foreground: 220 15% 85%;
     --sidebar-border: 220 20% 18%;
     --sidebar-ring: 38 92% 50%;
+
+    /* RADDO brand tokens (HSL) */
+    --raddo-ink: 210 82% 27%;
+    --raddo-ink-deep: 211 93% 17%;
+    --raddo-ink-soft: 210 75% 37%;
+    --raddo-paper: 40 33% 97%;
+    --raddo-paper-edge: 40 12% 88%;
+    --raddo-brass: 35 86% 54%;
+    --raddo-brass-deep: 33 84% 28%;
+    --raddo-ash: 48 4% 37%;
+    --raddo-charcoal: 60 3% 17%;
+    --raddo-night: 240 10% 4%;
   }
 
   .dark {
