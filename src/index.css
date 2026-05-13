@@ -123,6 +123,11 @@
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
+
+  .font-display {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+  }
   
   .font-sans {
     font-family: 'Inter', system-ui, sans-serif;
