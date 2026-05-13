@@ -53,33 +53,55 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          {/*
+            Routing convention:
+            - Top-level routes (/, /how, /pricing, /about, /security, /consult)
+              are PUBLIC marketing surfaces. No AuthGate, no AppLayout chrome.
+            - The product lives under /app/* behind AuthGate + WorkspaceProvider
+              + AppLayout. Future marketing routes follow the same split.
+          */}
+          <Route path="/" element={<Hero />} />
           <Route path="/respond/:token" element={<RespondPage />} />
-          <Route element={
+          <Route path="/app" element={
             <AuthGate>
               <WorkspaceProvider>
                 <AppLayout />
               </WorkspaceProvider>
             </AuthGate>
           }>
-            <Route path="/" element={<Index />} />
-            <Route path="/accounts" element={<AccountsList />} />
-            <Route path="/accounts/:id" element={<AccountDetail />} />
-            <Route path="/items" element={<ItemsList />} />
-            <Route path="/items/:id" element={<ItemDetail />} />
-            <Route path="/actions" element={<ActionsQueue />} />
-            <Route path="/timeline" element={<TimelinePage />} />
-            <Route path="/policies" element={<PoliciesList />} />
-            <Route path="/policies/:id" element={<PolicyDetail />} />
-            <Route path="/playbooks" element={<PlaybooksList />} />
-            <Route path="/playbooks/:id" element={<PlaybookDetail />} />
-            <Route path="/templates" element={<TemplatesList />} />
-            <Route path="/policy-rules" element={<PolicyRulesList />} />
-            <Route path="/contacts" element={<ContactsList />} />
-            <Route path="/connectors" element={<ConnectorsList />} />
-            <Route path="/suppression" element={<SuppressionList />} />
-            <Route path="/scheduler-health" element={<SchedulerHealth />} />
-            <Route path="/billing" element={<BillingUsage />} />
+            <Route index element={<Index />} />
+            <Route path="accounts" element={<AccountsList />} />
+            <Route path="accounts/:id" element={<AccountDetail />} />
+            <Route path="items" element={<ItemsList />} />
+            <Route path="items/:id" element={<ItemDetail />} />
+            <Route path="actions" element={<ActionsQueue />} />
+            <Route path="timeline" element={<TimelinePage />} />
+            <Route path="policies" element={<PoliciesList />} />
+            <Route path="policies/:id" element={<PolicyDetail />} />
+            <Route path="playbooks" element={<PlaybooksList />} />
+            <Route path="playbooks/:id" element={<PlaybookDetail />} />
+            <Route path="templates" element={<TemplatesList />} />
+            <Route path="policy-rules" element={<PolicyRulesList />} />
+            <Route path="contacts" element={<ContactsList />} />
+            <Route path="connectors" element={<ConnectorsList />} />
+            <Route path="suppression" element={<SuppressionList />} />
+            <Route path="scheduler-health" element={<SchedulerHealth />} />
+            <Route path="billing" element={<BillingUsage />} />
           </Route>
+          {/* Legacy product paths → redirect into /app/* */}
+          <Route path="/accounts/*" element={<Navigate to="/app/accounts" replace />} />
+          <Route path="/items/*" element={<Navigate to="/app/items" replace />} />
+          <Route path="/actions" element={<Navigate to="/app/actions" replace />} />
+          <Route path="/timeline" element={<Navigate to="/app/timeline" replace />} />
+          <Route path="/policies/*" element={<Navigate to="/app/policies" replace />} />
+          <Route path="/playbooks/*" element={<Navigate to="/app/playbooks" replace />} />
+          <Route path="/templates" element={<Navigate to="/app/templates" replace />} />
+          <Route path="/policy-rules" element={<Navigate to="/app/policy-rules" replace />} />
+          <Route path="/contacts" element={<Navigate to="/app/contacts" replace />} />
+          <Route path="/connectors" element={<Navigate to="/app/connectors" replace />} />
+          <Route path="/suppression" element={<Navigate to="/app/suppression" replace />} />
+          <Route path="/scheduler-health" element={<Navigate to="/app/scheduler-health" replace />} />
+          <Route path="/billing" element={<Navigate to="/app/billing" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
