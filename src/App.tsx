@@ -27,6 +27,8 @@ import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
+import StyleGuide from "@/pages/StyleGuide";
+import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
