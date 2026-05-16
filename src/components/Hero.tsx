@@ -134,19 +134,19 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-6 pr-8 pt-8 md:pr-12 md:pt-10">
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-4 pt-5 sm:gap-6 md:px-0 md:pr-12 md:pl-0 md:pt-10">
         {/* RADDO logo — top-left */}
         <motion.a
           href="/"
           initial="hidden"
           animate="show"
-          className="flex shrink-0 items-center gap-2"
+          className="flex shrink-0 items-center gap-1.5 sm:gap-2"
           aria-label="RADDO"
         >
           <motion.img
             src={raddoLogo}
             alt="RADDO"
-            className="h-[5.4rem] w-auto md:h-[6.3rem]"
+            className="h-12 w-auto sm:h-[5.4rem] md:h-[6.3rem]"
             style={{ objectFit: "contain", transformOrigin: "left center" }}
             variants={{
               hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
@@ -159,11 +159,10 @@ export function Hero() {
             }}
           />
           <span
-            className="font-display font-black overflow-hidden inline-block"
+            className="font-display font-black overflow-hidden inline-block text-[17px] sm:text-[26.4px]"
             aria-label="RADDO"
             style={{
               color: "hsl(var(--raddo-brass))",
-              fontSize: "26.4px",
               letterSpacing: "0.04em",
               lineHeight: 1.05,
             }}
@@ -204,12 +203,11 @@ export function Hero() {
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-          <div className="flex flex-col items-center gap-1 px-3 py-2">
+          <div className="flex flex-col items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2">
             {/* Monogram */}
             <span
-              className="font-display font-black text-raddo-ink-deep"
+              className="font-display font-black text-raddo-ink-deep text-[15px] sm:text-[22px]"
               style={{
-                fontSize: "22px",
                 letterSpacing: "0.04em",
                 lineHeight: 1,
               }}
@@ -219,8 +217,8 @@ export function Hero() {
 
             {/* Chief of [rotating] */}
             <div
-              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep"
-              style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "-0.005em" }}
+              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep text-[12px] sm:text-[18px]"
+              style={{ fontWeight: 700, letterSpacing: "-0.005em" }}
             >
               <span style={{ lineHeight: 1 }}>Chief of</span>
               <span
