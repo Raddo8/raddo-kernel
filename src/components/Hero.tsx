@@ -321,8 +321,32 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
+const INTRO_FLAG = "raddo-hero-intro-played-v1";
+
 export function Hero() {
   const reduce = useReducedMotion();
+
+  /**
+   * Hero intro cascade plays once per browser session. We persist a flag in
+   * sessionStorage so internal navigation back to "/" snaps straight to the
+   * final state instead of re-running the 3.8s cascade. Re-opening the site
+   * in a new tab (fresh session) replays the intro.
+   */
+  const [introPlayed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return window.sessionStorage.getItem(INTRO_FLAG) === "1"; }
+    catch { return false; }
+  });
+
+  // When intro has already played, render every animated element directly in
+  // its "show" state · no transition, no flash.
+  const INITIAL: "hidden" | "show" = introPlayed ? "show" : "hidden";
+
+  useEffect(() => {
+    if (introPlayed) return;
+    try { window.sessionStorage.setItem(INTRO_FLAG, "1"); } catch { /* ignore */ }
+  }, [introPlayed]);
+
   const [now, setNow] = useState(() =>
     new Date().toLocaleString("en-US", {
       month: "long",
