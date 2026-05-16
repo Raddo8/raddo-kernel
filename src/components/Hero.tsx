@@ -155,7 +155,7 @@ export function Hero() {
             <img
               src={raddoStone}
               alt="RADDO"
-              className="h-[5.4rem] w-auto md:h-[6.3rem]"
+              className="h-[2.7rem] w-auto md:h-[3.15rem]"
               style={{ objectFit: "contain" }}
             />
           </div>
