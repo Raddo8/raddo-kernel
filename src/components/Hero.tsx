@@ -252,7 +252,7 @@ export function Hero() {
           className="relative mt-16 overflow-hidden bg-raddo-paper"
           style={{
             borderRadius: 8,
-            border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
+            border: "1.5px solid hsl(var(--raddo-ink-deep) / 0.35)",
             boxShadow:
               "0 1px 0 hsl(var(--raddo-paper-edge)) inset, 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.25)",
             aspectRatio: "1100 / 620",
