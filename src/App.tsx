@@ -52,6 +52,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeOverridesProvider>
+      <MotionPreferenceProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
