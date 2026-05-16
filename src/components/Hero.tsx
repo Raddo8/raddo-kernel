@@ -123,13 +123,8 @@ function BriefingDossier() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="briefing-001-body"
-        className="w-full text-left group"
-        style={{
-          background: "transparent",
-          cursor: "pointer",
-        }}
+        className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
       >
-        <div className="px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9">
         <div
           className="font-display mb-4"
           style={{
