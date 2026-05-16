@@ -166,7 +166,7 @@ export function Hero() {
           <span className="block">Built for you day one.</span>
           <span
             className="block italic"
-            style={{ color: "hsl(var(--raddo-brass-deep))", fontWeight: 800 }}
+            style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
           >
             Sharpens with every action.
           </span>
