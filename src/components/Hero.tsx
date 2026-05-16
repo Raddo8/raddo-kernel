@@ -304,7 +304,7 @@ export function Hero() {
           {SOURCES.map((src, i) => (
             <div key={src} className="flex items-baseline gap-2">
               <span
-                className="font-sans text-raddo-brass-deep tabular-nums"
+                className="font-sans text-raddo-brass tabular-nums"
                 style={{ fontSize: "10px", letterSpacing: "0.18em" }}
               >
                 {String(i + 1).padStart(2, "0")}
