@@ -153,7 +153,7 @@ export function Hero() {
             </span>
           </div>
           <div className="mt-1 font-display text-[12px] italic text-raddo-ash">
-            {nowFormatted(now)}
+            {now}
           </div>
         </motion.div>
 
