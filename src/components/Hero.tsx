@@ -1,7 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo.png";
-import raddoStone from "@/assets/raddo-stone.png";
 
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
 
@@ -145,20 +144,12 @@ export function Hero() {
           className="block shrink-0"
           aria-label="RADDO"
         >
-          <div className="flex items-center gap-3">
-            <img
-              src={raddoLogo}
-              alt="RADDO"
-              className="h-[5.4rem] w-auto md:h-[6.3rem]"
-              style={{ objectFit: "contain" }}
-            />
-            <img
-              src={raddoStone}
-              alt="RADDO"
-              className="h-[2.7rem] w-auto md:h-[3.15rem]"
-              style={{ objectFit: "contain" }}
-            />
-          </div>
+          <img
+            src={raddoLogo}
+            alt="RADDO"
+            className="h-[5.4rem] w-auto md:h-[6.3rem]"
+            style={{ objectFit: "contain" }}
+          />
         </motion.a>
 
         <motion.div
