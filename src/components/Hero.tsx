@@ -728,7 +728,7 @@ export function Hero() {
 
         {/* Six-source row */}
         <motion.div
-          variants={fade(800, 2200)}
+          variants={fade(800, 3800)}
           initial="hidden"
           animate="show"
           className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
