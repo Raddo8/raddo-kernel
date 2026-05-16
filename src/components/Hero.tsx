@@ -775,15 +775,38 @@ export function Hero() {
           </figcaption>
         </motion.figure>
 
-        {/* Six-source row */}
+        {/* Six-source row · scroll-triggered, per-chip stagger */}
         <motion.div
-          variants={fade(800, 3800)}
-          initial={INITIAL}
-          animate="show"
+          initial={INITIAL === "show" ? "show" : "hidden"}
+          whileInView="show"
+          viewport={{ once: true, margin: "-12% 0px -12% 0px", amount: 0.3 }}
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: reduce ? 0 : lowPower ? 0.04 : 0.07,
+                delayChildren: reduce ? 0 : 0.05,
+              },
+            },
+          }}
           className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
-            <div key={src} className="flex items-baseline gap-2">
+            <motion.div
+              key={src}
+              variants={{
+                hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 12 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: (reduce ? 0 : 0.55) * (lowPower ? 0.85 : 1),
+                    ease: EASE_OUT,
+                  },
+                },
+              }}
+              className="flex items-baseline gap-2"
+            >
               <span
                 className="font-sans text-raddo-brass tabular-nums"
                 style={{ fontSize: "10px", letterSpacing: "0.18em" }}
@@ -796,7 +819,7 @@ export function Hero() {
               >
                 {src}
               </span>
-            </div>
+            </motion.div>
           ))}
         </motion.div>
       </section>
@@ -824,14 +847,35 @@ export function Hero() {
           </span>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-x-12 gap-y-12 md:grid-cols-2 lg:grid-cols-4">
-          {INDEX.map((item, i) => (
+        <motion.div
+          initial={INITIAL === "show" ? "show" : "hidden"}
+          whileInView="show"
+          viewport={{ once: true, margin: "-10% 0px -10% 0px", amount: 0.2 }}
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: reduce ? 0 : lowPower ? 0.07 : 0.12,
+                delayChildren: reduce ? 0 : 0.05,
+              },
+            },
+          }}
+          className="grid grid-cols-1 gap-x-12 gap-y-12 md:grid-cols-2 lg:grid-cols-4"
+        >
+          {INDEX.map((item) => (
             <motion.article
               key={item.roman}
-              variants={rise(700, i * 120)}
-              initial={INITIAL}
-              whileInView="show"
-              viewport={{ once: true, margin: "-10%" }}
+              variants={{
+                hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 22 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: (reduce ? 0 : 0.7) * (lowPower ? 0.85 : 1),
+                    ease: EASE_OUT,
+                  },
+                },
+              }}
               className="flex flex-col"
             >
               <div
@@ -855,7 +899,7 @@ export function Hero() {
               </p>
             </motion.article>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* ====== CLOSING CTA ====== */}
