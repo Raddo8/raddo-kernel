@@ -63,11 +63,9 @@ const App = () => (
           <Route path="/" element={<Hero />} />
           <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={
-            <AuthGate>
-              <WorkspaceProvider>
-                <AppLayout />
-              </WorkspaceProvider>
-            </AuthGate>
+            <WorkspaceProvider>
+              <AppLayout />
+            </WorkspaceProvider>
           }>
             <Route index element={<Index />} />
             <Route path="accounts" element={<AccountsList />} />
