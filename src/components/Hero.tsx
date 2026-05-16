@@ -199,7 +199,7 @@ export function Hero() {
           className="mt-10 h-px origin-left"
           style={{
             width: 280,
-            backgroundColor: "hsl(var(--raddo-brass-deep))",
+            backgroundColor: "hsl(var(--raddo-ink-deep))",
             opacity: 0.7,
           }}
         />
