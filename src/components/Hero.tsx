@@ -138,28 +138,56 @@ export function Hero() {
         {/* RADDO logo — top-left */}
         <motion.a
           href="/"
-          variants={fade(700, 100)}
           initial="hidden"
           animate="show"
           className="flex shrink-0 items-center gap-2"
           aria-label="RADDO"
         >
-          <img
+          <motion.img
             src={raddoLogo}
             alt="RADDO"
             className="h-[5.4rem] w-auto md:h-[6.3rem]"
-            style={{ objectFit: "contain" }}
+            style={{ objectFit: "contain", transformOrigin: "left center" }}
+            variants={{
+              hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
+              show: {
+                opacity: 1,
+                scale: 1,
+                filter: "blur(0px)",
+                transition: { duration: reduce ? 0 : 0.95, delay: reduce ? 0 : 0.15, ease: EASE },
+              },
+            }}
           />
           <span
-            className="font-display font-black"
+            className="font-display font-black overflow-hidden inline-block"
+            aria-label="RADDO"
             style={{
               color: "hsl(var(--raddo-brass))",
               fontSize: "26.4px",
               letterSpacing: "0.04em",
-              lineHeight: 1,
+              lineHeight: 1.05,
             }}
           >
-            RADDO
+            {"RADDO".split("").map((ch, i) => (
+              <motion.span
+                key={i}
+                className="inline-block"
+                variants={{
+                  hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : "100%" },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: reduce ? 0 : 0.7,
+                      delay: reduce ? 0 : 0.55 + i * 0.07,
+                      ease: EASE,
+                    },
+                  },
+                }}
+              >
+                {ch}
+              </motion.span>
+            ))}
           </span>
         </motion.a>
 
