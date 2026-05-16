@@ -204,7 +204,9 @@ export function Hero() {
               className="block italic"
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
-              Sharpens with every action.
+              Sharpens with
+              <br />
+              every action.
             </span>
             <span className="block">Yours to wield anywhere.</span>
           </motion.h1>
