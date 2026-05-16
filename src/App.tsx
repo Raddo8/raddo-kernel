@@ -50,20 +50,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/*
-            Routing convention:
-            - Top-level routes (/, /how, /pricing, /about, /security, /consult)
-              are PUBLIC marketing surfaces. No AuthGate, no AppLayout chrome.
-            - The product lives under /app/* behind AuthGate + WorkspaceProvider
-              + AppLayout. Future marketing routes follow the same split.
-          */}
-          <Route path="/" element={<Hero />} />
-          <Route path="/respond/:token" element={<RespondPage />} />
+    <ThemeOverridesProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/*
+              Routing convention:
+              - Top-level routes (/, /how, /pricing, /about, /security, /consult)
+                are PUBLIC marketing surfaces. No AuthGate, no AppLayout chrome.
+              - The product lives under /app/* behind AuthGate + WorkspaceProvider
+                + AppLayout. Future marketing routes follow the same split.
+            */}
+            <Route path="/" element={<Hero />} />
+            <Route path="/style-guide" element={<StyleGuide />} />
+            <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
