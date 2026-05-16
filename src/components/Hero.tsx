@@ -337,24 +337,129 @@ export function Hero() {
         </div>
 
         {/* Lede */}
-        <motion.p
+        <motion.section
           variants={rise(800, 900)}
           initial="hidden"
           animate="show"
-          className="mt-9 font-sans text-raddo-charcoal/[0.86]"
-          style={{
-            fontSize: "clamp(17px, 1.4vw, 20px)",
-            fontWeight: 400,
-            lineHeight: 1.55,
-            maxWidth: "720px",
-          }}
+          className="mt-12"
+          style={{ maxWidth: "660px" }}
         >
-          Email, meetings, documents, business chat, calendar, operations,
-          finance, legal, people, and risk context resolve into briefings,
-          drafts, decisions, projects, reports, presentations, and counsel.
-          In the morning. Before each meeting. Through each decision. Across
-          each decade. Sourced. Restrained. Yours.
-        </motion.p>
+          <div
+            aria-hidden="true"
+            className="mb-9"
+            style={{
+              width: 280,
+              height: 1.5,
+              backgroundColor: "hsl(var(--raddo-brass))",
+            }}
+          />
+          <div
+            className="font-display mb-[18px]"
+            style={{
+              fontVariant: "small-caps",
+              fontSize: 11,
+              letterSpacing: "0.22em",
+              color: "hsl(var(--raddo-brass))",
+            }}
+          >
+            What it is
+          </div>
+          <h2
+            className="font-display text-raddo-ink-deep m-0 mb-7"
+            style={{
+              fontWeight: 800,
+              fontSize: "clamp(36px, 4.2vw, 48px)",
+              lineHeight: 1.1,
+            }}
+          >
+            What is COB?
+          </h2>
+
+          <p
+            className="font-sans text-raddo-charcoal mb-6"
+            style={{ fontSize: 18, lineHeight: 1.55 }}
+          >
+            COB is a system of{" "}
+            <strong className="text-raddo-ink-deep font-bold">
+              intelligence, strategy, and competence
+            </strong>{" "}
+            built around one person — or one business. It reads what you read,
+            sits in your meetings, and holds the full context of your operation:
+            finance, legal, people, risk, every functional domain. It learns how
+            you think, how you write, what you weigh, what you cut. From that
+            foundation, it produces the briefings, drafts, projects, reports,
+            presentations, and counsel that let you show up as the sharpest
+            version of yourself in every room you walk into.
+          </p>
+
+          <p
+            className="font-sans text-raddo-charcoal mb-6"
+            style={{ fontSize: 18, lineHeight: 1.55 }}
+          >
+            Two things separate COB from any tool you have used before.
+          </p>
+
+          <p
+            className="font-sans text-raddo-charcoal mb-6"
+            style={{ fontSize: 18, lineHeight: 1.55 }}
+          >
+            <strong className="text-raddo-ink-deep font-bold">
+              It is portable.
+            </strong>{" "}
+            Not locked to one app, one platform, one provider. It carries
+            everything you teach it across the systems you already use.
+          </p>
+
+          <p
+            className="font-sans text-raddo-charcoal mb-6"
+            style={{ fontSize: 18, lineHeight: 1.55 }}
+          >
+            <strong className="text-raddo-ink-deep font-bold">
+              It is permanent.
+            </strong>{" "}
+            It does not reset when you change roles, restructure your team, or
+            move on to the next thing. The longer you use it, the more of you it
+            carries.
+          </p>
+
+          <p
+            className="font-sans text-raddo-charcoal mb-6"
+            style={{ fontSize: 18, lineHeight: 1.55 }}
+          >
+            Executives without a COB are now competing against executives with
+            one. The gap shows up quietly · in who is prepared when the question
+            lands, who has the draft ready before the meeting, who remembers
+            what was decided three quarters ago when it matters again, who
+            carries the full operation with them instead of behind them. The
+            disadvantage is small at first. It compounds.
+          </p>
+
+          <div
+            aria-hidden="true"
+            className="my-7"
+            style={{
+              width: 120,
+              height: 1.5,
+              backgroundColor: "hsl(var(--raddo-brass))",
+            }}
+          />
+
+          <div style={{ breakInside: "avoid" }}>
+            <p
+              className="font-display text-raddo-ink-deep mb-4"
+              style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
+            >
+              The question is no longer whether decision intelligence at this
+              depth becomes the standard for serious operators.
+            </p>
+            <p
+              className="font-display text-raddo-ink-deep"
+              style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
+            >
+              The question is whether you have one when it does.
+            </p>
+          </div>
+        </motion.section>
 
         {/* Asymmetric brass hairline */}
         <motion.div
