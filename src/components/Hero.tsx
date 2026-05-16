@@ -67,6 +67,20 @@ export function Hero() {
     return () => clearInterval(t);
   }, []);
 
+  // Rotating COB title — only the trailing word changes
+  const [titleIdx, setTitleIdx] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    let last = 0;
+    const t = setInterval(() => {
+      let next = Math.floor(Math.random() * COB_TITLES.length);
+      if (next === last) next = (next + 1) % COB_TITLES.length;
+      last = next;
+      setTitleIdx(next);
+    }, 2600);
+    return () => clearInterval(t);
+  }, [reduce]);
+
   const rise = (duration: number, delay: number): Variants => ({
     hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 24 },
     show: {
