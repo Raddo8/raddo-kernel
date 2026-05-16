@@ -382,7 +382,7 @@ export function Hero() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <span
-              className="font-sans uppercase text-raddo-brass-deep"
+              className="font-sans uppercase text-raddo-brass"
               style={{ fontSize: "11px", letterSpacing: "0.3em" }}
             >
               Begin
