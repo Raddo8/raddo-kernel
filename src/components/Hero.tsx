@@ -222,7 +222,7 @@ export function Hero() {
 
             {/* Chief of [rotating] */}
             <div
-              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep text-[12px] sm:text-[18px]"
+              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep text-[10.2px] sm:text-[15.3px]"
               style={{ fontWeight: 700, letterSpacing: "-0.005em" }}
             >
               <span style={{ lineHeight: 1 }}>Chief of</span>
@@ -230,8 +230,8 @@ export function Hero() {
                 aria-live="polite"
                 className="relative inline-block overflow-hidden"
                 style={{
-                  height: "1em",
-                  minWidth: "5.2em",
+                  height: "1.15em",
+                  minWidth: "8.2em",
                   textAlign: "left",
                 }}
               >
