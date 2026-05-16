@@ -614,9 +614,9 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Briefing dossier · What is COB? */}
+        {/* Briefing dossier · 2600ms */}
         <motion.section
-          variants={rise(800, 900)}
+          variants={rise(800, 2600)}
           initial="hidden"
           animate="show"
           className="mt-12"
@@ -625,9 +625,9 @@ export function Hero() {
           <BriefingDossier />
         </motion.section>
 
-        {/* Asymmetric brass hairline */}
+        {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
-          variants={scaleX(600, 1400)}
+          variants={scaleX(600, 3000)}
           initial="hidden"
           animate="show"
           className="mt-10 h-px origin-left"
@@ -638,9 +638,9 @@ export function Hero() {
           }}
         />
 
-        {/* CTA row */}
+        {/* CTA row · 3200ms */}
         <motion.div
-          variants={rise(700, 1600)}
+          variants={rise(700, 3200)}
           initial="hidden"
           animate="show"
           className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
