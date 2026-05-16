@@ -110,6 +110,7 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
+      </MotionPreferenceProvider>
     </ThemeOverridesProvider>
   </QueryClientProvider>
 );
