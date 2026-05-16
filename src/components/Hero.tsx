@@ -123,15 +123,10 @@ function BriefingDossier() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="briefing-001-body"
-        className="w-full text-left group"
-        style={{
-          padding: "32px 40px 36px",
-          background: "transparent",
-          cursor: "pointer",
-        }}
+        className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
       >
         <div
-          className="font-display mb-4"
+          className="font-display mb-3 md:mb-4"
           style={{
             fontVariant: "small-caps",
             fontSize: 11,
@@ -142,12 +137,12 @@ function BriefingDossier() {
           What it is
         </div>
 
-        <div className="flex items-end justify-between gap-6">
+        <div className="flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
           <h2
             className="font-display text-raddo-ink-deep m-0"
             style={{
               fontWeight: 800,
-              fontSize: "clamp(36px, 4.2vw, 48px)",
+              fontSize: "clamp(22px, 4.2vw, 48px)",
               lineHeight: 1.05,
             }}
           >
@@ -161,7 +156,7 @@ function BriefingDossier() {
               letterSpacing: "0.18em",
               color: "hsl(var(--raddo-ash))",
               textTransform: "uppercase",
-              paddingBottom: 8,
+              paddingBottom: 2,
             }}
           >
             <span>{open ? "Close" : "Open dossier"}</span>
@@ -189,7 +184,7 @@ function BriefingDossier() {
         </div>
 
         <div
-          className="mt-5 flex items-center gap-4 font-mono"
+          className="mt-4 md:mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono"
           style={{
             fontSize: 10,
             letterSpacing: "0.18em",
@@ -200,7 +195,7 @@ function BriefingDossier() {
           <span
             aria-hidden
             style={{
-              width: 56,
+              width: 40,
               height: 1.5,
               backgroundColor: "hsl(var(--raddo-brass))",
             }}
