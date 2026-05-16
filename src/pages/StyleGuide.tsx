@@ -323,7 +323,8 @@ export default function StyleGuide() {
 
         {/* Motion */}
         <Section title="Motion" subtitle="Curve cubic-bezier(0.22, 1, 0.36, 1) · cap 1.2s · entrance only · honours prefers-reduced-motion.">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <MotionPreferenceCard />
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-4">
             {MOTION.map((m) => (
               <div key={m.name} className="rounded-md border border-border bg-card p-4">
                 <div className="font-display text-raddo-ink-deep" style={{ fontSize: 28, fontWeight: 800 }}>
