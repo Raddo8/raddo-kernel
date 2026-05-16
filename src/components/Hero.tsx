@@ -212,9 +212,9 @@ export function Hero() {
             {/* Line 1: your COB */}
             <div
               className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
-              style={{ letterSpacing: "0.02em", lineHeight: 1.1 }}
+              style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
             >
-              <span style={{ fontStyle: "italic", fontWeight: 400 }}>your</span>{" "}
+              <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
               <span style={{ fontWeight: 900 }}>COB</span>
             </div>
 
