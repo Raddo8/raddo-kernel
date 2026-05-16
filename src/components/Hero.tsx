@@ -1,8 +1,27 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo.png";
 
-const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
+// Motion doctrine · two curves only.
+// EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
+// EASE_STD (project standard) — micro-interactions, hovers, exits. Matches 220ms tokens.
+const EASE_OUT: Transition["ease"] = [0.16, 1, 0.3, 1];
+const EASE_STD: Transition["ease"] = [0.22, 1, 0.36, 1];
+// Back-compat alias for inline usages elsewhere in this file.
+const EASE = EASE_STD;
+
+// Detect lower-powered devices once at module load · keeps cascade brisk on
+// modest hardware (older phones, low-CPU laptops) while preserving the premium
+// settle for capable machines. Halves delays and trims durations ~15%.
+function detectLowPower(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const cores = (navigator as Navigator & { hardwareConcurrency?: number }).hardwareConcurrency ?? 8;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (conn?.saveData) return true;
+  if (conn?.effectiveType && /2g|slow/i.test(conn.effectiveType)) return true;
+  return cores <= 4 || mem <= 4;
+}
 
 const SOURCES = [
   "Email",
@@ -384,15 +403,21 @@ export function Hero() {
     return () => clearInterval(t);
   }, [reduce]);
 
+  // Low-power devices get a brisker cascade (delays halved, durations -15%) so
+  // the page becomes interactive sooner without abandoning the staircase rhythm.
+  const lowPower = useMemo(() => detectLowPower(), []);
+  const dScale = reduce ? 0 : lowPower ? 0.85 : 1;
+  const tScale = reduce ? 0 : lowPower ? 0.5 : 1;
+
   const rise = (duration: number, delay: number): Variants => ({
-    hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 24 },
+    hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 20 },
     show: {
       opacity: 1,
       y: 0,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
@@ -402,9 +427,9 @@ export function Hero() {
     show: {
       opacity: 1,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
@@ -415,9 +440,9 @@ export function Hero() {
       opacity: 1,
       scaleX: 1,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
@@ -456,7 +481,7 @@ export function Hero() {
                 opacity: 1,
                 scale: 1,
                 filter: "blur(0px)",
-                transition: { duration: reduce ? 0 : 0.95, delay: reduce ? 0 : 0.15, ease: EASE },
+                transition: { duration: 0.85 * dScale, delay: 0.12 * tScale, ease: EASE_OUT },
               },
             }}
           />
@@ -479,9 +504,9 @@ export function Hero() {
                     opacity: 1,
                     y: 0,
                     transition: {
-                      duration: reduce ? 0 : 0.7,
-                      delay: reduce ? 0 : 0.55 + i * 0.07,
-                      ease: EASE,
+                      duration: 0.62 * dScale,
+                      delay: (0.46 + i * 0.055) * tScale,
+                      ease: EASE_OUT,
                     },
                   },
                 }}
