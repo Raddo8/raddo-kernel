@@ -121,7 +121,7 @@ export function Hero() {
           className="text-right"
         >
           <div
-            className="font-sans text-[10px] uppercase text-raddo-brass-deep"
+            className="font-sans text-[10px] uppercase text-raddo-brass"
             style={{ letterSpacing: "0.3em" }}
           >
             Edition 01 · 2026
