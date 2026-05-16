@@ -192,7 +192,7 @@ export function Hero() {
             animate="show"
             className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
             style={{
-              fontSize: "clamp(44px, 7.2vw, 92px)",
+              fontSize: "clamp(35px, 5.76vw, 74px)",
               fontWeight: 800,
               lineHeight: 1.02,
               letterSpacing: "-0.025em",
