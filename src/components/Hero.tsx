@@ -321,8 +321,32 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
+const INTRO_FLAG = "raddo-hero-intro-played-v1";
+
 export function Hero() {
   const reduce = useReducedMotion();
+
+  /**
+   * Hero intro cascade plays once per browser session. We persist a flag in
+   * sessionStorage so internal navigation back to "/" snaps straight to the
+   * final state instead of re-running the 3.8s cascade. Re-opening the site
+   * in a new tab (fresh session) replays the intro.
+   */
+  const [introPlayed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try { return window.sessionStorage.getItem(INTRO_FLAG) === "1"; }
+    catch { return false; }
+  });
+
+  // When intro has already played, render every animated element directly in
+  // its "show" state · no transition, no flash.
+  const INITIAL: "hidden" | "show" = introPlayed ? "show" : "hidden";
+
+  useEffect(() => {
+    if (introPlayed) return;
+    try { window.sessionStorage.setItem(INTRO_FLAG, "1"); } catch { /* ignore */ }
+  }, [introPlayed]);
+
   const [now, setNow] = useState(() =>
     new Date().toLocaleString("en-US", {
       month: "long",
@@ -416,7 +440,7 @@ export function Hero() {
         {/* RADDO logo — top-left */}
         <motion.a
           href="/"
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="flex shrink-0 items-center gap-1.5 sm:gap-2"
           aria-label="RADDO"
@@ -470,7 +494,7 @@ export function Hero() {
 
         <motion.div
           variants={fade(700, 200)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="relative"
           aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
@@ -534,7 +558,7 @@ export function Hero() {
         {/* Overline · enters after logo + RADDO finish (~1.53s) */}
         <motion.p
           variants={fade(600, 1600)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="font-sans uppercase text-raddo-brass"
           style={{
@@ -552,7 +576,7 @@ export function Hero() {
           <motion.div
             aria-hidden
             variants={fade(1200, 1750)}
-            initial="hidden"
+            initial={INITIAL}
             animate="show"
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
             style={{
@@ -585,7 +609,7 @@ export function Hero() {
 
           {/* Headline · lines cascade after mandala (1900ms / 2100ms / 2300ms) */}
           <motion.h1
-            initial="hidden"
+            initial={INITIAL}
             animate="show"
             className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
             style={{
@@ -617,7 +641,7 @@ export function Hero() {
         {/* Briefing dossier · 2600ms */}
         <motion.section
           variants={rise(800, 2600)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="mt-12"
           style={{ maxWidth: "720px" }}
@@ -628,7 +652,7 @@ export function Hero() {
         {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
           variants={scaleX(600, 3000)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="mt-10 h-px origin-left"
           style={{
@@ -641,7 +665,7 @@ export function Hero() {
         {/* CTA row · 3200ms */}
         <motion.div
           variants={rise(700, 3200)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
         >
@@ -681,7 +705,7 @@ export function Hero() {
         {/* ====== HERO FILM PANEL ====== */}
         <motion.figure
           variants={rise(900, 3500)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="relative mt-16 overflow-hidden bg-raddo-paper"
           style={{
@@ -729,7 +753,7 @@ export function Hero() {
         {/* Six-source row */}
         <motion.div
           variants={fade(800, 3800)}
-          initial="hidden"
+          initial={INITIAL}
           animate="show"
           className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
         >
@@ -756,7 +780,7 @@ export function Hero() {
       <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
         <motion.div
           variants={fade(600, 0)}
-          initial="hidden"
+          initial={INITIAL}
           whileInView="show"
           viewport={{ once: true, margin: "-15%" }}
           className="mb-12 flex items-baseline justify-between"
@@ -780,7 +804,7 @@ export function Hero() {
             <motion.article
               key={item.roman}
               variants={rise(700, i * 120)}
-              initial="hidden"
+              initial={INITIAL}
               whileInView="show"
               viewport={{ once: true, margin: "-10%" }}
               className="flex flex-col"
