@@ -330,7 +330,7 @@ export function Hero() {
           className="mb-12 flex items-baseline justify-between"
         >
           <span
-            className="font-sans uppercase text-raddo-brass-deep"
+            className="font-sans uppercase text-raddo-brass"
             style={{ fontSize: "11px", letterSpacing: "0.3em" }}
           >
             The Index
