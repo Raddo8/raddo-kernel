@@ -125,11 +125,11 @@ function BriefingDossier() {
         aria-controls="briefing-001-body"
         className="w-full text-left group"
         style={{
-          padding: "32px 40px 36px",
           background: "transparent",
           cursor: "pointer",
         }}
       >
+        <div className="px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9">
         <div
           className="font-display mb-4"
           style={{
