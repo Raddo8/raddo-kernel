@@ -504,9 +504,9 @@ export function Hero() {
                     opacity: 1,
                     y: 0,
                     transition: {
-                      duration: reduce ? 0 : 0.7,
-                      delay: reduce ? 0 : 0.55 + i * 0.07,
-                      ease: EASE,
+                      duration: 0.62 * dScale,
+                      delay: (0.46 + i * 0.055) * tScale,
+                      ease: EASE_OUT,
                     },
                   },
                 }}
