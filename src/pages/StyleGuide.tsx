@@ -430,6 +430,74 @@ export default function StyleGuide() {
   );
 }
 
+function MotionPreferenceCard() {
+  const { pref, setPref, isReduced } = useMotionPreference();
+
+  const options: { value: MotionPref; label: string; hint: string }[] = [
+    { value: "system", label: "System", hint: "Follow OS · prefers-reduced-motion" },
+    { value: "reduce", label: "Reduce", hint: "Force motion off · static reveals" },
+    { value: "full",   label: "Full",   hint: "Force motion on · ignore OS" },
+  ];
+
+  return (
+    <div className="rounded-md border border-border bg-card p-5">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+        <div>
+          <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase">
+            Reduced motion · user preference
+          </div>
+          <div className="font-sans text-sm text-foreground mt-1">
+            Pick how the app should behave when you prefer less animation. Saved to your browser.
+          </div>
+        </div>
+        <div
+          className="font-mono text-[10px] tracking-[0.18em] uppercase shrink-0 px-3 py-1 rounded-sm"
+          style={{
+            color: isReduced ? "hsl(var(--raddo-brass-deep))" : "hsl(var(--muted-foreground))",
+            border: `1px solid ${isReduced ? "hsl(var(--raddo-brass))" : "hsl(var(--border))"}`,
+            backgroundColor: isReduced ? "hsl(var(--raddo-brass) / 0.12)" : "transparent",
+          }}
+          aria-live="polite"
+        >
+          Motion · {isReduced ? "Off" : "On"}
+        </div>
+      </div>
+      <div role="radiogroup" aria-label="Motion preference" className="grid grid-cols-1 md:grid-cols-3 gap-2">
+        {options.map((opt) => {
+          const active = pref === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="radio"
+              aria-checked={active}
+              onClick={() => setPref(opt.value)}
+              className="text-left p-4 rounded-md transition-colors"
+              style={{
+                border: `1px solid ${active ? "hsl(var(--raddo-brass))" : "hsl(var(--border))"}`,
+                backgroundColor: active ? "hsl(var(--raddo-brass) / 0.08)" : "transparent",
+                cursor: "pointer",
+              }}
+            >
+              <div
+                className="font-display"
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: active ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--foreground))",
+                }}
+              >
+                {opt.label}
+              </div>
+              <div className="font-sans text-xs text-muted-foreground mt-1">{opt.hint}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
     <section>
