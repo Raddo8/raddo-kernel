@@ -403,15 +403,21 @@ export function Hero() {
     return () => clearInterval(t);
   }, [reduce]);
 
+  // Low-power devices get a brisker cascade (delays halved, durations -15%) so
+  // the page becomes interactive sooner without abandoning the staircase rhythm.
+  const lowPower = useMemo(() => detectLowPower(), []);
+  const dScale = reduce ? 0 : lowPower ? 0.85 : 1;
+  const tScale = reduce ? 0 : lowPower ? 0.5 : 1;
+
   const rise = (duration: number, delay: number): Variants => ({
-    hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 24 },
+    hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 20 },
     show: {
       opacity: 1,
       y: 0,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
@@ -421,9 +427,9 @@ export function Hero() {
     show: {
       opacity: 1,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
@@ -434,9 +440,9 @@ export function Hero() {
       opacity: 1,
       scaleX: 1,
       transition: {
-        duration: reduce ? 0 : duration / 1000,
-        delay: reduce ? 0 : delay / 1000,
-        ease: EASE,
+        duration: (duration / 1000) * dScale,
+        delay: (delay / 1000) * tScale,
+        ease: EASE_OUT,
       },
     },
   });
