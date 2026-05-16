@@ -6,57 +6,7 @@
 
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 10%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-
-    --primary: 220 25% 10%;
-    --primary-foreground: 220 20% 97%;
-
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 25% 10%;
-
-    --muted: 220 15% 94%;
-    --muted-foreground: 220 10% 46%;
-
-    --accent: 220 15% 92%;
-    --accent-foreground: 220 25% 10%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 220 25% 10%;
-
-    --radius: 0.375rem;
-
-    /* Status colors */
-    --status-amber: 38 92% 50%;
-    --status-amber-foreground: 38 92% 12%;
-    --status-green: 142 71% 45%;
-    --status-green-foreground: 142 71% 10%;
-    --status-red: 0 72% 51%;
-    --status-red-foreground: 0 0% 100%;
-    --status-blue: 217 91% 60%;
-    --status-blue-foreground: 0 0% 100%;
-
-    /* Sidebar */
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 220 15% 75%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 220 25% 10%;
-    --sidebar-accent: 220 20% 16%;
-    --sidebar-accent-foreground: 220 15% 85%;
-    --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 38 92% 50%;
-
-    /* RADDO brand tokens (HSL) */
+    /* RADDO brand tokens (HSL triplets — used directly and as the source for semantic tokens) */
     --raddo-ink: 210 82% 27%;
     --raddo-ink-deep: 211 93% 17%;
     --raddo-ink-soft: 210 75% 37%;
@@ -67,45 +17,57 @@
     --raddo-ash: 48 4% 37%;
     --raddo-charcoal: 60 3% 17%;
     --raddo-night: 240 10% 4%;
-  }
 
-  .dark {
-    --background: 220 25% 6%;
-    --foreground: 220 15% 90%;
+    /* Semantic tokens remapped to the RADDO palette (paper-dominant) */
+    --background: var(--raddo-paper);
+    --foreground: var(--raddo-charcoal);
 
-    --card: 220 25% 9%;
-    --card-foreground: 220 15% 90%;
+    --card: 0 0% 100%;
+    --card-foreground: var(--raddo-charcoal);
 
-    --popover: 220 25% 9%;
-    --popover-foreground: 220 15% 90%;
+    --popover: 0 0% 100%;
+    --popover-foreground: var(--raddo-charcoal);
 
-    --primary: 38 92% 50%;
-    --primary-foreground: 220 25% 6%;
+    --primary: var(--raddo-ink-deep);
+    --primary-foreground: var(--raddo-paper);
 
-    --secondary: 220 20% 14%;
-    --secondary-foreground: 220 15% 85%;
+    --secondary: var(--raddo-paper-edge);
+    --secondary-foreground: var(--raddo-ink-deep);
 
-    --muted: 220 20% 14%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 40 20% 93%;
+    --muted-foreground: var(--raddo-ash);
 
-    --accent: 220 20% 16%;
-    --accent-foreground: 220 15% 90%;
+    --accent: var(--raddo-brass);
+    --accent-foreground: var(--raddo-ink-deep);
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 16%;
-    --input: 220 20% 16%;
-    --ring: 38 92% 50%;
+    --border: var(--raddo-paper-edge);
+    --input: var(--raddo-paper-edge);
+    --ring: var(--raddo-brass);
 
-    --sidebar-background: 220 28% 5%;
-    --sidebar-foreground: 220 15% 65%;
-    --sidebar-primary: 38 92% 50%;
-    --sidebar-primary-foreground: 220 25% 6%;
-    --sidebar-accent: 220 20% 10%;
-    --sidebar-accent-foreground: 220 15% 80%;
-    --sidebar-border: 220 20% 12%;
-    --sidebar-ring: 38 92% 50%;
+    --radius: 0.5rem;
+
+    /* Status colors */
+    --status-amber: 35 86% 54%;
+    --status-amber-foreground: 33 84% 18%;
+    --status-green: 142 60% 35%;
+    --status-green-foreground: 0 0% 100%;
+    --status-red: 0 72% 51%;
+    --status-red-foreground: 0 0% 100%;
+    --status-blue: 210 82% 27%;
+    --status-blue-foreground: 0 0% 100%;
+
+    /* Sidebar — ink-deep chrome with brass accent */
+    --sidebar-background: var(--raddo-ink-deep);
+    --sidebar-foreground: 40 20% 88%;
+    --sidebar-primary: var(--raddo-brass);
+    --sidebar-primary-foreground: var(--raddo-ink-deep);
+    --sidebar-accent: 211 60% 22%;
+    --sidebar-accent-foreground: var(--raddo-paper);
+    --sidebar-border: 211 60% 22%;
+    --sidebar-ring: var(--raddo-brass);
   }
 }
 

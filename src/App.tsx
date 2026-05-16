@@ -27,6 +27,8 @@ import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
+import StyleGuide from "@/pages/StyleGuide";
+import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -48,20 +50,22 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/*
-            Routing convention:
-            - Top-level routes (/, /how, /pricing, /about, /security, /consult)
-              are PUBLIC marketing surfaces. No AuthGate, no AppLayout chrome.
-            - The product lives under /app/* behind AuthGate + WorkspaceProvider
-              + AppLayout. Future marketing routes follow the same split.
-          */}
-          <Route path="/" element={<Hero />} />
-          <Route path="/respond/:token" element={<RespondPage />} />
+    <ThemeOverridesProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/*
+              Routing convention:
+              - Top-level routes (/, /how, /pricing, /about, /security, /consult)
+                are PUBLIC marketing surfaces. No AuthGate, no AppLayout chrome.
+              - The product lives under /app/* behind AuthGate + WorkspaceProvider
+                + AppLayout. Future marketing routes follow the same split.
+            */}
+            <Route path="/" element={<Hero />} />
+            <Route path="/style-guide" element={<StyleGuide />} />
+            <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
@@ -101,9 +105,10 @@ const App = () => (
           <Route path="/scheduler-health" element={<Navigate to="/app/scheduler-health" replace />} />
           <Route path="/billing" element={<Navigate to="/app/billing" replace />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeOverridesProvider>
   </QueryClientProvider>
 );
 
