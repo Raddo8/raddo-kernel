@@ -30,10 +30,15 @@ const COB_TITLES = [
   "Intelligence",
   "Build",
   "Bookings",
-  "Bench",
-  "Bricks",
   "Health",
   "Logistics",
+  "Projects",
+  "Reports",
+  "Analysis",
+  "Presentation",
+  "Builds",
+  "Recruiting",
+  "Receivables",
 ];
 
 const INDEX = [
