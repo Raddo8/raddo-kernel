@@ -203,12 +203,11 @@ export function Hero() {
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-          <div className="flex flex-col items-center gap-1 px-3 py-2">
+          <div className="flex flex-col items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2">
             {/* Monogram */}
             <span
-              className="font-display font-black text-raddo-ink-deep"
+              className="font-display font-black text-raddo-ink-deep text-[15px] sm:text-[22px]"
               style={{
-                fontSize: "22px",
                 letterSpacing: "0.04em",
                 lineHeight: 1,
               }}
@@ -218,8 +217,8 @@ export function Hero() {
 
             {/* Chief of [rotating] */}
             <div
-              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep"
-              style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "-0.005em" }}
+              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep text-[12px] sm:text-[18px]"
+              style={{ fontWeight: 700, letterSpacing: "-0.005em" }}
             >
               <span style={{ lineHeight: 1 }}>Chief of</span>
               <span
