@@ -149,29 +149,66 @@ export function Hero() {
           Clarity · Origin · Decision.
         </motion.p>
 
-        {/* Headline */}
-        <motion.h1
-          variants={rise(1200, 400)}
-          initial="hidden"
-          animate="show"
-          className="mt-7 font-display text-raddo-ink-deep"
-          style={{
-            fontSize: "clamp(44px, 7.2vw, 92px)",
-            fontWeight: 800,
-            lineHeight: 1.02,
-            letterSpacing: "-0.025em",
-            maxWidth: "1080px",
-          }}
-        >
-          <span className="block">Built for you day one.</span>
-          <span
-            className="block italic"
-            style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
+        {/* Headline with Six-Source Mandala backdrop */}
+        <div className="relative mt-7">
+          {/* Mandala backdrop */}
+          <motion.div
+            aria-hidden
+            variants={fade(1200, 300)}
+            initial="hidden"
+            animate="show"
+            className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
+            style={{
+              borderRadius: 8,
+              border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
+              boxShadow:
+                "0 1px 0 hsl(var(--raddo-paper-edge)) inset, 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.2)",
+            }}
           >
-            Sharpens with every action.
-          </span>
-          <span className="block">Yours to wield anywhere.</span>
-        </motion.h1>
+            <img
+              src="/brand/hero-mandala-bg.png"
+              alt=""
+              className="h-full w-full object-cover"
+              style={{ opacity: 0.75 }}
+            />
+            {/* Paper wash to keep text crisp */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background:
+                  "linear-gradient(90deg, hsl(var(--raddo-paper) / 0.78) 0%, hsl(var(--raddo-paper) / 0.5) 55%, hsl(var(--raddo-paper) / 0.35) 100%)",
+              }}
+            />
+            {/* Brass frame corners */}
+            <span className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-brass-deep/60" />
+            <span className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-brass-deep/60" />
+            <span className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-brass-deep/60" />
+            <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
+          </motion.div>
+
+          <motion.h1
+            variants={rise(1200, 400)}
+            initial="hidden"
+            animate="show"
+            className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
+            style={{
+              fontSize: "clamp(44px, 7.2vw, 92px)",
+              fontWeight: 800,
+              lineHeight: 1.02,
+              letterSpacing: "-0.025em",
+              maxWidth: "1080px",
+            }}
+          >
+            <span className="block">Built for you day one.</span>
+            <span
+              className="block italic"
+              style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
+            >
+              Sharpens with every action.
+            </span>
+            <span className="block">Yours to wield anywhere.</span>
+          </motion.h1>
+        </div>
 
         {/* Lede */}
         <motion.p
