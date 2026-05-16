@@ -48,6 +48,279 @@ const INDEX = [
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
+function BriefingDossier() {
+  const reduce = useReducedMotion();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <article
+      className="relative"
+      style={{
+        backgroundColor: "hsl(var(--raddo-paper))",
+        border: "1px solid hsl(var(--raddo-paper-edge))",
+        borderRadius: 8,
+        boxShadow: open
+          ? "0 8px 32px -16px hsl(var(--raddo-ink-deep) / 0.18)"
+          : "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+        transition: "box-shadow 220ms cubic-bezier(0.22,1,0.36,1)",
+      }}
+    >
+      {/* Brass corner registration marks */}
+      <CornerMark pos="tl" />
+      <CornerMark pos="tr" />
+      <CornerMark pos="bl" />
+      <CornerMark pos="br" />
+
+      {/* Top meta strip */}
+      <div
+        className="flex items-center justify-between font-mono"
+        style={{
+          padding: "14px 24px",
+          borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+          fontSize: 10,
+          letterSpacing: "0.18em",
+          color: "hsl(var(--raddo-ash))",
+          textTransform: "uppercase",
+        }}
+      >
+        <span>BRIEFING · 001</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span
+            aria-hidden
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              backgroundColor: "hsl(var(--raddo-brass))",
+            }}
+          />
+          CLASSIFIED · FOR PRINCIPAL
+        </span>
+      </div>
+
+      {/* Header · clickable */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="briefing-001-body"
+        className="w-full text-left group"
+        style={{
+          padding: "32px 40px 36px",
+          background: "transparent",
+          cursor: "pointer",
+        }}
+      >
+        <div
+          className="font-display mb-4"
+          style={{
+            fontVariant: "small-caps",
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            color: "hsl(var(--raddo-brass))",
+          }}
+        >
+          What it is
+        </div>
+
+        <div className="flex items-end justify-between gap-6">
+          <h2
+            className="font-display text-raddo-ink-deep m-0"
+            style={{
+              fontWeight: 800,
+              fontSize: "clamp(36px, 4.2vw, 48px)",
+              lineHeight: 1.05,
+            }}
+          >
+            What is COB?
+          </h2>
+
+          <div
+            className="flex items-center gap-3 font-mono shrink-0"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              color: "hsl(var(--raddo-ash))",
+              textTransform: "uppercase",
+              paddingBottom: 8,
+            }}
+          >
+            <span>{open ? "Close" : "Open dossier"}</span>
+            <span
+              aria-hidden
+              className="grid place-items-center"
+              style={{
+                width: 28,
+                height: 28,
+                border: "1px solid hsl(var(--raddo-brass))",
+                borderRadius: 4,
+                color: "hsl(var(--raddo-brass-deep))",
+                transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                backgroundColor: open
+                  ? "hsl(var(--raddo-brass) / 0.12)"
+                  : "transparent",
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+              </svg>
+            </span>
+          </div>
+        </div>
+
+        <div
+          className="mt-5 flex items-center gap-4 font-mono"
+          style={{
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            color: "hsl(var(--raddo-ash))",
+            textTransform: "uppercase",
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              width: 56,
+              height: 1.5,
+              backgroundColor: "hsl(var(--raddo-brass))",
+            }}
+          />
+          <span>Subject · Decision Intelligence</span>
+          <span aria-hidden style={{ color: "hsl(var(--raddo-paper-edge))" }}>·</span>
+          <span>6 paragraphs · 90 sec read</span>
+        </div>
+      </button>
+
+      {/* Expandable body */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id="briefing-001-body"
+            key="body"
+            initial={reduce ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={reduce ? { height: "auto", opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
+            style={{ overflow: "hidden" }}
+          >
+            <div
+              style={{
+                padding: "8px 40px 40px",
+                borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              }}
+            >
+              <div
+                aria-hidden
+                className="mt-8 mb-8"
+                style={{
+                  width: 280,
+                  maxWidth: "100%",
+                  height: 1.5,
+                  backgroundColor: "hsl(var(--raddo-brass))",
+                }}
+              />
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                COB is a system of{" "}
+                <strong className="text-raddo-ink-deep font-bold">
+                  intelligence, strategy, and competence
+                </strong>{" "}
+                built around one person · or one business. It reads what you read,
+                sits in your meetings, and holds the full context of your operation:
+                finance, legal, people, risk, every functional domain. It learns how
+                you think, how you write, what you weigh, what you cut. From that
+                foundation, it produces the briefings, drafts, projects, reports,
+                presentations, and counsel that let you show up as the sharpest
+                version of yourself in every room you walk into.
+              </p>
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                Two things separate COB from any tool you have used before.
+              </p>
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                <strong className="text-raddo-ink-deep font-bold">It is portable.</strong>{" "}
+                Not locked to one app, one platform, one provider. It carries
+                everything you teach it across the systems you already use.
+              </p>
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong>{" "}
+                It does not reset when you change roles, restructure your team, or
+                move on to the next thing. The longer you use it, the more of you it
+                carries.
+              </p>
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                Executives without a COB are now competing against executives with
+                one. The gap shows up quietly · in who is prepared when the question
+                lands, who has the draft ready before the meeting, who remembers
+                what was decided three quarters ago when it matters again, who
+                carries the full operation with them instead of behind them. The
+                disadvantage is small at first. It compounds.
+              </p>
+
+              <div
+                aria-hidden
+                className="my-7"
+                style={{
+                  width: 120,
+                  height: 1.5,
+                  backgroundColor: "hsl(var(--raddo-brass))",
+                }}
+              />
+
+              <div style={{ breakInside: "avoid" }}>
+                <p
+                  className="font-display text-raddo-ink-deep mb-4"
+                  style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
+                >
+                  The question is no longer whether decision intelligence at this
+                  depth becomes the standard for serious operators.
+                </p>
+                <p
+                  className="font-display text-raddo-ink-deep"
+                  style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
+                >
+                  The question is whether you have one when it does.
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </article>
+  );
+}
+
+function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
+  const size = 10;
+  const offset = -1;
+  const style: React.CSSProperties = {
+    position: "absolute",
+    width: size,
+    height: size,
+    borderColor: "hsl(var(--raddo-brass))",
+    borderStyle: "solid",
+    borderWidth: 0,
+  };
+  if (pos === "tl") {
+    style.top = offset; style.left = offset;
+    style.borderTopWidth = 1.5; style.borderLeftWidth = 1.5;
+  } else if (pos === "tr") {
+    style.top = offset; style.right = offset;
+    style.borderTopWidth = 1.5; style.borderRightWidth = 1.5;
+  } else if (pos === "bl") {
+    style.bottom = offset; style.left = offset;
+    style.borderBottomWidth = 1.5; style.borderLeftWidth = 1.5;
+  } else {
+    style.bottom = offset; style.right = offset;
+    style.borderBottomWidth = 1.5; style.borderRightWidth = 1.5;
+  }
+  return <span aria-hidden style={style} />;
+}
+
 export function Hero() {
   const reduce = useReducedMotion();
   const [now, setNow] = useState(() =>
