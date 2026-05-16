@@ -147,7 +147,7 @@ export function Hero() {
           <img
             src={raddoLogo}
             alt="RADDO"
-            className="h-24 w-auto md:h-28"
+            className="h-36 w-auto md:h-[10.5rem]"
             style={{ objectFit: "contain" }}
           />
         </motion.a>
