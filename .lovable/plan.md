@@ -1,85 +1,117 @@
-## Status — LOCKED. Ready to build.
+## Cover revision · "What is COB?" section
 
-All three gates answered: **A · yes-i · A**. Setup v1.0 in hand (871 lines, validated). Mandala asset verified (2.5 MB, sufficient for 300dpi print). Video clip validated (8s, 1280×720, h264+aac, 2.9 MB).
+### Heads-up before building
 
----
+The lede currently in `cob_capability_brief_v6.html` is **not** the paragraph you quoted. It reads:
 
-## Build plan (final)
+> "Your COB is a system of **intelligence, strategy, and competence**. Built around you from day one. Connected to your email, calendar, documents, team and data. It learns how you work. It is portable. It carries everything you teach it. The longer you use it, the better it gets at being yours. And it stays yours for decades."
 
-### 1 · `cob_capability_brief_v6.html` — cover redesigned, body verbatim
+The "Email, meetings, documents, business chat…" paragraph you asked to remove lived in an earlier draft. I'll treat your intent as: **replace whatever lede is currently there with the new "What is COB?" section.** Flag if that's wrong before I start.
 
-**Cover layout (top→bottom):**
-1. Brand bar: `RADDO` mark left · `EDITION 01 · 2026` over `Capability Brief` italic right
-2. Overline: `Clarity · Origin · Decision.` (brass, 0.25em tracking)
-3. Headline (Fraunces 800, clamp 56–88px):
-   - "Built for you day one." — ink-deep
-   - "*Sharpens with every action.*" — italic, brass-deep
-   - "Yours to wield anywhere." — ink-deep
-4. Lede (Inter 19px, charcoal, max-width 640px) — verbatim from dispatch
-5. Brass hairline (asymmetric, 280px scaleX entrance)
-6. **Hero video panel** (1100×620, 8px border-radius, 1.5px brass border, paper inner):
-   - `<video autoplay muted loop playsinline poster="assets/hero-poster.jpg">` with mp4 + webm sources
-   - Mandala becomes the poster (frame from `public/brand/hero-six-source-mandala.png` re-cropped to 1100×620, used in print + `prefers-reduced-motion`)
-   - `@media print` and `@media (prefers-reduced-motion: reduce)` swap video → poster `<img>`
-7. Editorial index strip — two columns, brass roman numerals, ink labels (I/II/III/IV per spec)
-8. Brass CTA box (≈540×140, centered): `BEGIN` eyebrow · `Set up your COB` Fraunces 28px · sub · `Begin setup →` brass-deep
-   - href: `./RADDO_Individual_COB_Setup.html`
+### Placement recommendation
 
-**Body preserved verbatim** (Day One / Decade Ten, Spokes, Split, Industries, Roles, Integrations, footer). Existing blue `.cta` in body left untouched — flagged for separate v7 sweep dispatch.
+You offered two fallbacks if the cover gets too dense. My call: **option (b)** — keep the cover as hero-headline + video + index + CTA, and place "What is COB?" as the **first body section immediately after the cover page break**. Reasoning:
 
-**Motion cascade** (curve `cubic-bezier(0.22,1,0.36,1)`):
-overline fade 600ms → headline rise 1200ms @200 → lede rise 800ms @600 → hairline scaleX 600ms @1100 → video panel fade 800ms @1300 (video begins playing on fade-in) → index strip rise 800ms @1700 → CTA rise 800ms @2100. Total ≤2900ms. CTA hover: 1px lift, 220ms.
+- Cover already carries overline + 3-line headline + video panel + 4-cell index + CTA box. Inlining a 6-paragraph editorial section pushes the CTA below a second scroll on screen and forces a print overflow that breaks the cover's single-page integrity.
+- "What is COB?" reads as a foundational chapter, not a hero lede. Giving it its own breathing room honors restraint.
+- The existing brass hairline between headline and video stays. The new section gets its own hairlines per spec.
 
-**Print stylesheet:** `@page { size: Letter; margin: 0.6in }`, cover page-break-after always, video→poster swap, hero poster prints at 300dpi via mandala source.
+If you'd rather force it inline on the cover, say so and I'll cut the index strip to page 2 instead.
 
-### 2 · `RADDO_Individual_COB_Setup.html` — v1.0 bundled verbatim
+### Build steps
 
-Drop user-uploaded HTML (871 lines, theme-gap + 10×10 word grids + 15-row DISC + `mailto:cob.brahan@gmail.com` submit) into:
-- `/mnt/documents/raddo-brief/RADDO_Individual_COB_Setup.html` (resolves cover CTA `./` href)
-- `public/setup.html` (mirrors for `raddo.lovable.app/setup.html`)
+1. **Remove** current `.cover-lede` `<p>` (line 909–911) from the cover.
+2. **Remove** the now-redundant `.cover-hairline` div (line 913) — the video panel becomes the visual closer of the cover. (Or keep it; minor call. I'll keep it removed for cleaner cover rhythm. Flag if you want it retained.)
+3. **Insert** new `<section class="what-is-cob">` immediately after `</div><!-- /cover -->`, before the existing body content begins.
+4. **Add CSS** for the new section (scoped, no token drift):
 
-Zero edits to the Setup HTML.
-
-### 3 · Hero video assets
-
-- Strip audio + re-encode mp4 (h264, CRF 22, ~1.2 MB)
-- Generate webm sibling (vp9, ~900 KB) for broader browser fidelity
-- Extract poster JPEG from frame 0 (1100×620, q=85, ~120 KB)
-- All three written to `/mnt/documents/raddo-brief/assets/`
-
-### 4 · Deliverables (final)
-
+```text
+.what-is-cob {
+  max-width: 660px;
+  margin: 0 auto;
+  padding: 72px 32px 88px;
+  opacity: 0; transform: translateY(20px);
+  animation: cv-rise 800ms cubic-bezier(0.22,1,0.36,1) 2100ms forwards;
+}
+.what-is-cob .eyebrow {
+  font-family: 'Fraunces'; font-variant: small-caps;
+  font-size: 11px; letter-spacing: 0.22em;
+  color: var(--brass);            /* #EF9F27, bright */
+  margin-bottom: 18px;
+}
+.what-is-cob h2 {
+  font-family: 'Fraunces'; font-weight: 800;
+  font-size: clamp(36px, 4.2vw, 48px);
+  line-height: 1.1; color: var(--ink-deep);
+  margin: 0 0 28px;
+}
+.what-is-cob .rule-wide {
+  width: 280px; height: 1.5px; background: var(--brass);
+  margin: 0 0 36px;               /* sits above the section, per spec */
+}
+.what-is-cob p {
+  font-family: 'Inter'; font-size: 18px; line-height: 1.55;
+  color: var(--charcoal); margin: 0 0 24px;
+}
+.what-is-cob p strong { color: var(--ink-deep); font-weight: 700; }
+.what-is-cob .rule-close {
+  width: 120px; height: 1.5px; background: var(--brass);
+  margin: 8px 0 28px;
+}
+.what-is-cob .closer p {
+  font-family: 'Fraunces'; font-style: italic;
+  font-size: 21px; line-height: 1.45;
+  color: var(--ink-deep); margin: 0 0 16px;
+}
+@media print {
+  .what-is-cob { animation: none; opacity: 1; transform: none; padding-top: 56px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .what-is-cob { animation: none; opacity: 1; transform: none; }
+}
 ```
-/mnt/documents/raddo-brief/
-  cob_capability_brief_v6.html
-  RADDO_Individual_COB_Setup.html
-  assets/
-    hero.mp4
-    hero.webm
-    hero-poster.jpg
-public/setup.html
+
+Closer treatment: **Fraunces italic** — carries more editorial weight than Inter italic on a paper field and pairs with the headline family without introducing a third register.
+
+5. **HTML structure** (verbatim copy, bold per spec):
+
+```text
+<section class="what-is-cob">
+  <div class="rule-wide" aria-hidden="true"></div>
+  <div class="eyebrow">What it is</div>
+  <h2>What is COB?</h2>
+
+  <p>COB is a system of <strong>intelligence, strategy, and competence</strong> built around one person — or one business. It reads what you read, sits in your meetings, and holds the full context of your operation: finance, legal, people, risk, every functional domain. It learns how you think, how you write, what you weigh, what you cut. From that foundation, it produces the briefings, drafts, projects, reports, presentations, and counsel that let you show up as the sharpest version of yourself in every room you walk into.</p>
+
+  <p>Two things separate COB from any tool you have used before.</p>
+
+  <p><strong>It is portable.</strong> Not locked to one app, one platform, one provider. It carries everything you teach it across the systems you already use.</p>
+
+  <p><strong>It is permanent.</strong> It does not reset when you change roles, restructure your team, or move on to the next thing. The longer you use it, the more of you it carries.</p>
+
+  <p>Executives without a COB are now competing against executives with one. The gap shows up quietly — in who is prepared when the question lands, who has the draft ready before the meeting, who remembers what was decided three quarters ago when it matters again, who carries the full operation with them instead of behind them. The disadvantage is small at first. It compounds.</p>
+
+  <div class="rule-close" aria-hidden="true"></div>
+
+  <div class="closer">
+    <p>The question is no longer whether decision intelligence at this depth becomes the standard for serious operators.</p>
+    <p>The question is whether you have one when it does.</p>
+  </div>
+</section>
 ```
 
-`presentation-artifact` tags for the brief, Setup, and poster JPEG.
+6. **QA**: headless Chromium → PDF → `pdftoppm` JPEGs at 150dpi. Verify:
+   - Eyebrow renders small-caps brass at 0.22em tracking
+   - Bold tokens render ink-deep
+   - Closer renders Fraunces italic ~21px ink-deep
+   - Both hairlines bright brass `#EF9F27`, correct widths (280 / 120)
+   - Section reflows cleanly across page break in print
+   - Motion cascade enters after the cover settles; reduced-motion snaps
+7. **Re-emit** `presentation-artifact` for the updated brief.
 
-### 5 · QA protocol (mandatory, blocks delivery)
+### Out of scope (will not touch)
 
-- Chromium headless → PDF → `pdftoppm` JPEGs at 150dpi
-- Inspect cover at 1100 / 860 / 520 viewport renders
-- Verify: headline italic + brass-deep on line 2 only · video plays muted+loop on screen · poster appears in PDF · CTA href resolves to bundled Setup in headless click-test · `prefers-reduced-motion` emulation snaps video→poster · all bible tokens render correctly
-- Composite confidence reported in HANDOFF · no "clean" claim without screenshots
-
-### 6 · Post-build HANDOFF
-
-Signed `— LOVABLE`, posted to `docs/HANDOFF.md` with files changed, bible sections honored, ambiguous calls (none expected — all resolved at planning), QA screenshots inline, composite confidence score, reassign to COB-RADDO.
-
----
-
-## Out of scope (separate dispatches)
-
-- Body `.cta` blue→brass sweep across v6 body (v7)
-- Live-site `src/components/Hero.tsx` headline propagation (separate dispatch)
-- Expanding `public/brand/` allow-list with additional light-variant imagery (v7)
-- Any backend / Supabase touches
-
-— LOVABLE
+- `src/components/Hero.tsx` (live site)
+- Setup form HTML
+- Index strip wording, CTA copy, body sections below
+- Token palette
