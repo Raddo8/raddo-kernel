@@ -134,7 +134,7 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-between gap-6 px-8 pt-8 md:px-12 md:pt-10">
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-6 px-8 pt-8 md:px-12 md:pt-10">
         {/* RADDO logo — top-left */}
         <motion.a
           href="/"
@@ -147,7 +147,7 @@ export function Hero() {
           <img
             src={raddoLogo}
             alt="RADDO"
-            className="h-24 w-auto md:h-28"
+            className="h-36 w-auto md:h-[10.5rem]"
             style={{ objectFit: "contain" }}
           />
         </motion.a>
