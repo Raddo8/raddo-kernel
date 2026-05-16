@@ -12,6 +12,29 @@ const SOURCES = [
   "Financials",
 ];
 
+const COB_TITLES = [
+  "Business",
+  "Strategy",
+  "Operations",
+  "Brand",
+  "Sales",
+  "People",
+  "Communications",
+  "Staff",
+  "Books",
+  "Data",
+  "Counsel",
+  "Capital",
+  "Risk",
+  "Intelligence",
+  "Build",
+  "Bookings",
+  "Bench",
+  "Bricks",
+  "Health",
+  "Logistics",
+];
+
 const INDEX = [
   { roman: "I", label: "Clarity", body: "Six sources resolve into one brief before the day begins." },
   { roman: "II", label: "Origin", body: "Every line is sourced. Email, meeting, document, ledger — labelled." },
