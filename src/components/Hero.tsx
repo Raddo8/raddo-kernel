@@ -1,8 +1,27 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo.png";
 
-const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
+// Motion doctrine · two curves only.
+// EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
+// EASE_STD (project standard) — micro-interactions, hovers, exits. Matches 220ms tokens.
+const EASE_OUT: Transition["ease"] = [0.16, 1, 0.3, 1];
+const EASE_STD: Transition["ease"] = [0.22, 1, 0.36, 1];
+// Back-compat alias for inline usages elsewhere in this file.
+const EASE = EASE_STD;
+
+// Detect lower-powered devices once at module load · keeps cascade brisk on
+// modest hardware (older phones, low-CPU laptops) while preserving the premium
+// settle for capable machines. Halves delays and trims durations ~15%.
+function detectLowPower(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const cores = (navigator as Navigator & { hardwareConcurrency?: number }).hardwareConcurrency ?? 8;
+  const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 8;
+  const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  if (conn?.saveData) return true;
+  if (conn?.effectiveType && /2g|slow/i.test(conn.effectiveType)) return true;
+  return cores <= 4 || mem <= 4;
+}
 
 const SOURCES = [
   "Email",
