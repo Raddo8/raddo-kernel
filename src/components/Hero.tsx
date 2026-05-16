@@ -106,7 +106,7 @@ export function Hero() {
           <span className="font-display text-[22px] font-black tracking-[-0.02em] text-raddo-ink-deep">
             RADDO
           </span>
-          <span className="hidden h-px w-12 bg-raddo-brass-deep/40 md:block" />
+          <span className="hidden h-px w-12 bg-raddo-ink-deep/40 md:block" />
           <span
             className="hidden font-sans text-[11px] uppercase text-raddo-ash md:inline"
             style={{ letterSpacing: "0.25em" }}
@@ -121,7 +121,7 @@ export function Hero() {
           className="text-right"
         >
           <div
-            className="font-sans text-[10px] uppercase text-raddo-brass-deep"
+            className="font-sans text-[10px] uppercase text-raddo-ink-deep"
             style={{ letterSpacing: "0.3em" }}
           >
             Edition 01 · 2026
@@ -139,7 +139,7 @@ export function Hero() {
           variants={fade(600, 200)}
           initial="hidden"
           animate="show"
-          className="font-sans uppercase text-raddo-brass-deep"
+          className="font-sans uppercase text-raddo-ink-deep"
           style={{
             fontSize: "12px",
             fontWeight: 500,
@@ -237,7 +237,7 @@ export function Hero() {
               padding: "12px 4px",
             }}
           >
-            <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
+            <span className="border-b border-raddo-ink-deep/40 pb-[2px]">
               Read the Capability Brief
             </span>
             <span aria-hidden>→</span>
@@ -279,10 +279,10 @@ export function Hero() {
             </video>
           )}
           {/* Brass frame corners */}
-          <span aria-hidden className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-ink-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-ink-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-ink-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-ink-deep/60" />
           {/* Caption */}
           <figcaption
             className="absolute bottom-4 left-4 font-sans uppercase text-raddo-ink-deep/70"
@@ -297,12 +297,12 @@ export function Hero() {
           variants={fade(800, 2200)}
           initial="hidden"
           animate="show"
-          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
+          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-ink-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <div key={src} className="flex items-baseline gap-2">
               <span
-                className="font-sans text-raddo-brass-deep tabular-nums"
+                className="font-sans text-raddo-ink-deep tabular-nums"
                 style={{ fontSize: "10px", letterSpacing: "0.18em" }}
               >
                 {String(i + 1).padStart(2, "0")}
@@ -328,7 +328,7 @@ export function Hero() {
           className="mb-12 flex items-baseline justify-between"
         >
           <span
-            className="font-sans uppercase text-raddo-brass-deep"
+            className="font-sans uppercase text-raddo-ink-deep"
             style={{ fontSize: "11px", letterSpacing: "0.3em" }}
           >
             The Index
@@ -352,12 +352,12 @@ export function Hero() {
               className="flex flex-col"
             >
               <div
-                className="font-display text-raddo-brass-deep"
+                className="font-display text-raddo-ink-deep"
                 style={{ fontSize: "44px", fontWeight: 800, lineHeight: 1 }}
               >
                 {item.roman}
               </div>
-              <div className="mt-1 h-px w-8 bg-raddo-brass-deep/60" />
+              <div className="mt-1 h-px w-8 bg-raddo-ink-deep/60" />
               <h3
                 className="mt-5 font-display text-raddo-ink-deep"
                 style={{ fontSize: "24px", fontWeight: 700, letterSpacing: "-0.01em" }}
@@ -380,7 +380,7 @@ export function Hero() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <span
-              className="font-sans uppercase text-raddo-brass-deep"
+              className="font-sans uppercase text-raddo-ink-deep"
               style={{ fontSize: "11px", letterSpacing: "0.3em" }}
             >
               Begin
@@ -395,7 +395,7 @@ export function Hero() {
               }}
             >
               Sit down with us for five minutes.
-              <span className="block italic text-raddo-brass-deep">Walk out with a plan.</span>
+              <span className="block italic text-raddo-ink-deep">Walk out with a plan.</span>
             </h2>
             <p
               className="mt-6 max-w-[520px] font-sans text-raddo-charcoal/[0.84]"
