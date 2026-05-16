@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useState } from "react";
+import raddoLogo from "@/assets/raddo-logo.png";
 
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
 
@@ -133,8 +134,24 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-end gap-6 px-8 pt-8 md:px-12 md:pt-10">
-        {/* COB lockup — prominent top-right with rotating title */}
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-between gap-6 px-8 pt-8 md:px-12 md:pt-10">
+        {/* RADDO logo — top-left */}
+        <motion.a
+          href="/"
+          variants={fade(700, 100)}
+          initial="hidden"
+          animate="show"
+          className="block shrink-0"
+          aria-label="RADDO"
+        >
+          <img
+            src={raddoLogo}
+            alt="RADDO"
+            className="h-12 w-auto md:h-14"
+            style={{ objectFit: "contain" }}
+          />
+        </motion.a>
+
         <motion.div
           variants={fade(700, 200)}
           initial="hidden"
