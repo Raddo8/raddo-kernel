@@ -140,13 +140,13 @@ export function Hero() {
           href="/"
           initial="hidden"
           animate="show"
-          className="flex shrink-0 items-center gap-2"
+          className="flex shrink-0 items-center gap-1.5 sm:gap-2"
           aria-label="RADDO"
         >
           <motion.img
             src={raddoLogo}
             alt="RADDO"
-            className="h-[5.4rem] w-auto md:h-[6.3rem]"
+            className="h-12 w-auto sm:h-[5.4rem] md:h-[6.3rem]"
             style={{ objectFit: "contain", transformOrigin: "left center" }}
             variants={{
               hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
@@ -159,11 +159,10 @@ export function Hero() {
             }}
           />
           <span
-            className="font-display font-black overflow-hidden inline-block"
+            className="font-display font-black overflow-hidden inline-block text-[17px] sm:text-[26.4px]"
             aria-label="RADDO"
             style={{
               color: "hsl(var(--raddo-brass))",
-              fontSize: "26.4px",
               letterSpacing: "0.04em",
               lineHeight: 1.05,
             }}
