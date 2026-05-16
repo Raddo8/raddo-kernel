@@ -531,9 +531,9 @@ export function Hero() {
 
       {/* ====== HERO ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
-        {/* Overline */}
+        {/* Overline · enters after logo + RADDO finish (~1.53s) */}
         <motion.p
-          variants={fade(600, 200)}
+          variants={fade(600, 1600)}
           initial="hidden"
           animate="show"
           className="font-sans uppercase text-raddo-brass"
@@ -548,10 +548,10 @@ export function Hero() {
 
         {/* Headline with Six-Source Mandala backdrop */}
         <div className="relative mt-7">
-          {/* Mandala backdrop */}
+          {/* Mandala backdrop · 1750ms */}
           <motion.div
             aria-hidden
-            variants={fade(1200, 300)}
+            variants={fade(1200, 1750)}
             initial="hidden"
             animate="show"
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
@@ -583,8 +583,8 @@ export function Hero() {
             <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
           </motion.div>
 
+          {/* Headline · lines cascade after mandala (1900ms / 2100ms / 2300ms) */}
           <motion.h1
-            variants={rise(1200, 400)}
             initial="hidden"
             animate="show"
             className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
@@ -596,22 +596,27 @@ export function Hero() {
               maxWidth: "1080px",
             }}
           >
-            <span className="block">Built for you day one.</span>
-            <span
+            <motion.span className="block" variants={rise(900, 1900)}>
+              Built for you day one.
+            </motion.span>
+            <motion.span
               className="block italic"
+              variants={rise(900, 2100)}
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
               Sharpens with
               <br />
               every action.
-            </span>
-            <span className="block">Yours to wield anywhere.</span>
+            </motion.span>
+            <motion.span className="block" variants={rise(900, 2300)}>
+              Yours to wield anywhere.
+            </motion.span>
           </motion.h1>
         </div>
 
-        {/* Briefing dossier · What is COB? */}
+        {/* Briefing dossier · 2600ms */}
         <motion.section
-          variants={rise(800, 900)}
+          variants={rise(800, 2600)}
           initial="hidden"
           animate="show"
           className="mt-12"
@@ -620,9 +625,9 @@ export function Hero() {
           <BriefingDossier />
         </motion.section>
 
-        {/* Asymmetric brass hairline */}
+        {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
-          variants={scaleX(600, 1400)}
+          variants={scaleX(600, 3000)}
           initial="hidden"
           animate="show"
           className="mt-10 h-px origin-left"
@@ -633,9 +638,9 @@ export function Hero() {
           }}
         />
 
-        {/* CTA row */}
+        {/* CTA row · 3200ms */}
         <motion.div
-          variants={rise(700, 1600)}
+          variants={rise(700, 3200)}
           initial="hidden"
           animate="show"
           className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
@@ -675,7 +680,7 @@ export function Hero() {
 
         {/* ====== HERO FILM PANEL ====== */}
         <motion.figure
-          variants={rise(900, 1900)}
+          variants={rise(900, 3500)}
           initial="hidden"
           animate="show"
           className="relative mt-16 overflow-hidden bg-raddo-paper"
@@ -723,7 +728,7 @@ export function Hero() {
 
         {/* Six-source row */}
         <motion.div
-          variants={fade(800, 2200)}
+          variants={fade(800, 3800)}
           initial="hidden"
           animate="show"
           className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
