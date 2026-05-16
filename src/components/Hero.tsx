@@ -139,7 +139,7 @@ export function Hero() {
           variants={fade(600, 200)}
           initial="hidden"
           animate="show"
-          className="font-sans uppercase text-raddo-brass-deep"
+          className="font-sans uppercase text-raddo-brass"
           style={{
             fontSize: "12px",
             fontWeight: 500,
