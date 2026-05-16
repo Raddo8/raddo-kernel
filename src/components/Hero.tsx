@@ -133,30 +133,7 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-between gap-6 px-8 pt-8 md:px-12 md:pt-10">
-        <motion.div
-          variants={fade(600, 100)}
-          initial="hidden"
-          animate="show"
-          className="flex flex-col"
-        >
-          <div className="flex items-baseline gap-4">
-            <span className="font-display text-[22px] font-black tracking-[-0.02em] text-raddo-ink-deep">
-              RADDO
-            </span>
-            <span className="hidden h-px w-12 bg-raddo-brass-deep/40 md:block" />
-            <span
-              className="hidden font-sans text-[10px] uppercase text-raddo-brass md:inline"
-              style={{ letterSpacing: "0.3em" }}
-            >
-              Edition 01 · 2026
-            </span>
-          </div>
-          <div className="mt-1 font-display text-[12px] italic text-raddo-ash">
-            {now}
-          </div>
-        </motion.div>
-
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-end gap-6 px-8 pt-8 md:px-12 md:pt-10">
         {/* COB lockup — prominent top-right with rotating title */}
         <motion.div
           variants={fade(700, 200)}
