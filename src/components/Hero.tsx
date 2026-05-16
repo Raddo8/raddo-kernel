@@ -1,4 +1,4 @@
-import { motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -10,6 +10,29 @@ const SOURCES = [
   "Business chat",
   "Calendar",
   "Financials",
+];
+
+const COB_TITLES = [
+  "Business",
+  "Strategy",
+  "Operations",
+  "Brand",
+  "Sales",
+  "People",
+  "Communications",
+  "Staff",
+  "Books",
+  "Data",
+  "Counsel",
+  "Capital",
+  "Risk",
+  "Intelligence",
+  "Build",
+  "Bookings",
+  "Bench",
+  "Bricks",
+  "Health",
+  "Logistics",
 ];
 
 const INDEX = [
@@ -43,6 +66,20 @@ export function Hero() {
     );
     return () => clearInterval(t);
   }, []);
+
+  // Rotating COB title — only the trailing word changes
+  const [titleIdx, setTitleIdx] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    let last = 0;
+    const t = setInterval(() => {
+      let next = Math.floor(Math.random() * COB_TITLES.length);
+      if (next === last) next = (next + 1) % COB_TITLES.length;
+      last = next;
+      setTitleIdx(next);
+    }, 2600);
+    return () => clearInterval(t);
+  }, [reduce]);
 
   const rise = (duration: number, delay: number): Variants => ({
     hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 24 },
@@ -96,38 +133,97 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-end justify-between px-8 pt-8 md:px-12 md:pt-10">
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-start justify-between gap-6 px-8 pt-8 md:px-12 md:pt-10">
         <motion.div
           variants={fade(600, 100)}
           initial="hidden"
           animate="show"
-          className="flex items-baseline gap-4"
+          className="flex flex-col"
         >
-          <span className="font-display text-[22px] font-black tracking-[-0.02em] text-raddo-ink-deep">
-            RADDO
-          </span>
-          <span className="hidden h-px w-12 bg-raddo-brass-deep/40 md:block" />
-          <span
-            className="hidden font-sans text-[11px] uppercase text-raddo-ash md:inline"
-            style={{ letterSpacing: "0.25em" }}
-          >
-            Chief of Business
-          </span>
+          <div className="flex items-baseline gap-4">
+            <span className="font-display text-[22px] font-black tracking-[-0.02em] text-raddo-ink-deep">
+              RADDO
+            </span>
+            <span className="hidden h-px w-12 bg-raddo-brass-deep/40 md:block" />
+            <span
+              className="hidden font-sans text-[10px] uppercase text-raddo-brass md:inline"
+              style={{ letterSpacing: "0.3em" }}
+            >
+              Edition 01 · 2026
+            </span>
+          </div>
+          <div className="mt-1 font-display text-[12px] italic text-raddo-ash">
+            {now}
+          </div>
         </motion.div>
+
+        {/* COB lockup — prominent top-right with rotating title */}
         <motion.div
-          variants={fade(600, 200)}
+          variants={fade(700, 200)}
           initial="hidden"
           animate="show"
-          className="text-right"
+          className="relative"
+          aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
         >
-          <div
-            className="font-sans text-[10px] uppercase text-raddo-brass"
-            style={{ letterSpacing: "0.3em" }}
-          >
-            Edition 01 · 2026
-          </div>
-          <div className="mt-1 font-display text-[13px] italic text-raddo-ash">
-            {now}
+          {/* Brass frame corners */}
+          <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
+          <span aria-hidden className="pointer-events-none absolute -right-2 -top-2 h-2.5 w-2.5 border-r border-t border-raddo-brass" />
+          <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
+          <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
+
+          <div className="flex flex-col items-end gap-1 px-3 py-2">
+            {/* Monogram */}
+            <div className="flex items-baseline gap-2">
+              <span
+                aria-hidden
+                className="font-sans text-[9px] uppercase text-raddo-brass"
+                style={{ letterSpacing: "0.32em" }}
+              >
+                Persona
+              </span>
+              <span aria-hidden className="h-px w-6 bg-raddo-brass-deep/50" />
+              <span
+                className="font-display font-black text-raddo-ink-deep"
+                style={{
+                  fontSize: "22px",
+                  letterSpacing: "0.04em",
+                  lineHeight: 1,
+                }}
+              >
+                COB
+              </span>
+            </div>
+
+            {/* Chief of [rotating] */}
+            <div
+              className="flex items-baseline justify-end gap-[0.4em] font-display text-raddo-ink-deep"
+              style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
+            >
+              <span>Chief of</span>
+              <span
+                aria-live="polite"
+                className="relative inline-block overflow-hidden align-baseline"
+                style={{
+                  height: "1.1em",
+                  minWidth: "5.2em",
+                  textAlign: "left",
+                }}
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={COB_TITLES[titleIdx]}
+                    initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
+                    transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
+                    className="absolute inset-0 italic"
+                    style={{ color: "hsl(var(--raddo-brass))" }}
+                  >
+                    {COB_TITLES[titleIdx]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+            </div>
           </div>
         </motion.div>
       </header>
