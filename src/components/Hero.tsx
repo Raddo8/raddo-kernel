@@ -397,7 +397,7 @@ export function Hero() {
               }}
             >
               Sit down with us for five minutes.
-              <span className="block italic text-raddo-brass-deep">Walk out with a plan.</span>
+              <span className="block italic text-raddo-brass">Walk out with a plan.</span>
             </h2>
             <p
               className="mt-6 max-w-[520px] font-sans text-raddo-charcoal/[0.84]"
