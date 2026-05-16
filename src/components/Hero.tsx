@@ -680,7 +680,7 @@ export function Hero() {
 
         {/* ====== HERO FILM PANEL ====== */}
         <motion.figure
-          variants={rise(900, 1900)}
+          variants={rise(900, 3500)}
           initial="hidden"
           animate="show"
           className="relative mt-16 overflow-hidden bg-raddo-paper"
