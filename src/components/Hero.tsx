@@ -481,7 +481,7 @@ export function Hero() {
                 opacity: 1,
                 scale: 1,
                 filter: "blur(0px)",
-                transition: { duration: reduce ? 0 : 0.95, delay: reduce ? 0 : 0.15, ease: EASE },
+                transition: { duration: 0.85 * dScale, delay: 0.12 * tScale, ease: EASE_OUT },
               },
             }}
           />
