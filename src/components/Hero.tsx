@@ -1,4 +1,4 @@
-import { motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useState } from "react";
 
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
