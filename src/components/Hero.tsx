@@ -141,7 +141,7 @@ export function Hero() {
           variants={fade(700, 100)}
           initial="hidden"
           animate="show"
-          className="flex shrink-0 items-center gap-1"
+          className="flex shrink-0 items-center gap-2"
           aria-label="RADDO"
         >
           <img
