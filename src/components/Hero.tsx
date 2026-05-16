@@ -121,7 +121,7 @@ export function Hero() {
           className="text-right"
         >
           <div
-            className="font-sans text-[10px] uppercase text-raddo-brass-deep"
+            className="font-sans text-[10px] uppercase text-raddo-brass"
             style={{ letterSpacing: "0.3em" }}
           >
             Edition 01 · 2026
@@ -139,7 +139,7 @@ export function Hero() {
           variants={fade(600, 200)}
           initial="hidden"
           animate="show"
-          className="font-sans uppercase text-raddo-brass-deep"
+          className="font-sans uppercase text-raddo-brass"
           style={{
             fontSize: "12px",
             fontWeight: 500,
@@ -166,7 +166,7 @@ export function Hero() {
           <span className="block">Built for you day one.</span>
           <span
             className="block italic"
-            style={{ color: "hsl(var(--raddo-brass-deep))", fontWeight: 800 }}
+            style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
           >
             Sharpens with every action.
           </span>
@@ -183,12 +183,14 @@ export function Hero() {
             fontSize: "clamp(17px, 1.4vw, 20px)",
             fontWeight: 400,
             lineHeight: 1.55,
-            maxWidth: "640px",
+            maxWidth: "720px",
           }}
         >
-          Email, meetings, documents, business chat, calendar and financial
-          context resolve into one decision packet, delivered before your first
-          meeting. Sourced, restrained, yours.
+          Email, meetings, documents, business chat, calendar, operations,
+          finance, legal, people, and risk context resolve into briefings,
+          drafts, decisions, projects, reports, presentations, and counsel.
+          In the morning. Before each meeting. Through each decision. Across
+          each decade. Sourced. Restrained. Yours.
         </motion.p>
 
         {/* Asymmetric brass hairline */}
@@ -199,7 +201,7 @@ export function Hero() {
           className="mt-10 h-px origin-left"
           style={{
             width: 280,
-            backgroundColor: "hsl(var(--raddo-brass-deep))",
+            backgroundColor: "hsl(var(--raddo-brass))",
             opacity: 0.7,
           }}
         />
@@ -302,7 +304,7 @@ export function Hero() {
           {SOURCES.map((src, i) => (
             <div key={src} className="flex items-baseline gap-2">
               <span
-                className="font-sans text-raddo-brass-deep tabular-nums"
+                className="font-sans text-raddo-brass tabular-nums"
                 style={{ fontSize: "10px", letterSpacing: "0.18em" }}
               >
                 {String(i + 1).padStart(2, "0")}
@@ -328,7 +330,7 @@ export function Hero() {
           className="mb-12 flex items-baseline justify-between"
         >
           <span
-            className="font-sans uppercase text-raddo-brass-deep"
+            className="font-sans uppercase text-raddo-brass"
             style={{ fontSize: "11px", letterSpacing: "0.3em" }}
           >
             The Index
@@ -352,7 +354,7 @@ export function Hero() {
               className="flex flex-col"
             >
               <div
-                className="font-display text-raddo-brass-deep"
+                className="font-display text-raddo-brass"
                 style={{ fontSize: "44px", fontWeight: 800, lineHeight: 1 }}
               >
                 {item.roman}
@@ -380,7 +382,7 @@ export function Hero() {
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <span
-              className="font-sans uppercase text-raddo-brass-deep"
+              className="font-sans uppercase text-raddo-brass"
               style={{ fontSize: "11px", letterSpacing: "0.3em" }}
             >
               Begin
@@ -395,7 +397,7 @@ export function Hero() {
               }}
             >
               Sit down with us for five minutes.
-              <span className="block italic text-raddo-brass-deep">Walk out with a plan.</span>
+              <span className="block italic text-raddo-brass">Walk out with a plan.</span>
             </h2>
             <p
               className="mt-6 max-w-[520px] font-sans text-raddo-charcoal/[0.84]"
