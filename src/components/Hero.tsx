@@ -141,7 +141,7 @@ export function Hero() {
           variants={fade(700, 100)}
           initial="hidden"
           animate="show"
-          className="block shrink-0"
+          className="flex shrink-0 items-center gap-4"
           aria-label="RADDO"
         >
           <img
@@ -150,6 +150,17 @@ export function Hero() {
             className="h-[5.4rem] w-auto md:h-[6.3rem]"
             style={{ objectFit: "contain" }}
           />
+          <span
+            className="font-display font-black italic"
+            style={{
+              color: "hsl(var(--raddo-brass))",
+              fontSize: "22px",
+              letterSpacing: "0.04em",
+              lineHeight: 1,
+            }}
+          >
+            RADDO
+          </span>
         </motion.a>
 
         <motion.div
