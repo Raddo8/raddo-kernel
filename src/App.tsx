@@ -105,9 +105,10 @@ const App = () => (
           <Route path="/scheduler-health" element={<Navigate to="/app/scheduler-health" replace />} />
           <Route path="/billing" element={<Navigate to="/app/billing" replace />} />
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeOverridesProvider>
   </QueryClientProvider>
 );
 
