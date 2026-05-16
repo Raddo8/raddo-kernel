@@ -208,16 +208,25 @@ export function Hero() {
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-          <div className="flex flex-col items-end gap-1 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
-            {/* Line 1: COB · your Chief of */}
+          <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
+            {/* Line 1: your COB */}
             <div
-              className="font-display font-black text-raddo-ink-deep text-[13px] sm:text-[18px]"
-              style={{ letterSpacing: "0.02em", lineHeight: 1 }}
+              className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+              style={{ letterSpacing: "0.02em", lineHeight: 1.1 }}
             >
-              COB · your Chief of
+              <span style={{ fontStyle: "italic", fontWeight: 400 }}>your</span>{" "}
+              <span style={{ fontWeight: 900 }}>COB</span>
             </div>
 
-            {/* Line 2: rotating word */}
+            {/* Line 2: Chief of */}
+            <div
+              className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+              style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
+            >
+              Chief of
+            </div>
+
+            {/* Line 3: rotating word */}
             <span
               aria-live="polite"
               className="relative block overflow-hidden font-display italic text-[13px] sm:text-[18px]"
