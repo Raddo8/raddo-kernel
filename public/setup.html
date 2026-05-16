@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RADDO · Individual COB · Setup</title>
+<style>
+  :root {
+    --ink: #0C447C;
+    --ink-deep: #042C53;
+    --ink-soft: #185FA5;
+    --paper: #FAF8F4;
+    --paper-edge: #E5E3DE;
+    --brass: #EF9F27;
+    --brass-deep: #854F0B;
+    --ash: #5F5E5A;
+    --charcoal: #2C2C2A;
+    --night: #0A0A0C;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--charcoal);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 56px;
+    padding-bottom: 32px;
+    border-bottom: 1px solid var(--paper-edge);
+  }
+  .brand {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 4px;
+    margin: 0 0 6px;
+  }
+  .tagline {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    font-style: italic;
+    color: var(--ash);
+    font-size: 18px;
+    margin: 0 0 28px;
+  }
+  .intro {
+    text-align: left;
+    color: var(--charcoal);
+    font-size: 15px;
+    background: white;
+    border-left: 3px solid var(--brass);
+    padding: 16px 20px;
+    border-radius: 2px;
+  }
+  .intro strong { color: var(--ink); }
+  section {
+    margin-bottom: 56px;
+    padding-top: 8px;
+  }
+  .section-num {
+    font-family: Georgia, serif;
+    font-style: italic;
+    color: var(--brass);
+    font-size: 14px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  h2 {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    color: var(--ink);
+    font-size: 26px;
+    margin: 0 0 12px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+  .section-prompt {
+    color: var(--charcoal);
+    font-size: 15px;
+    margin: 0 0 24px;
+  }
+  .section-prompt em { color: var(--ash); }
+
+  /* Word chips */
+  .chip-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-block;
+    padding: 8px 14px;
+    background: white;
+    border: 1.5px solid var(--paper-edge);
+    border-radius: 20px;
+    font-size: 14px;
+    color: var(--charcoal);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .chip:hover {
+    border-color: var(--ink-soft);
+    color: var(--ink);
+  }
+  .chip.selected {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+  .chip.aspirational.selected {
+    background: var(--brass);
+    color: white;
+    border-color: var(--brass);
+  }
+  .counter {
+    color: var(--ash);
+    font-size: 13px;
+    margin-top: 14px;
+    font-style: italic;
+  }
+
+  /* App categories */
+  .app-category {
+    margin-bottom: 22px;
+  }
+  .app-category-label {
+    font-family: Georgia, serif;
+    color: var(--ink-deep);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .app-other-input {
+    margin-top: 14px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--paper-edge);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background: white;
+  }
+  .app-other-input:focus {
+    outline: none;
+    border-color: var(--ink);
+  }
+
+  /* DISC questions */
+  .disc-row {
+    margin-bottom: 24px;
+    padding: 18px 20px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid var(--paper-edge);
+  }
+  .disc-row-num {
+    color: var(--brass);
+    font-family: Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    margin-bottom: 8px;
+  }
+  .disc-prompt {
+    font-size: 14px;
+    color: var(--ash);
+    margin: 0 0 14px;
+  }
+  .disc-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  @media (min-width: 600px) {
+    .disc-options { grid-template-columns: repeat(4, 1fr); }
+  }
+  .disc-option {
+    padding: 12px 10px;
+    background: var(--paper);
+    border: 1.5px solid var(--paper-edge);
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s cubic-bezier(0.22, 1, 0.36, 1);
+    user-select: none;
+  }
+  .disc-option:hover {
+    border-color: var(--ink-soft);
+    background: white;
+  }
+  .disc-option.selected {
+    background: var(--ink);
+    color: white;
+    border-color: var(--ink);
+  }
+
+  /* Submit + output */
+  .submit-wrap {
+    text-align: center;
+    margin: 64px 0 32px;
+  }
+  button.primary {
+    background: var(--ink);
+    color: white;
+    border: none;
+    font-size: 17px;
+    font-weight: 600;
+    padding: 16px 36px;
+    border-radius: 4px;
+    cursor: pointer;
+    letter-spacing: 0.4px;
+    font-family: inherit;
+    transition: background 0.2s;
+  }
+  button.primary:hover { background: var(--ink-deep); }
+  button.secondary {
+    background: var(--brass);
+    color: white;
+    border: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button.secondary:hover { background: var(--brass-deep); }
+
+  .output-area {
+    background: white;
+    border: 1px solid var(--paper-edge);
+    border-radius: 6px;
+    padding: 24px;
+    margin-top: 32px;
+  }
+  .output-area h2 {
+    border-bottom: 1px solid var(--paper-edge);
+    padding-bottom: 10px;
+    margin-bottom: 16px;
+  }
+  .output-area p {
+    color: var(--ash);
+    font-size: 14px;
+  }
+  textarea.output {
+    width: 100%;
+    min-height: 360px;
+    border: 1px solid var(--paper-edge);
+    border-radius: 4px;
+    padding: 14px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--charcoal);
+    background: var(--paper);
+    resize: vertical;
+  }
+  .copy-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .copy-status {
+    color: var(--brass-deep);
+    font-size: 13px;
+    font-style: italic;
+  }
+
+  footer {
+    text-align: center;
+    margin-top: 56px;
+    color: var(--ash);
+    font-size: 13px;
+    font-style: italic;
+  }
+  footer .horizon {
+    color: var(--brass);
+    font-weight: 600;
+    letter-spacing: 2px;
+    font-style: normal;
+    margin-top: 6px;
+  }
+
+  hr.fancy {
+    border: none;
+    border-top: 1px solid var(--paper-edge);
+    margin: 48px 0;
+    position: relative;
+  }
+  hr.fancy::after {
+    content: "✦";
+    position: absolute;
+    top: -11px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--paper);
+    color: var(--brass);
+    padding: 0 12px;
+    font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <h1 class="brand">RADDO</h1>
+    <p class="tagline">Individual COB · Setup</p>
+    <div class="intro">
+      This is the setup form for your <strong>Individual COB</strong> — a personal Chief of Business that learns who you are, what matters to you, and what you're working on, then helps you actually run your week.<br><br>
+      The form has 4 short parts. Answer however feels honest — there are no wrong answers, skip anything that doesn't fit. Should take 10–15 minutes.<br><br>
+      When you're done, click <strong>Send to RADDO</strong> at the bottom. Your answers go straight to the team. Your Individual COB instance will be configured and ready within 48 hours.
+    </div>
+  </header>
+
+  <!-- ===== PART 1 ===== -->
+  <section>
+    <div class="section-num">Part 1 of 4</div>
+    <h2>How things feel <strong style="color:var(--brass)">right now</strong></h2>
+    <p class="section-prompt">
+      Pick every word that fits how things feel for you, your team, your business, or whatever world you operate in — <em>in this season</em>. No right number. If one word fits, pick one. If fifty fit, pick fifty.
+    </p>
+    <div class="chip-grid" id="current-grid"></div>
+    <p class="counter" id="current-counter">0 selected</p>
+  </section>
+
+  <hr class="fancy">
+
+  <!-- ===== PART 2 ===== -->
+  <section>
+    <div class="section-num">Part 2 of 4</div>
+    <h2>How things need to <strong style="color:var(--brass)">become</strong></h2>
+    <p class="section-prompt">
+      Different list — these are words about who or what you want to <strong>grow into</strong>. Pick every word that describes what needs to become true for the next level — for you, your team, your business. Pick one, pick all, no right number.
+    </p>
+    <div class="chip-grid" id="aspiration-grid"></div>
+    <p class="counter" id="aspiration-counter">0 selected</p>
+  </section>
+
+  <hr class="fancy">
+
+  <!-- ===== PART 3 ===== -->
+  <section>
+    <div class="section-num">Part 3 of 4</div>
+    <h2>Where your stuff <strong style="color:var(--brass)">lives</strong></h2>
+    <p class="section-prompt">
+      Check every app or place you actually use day-to-day. The COB needs to know where to look for your info.
+    </p>
+    <div id="app-section"></div>
+    <input type="text" class="app-other-input" id="app-other" placeholder="Anything else? Type here (separate with commas)">
+  </section>
+
+  <hr class="fancy">
+
+  <!-- ===== PART 4 ===== -->
+  <section>
+    <div class="section-num">Part 4 of 4</div>
+    <h2>How you naturally <strong style="color:var(--brass)">show up</strong></h2>
+    <p class="section-prompt">
+      For each row, tap <strong>every word that feels like you</strong>. Pick one, pick all four — whatever's honest. Tap again to deselect.
+    </p>
+    <div id="disc-section"></div>
+  </section>
+
+  <hr class="fancy">
+
+  <!-- ===== SUBMIT ===== -->
+  <div class="submit-wrap">
+    <button class="primary" id="generate-btn">Generate my COB profile</button>
+  </div>
+
+  <div class="output-area" id="output-area" style="display:none">
+    <h2>Your COB profile is ready</h2>
+    <p>Below is your structured profile. Tap <strong>Send to RADDO</strong> to open your email pre-filled with everything — you just hit Send. Or use Copy to clipboard if you'd rather send it yourself.</p>
+    <textarea class="output" id="output-text" readonly></textarea>
+    <div class="copy-row">
+      <button class="primary" id="send-btn" style="font-size:15px;padding:12px 24px;">📧 Send to RADDO</button>
+      <button class="secondary" id="copy-btn">Copy to clipboard</button>
+      <span class="copy-status" id="copy-status"></span>
+    </div>
+  </div>
+
+  <footer>
+    RADDO · Individual COB Setup · v1.0<br>
+    <span class="horizon">PURSUE THE HORIZON</span>
+  </footer>
+
+</div>
+
+<script>
+// ============================================================
+// 10 psychological themes — basis for gap analysis
+// ============================================================
+const THEMES = ["PRESENCE","CLARITY","DIRECTION","STABILITY","CONFIDENCE","CONNECTION","GROWTH","INFLUENCE","GENEROSITY","DISCIPLINE"];
+
+// ============================================================
+// PART 1 lexicon — full spectrum, 10 themes × (5 positive + 5 negative) = 100
+// Each word tagged with theme + polarity for gap analysis
+// ============================================================
+const PART1_CATEGORIES = {
+  PRESENCE:   { positive: ["Energized","Calm","Centered","Present","Vital"],          negative: ["Tired","Depleted","Manic","Restless","Weary"] },
+  CLARITY:    { positive: ["Focused","Clear","Sharp","Deep","Decided"],               negative: ["Scattered","Distracted","Foggy","Lost","Spinning"] },
+  DIRECTION:  { positive: ["Visionary","Strategic","Anchored","Aligned","Building"],  negative: ["Drifting","Wandering","Adrift","Searching","Reactive"] },
+  STABILITY:  { positive: ["Stable","Grounded","Resilient","Solid","Settled"],        negative: ["Volatile","Shaky","Fragile","Overwhelmed","Pressed"] },
+  CONFIDENCE: { positive: ["Confident","Bold","Sure","Brave","Empowered"],            negative: ["Uncertain","Hesitant","Doubtful","Cautious","Guarded"] },
+  CONNECTION: { positive: ["Connected","Supported","Belonging","Loved","Seen"],       negative: ["Isolated","Alone","Lonely","Overlooked","Invisible"] },
+  GROWTH:     { positive: ["Growing","Stretching","Expanding","Evolving","Curious"],  negative: ["Stuck","Plateaued","Contracting","Stalled","Discouraged"] },
+  INFLUENCE:  { positive: ["Leading","Powerful","In-control","Influential","Deciding"], negative: ["Powerless","Sidelined","Reacting","At-the-mercy","Following"] },
+  GENEROSITY: { positive: ["Generous","Serving","Contributing","Sharing","Open-handed"], negative: ["Drained-by-serving","Holding-back","Tight","Forgotten","Carrying-it-alone"] },
+  DISCIPLINE: { positive: ["Disciplined","Structured","Organized","Methodical","Steady-handed"], negative: ["Chaotic","Rushed","Frantic","Sloppy","Erratic"] }
+};
+
+// ============================================================
+// PART 2 lexicon — aspirational only, 10 themes × 10 positive = 100
+// ============================================================
+const PART2_CATEGORIES = {
+  PRESENCE:   ["Energized","Centered","Calm","Present","Vital","Alive","Awake","Refreshed","Joyful","Light"],
+  CLARITY:    ["Focused","Clear","Sharp","Deep","Decisive","Discerning","Mindful","Lucid","Aware","Attuned"],
+  DIRECTION:  ["Visionary","Strategic","Far-seeing","Purposeful","Aligned","Intentional","Anchored","Building","Creating","Pioneering"],
+  STABILITY:  ["Stable","Grounded","Resilient","Durable","Solid","Reliable","Trustworthy","Consistent","Established","Robust"],
+  CONFIDENCE: ["Confident","Bold","Sure","Brave","Self-trusting","Empowered","Strong","Courageous","Self-assured","Resolute"],
+  CONNECTION: ["Connected","Surrounded","Supported","Integrated","Belonging","Loved","Trusted","Cherished","Seen","Beloved"],
+  GROWTH:     ["Growing","Stretching","Expanding","Evolving","Becoming","Learning","Maturing","Compounding","Ascending","Thriving"],
+  INFLUENCE:  ["Leading","Influential","In-control","Powerful","Authoritative","Commanding","Magnetic","Inspiring","Pacesetting","Owning-it"],
+  GENEROSITY: ["Generous","Serving","Contributing","Open-handed","Abundant","Devoted","Honoring","Faithful","Sharing","Bestowing"],
+  DISCIPLINE: ["Disciplined","Structured","Organized","Methodical","Rigorous","Patient","Systematic","Persevering","Steadfast","Steady-handed"]
+};
+
+// Derive flat word lists + theme/polarity maps
+const WORDS_CURRENT = [];
+const WORD_THEMES_CURRENT = {};
+Object.entries(PART1_CATEGORIES).forEach(([theme, {positive, negative}]) => {
+  positive.forEach(w => { WORDS_CURRENT.push(w); WORD_THEMES_CURRENT[w] = { theme, polarity: 1 }; });
+  negative.forEach(w => { WORDS_CURRENT.push(w); WORD_THEMES_CURRENT[w] = { theme, polarity: -1 }; });
+});
+
+const WORDS_ASPIRATION = [];
+const WORD_THEMES_ASPIRATION = {};
+Object.entries(PART2_CATEGORIES).forEach(([theme, words]) => {
+  words.forEach(w => { WORDS_ASPIRATION.push(w); WORD_THEMES_ASPIRATION[w] = theme; });
+});
+
+// ============================================================
+// Fisher-Yates shuffle (mutates copy, returns shuffled array)
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Shuffled display orders — themes hidden from user, presented as random list
+const dedupCurrent = shuffle(WORDS_CURRENT);
+const dedupAspiration = shuffle(WORDS_ASPIRATION);
+
+// ============================================================
+// App inventory by category — business-focused
+// ============================================================
+const APPS = {
+  "Email": ["Gmail","Outlook","Apple Mail","ProtonMail","Yahoo Mail","Other email"],
+  "Calendar": ["Google Calendar","Apple Calendar","Outlook Calendar","Calendly","Other"],
+  "Documents & Files": ["Google Drive","Microsoft OneDrive","Dropbox","iCloud","SharePoint","Box","Notion"],
+  "Customers & Pipeline (CRM)": ["Salesforce","HubSpot","Pipedrive","Monday CRM","Zoho","Airtable","Attio","Notion","Spreadsheets","Other CRM"],
+  "Project & Task Management": ["Asana","Linear","Jira","Trello","ClickUp","Monday.com","Notion","Todoist","Things","Basecamp","Airtable"],
+  "Team Chat": ["Slack","Microsoft Teams","Discord","Google Chat","Other"],
+  "Meetings & Voice": ["Zoom","Google Meet","Microsoft Teams (video)","FaceTime","Granola","Otter","Fathom","Fireflies","Phone calls"],
+  "Finance & Accounting": ["QuickBooks","NetSuite","Xero","FreshBooks","Bill.com","Stripe Dashboard","Bank apps","Spreadsheets"],
+  "Notes & Knowledge": ["Apple Notes","Notion","Evernote","Bear","Obsidian","Roam","OneNote","Paper notebook","Just in my head"],
+  "Messaging (personal · partner · quick comms)": ["iMessage","WhatsApp","Signal","SMS/texts","Other"]
+};
+
+// ============================================================
+// 15 DISC rows — style embedded per adjective so we can shuffle option order
+// Each entry: { w: word, s: style }
+// ============================================================
+const DISC_RAW = [
+  [{w:"Bold",s:"D"},          {w:"Optimistic",s:"I"},   {w:"Patient",s:"S"},        {w:"Analytical",s:"C"}],
+  [{w:"Direct",s:"D"},        {w:"Enthusiastic",s:"I"}, {w:"Loyal",s:"S"},          {w:"Precise",s:"C"}],
+  [{w:"Decisive",s:"D"},      {w:"Persuasive",s:"I"},   {w:"Steady",s:"S"},         {w:"Careful",s:"C"}],
+  [{w:"Demanding",s:"D"},     {w:"Sociable",s:"I"},     {w:"Predictable",s:"S"},    {w:"Systematic",s:"C"}],
+  [{w:"Driving",s:"D"},       {w:"Lively",s:"I"},       {w:"Calm",s:"S"},           {w:"Accurate",s:"C"}],
+  [{w:"Dominant",s:"D"},      {w:"Expressive",s:"I"},   {w:"Supportive",s:"S"},     {w:"Perfectionist",s:"C"}],
+  [{w:"Daring",s:"D"},        {w:"Animated",s:"I"},     {w:"Peaceful",s:"S"},       {w:"Logical",s:"C"}],
+  [{w:"Forceful",s:"D"},      {w:"Influential",s:"I"},  {w:"Cooperative",s:"S"},    {w:"Conscientious",s:"C"}],
+  [{w:"Competitive",s:"D"},   {w:"Charismatic",s:"I"},  {w:"Diplomatic",s:"S"},     {w:"Detail-oriented",s:"C"}],
+  [{w:"Strong-willed",s:"D"}, {w:"Trusting",s:"I"},     {w:"Even-tempered",s:"S"},  {w:"Cautious",s:"C"}],
+  [{w:"Independent",s:"D"},   {w:"Outgoing",s:"I"},     {w:"Modest",s:"S"},         {w:"Thorough",s:"C"}],
+  [{w:"Adventurous",s:"D"},   {w:"Friendly",s:"I"},     {w:"Reserved",s:"S"},       {w:"Methodical",s:"C"}],
+  [{w:"Self-reliant",s:"D"},  {w:"Talkative",s:"I"},    {w:"Easygoing",s:"S"},      {w:"Diligent",s:"C"}],
+  [{w:"Take-charge",s:"D"},   {w:"Encouraging",s:"I"},  {w:"Sympathetic",s:"S"},    {w:"Reflective",s:"C"}],
+  [{w:"Pioneering",s:"D"},    {w:"Charming",s:"I"},     {w:"Accommodating",s:"S"},  {w:"Inquisitive",s:"C"}]
+];
+
+// Each row shuffled independently at load time so D/I/S/C don't appear in same position
+const DISC = DISC_RAW.map(row => shuffle(row));
+
+const DISC_LABELS = ["D","I","S","C"];
+const DISC_NAMES = {
+  D: "Dominance",
+  I: "Influence",
+  S: "Steadiness",
+  C: "Conscientiousness"
+};
+
+// ============================================================
+// State
+// ============================================================
+const state = {
+  current: new Set(),
+  aspiration: new Set(),
+  apps: new Set(),
+  appsOther: "",
+  disc: Array.from({length: DISC.length}, () => [])
+};
+
+// ============================================================
+// Render — Word chips for Part 1 & Part 2
+// ============================================================
+function renderChips(containerId, stateKey, counterId, isAspirational, wordList) {
+  const c = document.getElementById(containerId);
+  c.innerHTML = "";
+  wordList.forEach(w => {
+    const el = document.createElement("span");
+    el.className = "chip" + (isAspirational ? " aspirational" : "");
+    el.textContent = w;
+    el.dataset.word = w;
+    el.addEventListener("click", () => {
+      if (state[stateKey].has(w)) {
+        state[stateKey].delete(w);
+        el.classList.remove("selected");
+      } else {
+        state[stateKey].add(w);
+        el.classList.add("selected");
+      }
+      document.getElementById(counterId).textContent = `${state[stateKey].size} selected`;
+    });
+    c.appendChild(el);
+  });
+}
+
+renderChips("current-grid", "current", "current-counter", false, dedupCurrent);
+renderChips("aspiration-grid", "aspiration", "aspiration-counter", true, dedupAspiration);
+
+// ============================================================
+// Render — App categories
+// ============================================================
+const appWrap = document.getElementById("app-section");
+Object.entries(APPS).forEach(([cat, list]) => {
+  const block = document.createElement("div");
+  block.className = "app-category";
+  const label = document.createElement("div");
+  label.className = "app-category-label";
+  label.textContent = cat;
+  block.appendChild(label);
+  const grid = document.createElement("div");
+  grid.className = "chip-grid";
+  list.forEach(app => {
+    const chip = document.createElement("span");
+    chip.className = "chip";
+    chip.textContent = app;
+    chip.addEventListener("click", () => {
+      if (state.apps.has(app)) {
+        state.apps.delete(app);
+        chip.classList.remove("selected");
+      } else {
+        state.apps.add(app);
+        chip.classList.add("selected");
+      }
+    });
+    grid.appendChild(chip);
+  });
+  block.appendChild(grid);
+  appWrap.appendChild(block);
+});
+document.getElementById("app-other").addEventListener("input", e => {
+  state.appsOther = e.target.value;
+});
+
+// ============================================================
+// Render — DISC rows
+// ============================================================
+const discWrap = document.getElementById("disc-section");
+DISC.forEach((row, idx) => {
+  const block = document.createElement("div");
+  block.className = "disc-row";
+  block.innerHTML = `
+    <div class="disc-row-num">Row ${idx + 1} of 15</div>
+    <p class="disc-prompt">Tap <strong>every word</strong> that feels like you. Pick one, pick all four — whatever's honest:</p>
+    <div class="disc-options"></div>
+  `;
+  const opts = block.querySelector(".disc-options");
+  row.forEach(({w: word, s: style}) => {
+    const opt = document.createElement("div");
+    opt.className = "disc-option";
+    opt.textContent = word;
+    opt.dataset.style = style;
+    opt.addEventListener("click", () => {
+      const existing = state.disc[idx].findIndex(p => p.style === style);
+      if (existing >= 0) {
+        state.disc[idx].splice(existing, 1);
+        opt.classList.remove("selected");
+      } else {
+        state.disc[idx].push({ word, style });
+        opt.classList.add("selected");
+      }
+    });
+    opts.appendChild(opt);
+  });
+  discWrap.appendChild(block);
+});
+
+// ============================================================
+// Generate Summary
+// ============================================================
+function scoreDISC() {
+  const tally = { D: 0, I: 0, S: 0, C: 0 };
+  state.disc.forEach(row => {
+    row.forEach(pick => {
+      tally[pick.style] += 1;
+    });
+  });
+  const ranked = Object.entries(tally).sort((a, b) => b[1] - a[1]);
+  return { tally, ranked };
+}
+
+// ============================================================
+// Part 1 + Part 2 gap analysis — the core psychological framework
+// ============================================================
+function analyzeThemes() {
+  const result = THEMES.map(t => ({ theme: t, current: 0, aspiration: 0, gap: 0, currentDetail: { pos: 0, neg: 0 } }));
+
+  state.current.forEach(word => {
+    const td = WORD_THEMES_CURRENT[word];
+    if (td) {
+      const r = result.find(x => x.theme === td.theme);
+      if (r) {
+        r.current += td.polarity;
+        if (td.polarity > 0) r.currentDetail.pos += 1;
+        else r.currentDetail.neg += 1;
+      }
+    }
+  });
+
+  state.aspiration.forEach(word => {
+    const theme = WORD_THEMES_ASPIRATION[word];
+    if (theme) {
+      const r = result.find(x => x.theme === theme);
+      if (r) r.aspiration += 1;
+    }
+  });
+
+  result.forEach(r => r.gap = r.aspiration - r.current);
+
+  const sorted = [...result].sort((a, b) => b.gap - a.gap);
+  const growthAxes = sorted.filter(r => r.gap > 0);
+  const strengths = sorted.filter(r => r.gap <= 0 && (r.current > 0 || r.aspiration > 0));
+
+  return { all: result, sorted, growthAxes, strengths };
+}
+
+function themeTuningHint(theme) {
+  const hints = {
+    PRESENCE:  "Pace + rest signals · downshift morning friction · honor energy state",
+    CLARITY:   "Filter aggressively · one thing at a time · surface the next decision",
+    DIRECTION: "Tie every output to mission · surface drift · weekly course correction",
+    STABILITY: "Highlight what is stable · downplay noise · reduce decision count",
+    CONFIDENCE:"Confidence ratings on every output · validate decisions · evidence-backed",
+    CONNECTION:"Surface relationship touchpoints · who needs what · proactive outreach",
+    GROWTH:    "Track progress · celebrate compounding · note milestones",
+    INFLUENCE: "Draft outbound in her voice · advocate for her · prep negotiations",
+    GENEROSITY:"Highlight serving moments · watch for depletion patterns · boundary signals",
+    DISCIPLINE:"Enforce schedule · follow-through tracking · weekly cadence"
+  };
+  return hints[theme] || "";
+}
+
+function discInterpretation(ranked) {
+  const primary = ranked[0][0];
+  const secondary = ranked[1][0];
+  const primaryCount = ranked[0][1];
+  const secondaryCount = ranked[1][1];
+
+  let pattern = `${DISC_NAMES[primary]} (${primary})`;
+  if (primaryCount > 0 && secondaryCount >= primaryCount * 0.75) {
+    pattern = `${primary}/${secondary} hybrid — primary ${DISC_NAMES[primary]} with strong ${DISC_NAMES[secondary]} secondary`;
+  } else if (primaryCount === 0) {
+    pattern = "Insufficient signal — no DISC selections made";
+  }
+
+  const tuning = {
+    D: { style: "Bottom-line first. Confirms your decisions, doesn't second-guess. Short, direct, action-focused.",
+         voice: "Direct, results-focused, short sentences",
+         decision: "Trust gut + verify with quick data. Move fast.",
+         names: "HELM, IRON, PILOT, FOREMAN, DEPUTY" },
+    I: { style: "Conversational. Brings multiple angles. Warm and engaging.",
+         voice: "Warm, expressive, optimistic",
+         decision: "Talks options through, then commits with confidence",
+         names: "ATLAS, BEACON, GUIDE, COMPASS, NORTH" },
+    S: { style: "Calm pacing. Reassuring. Highlights what is stable. No pressure.",
+         voice: "Steady, kind, predictable, gentle",
+         decision: "Thoughtful consideration. Honors process. No rushing.",
+         names: "ANCHOR, KEEPER, STEWARD, WITNESS, WARDEN" },
+    C: { style: "Data-first. Methodology and confidence-rated. Precise.",
+         voice: "Precise, thorough, analytical, citation-heavy",
+         decision: "Wants the data, the reasoning, the confidence interval",
+         names: "LEDGER, COUNCIL, AUDITOR, ARROW, BRIDGE" }
+  };
+
+  return { primary, secondary, pattern, tuning: tuning[primary] };
+}
+
+document.getElementById("generate-btn").addEventListener("click", () => {
+  const { tally, ranked } = scoreDISC();
+  const interp = discInterpretation(ranked);
+  const discAnswered = state.disc.filter(row => row.length > 0).length;
+  const totalDiscPicks = state.disc.reduce((sum, row) => sum + row.length, 0);
+
+  const themeAnalysis = analyzeThemes();
+
+  const now = new Date();
+  const ts = now.toLocaleString();
+
+  const currentList = [...state.current].sort();
+  const aspirationList = [...state.aspiration].sort();
+  const appsList = [...state.apps];
+  if (state.appsOther.trim()) {
+    state.appsOther.split(",").forEach(s => { const t = s.trim(); if (t) appsList.push(t); });
+  }
+
+  const discPicks = state.disc.map((row, i) => {
+    if (row.length === 0) return `Row ${i + 1}: (skipped)`;
+    return `Row ${i + 1}: ${row.map(p => `${p.word} (${p.style})`).join(", ")}`;
+  }).join("\n");
+
+  // Theme table rows
+  const themeTableRows = themeAnalysis.sorted.map(r => {
+    const themePad = r.theme.padEnd(12);
+    const cur = String(r.current >= 0 ? "+" + r.current : r.current).padStart(4);
+    const asp = String("+" + r.aspiration).padStart(4);
+    const gap = String(r.gap >= 0 ? "+" + r.gap : r.gap).padStart(4);
+    return `  ${themePad} | ${cur}  | ${asp}  | ${gap}`;
+  }).join("\n");
+
+  const top3 = themeAnalysis.growthAxes.slice(0, 3);
+  const strengthsList = themeAnalysis.strengths.length
+    ? themeAnalysis.strengths.map(r => `${r.theme} (current ${r.current >= 0 ? "+" : ""}${r.current})`).join(", ")
+    : "(none — every theme has positive growth gap)";
+
+  const cobTuningLines = top3.length
+    ? top3.map((r, i) => `  ${i + 1}. ${r.theme} (gap +${r.gap}): ${themeTuningHint(r.theme)}`).join("\n")
+    : "  (no growth axes detected — likely need more Part 2 selections)";
+
+  const summary = [
+`=== RADDO · PERSONAL COB SETUP SUBMISSION ===
+Submitted: ${ts}
+
+----- PART 1 — CURRENT STATE (${currentList.length} of 100 selected) -----
+${currentList.length ? currentList.join(", ") : "(none selected)"}
+
+----- PART 2 — ASPIRATION STATE (${aspirationList.length} of 100 selected) -----
+${aspirationList.length ? aspirationList.join(", ") : "(none selected)"}
+
+----- THEME GAP ANALYSIS — where you are vs where you want to grow -----
+  Theme        | Now  | Aspires | Gap
+  -------------+------+---------+------
+${themeTableRows}
+
+  PRIMARY GROWTH AXIS:   ${top3[0] ? `${top3[0].theme} (gap +${top3[0].gap})` : "(insufficient data)"}
+  SECONDARY:             ${top3[1] ? `${top3[1].theme} (gap +${top3[1].gap})` : "(none)"}
+  TERTIARY:              ${top3[2] ? `${top3[2].theme} (gap +${top3[2].gap})` : "(none)"}
+
+  STRENGTHS TO PRESERVE: ${strengthsList}
+
+  COB CONFIG IMPLICATIONS (from top 3 growth axes):
+${cobTuningLines}
+
+----- PART 3 — DAILY APPLICATIONS -----
+${appsList.length ? appsList.map(a => "• " + a).join("\n") : "(none selected)"}
+
+----- PART 4 — BEHAVIORAL PROFILE (DISC, multi-select) -----
+Picks (${discAnswered} of 12 rows answered · ${totalDiscPicks} total selections):
+${discPicks}
+
+Scores:
+  D (Dominance):         ${tally.D}
+  I (Influence):         ${tally.I}
+  S (Steadiness):        ${tally.S}
+  C (Conscientiousness): ${tally.C}
+
+Primary style:   ${DISC_NAMES[interp.primary]} (${interp.primary})
+Secondary style: ${DISC_NAMES[interp.secondary]} (${interp.secondary})
+Pattern:         ${interp.pattern}
+
+----- COB TUNING HINTS (FOR JAKE) -----
+Suggested COB style:   ${interp.tuning.style}
+Voice signature:        ${interp.tuning.voice}
+Decision framework hint: ${interp.tuning.decision}
+Persona name candidates from lexicon: ${interp.tuning.names}
+
+=== END SUBMISSION ===
+PURSUE THE HORIZON 🌅`
+  ].join("\n");
+
+  const ta = document.getElementById("output-text");
+  ta.value = summary;
+  document.getElementById("output-area").style.display = "block";
+  document.getElementById("output-area").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+document.getElementById("copy-btn").addEventListener("click", async () => {
+  const ta = document.getElementById("output-text");
+  try {
+    await navigator.clipboard.writeText(ta.value);
+    document.getElementById("copy-status").textContent = "✓ copied — now paste into a text or email to RADDO";
+  } catch (err) {
+    ta.select();
+    document.execCommand("copy");
+    document.getElementById("copy-status").textContent = "✓ copied (fallback)";
+  }
+});
+
+// ============================================================
+// Send-to-RADDO email handler · mailto with full body
+// Falls back to clipboard-paste flow if URL exceeds safe length
+// ============================================================
+const RADDO_EMAIL = "cob.brahan@gmail.com";
+
+document.getElementById("send-btn").addEventListener("click", async () => {
+  const fullBody = document.getElementById("output-text").value;
+  const today = new Date().toLocaleDateString();
+  const subject = `RADDO · Individual COB Setup Submission · ${today}`;
+  const statusEl = document.getElementById("copy-status");
+
+  // Always copy to clipboard first as a safety net
+  try { await navigator.clipboard.writeText(fullBody); } catch {}
+
+  // Try full mailto first
+  const fullMailto = `mailto:${RADDO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullBody)}`;
+
+  if (fullMailto.length < 6500) {
+    // Full body fits — open with everything pre-filled
+    window.location.href = fullMailto;
+    statusEl.textContent = "✓ Email opened with your profile pre-filled. Hit Send.";
+  } else {
+    // Body too long for mailto URL — fall back to clipboard-paste flow
+    const shortBody = `Hi RADDO team,\n\nI've completed the Individual COB setup form. The full profile is on my clipboard — please paste it below this line and send:\n\n--- paste your profile below ---\n\n`;
+    const shortMailto = `mailto:${RADDO_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(shortBody)}`;
+    window.location.href = shortMailto;
+    statusEl.textContent = "✓ Profile copied to clipboard. Paste it below the line in the email that just opened, then Send.";
+  }
+});
+</script>
+</body>
+</html>
