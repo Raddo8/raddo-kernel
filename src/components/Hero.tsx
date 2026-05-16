@@ -183,12 +183,14 @@ export function Hero() {
             fontSize: "clamp(17px, 1.4vw, 20px)",
             fontWeight: 400,
             lineHeight: 1.55,
-            maxWidth: "640px",
+            maxWidth: "720px",
           }}
         >
-          Email, meetings, documents, business chat, calendar and financial
-          context resolve into one decision packet, delivered before your first
-          meeting. Sourced, restrained, yours.
+          Email, meetings, documents, business chat, calendar, operations,
+          finance, legal, people, and risk context resolve into briefings,
+          drafts, decisions, projects, reports, presentations, and counsel.
+          In the morning. Before each meeting. Through each decision. Across
+          each decade. Sourced. Restrained. Yours.
         </motion.p>
 
         {/* Asymmetric brass hairline */}
