@@ -548,10 +548,10 @@ export function Hero() {
 
         {/* Headline with Six-Source Mandala backdrop */}
         <div className="relative mt-7">
-          {/* Mandala backdrop */}
+          {/* Mandala backdrop · 1750ms */}
           <motion.div
             aria-hidden
-            variants={fade(1200, 300)}
+            variants={fade(1200, 1750)}
             initial="hidden"
             animate="show"
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
@@ -583,8 +583,8 @@ export function Hero() {
             <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
           </motion.div>
 
+          {/* Headline · lines cascade after mandala (1900ms / 2100ms / 2300ms) */}
           <motion.h1
-            variants={rise(1200, 400)}
             initial="hidden"
             animate="show"
             className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
@@ -596,16 +596,21 @@ export function Hero() {
               maxWidth: "1080px",
             }}
           >
-            <span className="block">Built for you day one.</span>
-            <span
+            <motion.span className="block" variants={rise(900, 1900)}>
+              Built for you day one.
+            </motion.span>
+            <motion.span
               className="block italic"
+              variants={rise(900, 2100)}
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
               Sharpens with
               <br />
               every action.
-            </span>
-            <span className="block">Yours to wield anywhere.</span>
+            </motion.span>
+            <motion.span className="block" variants={rise(900, 2300)}>
+              Yours to wield anywhere.
+            </motion.span>
           </motion.h1>
         </div>
 
