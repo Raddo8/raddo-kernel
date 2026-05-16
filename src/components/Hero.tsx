@@ -208,48 +208,41 @@ export function Hero() {
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-          <div className="flex flex-col items-center gap-1 px-2 py-1.5 sm:px-3 sm:py-2">
-            {/* Monogram */}
+          <div className="flex flex-col items-end gap-1 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
+            {/* Line 1: COB · your Chief of */}
+            <div
+              className="font-display font-black text-raddo-ink-deep text-[13px] sm:text-[18px]"
+              style={{ letterSpacing: "0.02em", lineHeight: 1 }}
+            >
+              COB · your Chief of
+            </div>
+
+            {/* Line 2: rotating word */}
             <span
-              className="font-display font-black text-raddo-ink-deep text-[15px] sm:text-[22px]"
+              aria-live="polite"
+              className="relative block overflow-hidden font-display italic text-[13px] sm:text-[18px]"
               style={{
-                letterSpacing: "0.04em",
-                lineHeight: 1,
+                height: "1.15em",
+                minWidth: "8.2em",
+                color: "hsl(var(--raddo-brass))",
+                fontWeight: 700,
+                letterSpacing: "-0.005em",
               }}
             >
-              COB
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={COB_TITLES[titleIdx]}
+                  initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
+                  transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
+                  className="absolute right-0 bottom-0 block"
+                  style={{ lineHeight: 1 }}
+                >
+                  {COB_TITLES[titleIdx]}
+                </motion.span>
+              </AnimatePresence>
             </span>
-
-            {/* Chief of [rotating] */}
-            <div
-              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep text-[10.2px] sm:text-[15.3px]"
-              style={{ fontWeight: 700, letterSpacing: "-0.005em" }}
-            >
-              <span style={{ lineHeight: 1 }}>Chief of</span>
-              <span
-                aria-live="polite"
-                className="relative inline-block overflow-hidden"
-                style={{
-                  height: "1.15em",
-                  minWidth: "8.2em",
-                  textAlign: "left",
-                }}
-              >
-                <AnimatePresence mode="popLayout" initial={false}>
-                  <motion.span
-                    key={COB_TITLES[titleIdx]}
-                    initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
-                    transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                    className="absolute left-0 bottom-0 italic"
-                    style={{ color: "hsl(var(--raddo-brass))", lineHeight: 1 }}
-                  >
-                    {COB_TITLES[titleIdx]}
-                  </motion.span>
-                </AnimatePresence>
-              </span>
-            </div>
           </div>
         </motion.div>
       </header>
