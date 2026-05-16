@@ -847,14 +847,35 @@ export function Hero() {
           </span>
         </motion.div>
 
-        <div className="grid grid-cols-1 gap-x-12 gap-y-12 md:grid-cols-2 lg:grid-cols-4">
-          {INDEX.map((item, i) => (
+        <motion.div
+          initial={INITIAL === "show" ? "show" : "hidden"}
+          whileInView="show"
+          viewport={{ once: true, margin: "-10% 0px -10% 0px", amount: 0.2 }}
+          variants={{
+            hidden: {},
+            show: {
+              transition: {
+                staggerChildren: reduce ? 0 : lowPower ? 0.07 : 0.12,
+                delayChildren: reduce ? 0 : 0.05,
+              },
+            },
+          }}
+          className="grid grid-cols-1 gap-x-12 gap-y-12 md:grid-cols-2 lg:grid-cols-4"
+        >
+          {INDEX.map((item) => (
             <motion.article
               key={item.roman}
-              variants={rise(700, i * 120)}
-              initial={INITIAL}
-              whileInView="show"
-              viewport={{ once: true, margin: "-10%" }}
+              variants={{
+                hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 22 },
+                show: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: (reduce ? 0 : 0.7) * (lowPower ? 0.85 : 1),
+                    ease: EASE_OUT,
+                  },
+                },
+              }}
               className="flex flex-col"
             >
               <div
@@ -878,7 +899,7 @@ export function Hero() {
               </p>
             </motion.article>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       {/* ====== CLOSING CTA ====== */}
