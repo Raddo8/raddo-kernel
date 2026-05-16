@@ -134,7 +134,7 @@ export function Hero() {
       />
 
       {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-6 pr-8 pt-8 md:pr-12 md:pt-10">
+      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-4 pt-5 sm:gap-6 md:px-0 md:pr-12 md:pl-0 md:pt-10">
         {/* RADDO logo — top-left */}
         <motion.a
           href="/"
