@@ -354,7 +354,7 @@ export function Hero() {
               className="flex flex-col"
             >
               <div
-                className="font-display text-raddo-brass-deep"
+                className="font-display text-raddo-brass"
                 style={{ fontSize: "44px", fontWeight: 800, lineHeight: 1 }}
               >
                 {item.roman}
