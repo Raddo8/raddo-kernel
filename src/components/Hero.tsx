@@ -171,40 +171,30 @@ export function Hero() {
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
           <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-          <div className="flex flex-col items-end gap-1 px-3 py-2">
+          <div className="flex flex-col items-center gap-1 px-3 py-2">
             {/* Monogram */}
-            <div className="flex items-baseline gap-2">
-              <span
-                aria-hidden
-                className="font-sans text-[9px] uppercase text-raddo-brass"
-                style={{ letterSpacing: "0.32em" }}
-              >
-                Persona
-              </span>
-              <span aria-hidden className="h-px w-6 bg-raddo-brass-deep/50" />
-              <span
-                className="font-display font-black text-raddo-ink-deep"
-                style={{
-                  fontSize: "22px",
-                  letterSpacing: "0.04em",
-                  lineHeight: 1,
-                }}
-              >
-                COB
-              </span>
-            </div>
+            <span
+              className="font-display font-black text-raddo-ink-deep"
+              style={{
+                fontSize: "22px",
+                letterSpacing: "0.04em",
+                lineHeight: 1,
+              }}
+            >
+              COB
+            </span>
 
             {/* Chief of [rotating] */}
             <div
-              className="flex items-baseline justify-end gap-[0.4em] font-display text-raddo-ink-deep"
-              style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
+              className="flex items-end justify-center gap-[0.4em] font-display text-raddo-ink-deep"
+              style={{ fontSize: "18px", fontWeight: 700, letterSpacing: "-0.005em" }}
             >
-              <span>Chief of</span>
+              <span style={{ lineHeight: 1 }}>Chief of</span>
               <span
                 aria-live="polite"
-                className="relative inline-block overflow-hidden align-baseline"
+                className="relative inline-block overflow-hidden"
                 style={{
-                  height: "1.1em",
+                  height: "1em",
                   minWidth: "5.2em",
                   textAlign: "left",
                 }}
@@ -216,8 +206,8 @@ export function Hero() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
                     transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                    className="absolute inset-0 italic"
-                    style={{ color: "hsl(var(--raddo-brass))" }}
+                    className="absolute left-0 bottom-0 italic"
+                    style={{ color: "hsl(var(--raddo-brass))", lineHeight: 1 }}
                   >
                     {COB_TITLES[titleIdx]}
                   </motion.span>
