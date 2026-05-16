@@ -29,6 +29,7 @@ import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
 import StyleGuide from "@/pages/StyleGuide";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
+import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
