@@ -139,7 +139,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
         <div className="flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
           <h2
-            className="font-display text-raddo-ink-deep m-0"
+            className="font-display text-raddo-ink-deep m-0 md:whitespace-nowrap"
             style={{
               fontWeight: 800,
               fontSize: "clamp(22px, 4.2vw, 48px)",
