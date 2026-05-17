@@ -125,17 +125,6 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         aria-controls="briefing-001-body"
         className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
       >
-        <div
-          className="font-display mb-3 md:mb-4"
-          style={{
-            fontVariant: "small-caps",
-            fontSize: 11,
-            letterSpacing: "0.22em",
-            color: "hsl(var(--raddo-brass))",
-          }}
-        >
-          What it is
-        </div>
 
         <div className="flex flex-col items-stretch gap-3">
           <h2
