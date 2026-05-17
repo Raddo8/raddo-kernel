@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
+import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -67,9 +68,8 @@ const INDEX = [
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
-function BriefingDossier() {
+function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((p: boolean) => boolean)) => void }) {
   const reduce = useReducedMotion();
-  const [open, setOpen] = useState(false);
 
   return (
     <article
