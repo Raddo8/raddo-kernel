@@ -123,7 +123,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-controls="briefing-001-body"
-        className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pr-14 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
+        className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
       >
         <div
           className="font-display mb-3 md:mb-4"
@@ -137,7 +137,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
           What it is
         </div>
 
-        <div className="flex flex-col items-start gap-3 md:flex-row md:items-end md:justify-between md:gap-6">
+        <div className="flex flex-col items-stretch gap-3">
           <h2
             className="font-display text-raddo-ink-deep m-0 md:whitespace-nowrap"
             style={{
@@ -150,7 +150,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
           </h2>
 
           <div
-            className="flex items-center gap-3 font-mono shrink-0 self-end md:self-auto"
+            className="flex items-center gap-3 font-mono shrink-0 self-end"
             style={{
               fontSize: 10,
               letterSpacing: "0.18em",
