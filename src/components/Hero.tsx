@@ -857,15 +857,15 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Briefing dossier · 2600ms */}
+        {/* Briefing · Exhibit composition · 2600ms */}
         <motion.section
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
           className="mt-12"
-          style={{ maxWidth: "720px" }}
+          style={{ maxWidth: "1180px" }}
         >
-          <BriefingDossier />
+          <BriefingComposition />
         </motion.section>
 
         {/* Asymmetric brass hairline · 3000ms */}
