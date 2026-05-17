@@ -673,123 +673,169 @@ export function Hero() {
         }}
       />
 
-      {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-4 pt-5 sm:gap-6 md:px-0 md:pr-12 md:pl-0 md:pt-10">
-        {/* RADDO logo — top-left */}
-        <motion.a
-          href="/"
-          initial={INITIAL}
-          animate="show"
-          className="flex shrink-0 items-center gap-1.5 sm:gap-2"
-          aria-label="RADDO"
+      {/* ====== EDITION BAR · sticky dossier chassis ====== */}
+      <div
+        className={`sticky top-0 z-40 transition-[padding,background-color,backdrop-filter] duration-220 ${
+          scrolled
+            ? "bg-raddo-paper/85 backdrop-blur-[6px] py-2 px-3 md:px-6"
+            : "bg-transparent py-3 px-3 md:px-6"
+        }`}
+        style={{ transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1)" }}
+      >
+        <div
+          className="relative mx-auto max-w-[1240px] rounded-lg border border-raddo-paper-edge bg-raddo-paper"
+          style={{
+            boxShadow:
+              "0 6px 18px -12px hsl(var(--raddo-charcoal) / 0.18), 0 1px 0 hsl(var(--raddo-paper-edge))",
+          }}
         >
-          <motion.img
-            src={raddoLogo}
-            alt="RADDO"
-            className="h-12 w-auto sm:h-[5.4rem] md:h-[6.3rem]"
-            style={{ objectFit: "contain", transformOrigin: "left center" }}
-            variants={{
-              hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
-              show: {
-                opacity: 1,
-                scale: 1,
-                filter: "blur(0px)",
-                transition: { duration: 0.85 * dScale, delay: 0.12 * tScale, ease: EASE_OUT },
-              },
-            }}
-          />
-          <span
-            className="font-display font-black overflow-hidden inline-block text-[17px] sm:text-[26.4px]"
-            aria-label="RADDO"
-            style={{
-              color: "hsl(var(--raddo-brass))",
-              letterSpacing: "0.04em",
-              lineHeight: 1.05,
-            }}
+          <CornerMark pos="tl" />
+          <CornerMark pos="tr" />
+          <CornerMark pos="bl" />
+          <CornerMark pos="br" />
+
+          {/* Meta strip · mirrors BRIEFING · 001 grammar */}
+          <div
+            className="flex items-center justify-between border-b border-raddo-paper-edge px-4 py-1.5 font-mono text-raddo-ash"
+            style={{ fontSize: 10, letterSpacing: "0.18em", textTransform: "uppercase" }}
           >
-            {"RADDO".split("").map((ch, i) => (
-              <motion.span
-                key={i}
-                className="inline-block"
+            <span>EDITION · 01</span>
+            <span className="hidden sm:inline">RADDO</span>
+            <span>CLARITY · ORIGIN · DECISION</span>
+          </div>
+
+          <header
+            className={`relative flex items-center justify-between gap-3 px-4 sm:gap-6 md:px-6 transition-[padding] duration-220 ${
+              scrolled ? "py-2" : "py-4 md:py-5"
+            }`}
+            style={{ transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1)" }}
+          >
+            {/* RADDO logo — top-left */}
+            <motion.a
+              href="/"
+              initial={INITIAL}
+              animate="show"
+              className="flex shrink-0 items-center gap-1.5 sm:gap-2"
+              aria-label="RADDO"
+            >
+              <motion.img
+                src={raddoLogo}
+                alt="RADDO"
+                className={`w-auto transition-[height] duration-220 ${
+                  scrolled ? "h-10 sm:h-12" : "h-12 sm:h-[5.4rem] md:h-[6.3rem]"
+                }`}
+                style={{
+                  objectFit: "contain",
+                  transformOrigin: "left center",
+                  transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1)",
+                }}
                 variants={{
-                  hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : "100%" },
+                  hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
                   show: {
                     opacity: 1,
-                    y: 0,
-                    transition: {
-                      duration: 0.62 * dScale,
-                      delay: (0.46 + i * 0.055) * tScale,
-                      ease: EASE_OUT,
-                    },
+                    scale: 1,
+                    filter: "blur(0px)",
+                    transition: { duration: 0.85 * dScale, delay: 0.12 * tScale, ease: EASE_OUT },
                   },
                 }}
+              />
+              <span
+                className={`font-display font-black overflow-hidden inline-block transition-[font-size] duration-220 ${
+                  scrolled ? "text-[15px] sm:text-[20px]" : "text-[17px] sm:text-[26.4px]"
+                }`}
+                aria-label="RADDO"
+                style={{
+                  color: "hsl(var(--raddo-brass))",
+                  letterSpacing: "0.04em",
+                  lineHeight: 1.05,
+                  transitionTimingFunction: "cubic-bezier(0.22,1,0.36,1)",
+                }}
               >
-                {ch}
-              </motion.span>
-            ))}
-          </span>
-        </motion.a>
+                {"RADDO".split("").map((ch, i) => (
+                  <motion.span
+                    key={i}
+                    className="inline-block"
+                    variants={{
+                      hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : "100%" },
+                      show: {
+                        opacity: 1,
+                        y: 0,
+                        transition: {
+                          duration: 0.62 * dScale,
+                          delay: (0.46 + i * 0.055) * tScale,
+                          ease: EASE_OUT,
+                        },
+                      },
+                    }}
+                  >
+                    {ch}
+                  </motion.span>
+                ))}
+              </span>
+            </motion.a>
 
-        <motion.div
-          variants={fade(700, 200)}
-          initial={INITIAL}
-          animate="show"
-          className="relative"
-          aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
-        >
-          {/* Brass frame corners */}
-          <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
-          <span aria-hidden className="pointer-events-none absolute -right-2 -top-2 h-2.5 w-2.5 border-r border-t border-raddo-brass" />
-          <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
-          <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
-
-          <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
-            {/* Line 1: your COB */}
-            <div
-              className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
-              style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
+            <motion.div
+              variants={fade(700, 200)}
+              initial={INITIAL}
+              animate="show"
+              className="relative"
+              aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
             >
-              <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
-              <span style={{ fontWeight: 900 }}>COB</span>
-            </div>
+              {/* Brass frame corners */}
+              <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
+              <span aria-hidden className="pointer-events-none absolute -right-2 -top-2 h-2.5 w-2.5 border-r border-t border-raddo-brass" />
+              <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
+              <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-            {/* Line 2: Chief of */}
-            <div
-              className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
-              style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
-            >
-              Chief of
-            </div>
-
-            {/* Line 3: rotating word */}
-            <span
-              aria-live="polite"
-              className="relative block overflow-hidden font-display italic text-[13px] sm:text-[18px]"
-              style={{
-                height: "1.15em",
-                minWidth: "8.2em",
-                color: "hsl(var(--raddo-brass))",
-                fontWeight: 700,
-                letterSpacing: "-0.005em",
-              }}
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={COB_TITLES[titleIdx]}
-                  initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
-                  transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                  className="absolute right-0 bottom-0 block"
-                  style={{ lineHeight: 1 }}
+              <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
+                {/* Line 1: your COB */}
+                <div
+                  className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+                  style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
                 >
-                  {COB_TITLES[titleIdx]}
-                </motion.span>
-              </AnimatePresence>
-            </span>
-          </div>
-        </motion.div>
-      </header>
+                  <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
+                  <span style={{ fontWeight: 900 }}>COB</span>
+                </div>
+
+                {/* Line 2: Chief of */}
+                <div
+                  className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+                  style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
+                >
+                  Chief of
+                </div>
+
+                {/* Line 3: rotating word */}
+                <span
+                  aria-live="polite"
+                  className="relative block overflow-hidden font-display italic text-[13px] sm:text-[18px]"
+                  style={{
+                    height: "1.15em",
+                    minWidth: "8.2em",
+                    color: "hsl(var(--raddo-brass))",
+                    fontWeight: 700,
+                    letterSpacing: "-0.005em",
+                  }}
+                >
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={COB_TITLES[titleIdx]}
+                      initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
+                      transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
+                      className="absolute right-0 bottom-0 block"
+                      style={{ lineHeight: 1 }}
+                    >
+                      {COB_TITLES[titleIdx]}
+                    </motion.span>
+                  </AnimatePresence>
+                </span>
+              </div>
+            </motion.div>
+          </header>
+        </div>
+      </div>
 
       {/* ====== HERO ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
