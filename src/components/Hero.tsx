@@ -318,8 +318,7 @@ function BriefingComposition() {
   );
 }
 
-
-  { n: "01", label: "Email", pos: "Upper left pedestal" },
+const VAULT_LEGEND: { n: string; label: string; pos: string }[] = [
   { n: "02", label: "Documents", pos: "Mid left pedestal" },
   { n: "03", label: "Calendar", pos: "Lower left pedestal" },
   { n: "04", label: "People", pos: "Upper right pedestal" },
