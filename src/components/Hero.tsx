@@ -570,6 +570,15 @@ export function Hero() {
     try { window.sessionStorage.setItem(INTRO_FLAG, "1"); } catch { /* ignore */ }
   }, [introPlayed]);
 
+  // Sticky-header compaction · true once the page has scrolled past the masthead breath
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   const [now, setNow] = useState(() =>
     new Date().toLocaleString("en-US", {
       month: "long",
