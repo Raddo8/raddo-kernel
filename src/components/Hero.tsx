@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
+import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -67,9 +68,8 @@ const INDEX = [
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
-function BriefingDossier() {
+function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((p: boolean) => boolean)) => void }) {
   const reduce = useReducedMotion();
-  const [open, setOpen] = useState(false);
 
   return (
     <article
@@ -299,6 +299,215 @@ function BriefingDossier() {
                 >
                   The question is whether you have one when it does.
                 </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </article>
+  );
+}
+
+function BriefingComposition() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+      <BriefingDossier open={open} setOpen={setOpen} />
+      <VaultExhibit open={open} />
+    </div>
+  );
+}
+
+const VAULT_LEGEND: { n: string; label: string; pos: string }[] = [
+  { n: "01", label: "Email", pos: "Upper left pedestal" },
+  { n: "02", label: "Documents", pos: "Mid left pedestal" },
+  { n: "03", label: "Calendar", pos: "Lower left pedestal" },
+  { n: "04", label: "People", pos: "Upper right pedestal" },
+  { n: "05", label: "Business chat", pos: "Mid right pedestal" },
+  { n: "06", label: "Financials", pos: "Lower right pedestal" },
+];
+
+function VaultExhibit({ open }: { open: boolean }) {
+  const reduce = useReducedMotion();
+  return (
+    <article
+      className="relative h-full flex flex-col"
+      style={{
+        backgroundColor: "hsl(var(--raddo-paper))",
+        border: "1px solid hsl(var(--raddo-paper-edge))",
+        borderRadius: 8,
+        boxShadow: open
+          ? "0 8px 32px -16px hsl(var(--raddo-ink-deep) / 0.18)"
+          : "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+        transition: "box-shadow 220ms cubic-bezier(0.22,1,0.36,1)",
+      }}
+    >
+      <CornerMark pos="tl" />
+      <CornerMark pos="tr" />
+      <CornerMark pos="bl" />
+      <CornerMark pos="br" />
+
+      <div
+        className="flex items-center justify-between font-mono"
+        style={{
+          padding: "14px 24px",
+          borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+          fontSize: 10,
+          letterSpacing: "0.18em",
+          color: "hsl(var(--raddo-ash))",
+          textTransform: "uppercase",
+        }}
+      >
+        <span>EXHIBIT · 002</span>
+        <span>The six · source vault</span>
+      </div>
+
+      <div style={{ padding: "20px 20px 0" }}>
+        <div
+          className="relative overflow-hidden"
+          style={{
+            borderRadius: 4,
+            border: "1px solid hsl(var(--raddo-paper-edge))",
+            backgroundColor: "hsl(var(--raddo-night))",
+          }}
+        >
+          <img
+            src={vaultExhibit}
+            alt="The COB vault · six source pedestals connected by brass tracery to a central paper briefing plaque"
+            loading="lazy"
+            className="block w-full h-auto"
+          />
+        </div>
+      </div>
+
+      <div className="px-6 md:px-10 pt-6">
+        <div
+          className="font-display mb-2"
+          style={{
+            fontVariant: "small-caps",
+            fontSize: 11,
+            letterSpacing: "0.22em",
+            color: "hsl(var(--raddo-brass))",
+          }}
+        >
+          What you are seeing
+        </div>
+        <p
+          className="font-sans text-raddo-charcoal m-0"
+          style={{ fontSize: 15, lineHeight: 1.55 }}
+        >
+          Six sources resolve into one briefing. The vault is the operation.
+          The plaque is the morning brief.
+        </p>
+      </div>
+
+      <div className="px-6 md:px-10 pt-6 pb-6 flex-1">
+        <div
+          className="flex items-center gap-3 font-mono mb-3"
+          style={{
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            color: "hsl(var(--raddo-ash))",
+            textTransform: "uppercase",
+          }}
+        >
+          <span aria-hidden style={{ width: 28, height: 1.5, backgroundColor: "hsl(var(--raddo-brass))" }} />
+          <span>Exhibit key</span>
+        </div>
+        <ul className="m-0 p-0 list-none">
+          {VAULT_LEGEND.map((row, i) => (
+            <li
+              key={row.n}
+              className="flex items-baseline gap-3 py-2"
+              style={{ borderTop: i === 0 ? "none" : "1px solid hsl(var(--raddo-paper-edge))" }}
+            >
+              <span
+                className="font-mono shrink-0"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  color: "hsl(var(--raddo-brass-deep))",
+                  minWidth: 24,
+                }}
+              >
+                {row.n}
+              </span>
+              <span
+                className="font-sans text-raddo-ink-deep"
+                style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
+              >
+                {row.label}
+              </span>
+              <span
+                className="font-mono hidden sm:inline"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.14em",
+                  color: "hsl(var(--raddo-ash))",
+                  textTransform: "uppercase",
+                }}
+              >
+                {row.pos}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="decision"
+            initial={reduce ? { height: "auto", opacity: 1 } : { height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={reduce ? { height: "auto", opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
+            style={{ overflow: "hidden" }}
+          >
+            <div
+              className="md:px-10"
+              style={{
+                padding: "20px 24px 28px",
+                borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              }}
+            >
+              <div
+                className="font-display mb-3"
+                style={{
+                  fontVariant: "small-caps",
+                  fontSize: 11,
+                  letterSpacing: "0.22em",
+                  color: "hsl(var(--raddo-brass))",
+                }}
+              >
+                Your move
+              </div>
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                <a
+                  href="/setup.html"
+                  className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+                  style={{
+                    backgroundColor: "hsl(var(--raddo-brass))",
+                    color: "hsl(var(--raddo-ink-deep))",
+                    padding: "12px 22px",
+                    borderRadius: 4,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  <span>See your first brief</span>
+                  <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
+                </a>
+                <a
+                  href="/capability-brief.html"
+                  className="inline-flex items-center font-sans text-raddo-ink-deep"
+                  style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}
+                >
+                  <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
+                    Read the Capability Brief
+                  </span>
+                </a>
               </div>
             </div>
           </motion.div>
@@ -658,15 +867,15 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Briefing dossier · 2600ms */}
+        {/* Briefing · Exhibit composition · 2600ms */}
         <motion.section
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
           className="mt-12"
-          style={{ maxWidth: "720px" }}
+          style={{ maxWidth: "1180px" }}
         >
-          <BriefingDossier />
+          <BriefingComposition />
         </motion.section>
 
         {/* Asymmetric brass hairline · 3000ms */}
