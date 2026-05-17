@@ -150,7 +150,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
           </h2>
 
           <div
-            className="flex items-center gap-3 font-mono shrink-0"
+            className="flex items-center gap-3 font-mono shrink-0 self-end md:self-auto"
             style={{
               fontSize: 10,
               letterSpacing: "0.18em",
