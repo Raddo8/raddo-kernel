@@ -12,3 +12,9 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /consult/thank-you
+Disallow: /style-guide
+Disallow: /respond/
+Disallow: /app/
+
+Sitemap: https://raddo.ai/sitemap.xml
