@@ -256,7 +256,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
             style={{ overflow: "hidden" }}
           >
-            <div style={{ padding: "4px 20px 0" }}>
+            <div style={{ padding: "4px 20px 20px" }}>
               <div
                 className="relative overflow-hidden"
                 style={{
@@ -272,45 +272,6 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   className="block w-full h-auto select-none"
                 />
               </div>
-            </div>
-
-            {/* Caption block · mirrors the vault exhibit's editorial footer */}
-            <div className="px-6 md:px-10 pt-6">
-              <div
-                className="font-display mb-2"
-                style={{
-                  fontVariant: "small-caps",
-                  fontSize: 11,
-                  letterSpacing: "0.22em",
-                  color: "hsl(var(--raddo-brass))",
-                }}
-              >
-                What you are holding
-              </div>
-              <p
-                className="font-sans text-raddo-charcoal m-0"
-                style={{ fontSize: 15, lineHeight: 1.55 }}
-              >
-                One sealed packet. Six sources resolved. Delivered before the first meeting.
-              </p>
-            </div>
-
-            {/* Footer meta strip · brand triple */}
-            <div
-              className="flex items-center justify-between font-mono mt-6"
-              style={{
-                padding: "12px 24px",
-                borderTop: "1px solid hsl(var(--raddo-paper-edge))",
-                fontSize: 10,
-                letterSpacing: "0.22em",
-                color: "hsl(var(--raddo-ash))",
-                textTransform: "uppercase",
-              }}
-            >
-              <span>Clarity · Origin · Decision</span>
-              <span style={{ color: "hsl(var(--raddo-brass-deep))" }}>
-                Seal intact
-              </span>
             </div>
           </motion.div>
         )}
