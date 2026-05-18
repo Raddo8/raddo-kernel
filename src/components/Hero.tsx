@@ -256,7 +256,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
             style={{ overflow: "hidden" }}
           >
-            <div style={{ padding: "20px 20px 20px" }}>
+            <div style={{ padding: "4px 20px 20px" }}>
               <div
                 className="relative overflow-hidden"
                 style={{
