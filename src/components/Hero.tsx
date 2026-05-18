@@ -817,6 +817,10 @@ export function Hero() {
             <img
               src="/brand/hero-mandala-bg.png"
               alt=""
+              loading="eager"
+              decoding="async"
+              // @ts-expect-error · fetchpriority is a valid HTML attr not yet in React types
+              fetchpriority="high"
               className="h-full w-full object-cover"
               style={{ opacity: 0.75 }}
             />
