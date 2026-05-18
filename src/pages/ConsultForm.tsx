@@ -274,6 +274,11 @@ export function ConsultForm() {
 
   return (
     <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+      <SeoHead
+        path="/consult"
+        title="Begin your consult · RADDO"
+        description="A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide."
+      />
       {/* Hairline paper grain · same texture as Hero */}
       <div
         aria-hidden

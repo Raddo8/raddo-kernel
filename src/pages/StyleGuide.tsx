@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useMotionPreference, type MotionPref } from "@/lib/motion-preference";
+import { SeoHead } from "@/components/SeoHead";
 
 /* --------------------------- Token catalogue --------------------------- */
 
@@ -213,6 +214,12 @@ export default function StyleGuide() {
 
   return (
     <main className="min-h-screen bg-background text-foreground">
+      <SeoHead
+        path="/style-guide"
+        title="Style guide · RADDO (internal)"
+        description="Internal RADDO design system reference."
+        robots="noindex,nofollow"
+      />
       {/* Header bar */}
       <div className="border-b border-border bg-card">
         <div className="max-w-[1280px] mx-auto px-8 py-6 flex items-center justify-between">
