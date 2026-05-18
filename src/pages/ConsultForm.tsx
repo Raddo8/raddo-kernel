@@ -608,6 +608,7 @@ export function ConsultForm() {
           </Panel>
         </div>
       </form>
+      </div>
     </main>
   );
 }
