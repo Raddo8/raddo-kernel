@@ -238,6 +238,8 @@ export function ConsultForm() {
       body: {
         email,
         name,
+        phone,
+        occupation,
         currentStateWordIds: currentStateSelections,
         aspirationWordIds: aspirationSelections,
         appSelections,
