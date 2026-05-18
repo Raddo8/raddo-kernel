@@ -473,15 +473,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART II · ASPIRATION</Overline>
+            <Overline>PART 2 · WHERE YOU WANT TO BE</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Choose any words for how the business needs to feel next.
+              Pick the words for how your business should feel in 12 months.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Same posture · select as many as fit.
+              Select as many as fit.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {aspirationWords.map((word) => (
