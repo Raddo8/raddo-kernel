@@ -211,18 +211,25 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             animate={{ opacity: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0 }}
             transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
-            style={{
-              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
-              overflow: "hidden",
-            }}
+            style={{ overflow: "hidden" }}
           >
-            <img
-              src={forYourEyesOnly}
-              alt="For your eyes only · sealed envelope on a brass-tracery topographic field"
-              loading="lazy"
-              className="block w-full h-auto select-none"
-              style={{ display: "block" }}
-            />
+            <div style={{ padding: "20px 20px 20px" }}>
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  borderRadius: 4,
+                  border: "1px solid hsl(var(--raddo-paper-edge))",
+                  backgroundColor: "hsl(var(--raddo-paper))",
+                }}
+              >
+                <img
+                  src={forYourEyesOnly}
+                  alt="For your eyes only · sealed envelope on a brass-tracery topographic field"
+                  loading="lazy"
+                  className="block w-full h-auto select-none"
+                />
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
