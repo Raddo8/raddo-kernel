@@ -143,63 +143,104 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             </h2>
           </div>
 
+          {/* Brass rule · separates title from briefing header block */}
           <div
-            className="mt-4 md:mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono"
+            aria-hidden
+            className="mt-5 mb-4"
             style={{
-              fontSize: 10,
-              letterSpacing: "0.18em",
-              color: "hsl(var(--raddo-ash))",
-              textTransform: "uppercase",
+              width: 56,
+              height: 1.5,
+              backgroundColor: "hsl(var(--raddo-brass))",
+            }}
+          />
+
+          {/* Intelligence briefing header · labelled field grid */}
+          <dl
+            className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
+            style={{
+              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+              padding: "12px 0",
             }}
           >
+            {[
+              { k: "Subject", v: "Decision Intelligence" },
+              { k: "Format", v: "6 paragraphs" },
+              { k: "Read", v: "90 seconds" },
+              { k: "Status", v: open ? "Unsealed" : "Sealed" },
+            ].map((row) => (
+              <div key={row.k} className="flex flex-col gap-1 min-w-0">
+                <dt
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "0.22em",
+                    color: "hsl(var(--raddo-ash))",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {row.k}
+                </dt>
+                <dd
+                  className="m-0 font-sans truncate"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "hsl(var(--raddo-ink-deep))",
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  {row.v}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* Action row · open dossier directive */}
+          <div className="mt-4 flex items-center justify-between gap-4">
+            <span
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-brass-deep))",
+                textTransform: "uppercase",
+              }}
+            >
+              {open ? "Tap to seal" : "Tap dossier or exhibit to unseal"}
+            </span>
             <span
               aria-hidden
+              className="flex items-center gap-2 font-mono"
               style={{
-                width: 40,
-                height: 1.5,
-                backgroundColor: "hsl(var(--raddo-brass))",
+                fontSize: 10,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-ash))",
+                textTransform: "uppercase",
               }}
-            />
-            <span>Subject · Decision Intelligence</span>
-            <span aria-hidden style={{ color: "hsl(var(--raddo-paper-edge))" }}>·</span>
-            <span>6 paragraphs · 90 sec read</span>
+            >
+              <span>{open ? "Close" : "Open dossier"}</span>
+              <span
+                className="grid place-items-center"
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: "1px solid hsl(var(--raddo-brass))",
+                  borderRadius: 4,
+                  color: "hsl(var(--raddo-brass-deep))",
+                  transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
+                  transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                  backgroundColor: open
+                    ? "hsl(var(--raddo-brass) / 0.12)"
+                    : "transparent",
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+                </svg>
+              </span>
+            </span>
           </div>
         </button>
-
-        {/* Bottom-right of header · OPEN DOSSIER indicator (visual; whole header toggles) */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute flex items-center gap-3 font-mono"
-          style={{
-            right: 24,
-            bottom: 18,
-            fontSize: 10,
-            letterSpacing: "0.18em",
-            color: "hsl(var(--raddo-ash))",
-            textTransform: "uppercase",
-          }}
-        >
-          <span>{open ? "Close" : "Open dossier"}</span>
-          <span
-            className="grid place-items-center"
-            style={{
-              width: 28,
-              height: 28,
-              border: "1px solid hsl(var(--raddo-brass))",
-              borderRadius: 4,
-              color: "hsl(var(--raddo-brass-deep))",
-              transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
-              transform: open ? "rotate(180deg)" : "rotate(0deg)",
-              backgroundColor: open
-                ? "hsl(var(--raddo-brass) / 0.12)"
-                : "transparent",
-            }}
-          >
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-            </svg>
-          </span>
-        </div>
       </div>
 
       {/* Closed-state visual · "For Your Eyes Only" envelope plate */}
