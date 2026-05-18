@@ -798,12 +798,12 @@ export function Hero() {
           animate="show"
           className="font-sans uppercase text-raddo-brass"
           style={{
-            fontSize: "12px",
+            fontSize: "18px",
             fontWeight: 500,
             letterSpacing: "0.32em",
           }}
         >
-          Clarity · Origin · Decision.
+          Not just in your corner. Building your corner.
         </motion.p>
 
         {/* Headline with Six-Source Mandala backdrop */}
