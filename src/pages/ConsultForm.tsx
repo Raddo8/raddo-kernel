@@ -281,13 +281,13 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                Show the business as it feels now, and as it needs to feel next.
+                5 minutes to set up your Chief of Business.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
                 style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
               >
-                Editorial, not clinical. Select the language that feels true, inventory the systems already in motion, then answer the prompts the way you naturally operate.
+                Four short sections · where you are today, where you want to be, the systems you already run, and how you make decisions. Skip anything that doesn't apply. Your COB is built from your answers.
               </p>
             </div>
             <Link
@@ -313,12 +313,12 @@ export function ConsultForm() {
         {/* Sidebar */}
         <aside className="h-fit lg:sticky lg:top-8">
           <Panel className="p-6">
-            <Overline>FIVE-MINUTE CONSULT</Overline>
+            <Overline>5 MIN · 4 SECTIONS</Overline>
             <p
               className="mt-5"
               style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
-              Four short passes. No clocks, no scores. Submit when it feels right · your COB starts to form around the answers.
+              Answer what's useful, skip the rest. Submit when you're done · we'll review and reply within 2 business days.
             </p>
 
             {toast.kind === "error" ? (
@@ -448,15 +448,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART I · CURRENT STATE</Overline>
+            <Overline>PART 1 · WHERE YOU ARE TODAY</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Choose any words that describe the business right now.
+              Pick the words that describe your business right now.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Pick the language that feels true. No limit.
+              Select as many as you want. The good, the bad, and everything in between.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {currentWords.map((word) => (
@@ -473,15 +473,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART II · ASPIRATION</Overline>
+            <Overline>PART 2 · WHERE YOU WANT TO BE</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Choose any words for how the business needs to feel next.
+              Pick the words for how your business should feel in 12 months.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Same posture · select as many as fit.
+              Select as many as fit.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {aspirationWords.map((word) => (
@@ -498,15 +498,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART III · APP FOOTPRINT</Overline>
+            <Overline>PART 3 · THE SYSTEMS YOU ALREADY RUN</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Tag the systems already in motion.
+              Which tools does your business actually use?
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Ten categories. Select what the business actually runs on today.
+              Tap every tool you use. So we know what your COB needs to plug into.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {APP_CATEGORIES.map((category) => (
@@ -534,21 +534,21 @@ export function ConsultForm() {
                   borderRadius: 8,
                   padding: "12px 14px",
                 }}
-                placeholder="Anything else the business depends on."
+                placeholder="List any other tools your business depends on."
               />
             </label>
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART IV · OPERATING STYLE</Overline>
+            <Overline>PART 4 · HOW YOU MAKE DECISIONS</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Mark every option that fits how you naturally work.
+              Pick the options that sound like how you work.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Select as many as feel true on each row. There is no wrong count.
+              For each row, select every option that fits. This tells your COB how to brief you · what to push, what to flag, what to leave alone.
             </p>
             <div className="mt-6 space-y-5">
               {discRows.map((row, index) => {

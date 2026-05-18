@@ -11,10 +11,10 @@ export default function ConsultThankYou() {
       <section className="mx-auto max-w-3xl rounded-[36px] border border-raddo-paper-edge bg-white p-8 shadow-[0_30px_80px_rgba(12,68,124,0.08)] md:p-12">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-raddo-ash">Submission received</p>
         <h1 className="mt-4 font-display text-4xl leading-tight text-raddo-charcoal md:text-5xl">
-          Your consult is submitted.
+          Thanks · we've got your answers.
         </h1>
         <p className="mt-5 max-w-2xl text-base leading-8 text-raddo-ash">
-          Expect a response within 2 business days. The consult is reviewed as signal, not as a lead-form trophy. If the shape of the work is real, the reply will be specific.
+          You'll hear back within 2 business days with a specific reply on what your COB would look like and what the next step would be.
         </p>
         <div className="mt-8 border-t border-raddo-paper-edge pt-6">
           <Link
