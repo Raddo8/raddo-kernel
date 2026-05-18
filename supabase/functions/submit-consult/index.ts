@@ -111,6 +111,10 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "A valid email is required." }, 400);
   }
 
+  if (!payload.name || typeof payload.name !== "string" || payload.name.trim().length === 0) {
+    return jsonResponse({ error: "Name is required." }, 400);
+  }
+
   // Defensive shape checks
   payload.currentStateWordIds = Array.isArray(payload.currentStateWordIds) ? payload.currentStateWordIds : [];
   payload.aspirationWordIds = Array.isArray(payload.aspirationWordIds) ? payload.aspirationWordIds : [];
