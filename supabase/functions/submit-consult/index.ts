@@ -165,7 +165,9 @@ Deno.serve(async (request) => {
   if (resendApiKey) {
     const summaryLines = [
       `Email: ${payload.email}`,
-      payload.name ? `Name: ${payload.name}` : null,
+      `Name: ${payload.name}`,
+      payload.phone ? `Phone: ${payload.phone}` : null,
+      payload.occupation ? `Occupation: ${payload.occupation}` : null,
       ``,
       `Primary style: ${disc.primaryStyle}`,
       `Secondary style: ${disc.secondaryStyle}`,
