@@ -743,8 +743,6 @@ export function Hero() {
           <p
             className="uppercase text-raddo-brass font-sans text-left font-semibold text-lg mx-[50px] ml-0 mr-0 px-0 my-0 mb-0 py-[40px] pb-0"
             style={{
-              fontSize: "13.5px",
-              fontWeight: 500,
               letterSpacing: "0.32em",
             }}
           >
