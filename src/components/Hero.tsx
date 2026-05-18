@@ -732,12 +732,12 @@ export function Hero() {
               <span style={{ fontWeight: 900 }}>COB</span>
             </div>
 
-            {/* Line 2: Chief of */}
+            {/* Line 2: Chief Of */}
             <div
               className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
               style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
             >
-              Chief of
+              <span style={{ fontWeight: 900 }}>C</span>hief <span style={{ fontWeight: 900 }}>O</span>f
             </div>
 
             {/* Line 3: rotating word */}
