@@ -119,84 +119,87 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
       </div>
 
       {/* Header · clickable */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        aria-controls="briefing-001-body"
-        className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
-      >
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="briefing-001-body"
+          className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
+        >
 
-        <div className="flex flex-col items-stretch gap-3">
-          <h2
-            className="font-display text-raddo-ink-deep m-0 md:whitespace-nowrap"
+          <div className="flex flex-col items-stretch gap-3">
+            <h2
+              className="font-display text-raddo-ink-deep m-0 md:whitespace-nowrap"
+              style={{
+                fontWeight: 800,
+                fontSize: "clamp(22px, 4.2vw, 48px)",
+                lineHeight: 1.05,
+              }}
+            >
+              What is COB?
+            </h2>
+          </div>
+
+          <div
+            className="mt-4 md:mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono"
             style={{
-              fontWeight: 800,
-              fontSize: "clamp(22px, 4.2vw, 48px)",
-              lineHeight: 1.05,
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              color: "hsl(var(--raddo-ash))",
+              textTransform: "uppercase",
             }}
           >
-            What is COB?
-          </h2>
-        </div>
+            <span
+              aria-hidden
+              style={{
+                width: 40,
+                height: 1.5,
+                backgroundColor: "hsl(var(--raddo-brass))",
+              }}
+            />
+            <span>Subject · Decision Intelligence</span>
+            <span aria-hidden style={{ color: "hsl(var(--raddo-paper-edge))" }}>·</span>
+            <span>6 paragraphs · 90 sec read</span>
+          </div>
+        </button>
 
+        {/* Bottom-right of header · OPEN DOSSIER indicator (visual; whole header toggles) */}
         <div
-          className="mt-4 md:mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 font-mono"
+          aria-hidden
+          className="pointer-events-none absolute flex items-center gap-3 font-mono"
           style={{
+            right: 24,
+            bottom: 18,
             fontSize: 10,
             letterSpacing: "0.18em",
             color: "hsl(var(--raddo-ash))",
             textTransform: "uppercase",
           }}
         >
+          <span>{open ? "Close" : "Open dossier"}</span>
           <span
-            aria-hidden
+            className="grid place-items-center"
             style={{
-              width: 40,
-              height: 1.5,
-              backgroundColor: "hsl(var(--raddo-brass))",
+              width: 28,
+              height: 28,
+              border: "1px solid hsl(var(--raddo-brass))",
+              borderRadius: 4,
+              color: "hsl(var(--raddo-brass-deep))",
+              transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+              backgroundColor: open
+                ? "hsl(var(--raddo-brass) / 0.12)"
+                : "transparent",
             }}
-          />
-          <span>Subject · Decision Intelligence</span>
-          <span aria-hidden style={{ color: "hsl(var(--raddo-paper-edge))" }}>·</span>
-          <span>6 paragraphs · 90 sec read</span>
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+            </svg>
+          </span>
         </div>
-      </button>
-
-      {/* Bottom-right · OPEN DOSSIER indicator (visual; whole header toggles) */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute flex items-center gap-3 font-mono"
-        style={{
-          right: 24,
-          top: 52,
-          fontSize: 10,
-          letterSpacing: "0.18em",
-          color: "hsl(var(--raddo-ash))",
-          textTransform: "uppercase",
-        }}
-      >
-        <span>{open ? "Close" : "Open dossier"}</span>
-        <span
-          className="grid place-items-center"
-          style={{
-            width: 28,
-            height: 28,
-            border: "1px solid hsl(var(--raddo-brass))",
-            borderRadius: 4,
-            color: "hsl(var(--raddo-brass-deep))",
-            transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
-            transform: open ? "rotate(180deg)" : "rotate(0deg)",
-            backgroundColor: open
-              ? "hsl(var(--raddo-brass) / 0.12)"
-              : "transparent",
-          }}
-        >
-          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-            <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-          </svg>
-        </span>
       </div>
+
 
       {/* Expandable body */}
       <AnimatePresence initial={false}>
