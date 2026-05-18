@@ -154,6 +154,52 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             }}
           />
 
+          {/* Action row · open dossier directive */}
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <span
+              className="font-mono"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-brass-deep))",
+                textTransform: "uppercase",
+              }}
+            >
+              {open ? "Tap to seal" : "Tap dossier or exhibit to unseal"}
+            </span>
+            <span
+              aria-hidden
+              className="flex items-center gap-2 font-mono"
+              style={{
+                fontSize: 10,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-ash))",
+                textTransform: "uppercase",
+              }}
+            >
+              <span>{open ? "Close" : "Open dossier"}</span>
+              <span
+                className="grid place-items-center"
+                style={{
+                  width: 28,
+                  height: 28,
+                  border: "1px solid hsl(var(--raddo-brass))",
+                  borderRadius: 4,
+                  color: "hsl(var(--raddo-brass-deep))",
+                  transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
+                  transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                  backgroundColor: open
+                    ? "hsl(var(--raddo-brass) / 0.12)"
+                    : "transparent",
+                }}
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+                </svg>
+              </span>
+            </span>
+          </div>
+
           {/* Intelligence briefing header · labelled field grid */}
           <dl
             className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
@@ -197,8 +243,8 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             ))}
           </dl>
 
-          {/* Action row · open dossier directive */}
-          <div className="mt-4 flex items-center justify-between gap-4">
+          {/* Spacer · was previously the action row position */}
+          <div className="hidden">
             <span
               className="font-mono"
               style={{
