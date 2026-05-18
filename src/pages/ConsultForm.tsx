@@ -226,6 +226,10 @@ export function ConsultForm() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const confirmed = window.confirm(
+      "Submit your consult? Review your answers first · once sent, this goes to the RADDO team for review."
+    );
+    if (!confirmed) return;
     setSubmitting(true);
     setToast({ kind: "idle", message: "" });
 
@@ -322,7 +326,7 @@ export function ConsultForm() {
         className="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[300px_minmax(0,1fr)]"
       >
         {/* Sidebar */}
-        <aside className="h-fit lg:sticky lg:top-8">
+        <aside className="sticky top-2 z-20 h-fit lg:top-8">
           <Panel className="p-6">
             <Overline>5 MIN · 4 SECTIONS</Overline>
             <p
