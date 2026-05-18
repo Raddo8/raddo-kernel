@@ -281,7 +281,7 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                5 minutes to set up your Chief of Business.
+                5 minutes to set up your Chief Of Business.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
