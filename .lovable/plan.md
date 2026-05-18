@@ -1,97 +1,148 @@
-# Phase 1A — Analytics + SEO + Sitemap
+## Goal
 
-Three concerns, one pass. All public marketing routes get per-route head; the gated `/app/*` product surfaces are intentionally excluded (noindex by virtue of auth gate + not in sitemap).
+Add a new top-of-fold "Introducing COB" section ABOVE the existing hero in `src/components/Hero.tsx`. The current hero (BriefingDossier, headline, CTAs, mandala asset, COB rotator) stays pixel-identical. New section is a 4-panel sliding carousel with mandatory telemetry, archetype-tagged consult CTA, and brand-locked aesthetic.
 
-## Existing state worth noting
+## Files to add
 
-- `index.html` already ships a sitewide title, description, canonical, og:* and twitter:* — the per-route Helmet will override these on routes that set their own; `index.html` remains the fallback for non-JS social crawlers.
-- `public/og-image.png` already exists → reuse it. No new image generation.
-- `public/robots.txt` exists with per-bot Allow blocks; will be edited in place to add Disallow + Sitemap, not replaced.
-- Routes in `App.tsx`: public marketing = `/`, `/consult`, `/consult/thank-you`, `/style-guide`, `/respond/:token`. Product lives under `/app/*` behind AuthGate.
+1. **`src/components/IntroducingCob.tsx`** (new) — self-contained section component. Owns its own state, motion, telemetry, accessibility. Exports `IntroducingCob`. No props.
 
-## ITEM 1 — Plausible
+2. **`src/lib/panel-telemetry.ts`** (new) — thin wrapper around `window.plausible` with typed event signatures for the four hero panel events. Centralizes goal names so they match the Plausible dashboard exactly.
 
-- Add to `index.html` `<head>`:
-  `<script defer data-domain="raddo.ai,raddo.lovable.app" src="https://plausible.io/js/script.js"></script>`
-  Dual-track via comma-separated `data-domain` so pageviews land in both Plausible properties while we're on the lovable subdomain. (Single script tag, no proxy needed.)
-- `src/vite-env.d.ts`: extend `Window` with optional `plausible(eventName: string, opts?: { props?: Record<string, string | number | boolean> }): void`.
-- `src/pages/ConsultForm.tsx`: in `handleSubmit`, after a successful `supabase.functions.invoke` and before `navigate("/consult/thank-you")`, fire:
-  `window.plausible?.("consult_submission")`.
+## Files to modify
 
-Note for report: Plausible needs both `raddo.ai` and `raddo.lovable.app` added as properties in the Plausible dashboard before events show up. I'll flag this in the post-build report.
+1. **`src/components/Hero.tsx`** — single insertion only: import `IntroducingCob`, render it as the first child inside `<main>` after the grain overlay and `<SiteHeader />` and BEFORE the existing `{/* ====== HERO ====== */}` section. No other lines touched. SeoHead, grain, header, existing hero section all unchanged.
 
-## ITEM 2 — react-helmet-async
+## IntroducingCob structure
 
-- `bun add react-helmet-async`.
-- `src/main.tsx`: wrap `<App />` in `<HelmetProvider>`.
-- Per-route `<Helmet>` blocks (each includes title, description, canonical, og:*, twitter:*):
-
-| Route | Title | Description |
-|---|---|---|
-| `/` (Hero.tsx) | RADDO · Your Chief of Business | RADDO is a Chief of Business built around you — drawing on every system you run to keep you sharp across email, meetings, decisions, and direction. |
-| `/consult` (ConsultForm.tsx) | Begin your consult · RADDO | A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide. |
-| `/consult/thank-you` (ConsultThankYou.tsx) | Consult received · RADDO | Your consult is in. Expect a response within 2 business days. + `<meta name="robots" content="noindex,follow" />` |
-| `/style-guide` (StyleGuide.tsx) | Style guide · RADDO (internal) | Internal RADDO design system reference. + `noindex,nofollow` (internal) |
-| `/respond/:token` (RespondPage.tsx) | Respond · RADDO | Secure single-use response surface. + `noindex,nofollow` (token URLs, never index) |
-| `*` (NotFound.tsx) | Not found · RADDO | This page could not be located. + `noindex,follow` |
-
-Canonical hosts use `https://raddo.ai` per dispatch (even though deployment is currently on `raddo.lovable.app` — Helmet writes the canonical the dispatch specified).
-
-`/app/*` product routes get no Helmet treatment in this dispatch — they sit behind AuthGate and are not in scope.
-
-## ITEM 3a — sitemap.xml
-
-Create `public/sitemap.xml` (static, hand-edited file — no generator script; route set is tiny and stable). Entries:
-
-- `/` priority 1.0, changefreq weekly
-- `/consult` priority 0.9, changefreq monthly
-
-Excluded: `/consult/thank-you` (per dispatch), `/style-guide` (internal), `/respond/:token` (dynamic token URLs), `/app/*` (gated), `*` (404). `lastmod` = today.
-
-## ITEM 3b — robots.txt
-
-Edit `public/robots.txt` in place. Keep existing per-bot Allow blocks; add at the end:
-
-```
-Disallow: /consult/thank-you
-Disallow: /style-guide
-Disallow: /respond/
-Disallow: /app/
-
-Sitemap: https://raddo.ai/sitemap.xml
+```text
+<section role="region" aria-roledescription="carousel" aria-label="Introducing COB">
+  <eyebrow>INTRODUCING COB</eyebrow>            // small caps, brass, tracked
+  <h1 font-display>What if your toughest decisions had already been solved?
+                    Even before you knew about them.</h1>
+  <carousel-viewport>                            // overflow-hidden, fixed aspect
+    <track style="transform: translateX(-index * 100%)">
+      <panel × 4>
+        <archetype-eyebrow/>                     // brass small caps
+        <scenario font-display/>                 // Fraunces, same scale as h1
+        <placeholder-figure/>                    // 4:5 mobile, 16:10 desktop
+      </panel>
+    </track>
+    <edge-button left/> <edge-button right/>     // desktop hover only
+  </carousel-viewport>
+  <dot-pagination/>                              // 4 dots, current=brass
+  <a href="/consult?archetype={slug}">Begin the consult</a>
+</section>
 ```
 
-(I'm adding the additional `Disallow` lines for `/style-guide`, `/respond/`, and `/app/` defensively — they're already noindex via Helmet but robots-level disallow keeps them out of crawl entirely. I'll flag this in the report; happy to remove if you want only the dispatch-specified single Disallow.)
+Section background: `bg-raddo-paper`. Container width matches existing hero (`max-w-[1240px]`, same horizontal padding). Vertical padding: `pt-16 pb-12 md:pt-24 md:pb-16` so the existing hero still breathes below.
 
-## ITEM 3c — OG meta
+## Panel content (verbatim, locked)
 
-OG + Twitter mirrors are part of each Helmet block in ITEM 2. Image source: `https://raddo.ai/og-image.png` (existing asset in `public/`). No new image needed.
+Stored as a const `PANELS` array of `{ slug, label, scenario, imageAlt, tone }`. Slugs: `professional | executive | owner | enterprise`. Copy exactly as specified in the dispatch — no paraphrasing, "Remember" frame preserved.
 
-## ITEM 3d — OG image
+## Placeholders (no AI imagery, no stock)
 
-Reusing existing `public/og-image.png`. Will report dimensions; if it's not 1200×630 I'll flag for follow-up but not regenerate in this pass.
+`PlaceholderFigure` component renders a solid warm-tone block, one per archetype:
 
-## Files to write
+- professional → dawn cream `hsl(var(--raddo-paper))` with subtle ink hairline border
+- executive    → dusk ink `hsl(var(--raddo-ink-deep))` with paper text
+- owner        → lamp brass `hsl(var(--raddo-brass))` at low saturation overlay on paper
+- enterprise   → atrium ivory (paper tinted slightly cooler)
 
-- `index.html` (Plausible script)
-- `src/vite-env.d.ts` (window.plausible type)
-- `src/main.tsx` (HelmetProvider wrap)
-- `src/pages/ConsultForm.tsx` (Plausible event + Helmet)
-- `src/components/Hero.tsx` (Helmet for `/`)
-- `src/pages/ConsultThankYou.tsx` (Helmet + noindex)
-- `src/pages/StyleGuide.tsx` (Helmet + noindex)
-- `src/pages/RespondPage.tsx` (Helmet + noindex)
-- `src/pages/NotFound.tsx` (Helmet + noindex)
-- `public/sitemap.xml` (new)
-- `public/robots.txt` (append Disallow + Sitemap)
-- `package.json` (react-helmet-async)
+Centered inside: a small framed caption box (1px ink hairline, 4px radius) holding the alt-text string. Aspect ratio: `aspect-[4/5] md:aspect-[16/10]`. Dev-only `// PLACEHOLDER //` chip in JetBrains Mono, positioned top-left, gated by `import.meta.env.DEV` (Vite equivalent of `NODE_ENV !== "production"`).
 
-## Out of scope
+Lazy loading: only the active panel's figure mounts eagerly. Adjacent panels prefetch via `requestIdleCallback` (fallback `setTimeout`) — since placeholders are CSS-only this is mostly a no-op, but the hook is in place so commissioned images later inherit the behavior.
 
-RAD-42 (Resend on /consult) — not touched.
+## Interaction
 
-## Open questions before I build
+- State: `const [index, setIndex] = useState(0)` + `const [direction, setDirection] = useState<"left"|"right"|"dot">("right")`.
+- Mobile swipe: framer-motion `drag="x"` with `dragConstraints={{left:0,right:0}}` and `onDragEnd` thresholding `offset.x` / `velocity.x` to commit a panel change.
+- Desktop arrow keys: a single `onKeyDown` handler on the carousel region — `ArrowLeft`, `ArrowRight`, `Home`, `End`. Region is `tabIndex={0}` with a brass focus ring matching existing tokens.
+- Edge buttons: `Button variant="ghost" size="icon"` with `lucide-react` ChevronLeft/Right, `aria-label="Previous panel" / "Next panel"`, visible on `group-hover` at md+ breakpoints only.
+- Dots: `<button>` per index, `aria-label="Go to {label} panel"`, `aria-current={i===index}`. Active dot brass-filled, inactive ink-soft outline.
+- Auto-advance: disabled. No timer anywhere.
+- Transition: 400ms `cubic-bezier(0.22, 1, 0.36, 1)` on the track's `transform`. `prefers-reduced-motion` → 0ms (snap), via existing `useReducedMotion()` from framer-motion.
+- No layout shift: viewport has a fixed aspect ratio and the headline/eyebrow are above-the-track (not per-panel), so panel switches never reflow the page. CLS = 0.
 
-None blocking. Two flags for the report after build:
-1. Plausible dashboard must have both `raddo.ai` and `raddo.lovable.app` properties created — I can't do that from code.
-2. Extra defensive `Disallow` lines in robots.txt beyond the one you specified — easy to drop if you'd rather keep the file minimal.
+## Telemetry pattern (built FIRST)
+
+`src/lib/panel-telemetry.ts`:
+
+```text
+type Archetype = "professional" | "executive" | "owner" | "enterprise";
+export const fireHeroPanelView   = (a: Archetype) => window.plausible?.("hero_panel_view",  { props: { archetype: a } });
+export const fireHeroPanelSwipe  = (from, to, direction) => window.plausible?.("hero_panel_swipe", { props: { from, to, direction } });
+export const fireHeroPanelDwell  = (a, dwell_ms) => window.plausible?.("hero_panel_dwell", { props: { archetype: a, dwell_ms } });
+export const fireHeroCtaClick    = (a: Archetype) => window.plausible?.("hero_cta_click",  { props: { archetype: a } });
+```
+
+Wiring inside `IntroducingCob.tsx`:
+
+- **view (>1.5s in viewport)**: `IntersectionObserver` on the carousel viewport at `threshold: 0.5`. When the active panel enters and stays for 1500ms (tracked via `setTimeout` cleared on exit or index change), fire `hero_panel_view` once per (panel × mount). De-dupe via `Set<Archetype>` ref so re-entering the same panel after dwell-out doesn't re-fire in the same session.
+- **swipe**: in the index-change committer (whether from keys, drag, dot, or button), call `fireHeroPanelSwipe(fromSlug, toSlug, direction)` BEFORE updating state. Direction source: keys/buttons → "left"|"right", dots → "dot", drag → derived from sign of `offset.x`.
+- **dwell**: track `enterMs` in a ref when index changes or panel becomes visible. On the next index change OR when the section scrolls out of view OR on `pagehide`, fire `hero_panel_dwell` with `Date.now() - enterMs`. Use `visibilitychange` + `pagehide` listeners cleaned up on unmount.
+- **cta click**: `onClick` handler on the consult link calls `fireHeroCtaClick(PANELS[index].slug)` then uses react-router `navigate(`/consult?archetype=${slug}`)`. Use `useNavigate` rather than a raw `<a>` so SPA navigation works and the event fires reliably before route change.
+
+All four events visible in DevTools → Network → filter `plausible.io`.
+
+## CTA wiring
+
+```text
+const navigate = useNavigate();
+const slug = PANELS[index].slug;
+<Button
+  variant="default"
+  className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+  onClick={() => { fireHeroCtaClick(slug); navigate(`/consult?archetype=${slug}`); }}
+>
+  Begin the consult
+</Button>
+```
+
+Brass-only per doctrine. Consult page does not consume the param yet — out of scope.
+
+## Brand compliance checks
+
+- Palette: only `raddo-paper`, `raddo-paper-edge`, `raddo-ink`, `raddo-ink-deep`, `raddo-ink-soft`, `raddo-brass`, `raddo-brass-deep`, `raddo-ash` via existing HSL tokens. No arbitrary colors.
+- Type: Fraunces for eyebrow-meta-headline AND scenario copy (equal hierarchical weight as specified). Inter for the CTA label. JetBrains Mono only for the dev placeholder chip.
+- Radius: 4px on figure frame and dots, 8px on the CTA. Nothing else.
+- Shadow: none on figures (placeholders), max 4px on CTA hover.
+- Motion: single 400ms curve, no looping, no spinners, no ornament.
+- No banned phrases. No "AI", no "magic", no tier numbers. Internal-doctrine comments in JSX kept as `{/* ... */}` source comments, never rendered.
+
+## Accessibility
+
+- `role="region"` `aria-roledescription="carousel"` `aria-label="Introducing COB"` on the section.
+- Each panel: `role="group"` `aria-roledescription="slide"` `aria-label={archetype label}` `aria-hidden={i !== index}` so screen readers skip inactive slides.
+- Inactive slides also get `inert` (when supported) to remove from tab order.
+- Carousel viewport `tabIndex={0}` with visible focus ring (brass, 2px).
+- Dots are real `<button>` elements with `aria-current`.
+- Edge buttons have `aria-label`s and are reachable via keyboard.
+- `prefers-reduced-motion`: track transform updates instantly (no transition), drag still allowed (user gesture, not motion design).
+- Color contrast: ink-deep on paper ≈ 11:1; brass eyebrow at 14px+ uppercase tracked treated as decoration but also paired with ink-deep scenario text so meaning never lives in brass alone.
+
+## Acceptance verification (post-build)
+
+- Visual: new section is first viewport, existing hero unchanged below.
+- Diff scope: `Hero.tsx` shows only an `import` line and one `<IntroducingCob />` render line added.
+- DevTools: Network filter `plausible.io` shows the four event names firing under the right interactions.
+- Keyboard-only walkthrough advances panels and reaches the CTA.
+- DevTools device-emulator swipe advances panels on mobile widths.
+- `prefers-reduced-motion: reduce` → instant transitions confirmed.
+- Lighthouse mobile run captured and reported.
+
+## Out of scope (confirmed)
+
+- Any change to BriefingDossier, BriefingComposition, current headline, current CTAs, mandala, COB rotator.
+- `/consult` page reading `?archetype=`.
+- Real diorama imagery.
+- A/B harness for "Remember" vs "Imagine".
+- Pricing references on the hero.
+
+## Technical notes (for your reference)
+
+- `IntersectionObserver`, `requestIdleCallback`, `visibilitychange`, `pagehide` all guarded for SSR/older browsers (`typeof window !== "undefined"`, feature checks).
+- `window.plausible` type already declared in `src/vite-env.d.ts` — no new ambient types needed.
+- Dev placeholder gate uses `import.meta.env.DEV` (Vite), not `process.env.NODE_ENV`, so it tree-shakes out of the production bundle cleanly.
+- Carousel uses CSS `transform: translateX` on a flex track rather than mounting/unmounting panels — keeps `IntersectionObserver` stable and CLS at 0.
+- Drag handler uses framer-motion's `PanInfo` not raw pointer events for momentum + velocity.
