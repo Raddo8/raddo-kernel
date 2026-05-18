@@ -852,7 +852,7 @@ export function Hero() {
               Built for you day one.
             </motion.span>
             <motion.span
-              className="block italic mt-6 md:mt-8"
+              className="block italic mt-12 md:mt-16"
               variants={rise(900, 2100)}
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
@@ -860,7 +860,7 @@ export function Hero() {
               <br />
               every action.
             </motion.span>
-            <motion.span className="block mt-6 md:mt-8" variants={rise(900, 2300)}>
+            <motion.span className="block mt-12 md:mt-16" variants={rise(900, 2300)}>
               Yours to wield anywhere.
             </motion.span>
           </motion.h1>
