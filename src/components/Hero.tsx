@@ -71,8 +71,237 @@ const INDEX = [
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// BriefingTypewriter · cinematic, transmission·style reveal for the opened
+// dossier body. Streams characters paragraph by paragraph, ~4.5s on first open,
+// ~2.5s on subsequent opens within session. Honors prefers·reduced·motion.
+// Full text is pre·rendered as transparent so layout reserves height instantly
+// (no shift after open).
+// ─────────────────────────────────────────────────────────────────────────────
+
+type TypeRun = { t: string; b?: boolean };
+type TypePara = {
+  runs: TypeRun[];
+  className: string;
+  style?: React.CSSProperties;
+  italic?: boolean; // pacing weight · italic paras decelerate for gravitas
+};
+
+const DOSSIER_PARAS: TypePara[] = [
+  {
+    className: "font-sans text-raddo-charcoal mb-6",
+    style: { fontSize: 18, lineHeight: 1.6 },
+    runs: [
+      { t: "COB is a system of " },
+      { t: "intelligence, strategy, and competence", b: true },
+      { t: " built around one person · or one business. It reads what you read, sits in your meetings, and holds the full context of your operation: finance, legal, people, risk, every functional domain. It learns how you think, how you write, what you weigh, what you cut. From that foundation, it produces the briefings, drafts, projects, reports, presentations, and counsel that let you show up as the sharpest version of yourself in every room you walk into." },
+    ],
+  },
+  {
+    className: "font-sans text-raddo-charcoal mb-6",
+    style: { fontSize: 18, lineHeight: 1.6 },
+    runs: [{ t: "Two things separate COB from any tool you have used before." }],
+  },
+  {
+    className: "font-sans text-raddo-charcoal mb-6",
+    style: { fontSize: 18, lineHeight: 1.6 },
+    runs: [
+      { t: "It is portable.", b: true },
+      { t: " Not locked to one app, one platform, one provider. It carries everything you teach it across the systems you already use." },
+    ],
+  },
+  {
+    className: "font-sans text-raddo-charcoal mb-6",
+    style: { fontSize: 18, lineHeight: 1.6 },
+    runs: [
+      { t: "It is permanent.", b: true },
+      { t: " It does not reset when you change roles, restructure your team, or move on to the next thing. The longer you use it, the more of you it carries." },
+    ],
+  },
+  {
+    className: "font-sans text-raddo-charcoal mb-6",
+    style: { fontSize: 18, lineHeight: 1.6 },
+    runs: [{ t: "Executives without a COB are now competing against executives with one. The gap shows up quietly · in who is prepared when the question lands, who has the draft ready before the meeting, who remembers what was decided three quarters ago when it matters again, who carries the full operation with them instead of behind them. The disadvantage is small at first. It compounds." }],
+  },
+  {
+    className: "font-display text-raddo-ink-deep mb-4",
+    style: { fontStyle: "italic", fontSize: 21, lineHeight: 1.45 },
+    italic: true,
+    runs: [{ t: "The question is no longer whether decision intelligence at this depth becomes the standard for serious operators." }],
+  },
+  {
+    className: "font-display text-raddo-ink-deep",
+    style: { fontStyle: "italic", fontSize: 21, lineHeight: 1.45 },
+    italic: true,
+    runs: [{ t: "The question is whether you have one when it does." }],
+  },
+];
+
+function BriefingTypewriter({
+  paras,
+  play,
+  replayCount,
+  dividerAfterIndex,
+}: {
+  paras: TypePara[];
+  play: boolean;
+  replayCount: number;
+  dividerAfterIndex?: number;
+}) {
+  const reduce = useReducedMotion();
+  const totals = useMemo(
+    () => paras.map((p) => p.runs.reduce((s, r) => s + r.t.length, 0)),
+    [paras]
+  );
+
+  const [progress, setProgress] = useState<number[]>(() => paras.map(() => 0));
+  const [activeIdx, setActiveIdx] = useState(0);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (!play) {
+      setProgress(paras.map(() => 0));
+      setActiveIdx(0);
+      setDone(false);
+      return;
+    }
+    if (reduce) {
+      setProgress(totals);
+      setActiveIdx(paras.length - 1);
+      setDone(true);
+      return;
+    }
+
+    // Budget: first open 4.5s · replays 2.5s. Italic paras slowed via weight.
+    const budgetMs = replayCount > 1 ? 2500 : 4500;
+    const weights = paras.map((p) => (p.italic ? 1.8 : 1));
+    const weightedTotal = paras.reduce((acc, _p, i) => acc + totals[i] * weights[i], 0);
+    const msPerWeightedChar = budgetMs / Math.max(1, weightedTotal);
+    const interParaPauseMs = 120;
+
+    let raf = 0;
+    let paraIdx = 0;
+    let paraStart = performance.now();
+    let pauseUntil = 0;
+
+    const tick = (now: number) => {
+      if (paraIdx >= paras.length) {
+        setDone(true);
+        return;
+      }
+      if (now < pauseUntil) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const charMs = msPerWeightedChar * weights[paraIdx];
+      const elapsed = now - paraStart;
+      const chars = Math.min(totals[paraIdx], Math.floor(elapsed / charMs));
+
+      setProgress((prev) => {
+        if (prev[paraIdx] === chars) return prev;
+        const next = prev.slice();
+        next[paraIdx] = chars;
+        return next;
+      });
+
+      if (chars >= totals[paraIdx]) {
+        paraIdx += 1;
+        setActiveIdx(paraIdx);
+        pauseUntil = now + interParaPauseMs;
+        paraStart = now + interParaPauseMs;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [play, reduce, replayCount, paras, totals]);
+
+  const dividerActive =
+    typeof dividerAfterIndex === "number" &&
+    (done || (progress[dividerAfterIndex] ?? 0) >= totals[dividerAfterIndex]);
+
+  return (
+    <>
+      {paras.map((p, i) => {
+        const shown = progress[i] ?? 0;
+        const isActive = !done && play && i === activeIdx && shown < totals[i];
+        let remaining = shown;
+
+        const paragraph = (
+          <p key={`p-${i}`} className={p.className} style={p.style}>
+            {p.runs.map((r, j) => {
+              const showLen = Math.max(0, Math.min(r.t.length, remaining));
+              const visible = r.t.slice(0, showLen);
+              const hidden = r.t.slice(showLen);
+              remaining = Math.max(0, remaining - r.t.length);
+              return (
+                <span key={j}>
+                  {r.b ? (
+                    <strong className="text-raddo-ink-deep font-bold">{visible}</strong>
+                  ) : (
+                    visible
+                  )}
+                  {hidden && (
+                    <span aria-hidden style={{ color: "transparent" }}>
+                      {r.b ? <strong className="font-bold">{hidden}</strong> : hidden}
+                    </span>
+                  )}
+                </span>
+              );
+            })}
+            {isActive && (
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 2,
+                  height: "0.95em",
+                  marginLeft: 2,
+                  verticalAlign: "-0.12em",
+                  backgroundColor: "hsl(var(--raddo-brass-deep))",
+                  animation: "raddo-caret-blink 600ms steps(2, start) infinite",
+                }}
+              />
+            )}
+          </p>
+        );
+
+        if (i === dividerAfterIndex) {
+          return (
+            <span key={`g-${i}`} style={{ display: "contents" }}>
+              {paragraph}
+              <div
+                aria-hidden
+                className="my-7"
+                style={{
+                  width: 120,
+                  height: 1.5,
+                  backgroundColor: "hsl(var(--raddo-brass))",
+                  opacity: dividerActive ? 1 : 0,
+                  transition: "opacity 320ms cubic-bezier(0.22,1,0.36,1)",
+                }}
+              />
+            </span>
+          );
+        }
+        return paragraph;
+      })}
+    </>
+  );
+}
+
 function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolean | ((p: boolean) => boolean)) => void }) {
   const reduce = useReducedMotion();
+  const replayRef = useRef(0);
+  if (open && replayRef.current === 0) replayRef.current = 1;
+  // bump replay count on every closed→open transition
+  const prevOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpenRef.current) replayRef.current += 1;
+    prevOpenRef.current = open;
+  }, [open]);
+  const replayCount = replayRef.current;
 
   return (
     <article
