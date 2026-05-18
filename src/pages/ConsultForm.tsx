@@ -266,6 +266,9 @@ export function ConsultForm() {
       return;
     }
 
+    if (typeof window !== "undefined") {
+      window.plausible?.("consult_submission");
+    }
     navigate("/consult/thank-you");
   }
 
