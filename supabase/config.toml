@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.mint-load-test-headers]
 verify_jwt = false
+
+[functions.submit-consult]
+verify_jwt = false

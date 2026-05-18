@@ -25,6 +25,8 @@ import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
+import Consult from "@/pages/Consult";
+import ConsultThankYou from "@/pages/ConsultThankYou";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
 import StyleGuide from "@/pages/StyleGuide";
@@ -66,6 +68,8 @@ const App = () => (
                 + AppLayout. Future marketing routes follow the same split.
             */}
             <Route path="/" element={<Hero />} />
+            <Route path="/consult" element={<Consult />} />
+            <Route path="/consult/thank-you" element={<ConsultThankYou />} />
             <Route path="/style-guide" element={<StyleGuide />} />
             <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={

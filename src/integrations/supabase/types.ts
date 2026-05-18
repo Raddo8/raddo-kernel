@@ -313,6 +313,60 @@ export type Database = {
           },
         ]
       }
+      consult_submissions: {
+        Row: {
+          app_inventory: Json
+          aspiration_state_words: Json
+          created_at: string
+          current_state_words: Json
+          disc_responses: Json
+          disc_scores: Json
+          email: string
+          id: string
+          is_hybrid: boolean
+          name: string | null
+          other_apps_text: string | null
+          persona_name_candidates: string[]
+          primary_style: string
+          secondary_style: string
+          theme_gap_analysis: Json
+        }
+        Insert: {
+          app_inventory: Json
+          aspiration_state_words: Json
+          created_at?: string
+          current_state_words: Json
+          disc_responses: Json
+          disc_scores: Json
+          email: string
+          id?: string
+          is_hybrid?: boolean
+          name?: string | null
+          other_apps_text?: string | null
+          persona_name_candidates?: string[]
+          primary_style: string
+          secondary_style: string
+          theme_gap_analysis: Json
+        }
+        Update: {
+          app_inventory?: Json
+          aspiration_state_words?: Json
+          created_at?: string
+          current_state_words?: Json
+          disc_responses?: Json
+          disc_scores?: Json
+          email?: string
+          id?: string
+          is_hybrid?: boolean
+          name?: string | null
+          other_apps_text?: string | null
+          persona_name_candidates?: string[]
+          primary_style?: string
+          secondary_style?: string
+          theme_gap_analysis?: Json
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           account_id: string
