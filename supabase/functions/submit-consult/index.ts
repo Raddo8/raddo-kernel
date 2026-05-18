@@ -136,7 +136,9 @@ Deno.serve(async (request) => {
     .from("consult_submissions")
     .insert({
       email: payload.email,
-      name: payload.name ?? null,
+      name: payload.name.trim(),
+      phone: payload.phone?.trim() || null,
+      occupation: payload.occupation?.trim() || null,
       current_state_words: payload.currentStateWordIds,
       aspiration_state_words: payload.aspirationWordIds,
       theme_gap_analysis: themeGapAnalysis,
