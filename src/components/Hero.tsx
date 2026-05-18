@@ -484,7 +484,7 @@ function VaultExhibit({ open }: { open: boolean }) {
                     letterSpacing: "0.01em",
                   }}
                 >
-                  <span>See your first brief</span>
+                  <span>Begin the consult</span>
                   <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
                 </a>
                 <a
