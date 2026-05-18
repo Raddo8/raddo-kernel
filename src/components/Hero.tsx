@@ -472,7 +472,7 @@ function VaultExhibit({ open }: { open: boolean }) {
               </div>
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <a
-                  href="/setup.html"
+                  href="/consult"
                   className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
@@ -887,7 +887,7 @@ export function Hero() {
           className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
         >
           <a
-            href="/setup.html"
+            href="/consult"
             className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
             style={{
               backgroundColor: "hsl(var(--raddo-brass))",
@@ -1128,7 +1128,7 @@ export function Hero() {
 
           <div className="md:col-span-5">
             <a
-              href="/setup.html"
+              href="/consult"
               className="raddo-cta-brass group block w-full"
               style={{
                 backgroundColor: "hsl(var(--raddo-brass))",
