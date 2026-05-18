@@ -385,8 +385,7 @@ function VaultExhibit({ open }: { open: boolean }) {
           className="font-sans text-raddo-charcoal m-0"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
-          Six sources resolve into one briefing. The vault is the operation.
-          The plaque is the morning brief.
+          The vault is the operation. The plaque is one expression of it.
         </p>
       </div>
 
