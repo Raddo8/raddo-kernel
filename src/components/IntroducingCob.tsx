@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { motion, useReducedMotion, type PanInfo } from "framer-motion";
+import { motion, useReducedMotion, type PanInfo, type Transition } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/lib/panel-telemetry";
 
 // Motion curve · matches project doctrine.
-const EASE = [0.22, 1, 0.36, 1] as const;
+const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
 const TRANSITION_MS = 400;
 const DWELL_VIEW_MS = 1500;
 
@@ -329,7 +329,7 @@ export function IntroducingCob() {
           transition={
             reduce
               ? { duration: 0 }
-              : { duration: TRANSITION_MS / 1000, ease: EASE as unknown as number[] }
+              : { duration: TRANSITION_MS / 1000, ease: EASE }
           }
           style={{ width: `${PANELS.length * 100}%` }}
         >
