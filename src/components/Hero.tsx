@@ -741,10 +741,11 @@ export function Hero() {
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[8px]"
         >
           <p
-            className="font-sans uppercase text-raddo-brass mt-[60px]"
+            className="uppercase text-raddo-brass mt-[60px]"
             style={{
-              fontSize: "13.5px",
-              fontWeight: 500,
+              fontFamily: '"Gotham", "Gotham SSm", "Montserrat", "Inter", sans-serif',
+              fontSize: "16.875px",
+              fontWeight: 700,
               letterSpacing: "0.32em",
             }}
           >
