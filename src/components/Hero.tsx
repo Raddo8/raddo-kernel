@@ -800,10 +800,10 @@ export function Hero() {
 
         {/* Headline with Six-Source Mandala backdrop */}
         <div className="relative mt-7">
-          {/* Mandala backdrop · 1750ms */}
+          {/* Mandala backdrop · leads the page · 200ms */}
           <motion.div
             aria-hidden
-            variants={fade(1200, 1750)}
+            variants={fade(1400, 200)}
             initial={INITIAL}
             animate="show"
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
@@ -835,11 +835,11 @@ export function Hero() {
             <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
           </motion.div>
 
-          {/* Headline · lines cascade after mandala (1900ms / 2100ms / 2300ms) */}
+          {/* Headline · cascades after the image has settled (1800 / 2100 / 2400ms) */}
           <motion.h1
             initial={INITIAL}
             animate="show"
-            className="relative font-display text-raddo-ink-deep px-6 py-8 md:px-10 md:py-12"
+            className="relative font-display text-raddo-ink-deep px-6 py-10 md:px-10 md:py-14"
             style={{
               fontSize: "clamp(35px, 5.76vw, 74px)",
               fontWeight: 800,
@@ -848,11 +848,11 @@ export function Hero() {
               maxWidth: "1080px",
             }}
           >
-            <motion.span className="block" variants={rise(900, 1900)}>
+            <motion.span className="block" variants={rise(900, 1800)}>
               Built for you day one.
             </motion.span>
             <motion.span
-              className="block italic mt-12 md:mt-16"
+              className="block italic mt-20 md:mt-28"
               variants={rise(900, 2100)}
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
@@ -860,7 +860,7 @@ export function Hero() {
               <br />
               every action.
             </motion.span>
-            <motion.span className="block mt-12 md:mt-16" variants={rise(900, 2300)}>
+            <motion.span className="block mt-20 md:mt-28" variants={rise(900, 2400)}>
               Yours to wield anywhere.
             </motion.span>
           </motion.h1>
