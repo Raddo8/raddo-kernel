@@ -62,9 +62,9 @@ const COB_TITLES = [
 ];
 
 const INDEX = [
-  { roman: "I", label: "Clarity", body: "Six sources resolve into one brief before the day begins." },
-  { roman: "II", label: "Origin", body: "Every line is sourced. Email, meeting, document, ledger — labelled." },
-  { roman: "III", label: "Decision", body: "Approve, escalate, redirect. The briefing presents the call, not the noise." },
+  { roman: "I", label: "Clarity", body: "Six sources held in continuous synthesis · ready when you are." },
+  { roman: "II", label: "Origin", body: "Every line is sourced. Email, meeting, document, ledger · labelled." },
+  { roman: "III", label: "Decision", body: "Approve, escalate, redirect. The system presents the call, not the noise." },
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
@@ -385,8 +385,7 @@ function VaultExhibit({ open }: { open: boolean }) {
           className="font-sans text-raddo-charcoal m-0"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
-          Six sources resolve into one briefing. The vault is the operation.
-          The plaque is the morning brief.
+          The vault is the operation. The plaque is one expression of it.
         </p>
       </div>
 
@@ -485,7 +484,7 @@ function VaultExhibit({ open }: { open: boolean }) {
                     letterSpacing: "0.01em",
                   }}
                 >
-                  <span>See your first brief</span>
+                  <span>Begin the consult</span>
                   <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
                 </a>
                 <a
@@ -937,7 +936,7 @@ export function Hero() {
           {reduce ? (
             <img
               src="/brand/video/hero-poster.jpg"
-              alt="The Six-Source Mandala — RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context resolving into one briefing."
+              alt="The Six-Source Mandala · RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief of Business."
               className="h-full w-full object-cover"
             />
           ) : (
@@ -1121,9 +1120,9 @@ export function Hero() {
               className="mt-6 max-w-[520px] font-sans text-raddo-charcoal/[0.84]"
               style={{ fontSize: "16px", lineHeight: 1.55 }}
             >
-              A short, structured intake — theme-gap, ten word lists, fifteen
+              A short, structured intake · theme-gap, ten word lists, fifteen
               calibration rows. Submit, and we schedule a sit-down. No demo
-              reels, no decks. Just the brief you would have wanted yesterday.
+              reels, no decks. Just your COB starting to form around you.
             </p>
           </div>
 
