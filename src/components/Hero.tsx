@@ -738,11 +738,13 @@ export function Hero() {
           variants={fade(600, 1600)}
           initial={INITIAL}
           animate="show"
-          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pr-[8px]"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
         >
           <p
-            className="uppercase text-raddo-brass font-sans text-left font-semibold text-lg mx-[50px] ml-0 mr-0 px-0 my-0 mb-0 py-[40px] pb-0 pt-[80px]"
+            className="font-sans uppercase text-raddo-brass"
             style={{
+              fontSize: "13.5px",
+              fontWeight: 500,
               letterSpacing: "0.32em",
             }}
           >
@@ -760,14 +762,14 @@ export function Hero() {
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-            <div className="flex flex-col items-end px-2 py-1.5 sm:py-2 text-right sm:px-[40px] pl-[40px] mr-0 gap-[4px] pr-[40px] border-slate-50">
+            <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
               {/* Line 1: your COB */}
               <div
-                className="pl-0 mr-[40px] text-xl font-sans text-left"
+                className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
                 style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
               >
                 <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
-                <span className="font-display text-raddo-ink-deep" style={{ fontWeight: 900 }}>COB</span>
+                <span style={{ fontWeight: 900 }}>COB</span>
               </div>
 
               {/* Line 2: Chief Of */}
