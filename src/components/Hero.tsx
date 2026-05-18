@@ -766,6 +766,7 @@ export function Hero() {
                 className="pl-0 mr-[40px] text-xl font-sans text-right w-full"
                 style={{ letterSpacing: "0.02em", lineHeight: 1.1 }}
               >
+                <span className="font-sans italic text-raddo-ash">your </span>
                 <span className="font-display text-raddo-ink-deep" style={{ fontWeight: 900 }}>COB</span>
               </div>
 
