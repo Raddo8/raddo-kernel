@@ -227,73 +227,47 @@ function BriefingTypewriter({
         const shown = progress[i] ?? 0;
         const isActive = !done && play && i === activeIdx && shown < totals[i];
 
-        // Ghost · full paragraph rendered invisible, reserves final layout.
-        const ghost = (
-          <span aria-hidden style={{ visibility: "hidden" }}>
-            {p.runs.map((r, j) =>
-              r.b ? (
-                <strong key={j} className="font-bold">
-                  {r.t}
-                </strong>
-              ) : (
-                <span key={j}>{r.t}</span>
-              )
-            )}
-          </span>
-        );
-
-        // Visible · only the typed prefix, overlaid on the ghost.
-        let rem = shown;
-        const visibleNodes: JSX.Element[] = [];
+        // Render every run in full so wrapping is always final · hide the
+        // not-yet-typed tail with opacity so nothing gets clipped or shifts.
+        let cursor = 0;
+        const nodes: JSX.Element[] = [];
         p.runs.forEach((r, j) => {
-          const showLen = Math.max(0, Math.min(r.t.length, rem));
-          if (showLen > 0) {
-            const slice = r.t.slice(0, showLen);
-            visibleNodes.push(
-              r.b ? (
-                <strong key={j} className="text-raddo-ink-deep font-bold">
-                  {slice}
-                </strong>
-              ) : (
-                <span key={j}>{slice}</span>
-              )
-            );
-          }
-          rem -= r.t.length;
+          const runStart = cursor;
+          const typedLen = Math.max(0, Math.min(r.t.length, shown - runStart));
+          const typed = r.t.slice(0, typedLen);
+          const hidden = r.t.slice(typedLen);
+          const Wrap: "strong" | "span" = r.b ? "strong" : "span";
+          const className = r.b ? "text-raddo-ink-deep font-bold" : undefined;
+          nodes.push(
+            <Wrap key={j} className={className}>
+              {typed}
+              {hidden && (
+                <span aria-hidden style={{ opacity: 0 }}>
+                  {hidden}
+                </span>
+              )}
+            </Wrap>
+          );
+          cursor += r.t.length;
         });
 
         const paragraph = (
-          <p
-            key={`p-${i}`}
-            className={p.className}
-            style={{ ...p.style, position: "relative" }}
-          >
-            {ghost}
-            <span
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              }}
-            >
-              {visibleNodes}
-              {isActive && (
-                <span
-                  aria-hidden
-                  style={{
-                    display: "inline-block",
-                    width: 2,
-                    height: "0.95em",
-                    marginLeft: 2,
-                    verticalAlign: "-0.12em",
-                    backgroundColor: "hsl(var(--raddo-brass-deep))",
-                    animation: "raddo-caret-blink 600ms steps(2, start) infinite",
-                  }}
-                />
-              )}
-            </span>
+          <p key={`p-${i}`} className={p.className} style={p.style}>
+            {nodes}
+            {isActive && (
+              <span
+                aria-hidden
+                style={{
+                  display: "inline-block",
+                  width: 2,
+                  height: "0.95em",
+                  marginLeft: 2,
+                  verticalAlign: "-0.12em",
+                  backgroundColor: "hsl(var(--raddo-brass-deep))",
+                  animation: "raddo-caret-blink 600ms steps(2, start) infinite",
+                }}
+              />
+            )}
           </p>
         );
 
