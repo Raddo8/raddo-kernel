@@ -808,10 +808,10 @@ export function Hero() {
 
         {/* Headline with Six-Source Mandala backdrop */}
         <div className="relative mt-7">
-          {/* Mandala backdrop · leads the page · 200ms */}
+          {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
-            variants={fade(1400, 200)}
+            variants={fade(800, 0)}
             initial={INITIAL}
             animate="show"
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
@@ -822,15 +822,41 @@ export function Hero() {
                 "0 1px 0 hsl(var(--raddo-paper-edge)) inset, 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.2)",
             }}
           >
-            <img
+            {/* Skeleton · paper-toned blur-up while the image decodes */}
+            <AnimatePresence>
+              {!heroImgLoaded && (
+                <motion.div
+                  key="hero-skeleton"
+                  initial={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute inset-0"
+                  style={{
+                    background:
+                      "linear-gradient(110deg, hsl(var(--raddo-paper-edge)) 0%, hsl(var(--raddo-paper)) 40%, hsl(var(--raddo-brass) / 0.08) 55%, hsl(var(--raddo-paper)) 70%, hsl(var(--raddo-paper-edge)) 100%)",
+                    backgroundSize: "200% 100%",
+                    animation: "raddo-shimmer 2.4s ease-in-out infinite",
+                    filter: "blur(8px)",
+                  }}
+                />
+              )}
+            </AnimatePresence>
+            <motion.img
               src="/brand/hero-mandala-bg.png"
               alt=""
               loading="eager"
               decoding="async"
               // @ts-expect-error · fetchpriority is a valid HTML attr not yet in React types
               fetchpriority="high"
+              onLoad={() => setHeroImgLoaded(true)}
+              initial={{ opacity: 0, filter: "blur(12px)", scale: 1.02 }}
+              animate={
+                heroImgLoaded
+                  ? { opacity: 0.75, filter: "blur(0px)", scale: 1 }
+                  : { opacity: 0, filter: "blur(12px)", scale: 1.02 }
+              }
+              transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               className="h-full w-full object-cover"
-              style={{ opacity: 0.75 }}
             />
             {/* Paper wash to keep text crisp */}
             <div
@@ -847,10 +873,10 @@ export function Hero() {
             <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
           </motion.div>
 
-          {/* Headline · cascades after the image has settled (1800 / 2100 / 2400ms) */}
+          {/* Headline · waits for image, then cascades in (300 / 600 / 900ms after reveal) */}
           <motion.h1
             initial={INITIAL}
-            animate="show"
+            animate={heroImgLoaded ? "show" : "hidden"}
             className="relative font-display text-raddo-ink-deep px-6 py-10 md:px-10 md:py-14"
             style={{
               fontSize: "clamp(35px, 5.76vw, 74px)",
@@ -860,19 +886,19 @@ export function Hero() {
               maxWidth: "1080px",
             }}
           >
-            <motion.span className="block" variants={rise(900, 1800)}>
+            <motion.span className="block" variants={rise(900, 300)}>
               Built for you day one.
             </motion.span>
             <motion.span
               className="block italic mt-20 md:mt-28"
-              variants={rise(900, 2100)}
+              variants={rise(900, 600)}
               style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
             >
               Sharpens with
               <br />
               every action.
             </motion.span>
-            <motion.span className="block mt-20 md:mt-28" variants={rise(900, 2400)}>
+            <motion.span className="block mt-20 md:mt-28" variants={rise(900, 900)}>
               Yours to wield anywhere.
             </motion.span>
           </motion.h1>
