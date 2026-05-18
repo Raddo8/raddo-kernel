@@ -767,7 +767,7 @@ export function Hero() {
                 style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
               >
                 <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
-                <span style={{ fontWeight: 900 }}>COB</span>
+                <span className="font-display text-raddo-ink-deep" style={{ fontWeight: 900 }}>COB</span>
               </div>
 
               {/* Line 2: Chief Of */}
