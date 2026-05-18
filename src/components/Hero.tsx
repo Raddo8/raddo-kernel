@@ -753,7 +753,7 @@ export function Hero() {
 
           {/* Inline COB lockup · single line */}
           <div
-            className="relative font-display text-raddo-ink-deep text-[13px] sm:text-[15px] flex items-baseline gap-2"
+            className="relative font-display text-raddo-ink-deep text-[13px] sm:text-[15px] flex items-end gap-2"
             style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
             aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
           >
@@ -788,8 +788,8 @@ export function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
                   transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                  className="absolute left-0 block"
-                  style={{ lineHeight: 1, bottom: "0.18em" }}
+                  className="absolute left-0 bottom-0 block"
+                  style={{ lineHeight: 1 }}
                 >
                   {COB_TITLES[titleIdx]}
                 </motion.span>
