@@ -205,8 +205,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
             style={{
               borderTop: "1px solid hsl(var(--raddo-paper-edge))",
-              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
-              padding: "12px 0",
+              padding: "12px 0 4px",
             }}
           >
             {[
