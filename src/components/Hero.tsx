@@ -788,8 +788,8 @@ export function Hero() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
                   transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                  className="absolute left-0 bottom-0 block"
-                  style={{ lineHeight: 1 }}
+                  className="absolute left-0 block"
+                  style={{ lineHeight: 1, bottom: "0.18em" }}
                 >
                   {COB_TITLES[titleIdx]}
                 </motion.span>
