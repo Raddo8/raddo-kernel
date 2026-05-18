@@ -169,7 +169,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         className="pointer-events-none absolute flex items-center gap-3 font-mono"
         style={{
           right: 24,
-          bottom: 18,
+          top: 52,
           fontSize: 10,
           letterSpacing: "0.18em",
           color: "hsl(var(--raddo-ash))",
