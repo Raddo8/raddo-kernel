@@ -10,7 +10,9 @@ type DiscResponse = {
 
 type ConsultSubmissionPayload = {
   email: string;
-  name?: string;
+  name: string;
+  phone?: string;
+  occupation?: string;
   currentStateWordIds: string[];
   aspirationWordIds: string[];
   appSelections: string[];
