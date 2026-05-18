@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useReducedMotion, type Variants, type Transition } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
