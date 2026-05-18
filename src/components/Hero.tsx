@@ -226,44 +226,74 @@ function BriefingTypewriter({
       {paras.map((p, i) => {
         const shown = progress[i] ?? 0;
         const isActive = !done && play && i === activeIdx && shown < totals[i];
-        let remaining = shown;
+
+        // Ghost · full paragraph rendered invisible, reserves final layout.
+        const ghost = (
+          <span aria-hidden style={{ visibility: "hidden" }}>
+            {p.runs.map((r, j) =>
+              r.b ? (
+                <strong key={j} className="font-bold">
+                  {r.t}
+                </strong>
+              ) : (
+                <span key={j}>{r.t}</span>
+              )
+            )}
+          </span>
+        );
+
+        // Visible · only the typed prefix, overlaid on the ghost.
+        let rem = shown;
+        const visibleNodes: JSX.Element[] = [];
+        p.runs.forEach((r, j) => {
+          const showLen = Math.max(0, Math.min(r.t.length, rem));
+          if (showLen > 0) {
+            const slice = r.t.slice(0, showLen);
+            visibleNodes.push(
+              r.b ? (
+                <strong key={j} className="text-raddo-ink-deep font-bold">
+                  {slice}
+                </strong>
+              ) : (
+                <span key={j}>{slice}</span>
+              )
+            );
+          }
+          rem -= r.t.length;
+        });
 
         const paragraph = (
-          <p key={`p-${i}`} className={p.className} style={p.style}>
-            {p.runs.map((r, j) => {
-              const showLen = Math.max(0, Math.min(r.t.length, remaining));
-              const visible = r.t.slice(0, showLen);
-              const hidden = r.t.slice(showLen);
-              remaining = Math.max(0, remaining - r.t.length);
-              return (
-                <span key={j}>
-                  {r.b ? (
-                    <strong className="text-raddo-ink-deep font-bold">{visible}</strong>
-                  ) : (
-                    visible
-                  )}
-                  {hidden && (
-                    <span aria-hidden style={{ color: "transparent" }}>
-                      {r.b ? <strong className="font-bold">{hidden}</strong> : hidden}
-                    </span>
-                  )}
-                </span>
-              );
-            })}
-            {isActive && (
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 2,
-                  height: "0.95em",
-                  marginLeft: 2,
-                  verticalAlign: "-0.12em",
-                  backgroundColor: "hsl(var(--raddo-brass-deep))",
-                  animation: "raddo-caret-blink 600ms steps(2, start) infinite",
-                }}
-              />
-            )}
+          <p
+            key={`p-${i}`}
+            className={p.className}
+            style={{ ...p.style, position: "relative" }}
+          >
+            {ghost}
+            <span
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              }}
+            >
+              {visibleNodes}
+              {isActive && (
+                <span
+                  aria-hidden
+                  style={{
+                    display: "inline-block",
+                    width: 2,
+                    height: "0.95em",
+                    marginLeft: 2,
+                    verticalAlign: "-0.12em",
+                    backgroundColor: "hsl(var(--raddo-brass-deep))",
+                    animation: "raddo-caret-blink 600ms steps(2, start) infinite",
+                  }}
+                />
+              )}
+            </span>
           </p>
         );
 
