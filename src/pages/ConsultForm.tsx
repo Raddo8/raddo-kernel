@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SeoHead } from "@/components/SeoHead";
 import {
   APP_CATEGORIES,
   ASPIRATION_WORDS,
@@ -265,11 +266,19 @@ export function ConsultForm() {
       return;
     }
 
+    if (typeof window !== "undefined") {
+      window.plausible?.("consult_submission");
+    }
     navigate("/consult/thank-you");
   }
 
   return (
     <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+      <SeoHead
+        path="/consult"
+        title="Begin your consult · RADDO"
+        description="A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide."
+      />
       {/* Hairline paper grain · same texture as Hero */}
       <div
         aria-hidden

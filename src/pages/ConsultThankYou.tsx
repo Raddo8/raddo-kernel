@@ -1,13 +1,15 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { SeoHead } from "@/components/SeoHead";
 
 export default function ConsultThankYou() {
-  useEffect(() => {
-    document.title = "RADDO · Consult submitted";
-  }, []);
-
   return (
     <main className="flex min-h-screen items-center bg-raddo-paper px-6 py-12">
+      <SeoHead
+        path="/consult/thank-you"
+        title="Consult received · RADDO"
+        description="Your consult is in. Expect a response within 2 business days."
+        robots="noindex,follow"
+      />
       <section className="mx-auto max-w-3xl rounded-[36px] border border-raddo-paper-edge bg-white p-8 shadow-[0_30px_80px_rgba(12,68,124,0.08)] md:p-12">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-raddo-ash">Submission received</p>
         <h1 className="mt-4 font-display text-4xl leading-tight text-raddo-charcoal md:text-5xl">
