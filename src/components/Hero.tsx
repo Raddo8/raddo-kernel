@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants, type Transiti
 import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
+import { SeoHead } from "@/components/SeoHead";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -643,6 +644,11 @@ export function Hero() {
 
   return (
     <main className="relative w-full bg-raddo-paper text-raddo-charcoal selection:bg-raddo-brass/30">
+      <SeoHead
+        path="/"
+        title="RADDO · Your Chief of Business"
+        description="RADDO is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
+      />
       {/* Hairline paper grain */}
       <div
         aria-hidden

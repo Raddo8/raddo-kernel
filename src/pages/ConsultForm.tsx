@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SeoHead } from "@/components/SeoHead";
 import {
   APP_CATEGORIES,
   ASPIRATION_WORDS,
