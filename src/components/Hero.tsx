@@ -306,71 +306,12 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 }}
               />
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                COB is a system of{" "}
-                <strong className="text-raddo-ink-deep font-bold">
-                  intelligence, strategy, and competence
-                </strong>{" "}
-                built around one person · or one business. It reads what you read,
-                sits in your meetings, and holds the full context of your operation:
-                finance, legal, people, risk, every functional domain. It learns how
-                you think, how you write, what you weigh, what you cut. From that
-                foundation, it produces the briefings, drafts, projects, reports,
-                presentations, and counsel that let you show up as the sharpest
-                version of yourself in every room you walk into.
-              </p>
-
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                Two things separate COB from any tool you have used before.
-              </p>
-
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                <strong className="text-raddo-ink-deep font-bold">It is portable.</strong>{" "}
-                Not locked to one app, one platform, one provider. It carries
-                everything you teach it across the systems you already use.
-              </p>
-
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong>{" "}
-                It does not reset when you change roles, restructure your team, or
-                move on to the next thing. The longer you use it, the more of you it
-                carries.
-              </p>
-
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                Executives without a COB are now competing against executives with
-                one. The gap shows up quietly · in who is prepared when the question
-                lands, who has the draft ready before the meeting, who remembers
-                what was decided three quarters ago when it matters again, who
-                carries the full operation with them instead of behind them. The
-                disadvantage is small at first. It compounds.
-              </p>
-
-              <div
-                aria-hidden
-                className="my-7"
-                style={{
-                  width: 120,
-                  height: 1.5,
-                  backgroundColor: "hsl(var(--raddo-brass))",
-                }}
+              <BriefingTypewriter
+                play={open}
+                replayCount={replayCount}
+                paras={DOSSIER_PARAS}
+                dividerAfterIndex={4}
               />
-
-              <div style={{ breakInside: "avoid" }}>
-                <p
-                  className="font-display text-raddo-ink-deep mb-4"
-                  style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
-                >
-                  The question is no longer whether decision intelligence at this
-                  depth becomes the standard for serious operators.
-                </p>
-                <p
-                  className="font-display text-raddo-ink-deep"
-                  style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
-                >
-                  The question is whether you have one when it does.
-                </p>
-              </div>
             </div>
           </motion.div>
         )}
