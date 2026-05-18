@@ -448,15 +448,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART I · CURRENT STATE</Overline>
+            <Overline>PART 1 · WHERE YOU ARE TODAY</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Choose any words that describe the business right now.
+              Pick the words that describe your business right now.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Pick the language that feels true. No limit.
+              Select as many as you want. The good, the bad, and everything in between.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {currentWords.map((word) => (
