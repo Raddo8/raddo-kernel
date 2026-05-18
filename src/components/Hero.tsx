@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants, type Transiti
 import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
+import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 
@@ -201,6 +202,30 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         </div>
       </div>
 
+      {/* Closed-state visual · "For Your Eyes Only" envelope plate */}
+      <AnimatePresence initial={false}>
+        {!open && (
+          <motion.div
+            key="closed-plate"
+            initial={reduce ? { opacity: 1 } : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.42, ease: EASE }}
+            style={{
+              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={forYourEyesOnly}
+              alt="For your eyes only · sealed envelope on a brass-tracery topographic field"
+              loading="lazy"
+              className="block w-full h-auto select-none"
+              style={{ display: "block" }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Expandable body */}
       <AnimatePresence initial={false}>
