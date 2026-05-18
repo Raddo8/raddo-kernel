@@ -164,12 +164,12 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             }}
           >
             {[
-              { k: "Subject", v: "Decision Intelligence" },
+              { k: "Subject", v: "Decision\nIntelligence" },
               { k: "Format", v: "6 paragraphs" },
               { k: "Read", v: "90 seconds" },
               { k: "Status", v: open ? "Unsealed" : "Sealed" },
             ].map((row) => (
-              <div key={row.k} className="flex flex-col gap-1 min-w-0">
+              <div key={row.k} className="flex flex-col gap-1 min-w-0 items-center text-center">
                 <dt
                   style={{
                     fontSize: 9,
@@ -181,12 +181,14 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   {row.k}
                 </dt>
                 <dd
-                  className="m-0 font-sans truncate"
+                  className="m-0 font-sans"
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
                     color: "hsl(var(--raddo-ink-deep))",
                     letterSpacing: "0.01em",
+                    whiteSpace: "pre-line",
+                    lineHeight: 1.3,
                   }}
                 >
                   {row.v}
