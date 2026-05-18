@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { SeoHead } from "@/components/SeoHead";
 
 type PageState = "loading" | "valid" | "expired" | "responded" | "invalid" | "submitted";
 
@@ -53,6 +54,12 @@ export default function RespondPage() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <SeoHead
+        path="/respond"
+        title="Respond · RADDO"
+        description="Secure single-use response surface."
+        robots="noindex,nofollow"
+      />
       <div className="w-full max-w-sm space-y-6">
         {state === "loading" && (
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
