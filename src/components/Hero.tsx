@@ -738,10 +738,10 @@ export function Hero() {
           variants={fade(600, 1600)}
           initial={INITIAL}
           animate="show"
-          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 px-[8px]"
         >
           <p
-            className="font-sans uppercase text-raddo-brass"
+            className="font-sans uppercase text-raddo-brass mt-[60px]"
             style={{
               fontSize: "13.5px",
               fontWeight: 500,
