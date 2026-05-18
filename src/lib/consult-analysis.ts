@@ -7,7 +7,7 @@ import {
   THEMES,
   type DiscStyle,
   type ThemeId,
-} from "./data";
+} from "./consult-data";
 
 export type DiscResponse = {
   rowId: string;
