@@ -534,7 +534,7 @@ export function ConsultForm() {
                   borderRadius: 8,
                   padding: "12px 14px",
                 }}
-                placeholder="Anything else the business depends on."
+                placeholder="List any other tools your business depends on."
               />
             </label>
           </Panel>
