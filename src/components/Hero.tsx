@@ -741,7 +741,7 @@ export function Hero() {
           className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
         >
           <p
-            className="font-sans uppercase text-raddo-brass"
+            className="uppercase text-raddo-brass font-sans text-left font-semibold text-lg mx-[50px] ml-0 mr-0 px-0 my-0 mb-0 py-[40px] pb-0"
             style={{
               fontSize: "13.5px",
               fontWeight: 500,
@@ -762,10 +762,10 @@ export function Hero() {
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-            <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
+            <div className="flex flex-col items-end px-2 py-1.5 sm:py-2 text-right sm:px-[40px] pl-[40px] mr-0 gap-[4px] pr-[40px] border-slate-50">
               {/* Line 1: your COB */}
               <div
-                className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+                className="pl-0 mr-[40px] text-xl font-sans text-left"
                 style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
               >
                 <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
