@@ -738,10 +738,10 @@ export function Hero() {
           variants={fade(600, 1600)}
           initial={INITIAL}
           animate="show"
-          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 pr-[8px]"
         >
           <p
-            className="uppercase text-raddo-brass font-sans text-left font-semibold text-lg mx-[50px] ml-0 mr-0 px-0 my-0 mb-0 py-[40px] pb-0"
+            className="uppercase text-raddo-brass font-sans text-left font-semibold text-lg mx-[50px] ml-0 mr-0 px-0 my-0 mb-0 py-[40px] pb-0 pt-[80px]"
             style={{
               letterSpacing: "0.32em",
             }}
