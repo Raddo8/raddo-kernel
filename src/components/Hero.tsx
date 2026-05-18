@@ -752,10 +752,15 @@ export function Hero() {
             Not just in your corner. Building your corner.
           </p>
 
-          {/* COB lockup · right-aligned, stacked */}
           <div
             className="relative ml-auto"
             aria-label={`COB · Chief Of ${COB_TITLES[titleIdx]}`}
+            style={{
+              backgroundColor: "hsl(var(--raddo-paper))",
+              border: "1px solid hsl(var(--raddo-paper-edge))",
+              borderRadius: 8,
+              boxShadow: "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+            }}
           >
             {/* Brass frame corners */}
             <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
