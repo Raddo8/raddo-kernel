@@ -684,7 +684,7 @@ export function Hero() {
           <motion.img
             src={raddoLogo}
             alt="RADDO"
-            className="h-6 w-auto sm:h-[2.7rem] md:h-[3.15rem]"
+            className="h-[1.275rem] w-auto sm:h-[2.295rem] md:h-[2.6775rem]"
             style={{ objectFit: "contain", transformOrigin: "left center" }}
             variants={{
               hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
