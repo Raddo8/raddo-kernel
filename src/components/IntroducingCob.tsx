@@ -307,139 +307,261 @@ export function IntroducingCob() {
         What if your toughest decisions had already been solved? Even before you knew about them.
       </h1>
 
-      {/* Carousel viewport */}
+      {/* Folder tabs · click a tab to pull that dossier forward */}
       <div
-        ref={viewportRef}
-        tabIndex={0}
-        onKeyDown={onKeyDown}
-        aria-live="polite"
-        className="group relative mt-10 md:mt-14 overflow-hidden focus:outline-none"
-        style={{
-          borderRadius: 8,
-          boxShadow: "inset 0 0 0 1px hsl(var(--raddo-paper-edge))",
-        }}
+        role="tablist"
+        aria-label="Dossier tabs"
+        className="mt-10 md:mt-14 flex items-end gap-1 md:gap-2 px-1 md:px-2 relative z-10"
       >
-        <motion.div
-          className="flex"
-          drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.18}
-          onDragEnd={onDragEnd}
-          animate={{ x: `${-index * 100}%` }}
-          transition={
-            reduce
-              ? { duration: 0 }
-              : { duration: TRANSITION_MS / 1000, ease: EASE }
-          }
-          style={{ width: `${PANELS.length * 100}%` }}
-        >
-          {PANELS.map((panel, i) => {
-            const active = i === index;
-            const adjacent = Math.abs(i - index) === 1;
-            const eager = active || adjacent;
-            return (
-              <div
-                key={panel.slug}
-                role="group"
-                aria-roledescription="slide"
-                aria-label={panel.label}
-                aria-hidden={!active}
-                className="shrink-0 px-6 py-8 md:px-12 md:py-12"
-                style={{ width: `${100 / PANELS.length}%` }}
-              >
-                <div className="grid gap-8 md:grid-cols-2 md:gap-12 items-center">
-                  <div>
-                    <p
-                      className="uppercase font-mono"
-                      style={{
-                        color: "hsl(var(--raddo-brass))",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        letterSpacing: "0.32em",
-                      }}
-                    >
-                      {panel.label}
-                    </p>
-                    <p
-                      className="font-display mt-5"
-                      style={{
-                        color: "hsl(var(--raddo-ink-deep))",
-                        fontWeight: 700,
-                        fontSize: "clamp(1.5rem, 2.6vw, 2.25rem)",
-                        lineHeight: 1.18,
-                        letterSpacing: "-0.005em",
-                      }}
-                    >
-                      {panel.scenario}
-                    </p>
-                  </div>
-                  <PlaceholderFigure panel={panel} eager={eager} />
-                </div>
-              </div>
-            );
-          })}
-        </motion.div>
-
-        {/* Desktop edge buttons */}
-        <button
-          type="button"
-          aria-label="Previous panel"
-          onClick={() => commitIndex(index - 1, "left")}
-          className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 size-11 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-          style={{
-            borderRadius: 4,
-            backgroundColor: "hsl(var(--raddo-paper) / 0.9)",
-            border: "1px solid hsl(var(--raddo-paper-edge))",
-            color: "hsl(var(--raddo-ink-deep))",
-          }}
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <button
-          type="button"
-          aria-label="Next panel"
-          onClick={() => commitIndex(index + 1, "right")}
-          className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 size-11 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-          style={{
-            borderRadius: 4,
-            backgroundColor: "hsl(var(--raddo-paper) / 0.9)",
-            border: "1px solid hsl(var(--raddo-paper-edge))",
-            color: "hsl(var(--raddo-ink-deep))",
-          }}
-        >
-          <ChevronRight className="size-5" />
-        </button>
-      </div>
-
-      {/* Dot pagination */}
-      <div className="mt-6 flex items-center justify-center gap-3">
         {PANELS.map((p, i) => {
           const active = i === index;
           return (
             <button
               key={p.slug}
+              role="tab"
               type="button"
-              aria-label={`Go to ${p.label} panel`}
-              aria-current={active}
+              aria-selected={active}
+              aria-controls={`dossier-panel-${p.slug}`}
+              id={`dossier-tab-${p.slug}`}
+              tabIndex={active ? 0 : -1}
               onClick={() => commitIndex(i, "dot")}
-              className="transition-colors"
+              className="font-mono uppercase transition-all"
               style={{
-                width: active ? 28 : 10,
-                height: 10,
-                borderRadius: 4,
+                flex: "1 1 0",
+                minWidth: 0,
+                paddingTop: active ? 12 : 16,
+                paddingBottom: active ? 14 : 10,
+                paddingLeft: 14,
+                paddingRight: 14,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.22em",
+                color: active
+                  ? "hsl(var(--raddo-ink-deep))"
+                  : "hsl(var(--raddo-ash))",
                 backgroundColor: active
-                  ? "hsl(var(--raddo-brass))"
-                  : "transparent",
-                border: `1px solid ${
-                  active
-                    ? "hsl(var(--raddo-brass))"
-                    : "hsl(var(--raddo-ink-soft) / 0.55)"
-                }`,
+                  ? "hsl(var(--raddo-paper))"
+                  : "hsl(40 22% 92%)",
+                borderTop: active
+                  ? "2px solid hsl(var(--raddo-brass))"
+                  : "1px solid hsl(var(--raddo-paper-edge))",
+                borderLeft: "1px solid hsl(var(--raddo-paper-edge))",
+                borderRight: "1px solid hsl(var(--raddo-paper-edge))",
+                borderBottom: active
+                  ? "1px solid hsl(var(--raddo-paper))"
+                  : "1px solid hsl(var(--raddo-paper-edge))",
+                borderTopLeftRadius: 6,
+                borderTopRightRadius: 6,
+                marginBottom: active ? -1 : 0,
+                textAlign: "left",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                cursor: "pointer",
               }}
-            />
+            >
+              <span style={{ opacity: 0.55, marginRight: 8 }}>
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              {p.label}
+            </button>
           );
         })}
       </div>
+
+      {/* Dossier folder · stacked peek + sliding active card */}
+      <div className="relative">
+        {/* Peek edges of folders sitting behind the active one */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 pointer-events-none"
+          style={{
+            top: 8,
+            bottom: -8,
+            left: 12,
+            right: 12,
+            borderRadius: 8,
+            border: "1px solid hsl(var(--raddo-paper-edge))",
+            backgroundColor: "hsl(40 22% 94%)",
+            zIndex: 0,
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-x-0 pointer-events-none"
+          style={{
+            top: 4,
+            bottom: -4,
+            left: 6,
+            right: 6,
+            borderRadius: 8,
+            border: "1px solid hsl(var(--raddo-paper-edge))",
+            backgroundColor: "hsl(40 26% 95%)",
+            zIndex: 0,
+          }}
+        />
+
+        {/* Active dossier */}
+        <div
+          ref={viewportRef}
+          tabIndex={0}
+          onKeyDown={onKeyDown}
+          aria-live="polite"
+          className="group relative focus:outline-none"
+          style={{
+            zIndex: 1,
+            borderRadius: 8,
+            border: "1px solid hsl(var(--raddo-ink-soft) / 0.35)",
+            backgroundColor: "hsl(var(--raddo-paper))",
+            boxShadow:
+              "0 1px 0 hsl(var(--raddo-ink-deep) / 0.04), 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.25)",
+            overflow: "hidden",
+          }}
+        >
+          {/* Dossier header strip · classification + dossier number */}
+          <div
+            className="flex items-center justify-between px-6 md:px-10 py-3 font-mono"
+            style={{
+              fontSize: 10.5,
+              letterSpacing: "0.28em",
+              textTransform: "uppercase",
+              color: "hsl(var(--raddo-ash))",
+              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+              backgroundColor: "hsl(40 28% 96%)",
+            }}
+          >
+            <span>
+              Dossier №{" "}
+              <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>
+                {String(index + 1).padStart(2, "0")}
+              </span>{" "}
+              / {String(PANELS.length).padStart(2, "0")}
+            </span>
+            <span
+              style={{
+                color: "hsl(var(--raddo-brass-deep))",
+                fontWeight: 700,
+              }}
+            >
+              For Principal · Confidential
+            </span>
+          </div>
+
+          {/* Sliding stage */}
+          <motion.div
+            className="relative"
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.18}
+            onDragEnd={onDragEnd}
+            style={{ touchAction: "pan-y" }}
+          >
+            {PANELS.map((panel, i) => {
+              const active = i === index;
+              const adjacent = Math.abs(i - index) === 1;
+              const eager = active || adjacent;
+              const offset = i - index;
+              return (
+                <motion.div
+                  key={panel.slug}
+                  id={`dossier-panel-${panel.slug}`}
+                  role="tabpanel"
+                  aria-labelledby={`dossier-tab-${panel.slug}`}
+                  aria-hidden={!active}
+                  className={active ? "relative" : "absolute inset-0"}
+                  initial={false}
+                  animate={{
+                    opacity: active ? 1 : 0,
+                    x: reduce ? 0 : offset * 24,
+                    y: active ? 0 : 6,
+                  }}
+                  transition={
+                    reduce
+                      ? { duration: 0 }
+                      : { duration: TRANSITION_MS / 1000, ease: EASE }
+                  }
+                  style={{
+                    pointerEvents: active ? "auto" : "none",
+                  }}
+                >
+                  <div className="px-6 md:px-10 py-8 md:py-12">
+                    <div className="grid gap-8 md:grid-cols-[1.1fr_1fr] md:gap-12 items-center">
+                      <div>
+                        <p
+                          className="uppercase font-mono"
+                          style={{
+                            color: "hsl(var(--raddo-brass))",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            letterSpacing: "0.32em",
+                          }}
+                        >
+                          {panel.label}
+                        </p>
+                        <div
+                          aria-hidden
+                          style={{
+                            marginTop: 14,
+                            width: 36,
+                            height: 1,
+                            backgroundColor: "hsl(var(--raddo-brass))",
+                          }}
+                        />
+                        <p
+                          className="font-display mt-5"
+                          style={{
+                            color: "hsl(var(--raddo-ink-deep))",
+                            fontWeight: 700,
+                            fontSize: "clamp(1.45rem, 2.5vw, 2.15rem)",
+                            lineHeight: 1.18,
+                            letterSpacing: "-0.005em",
+                          }}
+                        >
+                          {panel.scenario}
+                        </p>
+                      </div>
+                      <PlaceholderFigure panel={panel} eager={eager} />
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+
+          {/* Desktop edge buttons */}
+          <button
+            type="button"
+            aria-label="Previous dossier"
+            onClick={() => commitIndex(index - 1, "left")}
+            className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 size-10 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            style={{
+              borderRadius: 4,
+              backgroundColor: "hsl(var(--raddo-paper) / 0.95)",
+              border: "1px solid hsl(var(--raddo-paper-edge))",
+              color: "hsl(var(--raddo-ink-deep))",
+              zIndex: 2,
+            }}
+          >
+            <ChevronLeft className="size-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Next dossier"
+            onClick={() => commitIndex(index + 1, "right")}
+            className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 size-10 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+            style={{
+              borderRadius: 4,
+              backgroundColor: "hsl(var(--raddo-paper) / 0.95)",
+              border: "1px solid hsl(var(--raddo-paper-edge))",
+              color: "hsl(var(--raddo-ink-deep))",
+              zIndex: 2,
+            }}
+          >
+            <ChevronRight className="size-5" />
+          </button>
+        </div>
+      </div>
+
 
       {/* CTA */}
       <div className="mt-10 flex justify-center">
