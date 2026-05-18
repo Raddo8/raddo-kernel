@@ -589,6 +589,14 @@ export function Hero() {
 
   // Rotating COB title — only the trailing word changes
   const [titleIdx, setTitleIdx] = useState(0);
+  const [heroImgLoaded, setHeroImgLoaded] = useState(false);
+  useEffect(() => {
+    // If the preloaded image is already cached, mark it loaded on mount.
+    const img = new Image();
+    img.src = "/brand/hero-mandala-bg.png";
+    if (img.complete) setHeroImgLoaded(true);
+    else img.addEventListener("load", () => setHeroImgLoaded(true), { once: true });
+  }, []);
   useEffect(() => {
     if (reduce) return;
     let last = 0;
