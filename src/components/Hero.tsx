@@ -714,7 +714,7 @@ export function Hero() {
           initial={INITIAL}
           animate="show"
           className="relative"
-          aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
+          aria-label={`COB · Chief Of ${COB_TITLES[titleIdx]}`}
         >
           {/* Brass frame corners */}
           <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
@@ -732,12 +732,12 @@ export function Hero() {
               <span style={{ fontWeight: 900 }}>COB</span>
             </div>
 
-            {/* Line 2: Chief of */}
+            {/* Line 2: Chief Of */}
             <div
               className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
               style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
             >
-              Chief of
+              <span style={{ fontWeight: 900 }}>C</span>hief <span style={{ fontWeight: 900 }}>O</span>f
             </div>
 
             {/* Line 3: rotating word */}
@@ -936,7 +936,7 @@ export function Hero() {
           {reduce ? (
             <img
               src="/brand/video/hero-poster.jpg"
-              alt="The Six-Source Mandala · RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief of Business."
+              alt="The Six-Source Mandala · RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief Of Business."
               className="h-full w-full object-cover"
             />
           ) : (

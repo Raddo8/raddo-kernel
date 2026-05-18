@@ -281,7 +281,7 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                5 minutes to set up your Chief Of Business.
+                5 minutes to set up your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
