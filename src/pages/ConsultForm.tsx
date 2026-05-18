@@ -200,6 +200,8 @@ export function ConsultForm() {
   const [discRows] = useState(() => buildShuffledDiscRows(DISC_ROWS));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
   const [appSelections, setAppSelections] = useState<string[]>([]);
@@ -236,6 +238,8 @@ export function ConsultForm() {
       body: {
         email,
         name,
+        phone,
+        occupation,
         currentStateWordIds: currentStateSelections,
         aspirationWordIds: aspirationSelections,
         appSelections,
@@ -384,9 +388,10 @@ export function ConsultForm() {
               </label>
               <label className="space-y-2">
                 <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
-                  Name (optional)
+                  Name
                 </span>
                 <input
+                  required
                   type="text"
                   value={name}
                   onChange={(event) => setName(event.target.value)}
@@ -399,6 +404,44 @@ export function ConsultForm() {
                     padding: "12px 14px",
                   }}
                   placeholder="How should we address you?"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                  Phone
+                </span>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  className="w-full text-sm outline-none transition-colors"
+                  style={{
+                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    backgroundColor: "white",
+                    color: "hsl(var(--raddo-charcoal))",
+                    borderRadius: 8,
+                    padding: "12px 14px",
+                  }}
+                  placeholder="+1 555 000 0000"
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                  Occupation
+                </span>
+                <input
+                  type="text"
+                  value={occupation}
+                  onChange={(event) => setOccupation(event.target.value)}
+                  className="w-full text-sm outline-none transition-colors"
+                  style={{
+                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    backgroundColor: "white",
+                    color: "hsl(var(--raddo-charcoal))",
+                    borderRadius: 8,
+                    padding: "12px 14px",
+                  }}
+                  placeholder="CEO, CFO, COO, Founder…"
                 />
               </label>
             </div>

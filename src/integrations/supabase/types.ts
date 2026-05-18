@@ -325,8 +325,10 @@ export type Database = {
           id: string
           is_hybrid: boolean
           name: string | null
+          occupation: string | null
           other_apps_text: string | null
           persona_name_candidates: string[]
+          phone: string | null
           primary_style: string
           secondary_style: string
           theme_gap_analysis: Json
@@ -342,8 +344,10 @@ export type Database = {
           id?: string
           is_hybrid?: boolean
           name?: string | null
+          occupation?: string | null
           other_apps_text?: string | null
           persona_name_candidates?: string[]
+          phone?: string | null
           primary_style: string
           secondary_style: string
           theme_gap_analysis: Json
@@ -359,8 +363,10 @@ export type Database = {
           id?: string
           is_hybrid?: boolean
           name?: string | null
+          occupation?: string | null
           other_apps_text?: string | null
           persona_name_candidates?: string[]
+          phone?: string | null
           primary_style?: string
           secondary_style?: string
           theme_gap_analysis?: Json

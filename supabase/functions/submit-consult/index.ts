@@ -10,7 +10,9 @@ type DiscResponse = {
 
 type ConsultSubmissionPayload = {
   email: string;
-  name?: string;
+  name: string;
+  phone?: string;
+  occupation?: string;
   currentStateWordIds: string[];
   aspirationWordIds: string[];
   appSelections: string[];
@@ -109,6 +111,10 @@ Deno.serve(async (request) => {
     return jsonResponse({ error: "A valid email is required." }, 400);
   }
 
+  if (!payload.name || typeof payload.name !== "string" || payload.name.trim().length === 0) {
+    return jsonResponse({ error: "Name is required." }, 400);
+  }
+
   // Defensive shape checks
   payload.currentStateWordIds = Array.isArray(payload.currentStateWordIds) ? payload.currentStateWordIds : [];
   payload.aspirationWordIds = Array.isArray(payload.aspirationWordIds) ? payload.aspirationWordIds : [];
@@ -130,7 +136,9 @@ Deno.serve(async (request) => {
     .from("consult_submissions")
     .insert({
       email: payload.email,
-      name: payload.name ?? null,
+      name: payload.name.trim(),
+      phone: payload.phone?.trim() || null,
+      occupation: payload.occupation?.trim() || null,
       current_state_words: payload.currentStateWordIds,
       aspiration_state_words: payload.aspirationWordIds,
       theme_gap_analysis: themeGapAnalysis,
@@ -157,7 +165,9 @@ Deno.serve(async (request) => {
   if (resendApiKey) {
     const summaryLines = [
       `Email: ${payload.email}`,
-      payload.name ? `Name: ${payload.name}` : null,
+      `Name: ${payload.name}`,
+      payload.phone ? `Phone: ${payload.phone}` : null,
+      payload.occupation ? `Occupation: ${payload.occupation}` : null,
       ``,
       `Primary style: ${disc.primaryStyle}`,
       `Secondary style: ${disc.secondaryStyle}`,
