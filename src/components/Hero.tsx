@@ -62,9 +62,9 @@ const COB_TITLES = [
 ];
 
 const INDEX = [
-  { roman: "I", label: "Clarity", body: "Six sources resolve into one brief before the day begins." },
-  { roman: "II", label: "Origin", body: "Every line is sourced. Email, meeting, document, ledger — labelled." },
-  { roman: "III", label: "Decision", body: "Approve, escalate, redirect. The briefing presents the call, not the noise." },
+  { roman: "I", label: "Clarity", body: "Six sources held in continuous synthesis · ready when you are." },
+  { roman: "II", label: "Origin", body: "Every line is sourced. Email, meeting, document, ledger · labelled." },
+  { roman: "III", label: "Decision", body: "Approve, escalate, redirect. The system presents the call, not the noise." },
   { roman: "IV", label: "Authority", body: "Built for the chair the day answers to. Discreet, restrained, yours." },
 ];
 
