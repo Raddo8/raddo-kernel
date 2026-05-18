@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 import { SeoHead } from "@/components/SeoHead";
+import { SiteHeader } from "@/components/SiteHeader";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -671,64 +672,9 @@ export function Hero() {
         }}
       />
 
-      {/* ====== EDITION BAR ====== */}
-      <header className="relative z-10 mx-auto flex max-w-[1240px] items-center justify-between gap-3 px-4 pt-5 sm:gap-6 md:px-0 md:pr-12 md:pl-0 md:pt-10">
-        {/* RADDO logo — top-left */}
-        <motion.a
-          href="/"
-          initial={INITIAL}
-          animate="show"
-          className="flex shrink-0 items-center gap-1.5 sm:gap-2"
-          aria-label="RADDO"
-        >
-          <motion.img
-            src={raddoLogo}
-            alt="RADDO"
-            className="h-[1.275rem] w-auto sm:h-[2.295rem] md:h-[2.6775rem]"
-            style={{ objectFit: "contain", transformOrigin: "left center" }}
-            variants={{
-              hidden: { opacity: reduce ? 1 : 0, scale: reduce ? 1 : 0.86, filter: reduce ? "none" : "blur(6px)" },
-              show: {
-                opacity: 1,
-                scale: 1,
-                filter: "blur(0px)",
-                transition: { duration: 0.85 * dScale, delay: 0.12 * tScale, ease: EASE_OUT },
-              },
-            }}
-          />
-          <span
-            className="font-display font-black overflow-hidden inline-block text-[17px] sm:text-[26.4px]"
-            aria-label="RADDO"
-            style={{
-              color: "hsl(var(--raddo-brass))",
-              letterSpacing: "0.04em",
-              lineHeight: 1.05,
-            }}
-          >
-            {"RADDO".split("").map((ch, i) => (
-              <motion.span
-                key={i}
-                className="inline-block"
-                variants={{
-                  hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : "100%" },
-                  show: {
-                    opacity: 1,
-                    y: 0,
-                    transition: {
-                      duration: 0.62 * dScale,
-                      delay: (0.46 + i * 0.055) * tScale,
-                      ease: EASE_OUT,
-                    },
-                  },
-                }}
-              >
-                {ch}
-              </motion.span>
-            ))}
-          </span>
-        </motion.a>
+      {/* ====== PINNED SITE HEADER ====== */}
+      <SiteHeader />
 
-      </header>
 
 
       {/* ====== HERO ====== */}
