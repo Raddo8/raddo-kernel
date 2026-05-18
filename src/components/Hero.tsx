@@ -753,7 +753,7 @@ export function Hero() {
 
           {/* Inline COB lockup · single line */}
           <div
-            className="relative font-display text-raddo-ink-deep text-[13px] sm:text-[15px] flex items-baseline gap-2"
+            className="relative font-display text-raddo-ink-deep text-[13px] sm:text-[15px] flex items-end gap-2"
             style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
             aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
           >
