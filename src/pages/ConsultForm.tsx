@@ -313,12 +313,12 @@ export function ConsultForm() {
         {/* Sidebar */}
         <aside className="h-fit lg:sticky lg:top-8">
           <Panel className="p-6">
-            <Overline>FIVE-MINUTE CONSULT</Overline>
+            <Overline>5 MIN · 4 SECTIONS</Overline>
             <p
               className="mt-5"
               style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
-              Four short passes. No clocks, no scores. Submit when it feels right · your COB starts to form around the answers.
+              Answer what's useful, skip the rest. Submit when you're done · we'll review and reply within 2 business days.
             </p>
 
             {toast.kind === "error" ? (
