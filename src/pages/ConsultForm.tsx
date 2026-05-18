@@ -498,15 +498,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART III · APP FOOTPRINT</Overline>
+            <Overline>PART 3 · THE SYSTEMS YOU ALREADY RUN</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Tag the systems already in motion.
+              Which tools does your business actually use?
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Ten categories. Select what the business actually runs on today.
+              Tap every tool you use. So we know what your COB needs to plug into.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               {APP_CATEGORIES.map((category) => (
