@@ -265,7 +265,18 @@ export function ConsultForm() {
   }
 
   return (
-    <main className="min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+    <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+      {/* Hairline paper grain · same texture as Hero */}
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.04] mix-blend-multiply"
+        style={{
+          backgroundImage:
+            "radial-gradient(hsl(var(--raddo-charcoal)) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
+        }}
+      />
+      <div className="relative z-10">
       {/* Top band · cream paper */}
       <header className="mx-auto max-w-7xl px-6 pt-10 md:px-10 md:pt-14">
         <Panel className="px-6 py-10 md:px-10 md:py-14">
