@@ -714,7 +714,7 @@ export function Hero() {
           initial={INITIAL}
           animate="show"
           className="relative"
-          aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
+          aria-label={`COB · Chief Of ${COB_TITLES[titleIdx]}`}
         >
           {/* Brass frame corners */}
           <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
