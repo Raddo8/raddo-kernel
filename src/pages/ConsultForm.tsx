@@ -540,15 +540,15 @@ export function ConsultForm() {
           </Panel>
 
           <Panel className="p-6 md:p-8">
-            <Overline>PART IV · OPERATING STYLE</Overline>
+            <Overline>PART 4 · HOW YOU MAKE DECISIONS</Overline>
             <h2
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Mark every option that fits how you naturally work.
+              Pick the options that sound like how you work.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
-              Select as many as feel true on each row. There is no wrong count.
+              For each row, select every option that fits. This tells your COB how to brief you · what to push, what to flag, what to leave alone.
             </p>
             <div className="mt-6 space-y-5">
               {discRows.map((row, index) => {
