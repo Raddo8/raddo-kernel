@@ -200,6 +200,8 @@ export function ConsultForm() {
   const [discRows] = useState(() => buildShuffledDiscRows(DISC_ROWS));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [occupation, setOccupation] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
   const [appSelections, setAppSelections] = useState<string[]>([]);
