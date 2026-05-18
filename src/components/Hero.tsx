@@ -1120,9 +1120,9 @@ export function Hero() {
               className="mt-6 max-w-[520px] font-sans text-raddo-charcoal/[0.84]"
               style={{ fontSize: "16px", lineHeight: 1.55 }}
             >
-              A short, structured intake — theme-gap, ten word lists, fifteen
+              A short, structured intake · theme-gap, ten word lists, fifteen
               calibration rows. Submit, and we schedule a sit-down. No demo
-              reels, no decks. Just the brief you would have wanted yesterday.
+              reels, no decks. Just your COB starting to form around you.
             </p>
           </div>
 
