@@ -763,10 +763,9 @@ export function Hero() {
             <div className="flex flex-col items-end px-2 py-1.5 sm:py-2 text-right sm:px-[40px] pl-[40px] mr-0 gap-[4px] pr-[40px] border-slate-50">
               {/* Line 1: your COB */}
               <div
-                className="pl-0 mr-[40px] text-xl font-sans text-left"
-                style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
+                className="pl-0 mr-[40px] text-xl font-sans text-right w-full"
+                style={{ letterSpacing: "0.02em", lineHeight: 1.1 }}
               >
-                <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
                 <span className="font-display text-raddo-ink-deep" style={{ fontWeight: 900 }}>COB</span>
               </div>
 
