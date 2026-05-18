@@ -738,7 +738,7 @@ export function Hero() {
           variants={fade(600, 1600)}
           initial={INITIAL}
           animate="show"
-          className="flex flex-wrap items-center gap-x-6 gap-y-3"
+          className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3"
         >
           <p
             className="font-sans uppercase text-raddo-brass"
@@ -751,11 +751,10 @@ export function Hero() {
             Not just in your corner. Building your corner.
           </p>
 
-          {/* Inline COB lockup · single line */}
+          {/* COB lockup · right-aligned, stacked */}
           <div
-            className="relative font-display text-raddo-ink-deep text-[13px] sm:text-[15px] flex items-end gap-2"
-            style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
-            aria-label={`COB · Chief of ${COB_TITLES[titleIdx]}`}
+            className="relative ml-auto"
+            aria-label={`COB · Chief Of ${COB_TITLES[titleIdx]}`}
           >
             {/* Brass frame corners */}
             <span aria-hidden className="pointer-events-none absolute -left-2 -top-2 h-2.5 w-2.5 border-l border-t border-raddo-brass" />
@@ -763,38 +762,51 @@ export function Hero() {
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -left-2 h-2.5 w-2.5 border-b border-l border-raddo-brass" />
             <span aria-hidden className="pointer-events-none absolute -bottom-2 -right-2 h-2.5 w-2.5 border-b border-r border-raddo-brass" />
 
-            <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...      </span>
-            <span style={{ fontWeight: 900 }}>COB</span>
-            <span style={{ fontWeight: 700, color: "hsl(var(--raddo-ash))" }}>·</span>
-            <span style={{ fontWeight: 700 }}>
-              <span style={{ fontWeight: 900 }}>C</span>hief <span style={{ fontWeight: 900 }}>o</span>f
-            </span>
-            <span
-              aria-live="polite"
-              className="relative inline-block overflow-hidden font-display italic"
-              style={{
-                height: "1.15em",
-                minWidth: "8.2em",
-                color: "hsl(var(--raddo-brass))",
-                fontWeight: 700,
-                letterSpacing: "-0.005em",
-                verticalAlign: "baseline",
-              }}
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={COB_TITLES[titleIdx]}
-                  initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
-                  transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
-                  className="absolute left-0 bottom-0 block"
-                  style={{ lineHeight: 1 }}
-                >
-                  {COB_TITLES[titleIdx]}
-                </motion.span>
-              </AnimatePresence>
-            </span>
+            <div className="flex flex-col items-end gap-0.5 px-2 py-1.5 sm:px-3 sm:py-2 text-right">
+              {/* Line 1: your COB */}
+              <div
+                className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+                style={{ letterSpacing: "0.02em", lineHeight: 1.1, whiteSpace: "pre" }}
+              >
+                <span style={{ fontStyle: "italic", fontWeight: 400, color: "hsl(var(--raddo-ash))" }}>your ...          </span>
+                <span style={{ fontWeight: 900 }}>COB</span>
+              </div>
+
+              {/* Line 2: Chief Of */}
+              <div
+                className="font-display text-raddo-ink-deep text-[13px] sm:text-[18px]"
+                style={{ fontWeight: 700, letterSpacing: "-0.005em", lineHeight: 1.1 }}
+              >
+                <span style={{ fontWeight: 900 }}>C</span>hief <span style={{ fontWeight: 900 }}>O</span>f
+              </div>
+
+              {/* Line 3: rotating word */}
+              <span
+                aria-live="polite"
+                className="relative block overflow-hidden font-display italic text-[13px] sm:text-[18px]"
+                style={{
+                  height: "1.15em",
+                  minWidth: "8.2em",
+                  color: "hsl(var(--raddo-brass))",
+                  fontWeight: 700,
+                  letterSpacing: "-0.005em",
+                }}
+              >
+                <AnimatePresence mode="popLayout" initial={false}>
+                  <motion.span
+                    key={COB_TITLES[titleIdx]}
+                    initial={reduce ? { opacity: 1, y: 0 } : { opacity: 0, y: "100%" }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={reduce ? { opacity: 0 } : { opacity: 0, y: "-100%" }}
+                    transition={{ duration: reduce ? 0 : 0.55, ease: EASE }}
+                    className="absolute right-0 bottom-0 block"
+                    style={{ lineHeight: 1 }}
+                  >
+                    {COB_TITLES[titleIdx]}
+                  </motion.span>
+                </AnimatePresence>
+              </span>
+            </div>
           </div>
         </motion.div>
 
