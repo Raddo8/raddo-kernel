@@ -154,51 +154,8 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             }}
           />
 
-          {/* Intelligence briefing header · labelled field grid */}
-          <dl
-            className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
-            style={{
-              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
-              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
-              padding: "12px 0",
-            }}
-          >
-            {[
-              { k: "Subject", v: "Decision\nIntelligence" },
-              { k: "Format", v: "6 paragraphs" },
-              { k: "Read", v: "90 seconds" },
-              { k: "Status", v: open ? "Unsealed" : "Sealed" },
-            ].map((row) => (
-              <div key={row.k} className="flex flex-col gap-1 min-w-0 items-center text-center">
-                <dt
-                  style={{
-                    fontSize: 9,
-                    letterSpacing: "0.22em",
-                    color: "hsl(var(--raddo-ash))",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {row.k}
-                </dt>
-                <dd
-                  className="m-0 font-sans"
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: "hsl(var(--raddo-ink-deep))",
-                    letterSpacing: "0.01em",
-                    whiteSpace: "pre-line",
-                    lineHeight: 1.3,
-                  }}
-                >
-                  {row.v}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
           {/* Action row · open dossier directive */}
-          <div className="mt-4 flex items-center justify-between gap-4">
+          <div className="mb-4 flex items-center justify-between gap-4">
             <span
               className="font-mono"
               style={{
@@ -242,6 +199,50 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               </span>
             </span>
           </div>
+
+          {/* Intelligence briefing header · labelled field grid */}
+          <dl
+            className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
+            style={{
+              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+              padding: "12px 0",
+            }}
+          >
+            {[
+              { k: "Subject", v: "Decision\nIntelligence" },
+              { k: "Format", v: "6 paragraphs" },
+              { k: "Read", v: "90 seconds" },
+              { k: "Status", v: open ? "Unsealed" : "Sealed" },
+            ].map((row) => (
+              <div key={row.k} className="flex flex-col gap-1 min-w-0 items-center text-center">
+                <dt
+                  style={{
+                    fontSize: 9,
+                    letterSpacing: "0.22em",
+                    color: "hsl(var(--raddo-ash))",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {row.k}
+                </dt>
+                <dd
+                  className="m-0 font-sans"
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: "hsl(var(--raddo-ink-deep))",
+                    letterSpacing: "0.01em",
+                    whiteSpace: "pre-line",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {row.v}
+                </dd>
+              </div>
+            ))}
+          </dl>
+
         </button>
       </div>
 
