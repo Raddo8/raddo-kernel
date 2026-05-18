@@ -5,6 +5,7 @@ import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
+import { IntroducingCob } from "@/components/IntroducingCob";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -750,7 +751,8 @@ export function Hero() {
       {/* ====== PINNED SITE HEADER ====== */}
       <SiteHeader />
 
-
+      {/* ====== INTRODUCING COB (new top-of-fold) ====== */}
+      <IntroducingCob />
 
       {/* ====== HERO ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
