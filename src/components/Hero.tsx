@@ -936,7 +936,7 @@ export function Hero() {
           {reduce ? (
             <img
               src="/brand/video/hero-poster.jpg"
-              alt="The Six-Source Mandala — RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context resolving into one briefing."
+              alt="The Six-Source Mandala · RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief of Business."
               className="h-full w-full object-cover"
             />
           ) : (
