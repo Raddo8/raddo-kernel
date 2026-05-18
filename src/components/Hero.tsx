@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion, type Variants, type Transiti
 import { useEffect, useMemo, useState } from "react";
 import raddoLogo from "@/assets/raddo-logo-3d.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
+import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 
