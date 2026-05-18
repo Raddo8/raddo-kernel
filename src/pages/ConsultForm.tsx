@@ -281,13 +281,13 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                Show the business as it feels now, and as it needs to feel next.
+                5 minutes to set up your Chief of Business.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
                 style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
               >
-                Editorial, not clinical. Select the language that feels true, inventory the systems already in motion, then answer the prompts the way you naturally operate.
+                Four short sections · where you are today, where you want to be, the systems you already run, and how you make decisions. Skip anything that doesn't apply. Your COB is built from your answers.
               </p>
             </div>
             <Link
