@@ -737,25 +737,27 @@ export function Hero() {
         title="RADDO · Your Chief of Business"
         description="RADDO is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
       />
-      {/* Ambient background video · fixed, full-viewport, loops silently behind the top of the page */}
-      <video
-        aria-hidden
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-        className="pointer-events-none fixed inset-0 z-0 h-screen w-screen object-cover"
-        src="/brand/still-waters.mp4"
-      />
-      {/* Soft paper tint over the video so headline contrast holds */}
+      {/* Top-of-page video band · pinned at top, scrolls away with the page */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-0"
-        style={{
-          backgroundColor: "hsl(var(--raddo-paper) / 0.32)",
-        }}
-      />
+        className="pointer-events-none absolute left-0 right-0 top-0 z-0 overflow-hidden"
+        style={{ height: "min(900px, 92vh)" }}
+      >
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          className="h-full w-full object-cover"
+          src="/brand/still-waters.mp4"
+        />
+        {/* Soft paper tint so headline contrast holds */}
+        <div
+          className="absolute inset-0"
+          style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
+        />
+      </div>
 
       {/* Hairline paper grain */}
       <div
