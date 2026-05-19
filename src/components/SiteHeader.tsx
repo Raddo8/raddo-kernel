@@ -78,7 +78,7 @@ export function SiteHeader() {
         <div
           className="relative mx-auto max-w-[1240px]"
           style={{
-            backgroundColor: "hsl(var(--raddo-paper) / 0.55)",
+            backgroundColor: "hsl(var(--raddo-paper) / 0.92)",
             border: "1px solid hsl(var(--raddo-paper-edge))",
             borderRadius: 8,
             boxShadow: scrolled
