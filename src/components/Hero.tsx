@@ -772,7 +772,7 @@ export function Hero() {
               letterSpacing: "0.32em",
             }}
           >
-            What if your toughest decisions had already been solved? Even before you knew about them.
+            What if your toughest decisions had already been solved?<br />Even before you knew about them.
           </p>
 
           <div
