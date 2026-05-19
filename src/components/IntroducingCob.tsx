@@ -66,6 +66,34 @@ const PANELS: Panel[] = [
       "A vast atrium with multiple distant desks each holding a single dossier, central podium with a master synthesis under brass nameplate",
     tone: "atrium",
   },
+  {
+    slug: "dossier-05",
+    label: "DOSSIER 05",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dawn",
+  },
+  {
+    slug: "dossier-06",
+    label: "DOSSIER 06",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dusk",
+  },
+  {
+    slug: "dossier-07",
+    label: "DOSSIER 07",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "lamp",
+  },
+  {
+    slug: "dossier-08",
+    label: "DOSSIER 08",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "atrium",
+  },
 ];
 
 function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
