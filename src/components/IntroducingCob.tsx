@@ -92,6 +92,28 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
   };
   const s = toneStyle[panel.tone];
 
+  const imageSrc: Partial<Record<HeroArchetype, string>> = {
+    professional: cobProfessionalImg,
+  };
+  const src = imageSrc[panel.slug];
+
+  if (src) {
+    return (
+      <div
+        className="relative w-full aspect-[4/5] md:aspect-[16/10] overflow-hidden"
+        style={{ borderRadius: 4, border: `1px solid ${s.border}` }}
+      >
+        <img
+          src={src}
+          alt={panel.imageAlt}
+          loading={eager ? "eager" : "lazy"}
+          decoding="async"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </div>
+    );
+  }
+
   return (
     <div
       aria-label={panel.imageAlt}
