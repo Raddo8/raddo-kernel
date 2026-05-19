@@ -338,7 +338,7 @@ export function IntroducingCob() {
       {/* Eyebrow + headline · vertically centered over the video band */}
       <div
         className="absolute left-0 right-0 px-8 md:px-12"
-        style={{ top: "46vh", transform: "translateY(-50%)" }}
+        style={{ top: "calc(46vh - 50px)", transform: "translateY(-50%)" }}
       >
         <p
           className="uppercase font-mono"
