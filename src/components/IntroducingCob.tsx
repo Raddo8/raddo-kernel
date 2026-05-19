@@ -66,6 +66,34 @@ const PANELS: Panel[] = [
       "A vast atrium with multiple distant desks each holding a single dossier, central podium with a master synthesis under brass nameplate",
     tone: "atrium",
   },
+  {
+    slug: "dossier-05",
+    label: "DOSSIER 05",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dawn",
+  },
+  {
+    slug: "dossier-06",
+    label: "DOSSIER 06",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dusk",
+  },
+  {
+    slug: "dossier-07",
+    label: "DOSSIER 07",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "lamp",
+  },
+  {
+    slug: "dossier-08",
+    label: "DOSSIER 08",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "atrium",
+  },
 ];
 
 function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
@@ -335,13 +363,15 @@ export function IntroducingCob() {
         Not just in your corner. Building your corner.
       </h1>
 
-      {/* Folder tabs · click a tab to pull that dossier forward */}
-      <div
-        role="tablist"
-        aria-label="Dossier tabs"
-        className="mt-10 md:mt-14 flex items-end gap-1 md:gap-2 px-1 md:px-2 relative z-10"
-      >
-        {PANELS.map((p, i) => {
+      {/* Folder tabs · 4×2 grid · back row peeks behind front row */}
+      {(() => {
+        const front = index < 4 ? 0 : 1; // which row holds the active tab
+        const rows = [
+          PANELS.slice(0, 4).map((p, i) => ({ p, i })),
+          PANELS.slice(4, 8).map((p, i) => ({ p, i: i + 4 })),
+        ];
+
+        const renderTab = ({ p, i }: { p: Panel; i: number }, isBack: boolean) => {
           const active = i === index;
           return (
             <button
@@ -357,7 +387,7 @@ export function IntroducingCob() {
               style={{
                 flex: "1 1 0",
                 minWidth: 0,
-                paddingTop: active ? 12 : 16,
+                paddingTop: active ? 10 : 8,
                 paddingBottom: active ? 14 : 10,
                 paddingLeft: 14,
                 paddingRight: 14,
@@ -369,7 +399,9 @@ export function IntroducingCob() {
                   : "hsl(var(--raddo-ash))",
                 backgroundColor: active
                   ? "hsl(var(--raddo-paper))"
-                  : "hsl(40 22% 92%)",
+                  : isBack
+                    ? "hsl(40 20% 89%)"
+                    : "hsl(40 22% 92%)",
                 borderTop: active
                   ? "2px solid hsl(var(--raddo-brass))"
                   : "1px solid hsl(var(--raddo-paper-edge))",
@@ -386,6 +418,9 @@ export function IntroducingCob() {
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 cursor: "pointer",
+                boxShadow: isBack
+                  ? "inset 0 -6px 8px -6px hsl(var(--raddo-ink-deep) / 0.08)"
+                  : undefined,
               }}
             >
               <span style={{ opacity: 0.55, marginRight: 8 }}>
@@ -394,8 +429,35 @@ export function IntroducingCob() {
               {p.label}
             </button>
           );
-        })}
-      </div>
+        };
+
+        const backRow = rows[1 - front];
+        const frontRow = rows[front];
+
+        return (
+          <div
+            role="tablist"
+            aria-label="Dossier tabs"
+            className="mt-10 md:mt-14 relative z-10"
+          >
+            {/* Back row · text peeks above front row */}
+            <div
+              className="flex items-end gap-1 md:gap-2 px-3 md:px-5 relative"
+              style={{ zIndex: 1, marginBottom: -14 }}
+            >
+              {backRow.map((t) => renderTab(t, true))}
+            </div>
+            {/* Front row · sits on top, covers bottom of back row */}
+            <div
+              className="flex items-end gap-1 md:gap-2 px-1 md:px-2 relative"
+              style={{ zIndex: 2 }}
+            >
+              {frontRow.map((t) => renderTab(t, false))}
+            </div>
+          </div>
+        );
+      })()}
+
 
       {/* Dossier folder · stacked peek + sliding active card */}
       <div className="relative">
