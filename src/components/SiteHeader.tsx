@@ -147,7 +147,7 @@ export function SiteHeader() {
                 <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
                   · introducing
                 </span>{" "}
-                COB{" "}
+                <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>COB</span>{" "}
                 <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
                   · Chief Of Business
                 </span>
