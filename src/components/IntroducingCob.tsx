@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, type PanInfo, type Transition } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import cobProfessionalImg from "@/assets/cob-professional.png";
 import {
   fireHeroCtaClick,
   fireHeroPanelDwell,
