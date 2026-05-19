@@ -136,14 +136,21 @@ export function SiteHeader() {
                 style={{ objectFit: "contain" }}
               />
               <span
-                className="font-display font-black text-[15px] sm:text-[20px]"
+                className="font-display font-black text-[13px] sm:text-[16px]"
                 style={{
                   color: "hsl(var(--raddo-brass))",
-                  letterSpacing: "0.04em",
+                  letterSpacing: "0.03em",
                   lineHeight: 1,
                 }}
               >
-                RADDO
+                RADDO.ai{" "}
+                <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
+                  · introducing
+                </span>{" "}
+                COB{" "}
+                <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
+                  · Chief Of Business
+                </span>
               </span>
             </Link>
 
