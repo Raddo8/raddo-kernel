@@ -303,7 +303,7 @@ export function IntroducingCob() {
           maxWidth: "22ch",
         }}
       >
-        What if your toughest decisions had already been solved? Even before you knew about them.
+        Not just in your corner. Building your corner.
       </h1>
 
       {/* Folder tabs · click a tab to pull that dossier forward */}
