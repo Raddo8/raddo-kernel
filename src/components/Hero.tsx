@@ -772,7 +772,7 @@ export function Hero() {
               letterSpacing: "0.32em",
             }}
           >
-            Not just in your corner. Building your corner.
+            What if your toughest decisions had already been solved? Even before you knew about them.
           </p>
 
           <div
