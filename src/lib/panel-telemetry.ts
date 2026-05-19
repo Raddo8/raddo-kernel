@@ -1,7 +1,15 @@
 // Plausible event wrappers for the "Introducing COB" hero carousel.
 // Goal names must match the Plausible dashboard configuration.
 
-export type HeroArchetype = "professional" | "executive" | "owner" | "enterprise";
+export type HeroArchetype =
+  | "professional"
+  | "executive"
+  | "owner"
+  | "enterprise"
+  | "dossier-05"
+  | "dossier-06"
+  | "dossier-07"
+  | "dossier-08";
 export type HeroPanelDirection = "left" | "right" | "dot";
 
 function track(name: string, props: Record<string, string | number | boolean>) {
