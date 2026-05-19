@@ -96,6 +96,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
 
   const imageSrc: Partial<Record<HeroArchetype, string>> = {
     professional: cobProfessionalImg,
+    owner: cobBusinessImg,
     enterprise: cobEnterpriseImg,
   };
   const src = imageSrc[panel.slug];
