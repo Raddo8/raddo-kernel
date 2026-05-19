@@ -335,38 +335,34 @@ export function IntroducingCob() {
       className="relative z-10 mx-auto max-w-[1240px] px-8 pb-12 md:px-12 md:pb-16"
       style={{ paddingTop: "75vh" }}
     >
-      {/* Eyebrow + headline · vertically centered over the video band */}
-      <div
-        className="absolute left-0 right-0 px-8 md:px-12"
-        style={{ top: "calc(46vh - 90px)", transform: "translateY(-50%)" }}
+      {/* Eyebrow */}
+      <p
+        className="uppercase font-mono"
+        style={{
+          color: "hsl(var(--raddo-brass))",
+          fontSize: 13,
+          fontWeight: 700,
+          letterSpacing: "0.32em",
+        }}
       >
-        <p
-          className="uppercase font-mono"
-          style={{
-            color: "hsl(var(--raddo-brass))",
-            fontSize: 13,
-            fontWeight: 700,
-            letterSpacing: "0.32em",
-          }}
-        >
-          Introducing COB
-        </p>
+        Introducing COB
+      </p>
 
-        <h1
-          className="font-display"
-          style={{
-            color: "hsl(var(--raddo-ink-deep))",
-            fontWeight: 800,
-            fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
-            lineHeight: 1.08,
-            letterSpacing: "-0.01em",
-            marginTop: 18,
-            maxWidth: "22ch",
-          }}
-        >
-          Not just in your corner. Building your corner.
-        </h1>
-      </div>
+      {/* Meta-headline */}
+      <h1
+        className="font-display"
+        style={{
+          color: "hsl(var(--raddo-ink-deep))",
+          fontWeight: 800,
+          fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+          lineHeight: 1.08,
+          letterSpacing: "-0.01em",
+          marginTop: 18,
+          maxWidth: "22ch",
+        }}
+      >
+        Not just in your corner. Building your corner.
+      </h1>
 
       {/* Folder tabs · 4×2 grid · back row peeks behind front row */}
       {(() => {
