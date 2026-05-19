@@ -3,6 +3,7 @@ import { motion, useReducedMotion, type PanInfo, type Transition } from "framer-
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import cobProfessionalImg from "@/assets/cob-professional.png";
+import cobExecutiveImg from "@/assets/cob-executive.png";
 import cobBusinessImg from "@/assets/cob-business.png";
 import cobEnterpriseImg from "@/assets/cob-enterprise.png";
 import {
@@ -96,6 +97,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
 
   const imageSrc: Partial<Record<HeroArchetype, string>> = {
     professional: cobProfessionalImg,
+    executive: cobExecutiveImg,
     owner: cobBusinessImg,
     enterprise: cobEnterpriseImg,
   };
