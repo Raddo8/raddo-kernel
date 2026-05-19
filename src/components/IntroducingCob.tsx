@@ -332,7 +332,8 @@ export function IntroducingCob() {
       role="region"
       aria-roledescription="carousel"
       aria-label="Introducing COB"
-      className="relative z-10 mx-auto max-w-[1240px] px-8 pt-12 pb-12 md:px-12 md:pt-20 md:pb-16"
+      className="relative z-10 mx-auto max-w-[1240px] px-8 pb-12 md:px-12 md:pb-16"
+      style={{ paddingTop: "50vh" }}
     >
       {/* Eyebrow */}
       <p
