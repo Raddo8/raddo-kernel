@@ -47,7 +47,7 @@ const PANELS: Panel[] = [
   },
   {
     slug: "owner",
-    label: "THE OWNER",
+    label: "THE BUSINESS",
     scenario:
       "Remember the Tuesday you got back · the hire-vs-vendor math already done, the customer about to churn already flagged, the vendor whose pricing crept up over four quarters on your screen by 7am.",
     imageAlt:
