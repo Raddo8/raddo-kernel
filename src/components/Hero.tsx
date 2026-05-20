@@ -756,6 +756,7 @@ export function Hero() {
           playsInline
           preload="auto"
           className="h-full w-full object-cover"
+          style={{ opacity: 0.4 }}
           src="/brand/still-waters.mp4"
         />
         {/* Soft paper tint so headline contrast holds */}
@@ -768,18 +769,19 @@ export function Hero() {
           <p
             className="font-display text-left max-w-[34ch]"
             style={{
-              color: "hsl(var(--raddo-brass))",
-              fontWeight: 800,
-              fontSize: "36px",
+              color: "hsl(var(--raddo-ink-deep))",
+              fontWeight: 900,
+              fontSize: "48px",
               lineHeight: 1.18,
               letterSpacing: "-0.01em",
               textShadow:
-                "0 0 18px hsl(0 0% 100% / 0.55), 0 0 36px hsl(0 0% 100% / 0.35), 0 0 64px hsl(0 0% 100% / 0.25)",
+                "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
             }}
           >
-            Imagine an executive who never forgets, never loses context, and never stops working in your best interest. RADDO builds that executive.
+            Imagine an executive who never forgets, never loses context, and never stops working in your best interest. <span style={{ color: "hsl(var(--raddo-brass))" }}>RADDO</span> builds that executive.
           </p>
         </div>
+
       </div>
 
       {/* Hairline paper grain */}
