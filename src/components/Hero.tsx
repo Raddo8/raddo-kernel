@@ -737,11 +737,17 @@ export function Hero() {
         title="RADDO · Your Chief of Business"
         description="RADDO is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
       />
-      {/* Top-of-page video band · pinned at top, scrolls away with the page */}
+      {/* Top dark-blue bar · scrolls with the page */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-0 right-0 top-0 z-0 overflow-hidden"
-        style={{ height: "min(900px, 92vh)" }}
+        className="absolute left-0 right-0 top-0 z-0"
+        style={{ height: 60, backgroundColor: "hsl(var(--raddo-ink-deep))" }}
+      />
+      {/* Top-of-page video band · sits below the bar, scrolls away with the page */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-0 right-0 z-0 overflow-hidden"
+        style={{ top: 60, height: "min(900px, 92vh)" }}
       >
         <video
           autoPlay
