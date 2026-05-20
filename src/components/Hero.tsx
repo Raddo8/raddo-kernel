@@ -764,16 +764,17 @@ export function Hero() {
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
         {/* Hovering headline · bottom third of video */}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-center px-8 md:px-16 pointer-events-none">
+        <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
           <p
-            className="font-display text-center max-w-[28ch]"
+            className="font-display text-left max-w-[34ch]"
             style={{
               color: "hsl(var(--raddo-brass))",
               fontWeight: 800,
-              fontSize: "clamp(1.75rem, 4.2vw, 3.5rem)",
-              lineHeight: 1.15,
+              fontSize: "36px",
+              lineHeight: 1.18,
               letterSpacing: "-0.01em",
-              textShadow: "0 2px 18px hsl(var(--raddo-ink-deep) / 0.55)",
+              textShadow:
+                "0 0 18px hsl(0 0% 100% / 0.55), 0 0 36px hsl(0 0% 100% / 0.35), 0 0 64px hsl(0 0% 100% / 0.25)",
             }}
           >
             Imagine an executive who never forgets, never loses context, and never stops working in your best interest. RADDO builds that executive.
