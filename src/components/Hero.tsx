@@ -756,7 +756,7 @@ export function Hero() {
           playsInline
           preload="auto"
           className="h-full w-full object-cover"
-          style={{ opacity: 0.4 }}
+          style={{ opacity: 0.32 }}
           src="/brand/still-waters.mp4"
         />
         {/* Soft paper tint so headline contrast holds */}
