@@ -749,6 +749,7 @@ export function Hero() {
           muted
           playsInline
           preload="auto"
+          ref={(el) => { if (el) el.playbackRate = 0.8; }}
           className="h-full w-full object-cover"
           src="/brand/big-cubicle.mp4"
         />
