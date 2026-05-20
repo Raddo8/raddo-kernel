@@ -144,7 +144,7 @@ export function SiteHeader() {
                 }}
               >
                 RADDO.ai{" "}
-                <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
+                <span className="hidden sm:inline" style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
                   · introducing
                 </span>{" "}
                 <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>COB</span>{" "}
