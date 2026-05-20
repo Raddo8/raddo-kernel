@@ -31,6 +31,36 @@ type Panel = {
 // Copy locked — do not paraphrase. "Remember" frame is intentional.
 const PANELS: Panel[] = [
   {
+    slug: "raddo-ai",
+    label: "RADDO.AI",
+    scenario:
+      "Each Chief of Business (COB) is a private, conversational operating partner that learns your company end-to-end, remembers every decision, and quietly orchestrates the work that runs it. Built for the operators · founders, owners, senior executives · who run real businesses and need an executive who keeps up.",
+    imageAlt:
+      "RADDO mark embossed on cream paper, brass desk lamp casting warm light across a one-page brief",
+    tone: "lamp",
+  },
+  {
+    slug: "dossier-02",
+    label: "DOSSIER 02",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dawn",
+  },
+  {
+    slug: "dossier-03",
+    label: "DOSSIER 03",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "dusk",
+  },
+  {
+    slug: "dossier-04",
+    label: "DOSSIER 04",
+    scenario: "Scenario copy pending · placeholder dossier.",
+    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    tone: "atrium",
+  },
+  {
     slug: "professional",
     label: "THE PROFESSIONAL",
     scenario:
@@ -64,34 +94,6 @@ const PANELS: Panel[] = [
       "Remember the board meeting that didn't surprise you · every C-suite seat running with their own Chief of Business, and the synthesis surfacing where their decisions would collide three days before they did.",
     imageAlt:
       "A vast atrium with multiple distant desks each holding a single dossier, central podium with a master synthesis under brass nameplate",
-    tone: "atrium",
-  },
-  {
-    slug: "dossier-05",
-    label: "DOSSIER 05",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
-    tone: "dawn",
-  },
-  {
-    slug: "dossier-06",
-    label: "DOSSIER 06",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
-    tone: "dusk",
-  },
-  {
-    slug: "dossier-07",
-    label: "DOSSIER 07",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
-    tone: "lamp",
-  },
-  {
-    slug: "dossier-08",
-    label: "DOSSIER 08",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
     tone: "atrium",
   },
 ];
