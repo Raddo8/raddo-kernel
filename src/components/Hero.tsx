@@ -6,6 +6,7 @@ import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 import { IntroducingCob } from "@/components/IntroducingCob";
+import WhereCobHelps from "@/components/WhereCobHelps";
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
