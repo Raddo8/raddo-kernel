@@ -347,18 +347,37 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           });
         });
 
-        // Collision pairs · axis-aligned bbox overlap.
+        // Collision pairs · axis-aligned bbox overlap + depth metrics.
+        // depth = min penetration along x or y needed to separate the two boxes
+        // (i.e. the smallest jitter/padding budget that would resolve the hit).
+        type Pair = { a: number; b: number; ox: number; oy: number; area: number; depth: number; ix: number; iy: number; iw: number; ih: number };
+        const pairs: Pair[] = [];
         const colliding = new Set<number>();
         for (let a = 0; a < boxes.length; a++) {
           for (let b = a + 1; b < boxes.length; b++) {
             const A = boxes[a];
             const B = boxes[b];
-            if (A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y) {
+            const ox = Math.min(A.x + A.w, B.x + B.w) - Math.max(A.x, B.x);
+            const oy = Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y);
+            if (ox > 0 && oy > 0) {
               colliding.add(A.i);
               colliding.add(B.i);
+              pairs.push({
+                a: A.i,
+                b: B.i,
+                ox,
+                oy,
+                area: ox * oy,
+                depth: Math.min(ox, oy),
+                ix: Math.max(A.x, B.x),
+                iy: Math.max(A.y, B.y),
+                iw: ox,
+                ih: oy,
+              });
             }
           }
         }
+        pairs.sort((p, q) => q.area - p.area);
 
         boxes.forEach((bx) => {
           const rect = document.createElementNS(NS, "rect");
@@ -373,7 +392,6 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           rect.setAttribute("stroke-width", hit ? "1.25" : "0.75");
           dsvg.appendChild(rect);
 
-          // Coord label.
           const txt = document.createElementNS(NS, "text");
           const s = scatterByIndex[bx.i];
           txt.setAttribute("x", String(bx.x + 2));
@@ -385,8 +403,50 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           dsvg.appendChild(txt);
         });
 
+        // Paint overlap rectangles (filled) + annotate area/depth on the largest pair.
+        pairs.forEach((p, idx) => {
+          const overlap = document.createElementNS(NS, "rect");
+          overlap.setAttribute("x", String(p.ix));
+          overlap.setAttribute("y", String(p.iy));
+          overlap.setAttribute("width", String(p.iw));
+          overlap.setAttribute("height", String(p.ih));
+          overlap.setAttribute("fill", "#dc2626");
+          overlap.setAttribute("fill-opacity", "0.28");
+          dsvg.appendChild(overlap);
+          if (idx < 12) {
+            const lbl = document.createElementNS(NS, "text");
+            lbl.setAttribute("x", String(p.ix + p.iw / 2));
+            lbl.setAttribute("y", String(p.iy + p.ih / 2));
+            lbl.setAttribute("text-anchor", "middle");
+            lbl.setAttribute("dominant-baseline", "middle");
+            lbl.setAttribute("fill", "#7f1d1d");
+            lbl.setAttribute("font-family", "JetBrains Mono, monospace");
+            lbl.setAttribute("font-size", "8");
+            lbl.textContent = `${Math.round(p.area)}px² · d${p.depth.toFixed(1)}`;
+            dsvg.appendChild(lbl);
+          }
+        });
+
         const sortedIndices = Array.from(colliding).sort((a, b) => a - b);
-        setDebugStats({ collisions: colliding.size, total: boxes.length, indices: sortedIndices });
+        const totalOverlapArea = pairs.reduce((s, p) => s + p.area, 0);
+        const maxDepth = pairs.reduce((m, p) => Math.max(m, p.depth), 0);
+        const topPairs = pairs.slice(0, 6).map((p) => ({
+          a: p.a,
+          b: p.b,
+          area: Math.round(p.area),
+          depth: Math.round(p.depth * 10) / 10,
+          ox: Math.round(p.ox * 10) / 10,
+          oy: Math.round(p.oy * 10) / 10,
+        }));
+        setDebugStats({
+          collisions: colliding.size,
+          total: boxes.length,
+          indices: sortedIndices,
+          pairs: pairs.length,
+          totalArea: Math.round(totalOverlapArea),
+          maxDepth: Math.round(maxDepth * 10) / 10,
+          topPairs,
+        });
       }
     }
 
