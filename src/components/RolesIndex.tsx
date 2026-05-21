@@ -97,7 +97,16 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     } catch { /* noop */ }
     return false;
   }, []);
-  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number; indices: number[] }>({ collisions: 0, total: 0, indices: [] });
+  type TopPair = { a: number; b: number; area: number; depth: number; ox: number; oy: number };
+  const [debugStats, setDebugStats] = useState<{
+    collisions: number;
+    total: number;
+    indices: number[];
+    pairs: number;
+    totalArea: number;
+    maxDepth: number;
+    topPairs: TopPair[];
+  }>({ collisions: 0, total: 0, indices: [], pairs: 0, totalArea: 0, maxDepth: 0, topPairs: [] });
 
   // Detect reduced motion + already-scrolled · resolved on first paint when either is true.
   const initialResolved = useMemo(() => {
@@ -347,18 +356,37 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           });
         });
 
-        // Collision pairs · axis-aligned bbox overlap.
+        // Collision pairs · axis-aligned bbox overlap + depth metrics.
+        // depth = min penetration along x or y needed to separate the two boxes
+        // (i.e. the smallest jitter/padding budget that would resolve the hit).
+        type Pair = { a: number; b: number; ox: number; oy: number; area: number; depth: number; ix: number; iy: number; iw: number; ih: number };
+        const pairs: Pair[] = [];
         const colliding = new Set<number>();
         for (let a = 0; a < boxes.length; a++) {
           for (let b = a + 1; b < boxes.length; b++) {
             const A = boxes[a];
             const B = boxes[b];
-            if (A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y) {
+            const ox = Math.min(A.x + A.w, B.x + B.w) - Math.max(A.x, B.x);
+            const oy = Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y);
+            if (ox > 0 && oy > 0) {
               colliding.add(A.i);
               colliding.add(B.i);
+              pairs.push({
+                a: A.i,
+                b: B.i,
+                ox,
+                oy,
+                area: ox * oy,
+                depth: Math.min(ox, oy),
+                ix: Math.max(A.x, B.x),
+                iy: Math.max(A.y, B.y),
+                iw: ox,
+                ih: oy,
+              });
             }
           }
         }
+        pairs.sort((p, q) => q.area - p.area);
 
         boxes.forEach((bx) => {
           const rect = document.createElementNS(NS, "rect");
@@ -373,7 +401,6 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           rect.setAttribute("stroke-width", hit ? "1.25" : "0.75");
           dsvg.appendChild(rect);
 
-          // Coord label.
           const txt = document.createElementNS(NS, "text");
           const s = scatterByIndex[bx.i];
           txt.setAttribute("x", String(bx.x + 2));
@@ -385,8 +412,50 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           dsvg.appendChild(txt);
         });
 
+        // Paint overlap rectangles (filled) + annotate area/depth on the largest pair.
+        pairs.forEach((p, idx) => {
+          const overlap = document.createElementNS(NS, "rect");
+          overlap.setAttribute("x", String(p.ix));
+          overlap.setAttribute("y", String(p.iy));
+          overlap.setAttribute("width", String(p.iw));
+          overlap.setAttribute("height", String(p.ih));
+          overlap.setAttribute("fill", "#dc2626");
+          overlap.setAttribute("fill-opacity", "0.28");
+          dsvg.appendChild(overlap);
+          if (idx < 12) {
+            const lbl = document.createElementNS(NS, "text");
+            lbl.setAttribute("x", String(p.ix + p.iw / 2));
+            lbl.setAttribute("y", String(p.iy + p.ih / 2));
+            lbl.setAttribute("text-anchor", "middle");
+            lbl.setAttribute("dominant-baseline", "middle");
+            lbl.setAttribute("fill", "#7f1d1d");
+            lbl.setAttribute("font-family", "JetBrains Mono, monospace");
+            lbl.setAttribute("font-size", "8");
+            lbl.textContent = `${Math.round(p.area)}px² · d${p.depth.toFixed(1)}`;
+            dsvg.appendChild(lbl);
+          }
+        });
+
         const sortedIndices = Array.from(colliding).sort((a, b) => a - b);
-        setDebugStats({ collisions: colliding.size, total: boxes.length, indices: sortedIndices });
+        const totalOverlapArea = pairs.reduce((s, p) => s + p.area, 0);
+        const maxDepth = pairs.reduce((m, p) => Math.max(m, p.depth), 0);
+        const topPairs = pairs.slice(0, 6).map((p) => ({
+          a: p.a,
+          b: p.b,
+          area: Math.round(p.area),
+          depth: Math.round(p.depth * 10) / 10,
+          ox: Math.round(p.ox * 10) / 10,
+          oy: Math.round(p.oy * 10) / 10,
+        }));
+        setDebugStats({
+          collisions: colliding.size,
+          total: boxes.length,
+          indices: sortedIndices,
+          pairs: pairs.length,
+          totalArea: Math.round(totalOverlapArea),
+          maxDepth: Math.round(maxDepth * 10) / 10,
+          topPairs,
+        });
       }
     }
 
@@ -523,7 +592,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                 preserveAspectRatio="none"
               />
               <div
-                className="pointer-events-none absolute left-2 top-2 z-30 max-w-[260px] rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
+                className="pointer-events-none absolute left-2 top-2 z-30 max-w-[320px] rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
                 style={{
                   fontFamily: "JetBrains Mono, monospace",
                   fontSize: "11px",
@@ -532,10 +601,14 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                 }}
               >
                 <div>
-                  DEBUG · labels {debugStats.total} · collisions{" "}
+                  DEBUG · labels {debugStats.total} · hits{" "}
                   <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
                     {debugStats.collisions}
-                  </span>
+                  </span>{" "}
+                  · pairs {debugStats.pairs}
+                </div>
+                <div style={{ color: "#fcd34d", fontSize: "10px", lineHeight: "14px" }}>
+                  area Σ {debugStats.totalArea}px² · depth max {debugStats.maxDepth}px
                 </div>
                 {debugStats.indices.length > 0 && (
                   <div
@@ -545,6 +618,16 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                   >
                     hit · {debugStats.indices.slice(0, 24).join(", ")}
                     {debugStats.indices.length > 24 ? ` …+${debugStats.indices.length - 24}` : ""}
+                  </div>
+                )}
+                {debugStats.topPairs.length > 0 && (
+                  <div className="mt-1" style={{ fontSize: "10px", lineHeight: "14px", color: "#fecaca" }}>
+                    <div style={{ color: "#fda4af" }}>top pairs · area · depth · Δx,Δy</div>
+                    {debugStats.topPairs.map((p) => (
+                      <div key={`${p.a}-${p.b}`}>
+                        {p.a}↔{p.b} · {p.area}px² · d{p.depth} · {p.ox},{p.oy}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
