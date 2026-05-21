@@ -474,6 +474,29 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
             className="pointer-events-none absolute inset-0 h-full w-full"
             preserveAspectRatio="none"
           />
+          {debug && (
+            <>
+              <svg
+                ref={debugSvgRef}
+                className="pointer-events-none absolute inset-0 z-20 h-full w-full"
+                preserveAspectRatio="none"
+              />
+              <div
+                className="pointer-events-none absolute left-2 top-2 z-30 rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
+                style={{
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "11px",
+                  lineHeight: "16px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                DEBUG · labels {debugStats.total} · collisions{" "}
+                <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
+                  {debugStats.collisions}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
