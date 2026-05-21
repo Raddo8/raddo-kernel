@@ -395,7 +395,13 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                   key={bandKey}
                   aria-labelledby={`band-${bandKey}-heading`}
                 >
-                  <div className="mb-4 flex items-baseline gap-4 border-b border-raddo-paper-edge pb-2">
+                  <div
+                    className="mb-4 flex items-baseline gap-4 border-b border-raddo-paper-edge pb-2"
+                    style={{
+                      opacity: phase === "resolved" ? 1 : 0,
+                      transition: `opacity 400ms cubic-bezier(0.22, 1, 0.36, 1) ${phase === "resolved" ? "1200ms" : "0ms"}`,
+                    }}
+                  >
                     <h3
                       id={`band-${bandKey}-heading`}
                       className="text-raddo-ash"
