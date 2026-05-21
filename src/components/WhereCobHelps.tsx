@@ -59,12 +59,12 @@ interface WordState {
 }
 
 const REST_FONT = 16;
-const MAX_SCALE = 3;
+const MAX_FONT = 34;
 const REST_OPACITY = 0.45;
-const HOT_RADIUS = 60;
-const COLD_RADIUS = 180;
+const HOT_RADIUS = 24;
+const COLD_RADIUS = 88;
 const COLLISION_PAD = 8;
-const LERP = 0.15;
+const LERP = 0.22;
 
 export default function WhereCobHelps() {
   const wordsRef = useRef<string[]>(shuffle(RAW_WORDS));
