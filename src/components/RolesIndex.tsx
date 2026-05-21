@@ -97,7 +97,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     } catch { /* noop */ }
     return false;
   }, []);
-  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number }>({ collisions: 0, total: 0 });
+  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number; indices: number[] }>({ collisions: 0, total: 0, indices: [] });
 
   // Detect reduced motion + already-scrolled · resolved on first paint when either is true.
   const initialResolved = useMemo(() => {
