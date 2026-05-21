@@ -523,7 +523,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                 preserveAspectRatio="none"
               />
               <div
-                className="pointer-events-none absolute left-2 top-2 z-30 rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
+                className="pointer-events-none absolute left-2 top-2 z-30 max-w-[260px] rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
                 style={{
                   fontFamily: "JetBrains Mono, monospace",
                   fontSize: "11px",
@@ -531,10 +531,22 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                   letterSpacing: "0.04em",
                 }}
               >
-                DEBUG · labels {debugStats.total} · collisions{" "}
-                <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
-                  {debugStats.collisions}
-                </span>
+                <div>
+                  DEBUG · labels {debugStats.total} · collisions{" "}
+                  <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
+                    {debugStats.collisions}
+                  </span>
+                </div>
+                {debugStats.indices.length > 0 && (
+                  <div
+                    className="mt-1 break-words"
+                    style={{ color: "#fca5a5", fontSize: "10px", lineHeight: "14px" }}
+                    title={debugStats.indices.join(", ")}
+                  >
+                    hit · {debugStats.indices.slice(0, 24).join(", ")}
+                    {debugStats.indices.length > 24 ? ` …+${debugStats.indices.length - 24}` : ""}
+                  </div>
+                )}
               </div>
             </>
           )}
