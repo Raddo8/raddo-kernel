@@ -120,7 +120,9 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     return m;
   }, []);
 
-  // IntersectionObserver · fire collapse once when section crosses threshold.
+  // IntersectionObserver · fire collapse once when section enters viewport.
+  // We observe a small trigger element near the section top so a tall section
+  // (which can never reach a high intersectionRatio) still fires reliably.
   useEffect(() => {
     if (phaseRef.current === "resolved") return;
     const el = sectionRef.current;
@@ -129,30 +131,35 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       return;
     }
 
-    // If already past threshold on mount, skip the scattered intro.
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || 800;
-    const visibleRatio = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0)) / Math.min(rect.height, vh);
-    if (visibleRatio >= threshold) {
-      // Defer one frame so layout is settled, then start collapse.
-      requestAnimationFrame(() => startCollapse());
-      return;
-    }
+    let fired = false;
+    const fire = () => {
+      if (fired) return;
+      fired = true;
+      // Hold scattered state briefly so the visitor reads "150 of these" first.
+      window.setTimeout(() => startCollapse(), 900);
+    };
 
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting && e.intersectionRatio >= threshold) {
+          if (e.isIntersecting) {
             obs.disconnect();
-            startCollapse();
+            fire();
             break;
           }
         }
       },
-      { threshold: [threshold] }
+      { rootMargin: "0px 0px -20% 0px" }
     );
     obs.observe(el);
-    return () => obs.disconnect();
+
+    // Hard fallback · if observer never fires (some embeds), trigger after 4s.
+    const fallback = window.setTimeout(fire, 4000);
+
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(fallback);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold]);
 
