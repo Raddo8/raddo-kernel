@@ -592,7 +592,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                 preserveAspectRatio="none"
               />
               <div
-                className="pointer-events-none absolute left-2 top-2 z-30 max-w-[260px] rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
+                className="pointer-events-none absolute left-2 top-2 z-30 max-w-[320px] rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
                 style={{
                   fontFamily: "JetBrains Mono, monospace",
                   fontSize: "11px",
@@ -601,10 +601,14 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                 }}
               >
                 <div>
-                  DEBUG · labels {debugStats.total} · collisions{" "}
+                  DEBUG · labels {debugStats.total} · hits{" "}
                   <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
                     {debugStats.collisions}
-                  </span>
+                  </span>{" "}
+                  · pairs {debugStats.pairs}
+                </div>
+                <div style={{ color: "#fcd34d", fontSize: "10px", lineHeight: "14px" }}>
+                  area Σ {debugStats.totalArea}px² · depth max {debugStats.maxDepth}px
                 </div>
                 {debugStats.indices.length > 0 && (
                   <div
@@ -614,6 +618,16 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                   >
                     hit · {debugStats.indices.slice(0, 24).join(", ")}
                     {debugStats.indices.length > 24 ? ` …+${debugStats.indices.length - 24}` : ""}
+                  </div>
+                )}
+                {debugStats.topPairs.length > 0 && (
+                  <div className="mt-1" style={{ fontSize: "10px", lineHeight: "14px", color: "#fecaca" }}>
+                    <div style={{ color: "#fda4af" }}>top pairs · area · depth · Δx,Δy</div>
+                    {debugStats.topPairs.map((p) => (
+                      <div key={`${p.a}-${p.b}`}>
+                        {p.a}↔{p.b} · {p.area}px² · d{p.depth} · {p.ox},{p.oy}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
