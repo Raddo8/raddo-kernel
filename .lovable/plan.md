@@ -1,137 +1,140 @@
-# WhereCobHelps — Interactive Word-Cloud Section
 
-Full-width marketing section: heading · 100-word drifting cloud with magnifying-glass hover · subhead. Self-contained, no props.
+# Hero Dossier Intake — Confidential Chat Surface
 
-## 100th word (locked)
+A premium, single-purpose chat surface that lives on the Hero page directly under the headline + image, framed as a **confidential intake dossier** (not a "chatbot"). Built now as an aesthetic + interaction shell. The actual question protocol you're writing drops in later as a single typed script — no rebuild required.
 
-**Process Improver**, slotted in the Operations group between `The Standardizer` and `Chief Strategy Officer`. Final count = 100. ✓
+## Placement
 
-## Files
-
-1. **`src/components/WhereCobHelps.tsx`** — new, default export.
-2. **`src/components/Hero.tsx`** — one-line insert of `<WhereCobHelps />` immediately after the main hero section closes (after current line 1146 `</section>`), before the `{/* ====== EDITORIAL INDEX ====== */}` block. Import added at top with existing component imports.
-
-Existing tokens cover everything: `raddo-paper`, `raddo-paper-edge`, `raddo-ink`, `raddo-brass`. No CSS/Tailwind config changes.
-
-## Layout
+`src/components/Hero.tsx`, inserted between the headline block (closes line 985) and `BriefingComposition` (line 988). Sits in the same 1180px column, full-width within it.
 
 ```text
-┌──────────────────────────────────────────────────┐
-│  "Where can COB help?"  (centered)               │
-│  font-display 56/36 · weight 400 · ink · -0.02em │
-│  mb-16                                           │
-├──────────────────────────────────────────────────┤
-│  ╔══════════════════════════════════════════╗    │
-│  ║ paper bg + SVG grain @ 10%, multiply     ║    │
-│  ║ 100 drifting words (left/top anchored)   ║    │
-│  ║ brass lens follows cursor (desktop)      ║    │
-│  ║ height: min(600px, 70vh), min 480px      ║    │
-│  ╚══════════════════════════════════════════╝    │
-│  mt-16                                           │
-│  Subhead (Fraunces 24/18, ink @ 0.75, 720px)     │
-└──────────────────────────────────────────────────┘
+[ image + headline grid ]
+       ↓
+[ DOSSIER INTAKE — new chat surface ]   ← this build
+       ↓
+[ BriefingComposition ]
+[ brass hairline ]
+[ CTA row ]
 ```
 
-Canvas is full-width (escapes the 1240px container) with top/bottom hairline borders in `raddo-paper-edge` — keeps the editorial banking feel and visually separates from the hero above and editorial index below.
+Stagger: appears at ~2400ms reveal (between headline 900ms cascade and Briefing 2600ms) so the page settles in order: headline → intake invitation → briefing exhibit → CTA.
 
-## Component architecture
+## Aesthetic — "The Intake Dossier"
 
-All per-frame state in **refs**; the loop writes inline `style` directly to DOM nodes — zero React renders during animation.
+Reads as a sealed manila folder / boardroom intake form, not a messaging app. References: classified dossier cover, private bank intake card, watchmaker's service ticket.
 
-```text
-WhereCobHelps
-├── wordsRef          shuffled list of 100 strings (module-level RAW_WORDS)
-├── containerRef      canvas <div>
-├── itemRefs          (HTMLDivElement | null)[]   // each word
-├── lensRef           brass lens <div>
-├── stateRef          WordState[]   {x,y,vx,vy,w,h,scale,opacity}
-├── cursorRef         {x,y,active}
-├── lensPosRef        {x,y} lerped follower
-├── tapRef            {x,y,until} | null   (mobile tap epicenter)
-├── sizeRef           {w,h} container size from ResizeObserver
-├── isTouchRef        matchMedia('(hover: none)')
-├── reducedRef        matchMedia('(prefers-reduced-motion: reduce)')
-├── visibleRef        IntersectionObserver pauses loop off-screen
-├── rafRef            current rAF id
-└── underlineLeaderRef  index of currently-underlined leader (-1 if none)
+Frame
+- Cream paper surface (`raddo-paper`), 1px `raddo-paper-edge` border, 8px radius
+- Four brass corner brackets (matches the hero image frame at lines 951–954) — visual rhyme
+- Top-left eyebrow: monospace-feeling Inter caps, brass-deep — `INTAKE · CONFIDENTIAL · SESSION 001`
+- Top-right: tabular-num timestamp (Inter tnum), e.g. `26.05.21 · 14:32 UTC` — generated client-side
+- Bottom-right fleuron `❦` in brass at 40% opacity
+- Faint paper grain (inline SVG `feTurbulence`, multiply 6%) — same technique cited in plan.md
+
+Header strip (inside frame, above transcript)
+- Fraunces 22/28, ink-deep: *"What's the one thing keeping you up at night?"* (placeholder; replaced when your protocol arrives)
+- Inter 13, ash, single line: *"Answer in your own words. Nothing leaves this page. No account required."*
+- 1px brass hairline divider, 64px wide, left-aligned
+
+Transcript area
+- Left rail "asked by COB" turns: ink-deep Fraunces 18, no bubble, just a brass `▍` left tick and a hairline rule above
+- Right rail "your reply" turns: paper-edge card, ink charcoal Inter 15, 4px radius, max-width 78%, right-aligned, subtle 4px shadow (≤8px per doctrine)
+- Each turn timestamped in tnum ash 11 underneath
+- Typing indicator on COB turns: three brass dots, 220ms stagger fade — no looping spinner
+
+Composer
+- Single-line growing textarea, Inter 16, ink-deep
+- Placeholder: *"Type your answer · Enter to send · Shift+Enter for a new line"*
+- Brass send chevron `→` (icon-only button, ARIA labelled)
+- Below composer, ash 11: *"Encrypted in transit · stored only with your consent · withdraw anytime."*
+- Character counter appears only past 280 chars, tnum
+
+Empty / opening state
+- Before user engages, transcript shows a single sealed-envelope mark and one Fraunces line: *"Open the dossier"* — clicking anywhere on the surface "unseals" it (220ms brass wax-seal fade, paper crease line draws across with `scaleX`), revealing the first COB question.
+
+States (all 7 per doctrine)
+- default · hover (composer border darkens to ink-soft) · focus (2px brass focus ring) · active (send button compresses 1px) · disabled (paper-edge 40%, no copy change) · loading (three brass dots) · error (single inline ink line, no red; brass underline on field)
+
+Motion (brand curve `cubic-bezier(0.22, 1, 0.36, 1)`)
+- Surface entrance: rise 16px + fade, 800ms at 2400ms delay
+- Each new transcript turn: rise 8px + fade, 220ms
+- Wax-seal unseal: 420ms
+- `prefers-reduced-motion`: snap to final state, no seal animation, instant turn appearance
+
+## Architecture
+
+New files
+- `src/components/hero/DossierIntake.tsx` — the surface (default-exported component, no props)
+- `src/components/hero/intake-protocol.ts` — the conversation script (typed, single export). Stubbed with 2 placeholder turns now; you paste your real protocol in here later — no other file changes needed.
+
+Edited
+- `src/components/Hero.tsx` — one import, one `<DossierIntake />` insert after line 985, wrapped in the same `motion.section` rise pattern used by `BriefingComposition`.
+
+### Protocol shape (so your script slots in cleanly)
+
+```ts
+// src/components/hero/intake-protocol.ts
+export type IntakeTurn =
+  | { kind: "ask"; id: string; prompt: string; hint?: string }
+  | { kind: "branch"; id: string; on: (reply: string) => string /* next id */ }
+  | { kind: "close"; id: string; message: string; cta?: { label: string; href: string } };
+
+export const INTAKE_PROTOCOL: IntakeTurn[] = [
+  { kind: "ask", id: "q1", prompt: "What's the one thing keeping you up at night?" },
+  { kind: "ask", id: "q2", prompt: "And what's taking up most of your day?" },
+  // ← your real protocol drops in here
+];
 ```
 
-### Init (useLayoutEffect)
+The component reads this array sequentially, advancing on each user submit. Branching is supported (your `on(reply)` returns the next turn id) so when your protocol arrives, decision trees work without refactor.
 
-1. Read `hover: none` and `prefers-reduced-motion: reduce`.
-2. ResizeObserver triggers `repack()`. Initial call on mount.
-3. `repack()`:
-   - For each word ref: reset transform → `getBoundingClientRect()` to read rest bbox.
-   - Place via greedy AABB rejection, ≤250 attempts/word with 8px padding; best-effort if exhausted (effectively never with 100 words in 600px tall canvas at 16px serif).
-   - Assign velocity: random angle, speed ∈ [8,20] px/s. Zero speed under reduced-motion.
-4. IntersectionObserver toggles `visibleRef`.
+### Local state only (no backend in this build)
 
-### rAF loop
+- Transcript held in `useState<IntakeTurn[]>` — ephemeral, page-local
+- No Supabase write in this phase (per backend phasing doctrine — Phase 1, no customer data). When you're ready to capture answers, we add a single `submit-intake` edge function and a `dossier_intakes` table behind it. Out of scope for this build.
 
-Per frame, clamped `dt ≤ 33ms`:
+### Voice + doctrine compliance
 
-1. **Drift** + edge bounce (account for `w/h`).
-2. **Collision separation**: O(n²) AABB · resolve along smaller-overlap axis · 100 words ≈ 10k cheap ops, fine on mid-tier hardware.
-3. **Epicenter**: cursor (desktop, when `active`) or tap (mobile, while `now < tap.until`).
-4. **Target scale/opacity** per word (smoothstep over distance):
-   - `d ≤ 60`: scale 3.0, opacity 1.0
-   - `60 < d ≤ 180`: smoothstep interpolation toward 1.0/0.45
-   - `d > 180` or no focus: scale 1.0, opacity 0.45
-5. **Lerp** current → target with factor 0.15 (instant snap under reduced-motion).
-6. **Write to DOM**: `el.style.transform = translate3d(x,y,0) scale(s)` · `el.style.opacity = o`.
-7. **Leader underline**: single max-scaled word (only if `scale > 1.05`) gets `data-leader="true"`; rendered via a scoped `<style>` block with a brass `::after` hairline transitioning opacity + scaleX over 220ms with the brand curve.
-8. **Lens follow** (desktop only): lerped position, fade opacity on enter/leave with 220ms brand-curve transition.
+- No banned phrases. No "AI," no "assistant," no "magic."
+- COB never called "chatbot." Header reads *"Your COB is listening."* (or your replacement copy.)
+- Source-integrity tone preserved: confirmation lines like *"Recorded. Continue when ready."*
+- Brass used only for: eyebrow, hairlines, corner brackets, send chevron, focus ring, fleuron. Never on body copy.
+- Border radii: 4px (composer, reply cards) / 8px (outer frame). Shadows ≤ 8px.
+- Two type families only (Fraunces · Inter, tnum for timestamps).
 
-### Pointer handlers
+### Accessibility
 
-- `onPointerEnter/Move` (desktop): write cursor coords relative to canvas; `active = true`.
-- `onPointerLeave`: `active = false` → epicenter clears → words relax via lerp.
-- `onPointerDown` (touch): if `e.target.dataset.word === "1"` set `tapRef` for 1.5s; otherwise clear (tap-to-relax).
-- Container `cursor: none` on hover-capable; `default` on touch.
+- `<section aria-labelledby="dossier-intake-heading">` with real `<h2>` (visually styled as the header line)
+- Transcript is a live region: `role="log" aria-live="polite" aria-relevant="additions"`
+- Composer is a real `<form>` with `<label className="sr-only">` for the textarea
+- Send button has explicit `aria-label="Send your answer"`
+- Full keyboard flow: Tab into composer → type → Enter to send → focus returns to composer
+- Honors `prefers-reduced-motion` (snap to final, no seal)
 
-### Brass lens
+### Responsive
 
-40×40 absolute div: `border-radius: 9999px`, `background hsl(--raddo-brass / 0.18)`, `1px hsl(--raddo-brass / 0.55)` border, inset paper ring for the lens-glass feel, `pointer-events: none`. Hidden on touch.
+- Desktop ≥ 768px: 1180px column, transcript and composer share full width
+- Mobile < 768px: 88% width, reply cards max-width 92%, header stacks (eyebrow → timestamp on second row), composer chevron stays inline
+- Min surface height: 420px so the empty state doesn't feel thin; grows with transcript
 
-### Paper grain
+## Out of scope (this build)
 
-Inline SVG `feTurbulence` (`baseFrequency 0.9`, `numOctaves 2`, stitched), 200×200 repeated, multiply-blend at 10% opacity. No external asset.
-
-## Accessibility
-
-- `<section aria-labelledby="where-cob-helps-heading">`.
-- Real `<h2>` for the heading.
-- Decorative canvas: each word div remains visible but the full word list is mirrored in a visually-hidden `<ul>` for SR.
-- `prefers-reduced-motion: reduce` → velocity 0, instant lerp (factor 1), no lens fade, no underline transition. Cursor proximity still magnifies (informational, not decorative).
-
-## Performance
-
-- Refs + direct DOM writes — 0 React renders/frame.
-- `will-change: transform` on words and lens.
-- IntersectionObserver pauses loop when offscreen.
-- O(n²) collisions = ~10k ops/frame at n=100. Comfortable on mid-tier laptops & recent iPhones.
-- Pointer sampling event-driven; per-frame math gated by rAF.
+- Backend persistence of answers (Phase 2 work)
+- Real-time streaming COB replies (current build advances script turn-by-turn)
+- Telemetry / Plausible events (add when intake goes live)
+- Multi-session resume — each page load is a fresh intake
 
 ## Acceptance check (post-build, manual)
 
-1. All 100 words drifting languidly at idle.
-2. Hover → brass lens appears, words magnify smoothly, single leader underlined in brass.
-3. Cursor glide produces fluid magnification (no snap).
-4. Leave canvas → relax to 16px / 0.45 opacity within ~500ms.
-5. Touch device: no lens, tap word amplifies it + neighbors for 1.5s, tap empty resets.
-6. Resize → re-pack without overflow.
-7. `prefers-reduced-motion: reduce` → static positions, instant magnification.
+1. Surface appears under headline, above BriefingComposition, in the same 1180px column
+2. Sealed empty state renders; clicking anywhere unseals with brass wax fade (420ms)
+3. First COB prompt appears, composer focuses
+4. Typing + Enter posts a right-rail reply card, next COB prompt fades in after 600ms
+5. Shift+Enter inserts newline, doesn't send
+6. `prefers-reduced-motion: reduce` → no seal animation, turns snap in
+7. Tab order: send button reachable; Enter on focused send works
+8. Mobile (375px): surface at 88% width, no overflow, composer chevron stays right-aligned
+9. Replacing `INTAKE_PROTOCOL` with a longer array requires zero other edits
+10. No banned phrase, no blue CTA, no extra type family, no shadow > 8px
 
-## Brand compliance
-
-- Palette: only `raddo-paper`, `raddo-paper-edge`, `raddo-ink`, `raddo-brass` via existing HSL tokens.
-- Type: Fraunces only.
-- Brass used only as accent (lens tint, leader underline). Never on body.
-- Motion: brand curve `cubic-bezier(0.22, 1, 0.36, 1)` on every transition. No looping ornament — drift is functional (it is the content), not decoration.
-- No banned phrases, no AI/magic copy.
-
-## Out of scope
-
-- Plausible telemetry (no event spec given for this section).
-- Real cursor-on-touch lens (intentionally desktop-only per spec).
-- Per-word click navigation.
+When you send your protocol, I paste it into `intake-protocol.ts` and we're live.
