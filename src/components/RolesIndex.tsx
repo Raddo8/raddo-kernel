@@ -35,30 +35,39 @@ interface Scatter {
 // reserved for the "Your COB" marker (roles routed around them).
 function computeScatter(roles: Role[]): Scatter[] {
   const rand = rng(20260521);
-  const COLS = 8;
-  const ROWS = 21; // 21 rows · skip rows 10 + 11 (center) → 19 usable × 8 = 152 cells (≥150)
-  const cellW = 1 / COLS;
-  const cellH = 1 / ROWS;
+  const COLS = 6;
+  const ROWS = 26; // skip 2 center rows → 24×6 = 144; remainder wraps but still distinct cells
+  // Inset so labels (~180px wide) never clip canvas edges.
+  const PAD_X = 0.08;
+  const PAD_Y = 0.04;
+  const usableW = 1 - PAD_X * 2;
+  const usableH = 1 - PAD_Y * 2;
+  const cellW = usableW / COLS;
+  const cellH = usableH / ROWS;
   const cells: { cx: number; cy: number }[] = [];
+  const centerRow1 = Math.floor(ROWS / 2) - 1;
+  const centerRow2 = Math.floor(ROWS / 2);
   for (let row = 0; row < ROWS; row++) {
-    if (row === 10 || row === 11) continue; // reserve for COB marker
+    if (row === centerRow1 || row === centerRow2) continue;
     for (let col = 0; col < COLS; col++) {
-      const cx = (col + 0.5) * cellW;
-      const cy = (row + 0.5) * cellH;
+      const cx = PAD_X + (col + 0.5) * cellW;
+      const cy = PAD_Y + (row + 0.5) * cellH;
       cells.push({ cx, cy });
     }
   }
-  // Shuffle cells deterministically so roles don't line up alphabetically.
+  // Shuffle deterministically.
   for (let i = cells.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
     [cells[i], cells[j]] = [cells[j], cells[i]];
   }
   return roles.map((_role, i) => {
     const c = cells[i % cells.length];
-    // ±25 % jitter within cell — enough to feel organic, never enough to collide.
-    const jx = (rand() - 0.5) * cellW * 0.5;
-    const jy = (rand() - 0.5) * cellH * 0.5;
-    return { fx: Math.max(0.01, Math.min(0.99, c.cx + jx)), fy: Math.max(0.01, Math.min(0.99, c.cy + jy)) };
+    const jx = (rand() - 0.5) * cellW * 0.4;
+    const jy = (rand() - 0.5) * cellH * 0.4;
+    return {
+      fx: Math.max(PAD_X, Math.min(1 - PAD_X, c.cx + jx)),
+      fy: Math.max(PAD_Y, Math.min(1 - PAD_Y, c.cy + jy)),
+    };
   });
 }
 
@@ -111,7 +120,9 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     return m;
   }, []);
 
-  // IntersectionObserver · fire collapse once when section crosses threshold.
+  // IntersectionObserver · fire collapse once when section enters viewport.
+  // We observe a small trigger element near the section top so a tall section
+  // (which can never reach a high intersectionRatio) still fires reliably.
   useEffect(() => {
     if (phaseRef.current === "resolved") return;
     const el = sectionRef.current;
@@ -120,30 +131,35 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       return;
     }
 
-    // If already past threshold on mount, skip the scattered intro.
-    const rect = el.getBoundingClientRect();
-    const vh = window.innerHeight || 800;
-    const visibleRatio = Math.max(0, Math.min(rect.bottom, vh) - Math.max(rect.top, 0)) / Math.min(rect.height, vh);
-    if (visibleRatio >= threshold) {
-      // Defer one frame so layout is settled, then start collapse.
-      requestAnimationFrame(() => startCollapse());
-      return;
-    }
+    let fired = false;
+    const fire = () => {
+      if (fired) return;
+      fired = true;
+      // Hold scattered state briefly so the visitor reads "150 of these" first.
+      window.setTimeout(() => startCollapse(), 900);
+    };
 
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting && e.intersectionRatio >= threshold) {
+          if (e.isIntersecting) {
             obs.disconnect();
-            startCollapse();
+            fire();
             break;
           }
         }
       },
-      { threshold: [threshold] }
+      { rootMargin: "0px 0px -20% 0px" }
     );
     obs.observe(el);
-    return () => obs.disconnect();
+
+    // Hard fallback · if observer never fires (some embeds), trigger after 4s.
+    const fallback = window.setTimeout(fire, 4000);
+
+    return () => {
+      obs.disconnect();
+      window.clearTimeout(fallback);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [threshold]);
 
@@ -207,8 +223,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     const svg = connectorSvgRef.current;
     if (svg) {
       svg.setAttribute("viewBox", `0 0 ${cw} ${ch}`);
-      svg.style.opacity = "0.32";
-      // Replace lines.
+      svg.style.opacity = "1";
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       const NS = "http://www.w3.org/2000/svg";
       connectors.forEach((c) => {
@@ -218,6 +233,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
         line.setAttribute("x2", String(c.x2));
         line.setAttribute("y2", String(c.y2));
         line.setAttribute("stroke", "#EF9F27");
+        line.setAttribute("stroke-opacity", "0.55");
         line.setAttribute("stroke-width", "1");
         svg.appendChild(line);
       });
