@@ -340,7 +340,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
         <div
           ref={canvasRef}
           className="relative mt-10 w-full overflow-hidden"
-          style={{ height: "clamp(520px, 64vw, 680px)" }}
+          style={{ height: "clamp(720px, 88vw, 920px)" }}
           aria-hidden="true"
         >
           <svg
