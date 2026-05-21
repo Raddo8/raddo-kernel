@@ -85,7 +85,19 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
   const roleNodeRefs = useRef<Map<number, HTMLLIElement>>(new Map());
   const cobMarkerRef = useRef<HTMLDivElement | null>(null);
   const connectorSvgRef = useRef<SVGSVGElement | null>(null);
+  const debugSvgRef = useRef<SVGSVGElement | null>(null);
   const scatteredHeadlineRef = useRef<HTMLParagraphElement | null>(null);
+
+  // Debug overlay · enable via ?roles-debug=1 or localStorage RADDO_ROLES_DEBUG=1
+  const debug = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (new URLSearchParams(window.location.search).get("roles-debug") === "1") return true;
+      if (window.localStorage?.getItem("RADDO_ROLES_DEBUG") === "1") return true;
+    } catch { /* noop */ }
+    return false;
+  }, []);
+  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number }>({ collisions: 0, total: 0 });
 
   // Detect reduced motion + already-scrolled · resolved on first paint when either is true.
   const initialResolved = useMemo(() => {
@@ -239,6 +251,104 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       });
     }
 
+    // Debug overlay · cell grid + label bboxes + collision detection.
+    if (debug) {
+      const dsvg = debugSvgRef.current;
+      if (dsvg) {
+        dsvg.setAttribute("viewBox", `0 0 ${cw} ${ch}`);
+        while (dsvg.firstChild) dsvg.removeChild(dsvg.firstChild);
+        const NS = "http://www.w3.org/2000/svg";
+
+        // Grid lines · mirror computeScatter() PAD/COLS/ROWS.
+        const COLS = 6;
+        const ROWS = 26;
+        const PAD_X = 0.08;
+        const PAD_Y = 0.04;
+        const usableW = 1 - PAD_X * 2;
+        const usableH = 1 - PAD_Y * 2;
+        for (let c = 0; c <= COLS; c++) {
+          const x = (PAD_X + (c * usableW) / COLS) * cw;
+          const ln = document.createElementNS(NS, "line");
+          ln.setAttribute("x1", String(x));
+          ln.setAttribute("y1", String(PAD_Y * ch));
+          ln.setAttribute("x2", String(x));
+          ln.setAttribute("y2", String((1 - PAD_Y) * ch));
+          ln.setAttribute("stroke", "#22c55e");
+          ln.setAttribute("stroke-opacity", "0.25");
+          ln.setAttribute("stroke-dasharray", "2 4");
+          dsvg.appendChild(ln);
+        }
+        for (let r = 0; r <= ROWS; r++) {
+          const y = (PAD_Y + (r * usableH) / ROWS) * ch;
+          const ln = document.createElementNS(NS, "line");
+          ln.setAttribute("x1", String(PAD_X * cw));
+          ln.setAttribute("y1", String(y));
+          ln.setAttribute("x2", String((1 - PAD_X) * cw));
+          ln.setAttribute("y2", String(y));
+          ln.setAttribute("stroke", "#22c55e");
+          ln.setAttribute("stroke-opacity", "0.2");
+          ln.setAttribute("stroke-dasharray", "2 4");
+          dsvg.appendChild(ln);
+        }
+
+        // Collect post-transform bboxes (re-measure after transforms applied).
+        type Box = { x: number; y: number; w: number; h: number; i: number };
+        const boxes: Box[] = [];
+        ROLES.forEach((_role, i) => {
+          const el = roleNodeRefs.current.get(i);
+          if (!el) return;
+          const r = el.getBoundingClientRect();
+          boxes.push({
+            x: r.left - canvasRect.left,
+            y: r.top - canvasRect.top,
+            w: r.width,
+            h: r.height,
+            i,
+          });
+        });
+
+        // Collision pairs · axis-aligned bbox overlap.
+        const colliding = new Set<number>();
+        for (let a = 0; a < boxes.length; a++) {
+          for (let b = a + 1; b < boxes.length; b++) {
+            const A = boxes[a];
+            const B = boxes[b];
+            if (A.x < B.x + B.w && A.x + A.w > B.x && A.y < B.y + B.h && A.y + A.h > B.y) {
+              colliding.add(A.i);
+              colliding.add(B.i);
+            }
+          }
+        }
+
+        boxes.forEach((bx) => {
+          const rect = document.createElementNS(NS, "rect");
+          rect.setAttribute("x", String(bx.x));
+          rect.setAttribute("y", String(bx.y));
+          rect.setAttribute("width", String(bx.w));
+          rect.setAttribute("height", String(bx.h));
+          rect.setAttribute("fill", "none");
+          const hit = colliding.has(bx.i);
+          rect.setAttribute("stroke", hit ? "#dc2626" : "#3b82f6");
+          rect.setAttribute("stroke-opacity", hit ? "0.9" : "0.45");
+          rect.setAttribute("stroke-width", hit ? "1.25" : "0.75");
+          dsvg.appendChild(rect);
+
+          // Coord label.
+          const txt = document.createElementNS(NS, "text");
+          const s = scatterByIndex[bx.i];
+          txt.setAttribute("x", String(bx.x + 2));
+          txt.setAttribute("y", String(bx.y - 2));
+          txt.setAttribute("fill", hit ? "#dc2626" : "#3b82f6");
+          txt.setAttribute("font-family", "JetBrains Mono, monospace");
+          txt.setAttribute("font-size", "8");
+          txt.textContent = `${bx.i} · ${s.fx.toFixed(2)},${s.fy.toFixed(2)}`;
+          dsvg.appendChild(txt);
+        });
+
+        setDebugStats({ collisions: colliding.size, total: boxes.length });
+      }
+    }
+
     // Force a reflow so the next phase change animates from these starts.
     void canvas.offsetHeight;
   }
@@ -364,6 +474,29 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
             className="pointer-events-none absolute inset-0 h-full w-full"
             preserveAspectRatio="none"
           />
+          {debug && (
+            <>
+              <svg
+                ref={debugSvgRef}
+                className="pointer-events-none absolute inset-0 z-20 h-full w-full"
+                preserveAspectRatio="none"
+              />
+              <div
+                className="pointer-events-none absolute left-2 top-2 z-30 rounded-sm bg-raddo-night/85 px-2 py-1 text-raddo-paper"
+                style={{
+                  fontFamily: "JetBrains Mono, monospace",
+                  fontSize: "11px",
+                  lineHeight: "16px",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                DEBUG · labels {debugStats.total} · collisions{" "}
+                <span style={{ color: debugStats.collisions ? "#fca5a5" : "#86efac" }}>
+                  {debugStats.collisions}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       )}
 
