@@ -30,26 +30,38 @@ interface Scatter {
   fy: number;
 }
 
+// Jittered-grid scatter · guarantees no overlap by assigning each role its own
+// cell, then jittering within. 10 cols × 15 rows = 150 cells. Center 2 rows
+// reserved for the "Your COB" marker (roles routed around them).
 function computeScatter(roles: Role[]): Scatter[] {
   const rand = rng(20260521);
-  return roles.map((role, i) => {
-    const layer = BAND_LAYER[role.band];
-    // Distribute angularly within band, with jitter.
-    const r1 = rand();
-    const r2 = rand();
-    const r3 = rand();
-    // Horizontal: spread across full width with mild center bias.
-    const fx = 0.05 + 0.90 * r1;
-    // Vertical: anchored to band layer, ±0.12 jitter, avoid dead center (where COB sits).
-    let fy = layer + (r2 - 0.5) * 0.24;
-    // Push away from the central ~10% vertical band to keep the COB marker readable.
-    if (Math.abs(fy - 0.5) < 0.08) {
-      fy = fy < 0.5 ? 0.5 - 0.10 - r3 * 0.04 : 0.5 + 0.10 + r3 * 0.04;
+  const COLS = 8;
+  const ROWS = 21; // 21 rows · skip rows 10 + 11 (center) → 19 usable × 8 = 152 cells (≥150)
+  const cellW = 1 / COLS;
+  const cellH = 1 / ROWS;
+  const cells: { cx: number; cy: number }[] = [];
+  for (let row = 0; row < ROWS; row++) {
+    if (row === 10 || row === 11) continue; // reserve for COB marker
+    for (let col = 0; col < COLS; col++) {
+      const cx = (col + 0.5) * cellW;
+      const cy = (row + 0.5) * cellH;
+      cells.push({ cx, cy });
     }
-    fy = Math.max(0.04, Math.min(0.96, fy));
-    return { fx, fy };
+  }
+  // Shuffle cells deterministically so roles don't line up alphabetically.
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return roles.map((_role, i) => {
+    const c = cells[i % cells.length];
+    // ±25 % jitter within cell — enough to feel organic, never enough to collide.
+    const jx = (rand() - 0.5) * cellW * 0.5;
+    const jy = (rand() - 0.5) * cellH * 0.5;
+    return { fx: Math.max(0.01, Math.min(0.99, c.cx + jx)), fy: Math.max(0.01, Math.min(0.99, c.cy + jy)) };
   });
 }
+
 
 interface RolesIndexProps {
   /** override IntersectionObserver threshold for tests */
@@ -328,7 +340,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
         <div
           ref={canvasRef}
           className="relative mt-10 w-full overflow-hidden"
-          style={{ height: "clamp(520px, 64vw, 680px)" }}
+          style={{ height: "clamp(720px, 88vw, 920px)" }}
           aria-hidden="true"
         >
           <svg
@@ -374,14 +386,14 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       </div>
 
       {/* The Index · resolved 3-column editorial spread.
-          Always rendered (DOM source of truth for FLIP) but visually quiet pre-resolved
-          so the eye reads the scatter canvas overlay above. */}
+          Always rendered AND visible (DOM source of truth for FLIP). During scatter,
+          the <li> labels are transformed up into the canvas region; the band
+          headings + rules fade in only at resolved. */}
       <div
-        className={`mt-14 transition-opacity duration-500 ${
-          phase === "resolved" ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className="relative z-10 mt-14"
         style={{
-          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+          marginTop: phase === "resolved" ? "3.5rem" : "-1rem",
+          transition: `margin-top 600ms cubic-bezier(0.22, 1, 0.36, 1)`,
         }}
       >
         <div className="space-y-12">
@@ -395,7 +407,13 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
                   key={bandKey}
                   aria-labelledby={`band-${bandKey}-heading`}
                 >
-                  <div className="mb-4 flex items-baseline gap-4 border-b border-raddo-paper-edge pb-2">
+                  <div
+                    className="mb-4 flex items-baseline gap-4 border-b border-raddo-paper-edge pb-2"
+                    style={{
+                      opacity: phase === "resolved" ? 1 : 0,
+                      transition: `opacity 400ms cubic-bezier(0.22, 1, 0.36, 1) ${phase === "resolved" ? "1200ms" : "0ms"}`,
+                    }}
+                  >
                     <h3
                       id={`band-${bandKey}-heading`}
                       className="text-raddo-ash"
