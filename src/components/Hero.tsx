@@ -6,6 +6,7 @@ import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 import { IntroducingCob } from "@/components/IntroducingCob";
+import DossierIntake from "@/components/hero/DossierIntake";
 
 
 // Motion doctrine · two curves only.
@@ -984,6 +985,16 @@ export function Hero() {
             </motion.span>
           </motion.h1>
         </div>
+
+        {/* Dossier Intake · confidential chat surface · 2400ms */}
+        <motion.div
+          variants={rise(800, 2400)}
+          initial={INITIAL}
+          animate="show"
+          className="mt-14"
+        >
+          <DossierIntake />
+        </motion.div>
 
         {/* Briefing · Exhibit composition · 2600ms */}
         <motion.section
