@@ -209,6 +209,7 @@ export default function WhereCobHelps() {
         ex = cursorRef.current.x; ey = cursorRef.current.y; hasFocus = true;
       }
 
+      const MAX_RATIO = MAX_FONT / REST_FONT;
       let leader = -1;
       let leaderScale = -1;
       for (let i = 0; i < states.length; i++) {
@@ -219,11 +220,11 @@ export default function WhereCobHelps() {
           const cy = s.y + s.h / 2;
           const d = Math.hypot(cx - ex, cy - ey);
           if (d <= HOT_RADIUS) {
-            tScale = MAX_SCALE; tOpac = 1;
+            tScale = MAX_RATIO; tOpac = 1;
           } else if (d <= COLD_RADIUS) {
             const t = 1 - (d - HOT_RADIUS) / (COLD_RADIUS - HOT_RADIUS);
-            const e = t * t * (3 - 2 * t);
-            tScale = 1 + (MAX_SCALE - 1) * e;
+            const e = t * t * t * (t * (t * 6 - 15) + 10);
+            tScale = 1 + (MAX_RATIO - 1) * e;
             tOpac = REST_OPACITY + (1 - REST_OPACITY) * e;
           }
         }
@@ -233,11 +234,19 @@ export default function WhereCobHelps() {
 
         const el = itemRefs.current[i];
         if (el) {
-          el.style.transform = `translate3d(${s.x}px, ${s.y}px, 0) scale(${s.scale.toFixed(3)})`;
+          // Render at true font-size for crisp glyphs; offset translate so the
+          // word grows from its physics center instead of its top-left corner.
+          const grow = s.scale - 1;
+          const offX = -(s.w * grow) / 2;
+          const offY = -(s.h * grow) / 2;
+          el.style.fontSize = `${(REST_FONT * s.scale).toFixed(2)}px`;
+          el.style.transform = `translate3d(${(s.x + offX).toFixed(2)}px, ${(s.y + offY).toFixed(2)}px, 0)`;
           el.style.opacity = s.opacity.toFixed(3);
+          el.style.zIndex = s.scale > 1.05 ? "2" : "1";
         }
         if (s.scale > leaderScale) { leaderScale = s.scale; leader = i; }
       }
+
 
       const newLeader = leaderScale > 1.05 ? leader : -1;
       if (newLeader !== underlineLeaderRef.current) {
