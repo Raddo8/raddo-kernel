@@ -358,16 +358,20 @@ export default function WhereCobHelps() {
             ref={(el) => { itemRefs.current[i] = el; }}
             data-word="1"
             data-leader="false"
-            className="absolute left-0 top-0 select-none font-display whitespace-nowrap will-change-transform"
+            className="absolute left-0 top-0 select-none font-display whitespace-nowrap"
             style={{
               fontSize: `${REST_FONT}px`,
               fontWeight: 400,
               color: "hsl(var(--raddo-ink))",
               opacity: REST_OPACITY,
-              transformOrigin: "center center",
+              willChange: "transform, font-size",
+              textRendering: "geometricPrecision",
+              WebkitFontSmoothing: "antialiased",
+              MozOsxFontSmoothing: "grayscale",
               transition: "none",
               pointerEvents: "auto",
             }}
+
           >
             {w}
           </div>
