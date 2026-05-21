@@ -35,8 +35,8 @@ interface Scatter {
 // reserved for the "Your COB" marker (roles routed around them).
 function computeScatter(roles: Role[]): Scatter[] {
   const rand = rng(20260521);
-  const COLS = 10;
-  const ROWS = 17; // 17 rows · skip rows 7 + 8 (center band for COB) = 15 usable rows · 10 cols = 150 cells
+  const COLS = 8;
+  const ROWS = 21; // 21 rows · skip rows 10 + 11 (center) → 19 usable × 8 = 152 cells (≥150)
   const cellW = 1 / COLS;
   const cellH = 1 / ROWS;
   const cells: { cx: number; cy: number }[] = [];
