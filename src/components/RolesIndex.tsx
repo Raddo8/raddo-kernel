@@ -30,26 +30,38 @@ interface Scatter {
   fy: number;
 }
 
+// Jittered-grid scatter · guarantees no overlap by assigning each role its own
+// cell, then jittering within. 10 cols × 15 rows = 150 cells. Center 2 rows
+// reserved for the "Your COB" marker (roles routed around them).
 function computeScatter(roles: Role[]): Scatter[] {
   const rand = rng(20260521);
-  return roles.map((role, i) => {
-    const layer = BAND_LAYER[role.band];
-    // Distribute angularly within band, with jitter.
-    const r1 = rand();
-    const r2 = rand();
-    const r3 = rand();
-    // Horizontal: spread across full width with mild center bias.
-    const fx = 0.05 + 0.90 * r1;
-    // Vertical: anchored to band layer, ±0.12 jitter, avoid dead center (where COB sits).
-    let fy = layer + (r2 - 0.5) * 0.24;
-    // Push away from the central ~10% vertical band to keep the COB marker readable.
-    if (Math.abs(fy - 0.5) < 0.08) {
-      fy = fy < 0.5 ? 0.5 - 0.10 - r3 * 0.04 : 0.5 + 0.10 + r3 * 0.04;
+  const COLS = 10;
+  const ROWS = 17; // 17 rows · skip rows 7 + 8 (center band for COB) = 15 usable rows · 10 cols = 150 cells
+  const cellW = 1 / COLS;
+  const cellH = 1 / ROWS;
+  const cells: { cx: number; cy: number }[] = [];
+  for (let row = 0; row < ROWS; row++) {
+    if (row === 7 || row === 8) continue; // reserve for COB marker
+    for (let col = 0; col < COLS; col++) {
+      const cx = (col + 0.5) * cellW;
+      const cy = (row + 0.5) * cellH;
+      cells.push({ cx, cy });
     }
-    fy = Math.max(0.04, Math.min(0.96, fy));
-    return { fx, fy };
+  }
+  // Shuffle cells deterministically so roles don't line up alphabetically.
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  return roles.map((_role, i) => {
+    const c = cells[i % cells.length];
+    // ±25 % jitter within cell — enough to feel organic, never enough to collide.
+    const jx = (rand() - 0.5) * cellW * 0.5;
+    const jy = (rand() - 0.5) * cellH * 0.5;
+    return { fx: Math.max(0.01, Math.min(0.99, c.cx + jx)), fy: Math.max(0.01, Math.min(0.99, c.cy + jy)) };
   });
 }
+
 
 interface RolesIndexProps {
   /** override IntersectionObserver threshold for tests */
