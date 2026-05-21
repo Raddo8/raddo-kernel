@@ -529,15 +529,44 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       {showScattered && (
         <div
           ref={canvasRef}
-          className="relative mt-10 w-full overflow-hidden"
+          role="button"
+          tabIndex={0}
+          aria-label="Resolve · collapse 150 executive lenses into one COB"
+          onClick={handleCollapseRequest}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCollapseRequest();
+            }
+          }}
+          className="group relative mt-10 w-full cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass/60"
           style={{ height: "clamp(720px, 88vw, 920px)" }}
-          aria-hidden="true"
         >
           <svg
             ref={connectorSvgRef}
             className="pointer-events-none absolute inset-0 h-full w-full"
             preserveAspectRatio="none"
           />
+          {/* Click affordance · brass chip bottom-center. */}
+          <div
+            className="pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2"
+            aria-hidden="true"
+          >
+            <span
+              className="inline-flex items-center gap-2 rounded-sm border border-raddo-brass/60 bg-raddo-paper/90 px-3 py-1.5 text-raddo-ink-deep shadow-sm transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontSize: "11px",
+                lineHeight: "16px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <span className="block h-1.5 w-1.5 rounded-full bg-raddo-brass" />
+              Click to resolve
+            </span>
+          </div>
           {debug && (
             <>
               <svg
