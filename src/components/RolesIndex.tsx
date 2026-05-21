@@ -132,48 +132,65 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     return m;
   }, []);
 
-  // IntersectionObserver · fire collapse once when section enters viewport.
-  // We observe a small trigger element near the section top so a tall section
-  // (which can never reach a high intersectionRatio) still fires reliably.
+  // Replayable scroll choreography · the section resets to scattered whenever it
+  // leaves the viewport and re-collapses each time it re-enters. A hard fallback
+  // also fires the first collapse for embeds where IntersectionObserver is unreliable.
   useEffect(() => {
-    if (phaseRef.current === "resolved") return;
+    // Reduced-motion users get resolved state permanently · no replay.
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      setPhase("resolved");
+      return;
+    }
+
     const el = sectionRef.current;
     if (!el || typeof IntersectionObserver === "undefined") {
       setPhase("resolved");
       return;
     }
 
-    let fired = false;
-    const fire = () => {
-      if (fired) return;
-      fired = true;
-      // Hold scattered state briefly so the visitor reads "150 of these" first.
-      window.setTimeout(() => startCollapse(), 900);
+    let enterTimer: number | undefined;
+    let inView = false;
+
+    const scheduleCollapse = () => {
+      window.clearTimeout(enterTimer);
+      // Brief hold so the visitor reads "150 of these" before collapse.
+      enterTimer = window.setTimeout(() => {
+        if (inView && phaseRef.current === "scattered") startCollapse();
+      }, 700);
     };
 
     const obs = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (e.isIntersecting) {
-            obs.disconnect();
-            fire();
-            break;
+            inView = true;
+            // If we're already resolved (prior pass), reset to scattered, then collapse.
+            if (phaseRef.current === "resolved") setPhase("scattered");
+            scheduleCollapse();
+          } else {
+            inView = false;
+            window.clearTimeout(enterTimer);
+            // Reset to scattered when fully out of view so the next entry replays.
+            if (phaseRef.current !== "scattered") setPhase("scattered");
           }
         }
       },
-      { rootMargin: "0px 0px -20% 0px" }
+      { rootMargin: "0px 0px -15% 0px", threshold: [0, 0.01] }
     );
     obs.observe(el);
 
-    // Hard fallback · if observer never fires (some embeds), trigger after 4s.
-    const fallback = window.setTimeout(fire, 4000);
+    // Hard fallback · ensure first collapse fires even if observer is silent.
+    const fallback = window.setTimeout(() => {
+      if (phaseRef.current === "scattered") startCollapse();
+    }, 4500);
 
     return () => {
       obs.disconnect();
+      window.clearTimeout(enterTimer);
       window.clearTimeout(fallback);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [threshold]);
+  }, []);
 
   // FLIP collapse: nodes are rendered in their RESOLVED positions; in scattered phase
   // we apply per-node transforms to push them out to scatter coordinates. The collapse
