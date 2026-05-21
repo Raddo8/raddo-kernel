@@ -374,14 +374,14 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       </div>
 
       {/* The Index · resolved 3-column editorial spread.
-          Always rendered (DOM source of truth for FLIP) but visually quiet pre-resolved
-          so the eye reads the scatter canvas overlay above. */}
+          Always rendered AND visible (DOM source of truth for FLIP). During scatter,
+          the <li> labels are transformed up into the canvas region; the band
+          headings + rules fade in only at resolved. */}
       <div
-        className={`mt-14 transition-opacity duration-500 ${
-          phase === "resolved" ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
+        className="relative z-10 mt-14"
         style={{
-          transitionTimingFunction: "cubic-bezier(0.22, 1, 0.36, 1)",
+          marginTop: phase === "resolved" ? "3.5rem" : "-1rem",
+          transition: `margin-top 600ms cubic-bezier(0.22, 1, 0.36, 1)`,
         }}
       >
         <div className="space-y-12">
