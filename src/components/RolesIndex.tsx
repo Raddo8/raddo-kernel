@@ -141,65 +141,19 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     return m;
   }, []);
 
-  // Replayable scroll choreography · the section resets to scattered whenever it
-  // leaves the viewport and re-collapses each time it re-enters. A hard fallback
-  // also fires the first collapse for embeds where IntersectionObserver is unreliable.
+  // Click-to-collapse only · no scroll triggers, no auto-fire timers. The user
+  // initiates the collapse by clicking the scattered canvas (or pressing Enter
+  // when it has keyboard focus). Reduced-motion users skip straight to resolved.
   useEffect(() => {
-    // Reduced-motion users get resolved state permanently · no replay.
     if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
       setPhase("resolved");
-      return;
     }
-
-    const el = sectionRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") {
-      setPhase("resolved");
-      return;
-    }
-
-    let enterTimer: number | undefined;
-    let inView = false;
-
-    const scheduleCollapse = () => {
-      window.clearTimeout(enterTimer);
-      // Brief hold so the visitor reads "150 of these" before collapse.
-      enterTimer = window.setTimeout(() => {
-        if (inView && phaseRef.current === "scattered") startCollapse();
-      }, 700);
-    };
-
-    const obs = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            inView = true;
-            // If we're already resolved (prior pass), reset to scattered, then collapse.
-            if (phaseRef.current === "resolved") setPhase("scattered");
-            scheduleCollapse();
-          } else {
-            inView = false;
-            window.clearTimeout(enterTimer);
-            // Reset to scattered when fully out of view so the next entry replays.
-            if (phaseRef.current !== "scattered") setPhase("scattered");
-          }
-        }
-      },
-      { rootMargin: "0px 0px -15% 0px", threshold: [0, 0.01] }
-    );
-    obs.observe(el);
-
-    // Hard fallback · ensure first collapse fires even if observer is silent.
-    const fallback = window.setTimeout(() => {
-      if (phaseRef.current === "scattered") startCollapse();
-    }, 4500);
-
-    return () => {
-      obs.disconnect();
-      window.clearTimeout(enterTimer);
-      window.clearTimeout(fallback);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // User-initiated collapse handler · safe to call multiple times.
+  function handleCollapseRequest() {
+    if (phaseRef.current === "scattered") startCollapse();
+  }
 
   // FLIP collapse: nodes are rendered in their RESOLVED positions; in scattered phase
   // we apply per-node transforms to push them out to scatter coordinates. The collapse
@@ -575,15 +529,44 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
       {showScattered && (
         <div
           ref={canvasRef}
-          className="relative mt-10 w-full overflow-hidden"
+          role="button"
+          tabIndex={0}
+          aria-label="Resolve · collapse 150 executive lenses into one COB"
+          onClick={handleCollapseRequest}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleCollapseRequest();
+            }
+          }}
+          className="group relative mt-10 w-full cursor-pointer overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass/60"
           style={{ height: "clamp(720px, 88vw, 920px)" }}
-          aria-hidden="true"
         >
           <svg
             ref={connectorSvgRef}
             className="pointer-events-none absolute inset-0 h-full w-full"
             preserveAspectRatio="none"
           />
+          {/* Click affordance · brass chip bottom-center. */}
+          <div
+            className="pointer-events-none absolute bottom-6 left-1/2 z-30 -translate-x-1/2"
+            aria-hidden="true"
+          >
+            <span
+              className="inline-flex items-center gap-2 rounded-sm border border-raddo-brass/60 bg-raddo-paper/90 px-3 py-1.5 text-raddo-ink-deep shadow-sm transition-opacity duration-300 group-hover:opacity-100"
+              style={{
+                fontFamily: "Inter, sans-serif",
+                fontSize: "11px",
+                lineHeight: "16px",
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              <span className="block h-1.5 w-1.5 rounded-full bg-raddo-brass" />
+              Click to resolve
+            </span>
+          </div>
           {debug && (
             <>
               <svg
