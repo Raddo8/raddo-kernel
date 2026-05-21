@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.submit-consult]
 verify_jwt = false
+
+[functions.cob-chat]
+verify_jwt = false
