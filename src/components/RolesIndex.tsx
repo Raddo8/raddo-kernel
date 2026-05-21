@@ -85,7 +85,19 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
   const roleNodeRefs = useRef<Map<number, HTMLLIElement>>(new Map());
   const cobMarkerRef = useRef<HTMLDivElement | null>(null);
   const connectorSvgRef = useRef<SVGSVGElement | null>(null);
+  const debugSvgRef = useRef<SVGSVGElement | null>(null);
   const scatteredHeadlineRef = useRef<HTMLParagraphElement | null>(null);
+
+  // Debug overlay · enable via ?roles-debug=1 or localStorage RADDO_ROLES_DEBUG=1
+  const debug = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (new URLSearchParams(window.location.search).get("roles-debug") === "1") return true;
+      if (window.localStorage?.getItem("RADDO_ROLES_DEBUG") === "1") return true;
+    } catch { /* noop */ }
+    return false;
+  }, []);
+  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number }>({ collisions: 0, total: 0 });
 
   // Detect reduced motion + already-scrolled · resolved on first paint when either is true.
   const initialResolved = useMemo(() => {
