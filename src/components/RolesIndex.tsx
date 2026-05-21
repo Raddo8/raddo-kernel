@@ -41,7 +41,7 @@ function computeScatter(roles: Role[]): Scatter[] {
   const cellH = 1 / ROWS;
   const cells: { cx: number; cy: number }[] = [];
   for (let row = 0; row < ROWS; row++) {
-    if (row === 7 || row === 8) continue; // reserve for COB marker
+    if (row === 10 || row === 11) continue; // reserve for COB marker
     for (let col = 0; col < COLS; col++) {
       const cx = (col + 0.5) * cellW;
       const cy = (row + 0.5) * cellH;
