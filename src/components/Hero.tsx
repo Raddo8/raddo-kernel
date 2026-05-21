@@ -6,7 +6,7 @@ import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 import { IntroducingCob } from "@/components/IntroducingCob";
-import WhereCobHelps from "@/components/WhereCobHelps";
+
 
 // Motion doctrine · two curves only.
 // EASE_OUT (out-expo) — premium settle for entrances. Quick lift, long quiet tail.
@@ -1145,9 +1145,6 @@ export function Hero() {
           ))}
         </motion.div>
       </section>
-
-      {/* ====== WHERE COB HELPS · interactive word cloud ====== */}
-      <WhereCobHelps />
 
       {/* ====== EDITORIAL INDEX ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
