@@ -1146,9 +1146,6 @@ export function Hero() {
         </motion.div>
       </section>
 
-      {/* ====== WHERE COB HELPS · interactive word cloud ====== */}
-      <WhereCobHelps />
-
       {/* ====== EDITORIAL INDEX ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
 
