@@ -97,7 +97,16 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     } catch { /* noop */ }
     return false;
   }, []);
-  const [debugStats, setDebugStats] = useState<{ collisions: number; total: number; indices: number[] }>({ collisions: 0, total: 0, indices: [] });
+  type TopPair = { a: number; b: number; area: number; depth: number; ox: number; oy: number };
+  const [debugStats, setDebugStats] = useState<{
+    collisions: number;
+    total: number;
+    indices: number[];
+    pairs: number;
+    totalArea: number;
+    maxDepth: number;
+    topPairs: TopPair[];
+  }>({ collisions: 0, total: 0, indices: [], pairs: 0, totalArea: 0, maxDepth: 0, topPairs: [] });
 
   // Detect reduced motion + already-scrolled · resolved on first paint when either is true.
   const initialResolved = useMemo(() => {
