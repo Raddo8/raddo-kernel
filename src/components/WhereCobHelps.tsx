@@ -341,22 +341,22 @@ export default function WhereCobHelps() {
         >
           {/* Corner brackets */}
           {([
-            { top: -1, left: -1, borders: { borderTop: true, borderLeft: true } },
-            { top: -1, right: -1, borders: { borderTop: true, borderRight: true } },
-            { bottom: -1, left: -1, borders: { borderBottom: true, borderLeft: true } },
-            { bottom: -1, right: -1, borders: { borderBottom: true, borderRight: true } },
-          ] as const).map((c, idx) => (
+            { top: -1, left: -1, bT: true, bL: true },
+            { top: -1, right: -1, bT: true, bR: true },
+            { bottom: -1, left: -1, bB: true, bL: true },
+            { bottom: -1, right: -1, bB: true, bR: true },
+          ] as Array<{ top?: number; left?: number; right?: number; bottom?: number; bT?: boolean; bB?: boolean; bL?: boolean; bR?: boolean }>).map((c, idx) => (
             <div
               key={idx}
               aria-hidden="true"
               className="pointer-events-none absolute"
               style={{
                 width: 16, height: 16,
-                top: c.top, left: (c as any).left, right: (c as any).right, bottom: (c as any).bottom,
-                borderTop: c.borders.borderTop ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
-                borderBottom: c.borders.borderBottom ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
-                borderLeft: c.borders.borderLeft ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
-                borderRight: c.borders.borderRight ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
+                top: c.top, left: c.left, right: c.right, bottom: c.bottom,
+                borderTop: c.bT ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
+                borderBottom: c.bB ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
+                borderLeft: c.bL ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
+                borderRight: c.bR ? "1px solid rgba(239, 159, 39, 0.9)" : undefined,
               }}
             />
           ))}
