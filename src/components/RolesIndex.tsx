@@ -223,8 +223,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
     const svg = connectorSvgRef.current;
     if (svg) {
       svg.setAttribute("viewBox", `0 0 ${cw} ${ch}`);
-      svg.style.opacity = "0.32";
-      // Replace lines.
+      svg.style.opacity = "1";
       while (svg.firstChild) svg.removeChild(svg.firstChild);
       const NS = "http://www.w3.org/2000/svg";
       connectors.forEach((c) => {
@@ -234,6 +233,7 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
         line.setAttribute("x2", String(c.x2));
         line.setAttribute("y2", String(c.y2));
         line.setAttribute("stroke", "#EF9F27");
+        line.setAttribute("stroke-opacity", "0.55");
         line.setAttribute("stroke-width", "1");
         svg.appendChild(line);
       });
