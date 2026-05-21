@@ -385,7 +385,8 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
           dsvg.appendChild(txt);
         });
 
-        setDebugStats({ collisions: colliding.size, total: boxes.length });
+        const sortedIndices = Array.from(colliding).sort((a, b) => a - b);
+        setDebugStats({ collisions: colliding.size, total: boxes.length, indices: sortedIndices });
       }
     }
 
