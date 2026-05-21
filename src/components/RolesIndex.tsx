@@ -198,12 +198,35 @@ export function RolesIndex({ threshold = 0.35 }: RolesIndexProps) {
   useLayoutEffect(() => {
     if (phase !== "scattered") return;
     applyScatterTransforms();
-    // Reapply on resize while scattered.
-    const onResize = () => {
-      if (phaseRef.current === "scattered") applyScatterTransforms();
+
+    // Debounced recompute · covers viewport resize, container reflow, font load,
+    // orientation change. Keeps scatter positions AND the debug overlay accurate
+    // across desktop/tablet/mobile breakpoints.
+    let raf = 0;
+    const schedule = () => {
+      if (phaseRef.current !== "scattered") return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => applyScatterTransforms());
     };
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+
+    const canvas = canvasRef.current;
+    let ro: ResizeObserver | undefined;
+    if (canvas && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(schedule);
+      ro.observe(canvas);
+    }
+    window.addEventListener("resize", schedule);
+    window.addEventListener("orientationchange", schedule);
+    // Recompute once fonts settle · label widths shift after Inter loads.
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts;
+    fonts?.ready?.then(schedule).catch(() => {});
+
+    return () => {
+      cancelAnimationFrame(raf);
+      ro?.disconnect();
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("orientationchange", schedule);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
