@@ -924,7 +924,7 @@ export function Hero() {
               )}
             </AnimatePresence>
             <motion.img
-              src="/brand/hero-mandala-bg.png"
+              src="/brand/corner-cubicle.png"
               alt=""
               loading="eager"
               decoding="async"
@@ -934,7 +934,7 @@ export function Hero() {
               initial={{ opacity: 0, filter: "blur(12px)", scale: 1.02 }}
               animate={
                 heroImgLoaded
-                  ? { opacity: 0.75, filter: "blur(0px)", scale: 1 }
+                  ? { opacity: 0.7, filter: "blur(0px)", scale: 1 }
                   : { opacity: 0, filter: "blur(12px)", scale: 1.02 }
               }
               transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
