@@ -9,6 +9,7 @@ export type ChatMessage = {
   at: number;
   trace?: string | null;
   streaming?: boolean;
+  synthetic?: boolean;
 };
 
 export type VoiceDivider = {
