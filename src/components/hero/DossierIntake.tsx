@@ -905,6 +905,54 @@ export default function DossierIntake() {
                   })()}
                 </div>
 
+                {/* Hard-close deployment CTA · fires after COB delivers the close (≥12 COB user turns) */}
+                {showDeploymentCta && (
+                  <DeploymentCtaCard
+                    initialEmail={lead?.email ?? ""}
+                    initialCompany={lead?.company ?? ""}
+                    submitting={submittingLead}
+                    onSubmit={submitDeploymentInquiry}
+                    reducedMotion={reducedMotion}
+                  />
+                )}
+                {deploymentInquirySent && (
+                  <motion.div
+                    initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.42, ease: BRAND_EASE }}
+                    className="mt-5 p-4"
+                    style={{
+                      backgroundColor: "hsl(var(--raddo-paper))",
+                      border: "1px solid hsl(var(--raddo-brass-deep) / 0.5)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <span
+                      className="font-sans block"
+                      style={{
+                        color: "hsl(var(--raddo-brass-deep))",
+                        fontSize: "10px",
+                        letterSpacing: "0.18em",
+                        fontWeight: 600,
+                      }}
+                    >
+                      DEPLOYMENT · RECEIVED
+                    </span>
+                    <p
+                      className="font-display mt-2"
+                      style={{
+                        color: "hsl(var(--raddo-ink-deep))",
+                        fontSize: "16px",
+                        lineHeight: 1.45,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Got it. Someone from the deployment team will be in touch within one business day. Keep stress-testing the sandbox if you like — the next real step is the conversation we'll have offline.
+                    </p>
+                  </motion.div>
+                )}
+
+
                 {/* Composer */}
                 <form
                   onSubmit={(e) => {
