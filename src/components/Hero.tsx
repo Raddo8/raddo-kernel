@@ -906,15 +906,16 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Dossier Intake · confidential chat surface · 2400ms */}
+        {/* Introducing COB · folder system · 2400ms */}
         <motion.div
           variants={rise(800, 2400)}
           initial={INITIAL}
           animate="show"
           className="mt-14"
         >
-          <DossierIntake />
+          <IntroducingCob />
         </motion.div>
+
 
         {/* Briefing · Exhibit composition · 2600ms */}
         <motion.section
