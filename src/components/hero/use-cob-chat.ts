@@ -154,6 +154,13 @@ export function useCobChat() {
       setSubmittingLead(true);
       setError(null);
       try {
+        // Snapshot transcript (non-synthetic, real exchanges only) to ship with the inquiry.
+        const msgs = transcript
+          .filter((t): t is ChatMessage => (t as ChatMessage).role !== undefined)
+          .filter((m) => !m.synthetic && (m.text || "").trim().length > 0)
+          .map((m) => ({ role: m.role, voice: m.voice, text: m.text, at: m.at }));
+        const startedAt = msgs.length ? new Date(msgs[0].at).toISOString() : new Date().toISOString();
+
         const resp = await fetch(LEAD_URL, {
           method: "POST",
           headers: {
@@ -171,6 +178,18 @@ export function useCobChat() {
             // carry forward gate-known identity when available
             name: lead?.name,
             title: lead?.title,
+            // transcript payload for downstream emails
+            messages: msgs,
+            lead: lead
+              ? {
+                  name: lead.name,
+                  email: lead.email,
+                  company: lead.company,
+                  title: lead.title,
+                  challenge: lead.challenge,
+                }
+              : null,
+            started_at: startedAt,
           }),
         });
         const j = await resp.json().catch(() => ({}));
@@ -189,8 +208,98 @@ export function useCobChat() {
         setSubmittingLead(false);
       }
     },
-    [voice, submittingLead, lead],
+    [voice, submittingLead, lead, transcript],
   );
+
+  // ── Phase detectors · drive Conviction Funnel hard-close timing ──────────
+  const phase3PivotRe = /(want to talk about (what )?deployment|here'?s what (changes|happens) when (i'?m|cob is) deployed|deployed across your operation|at deployment scale)/i;
+  const phase4GateRe = /(that'?s deployment[- ]scope|here'?s the structure i'?d use|no\b[^.]{0,40}but i'?ll give you the structure)/i;
+  const bulletLineRe = /^\s*([-*•]|\d+[.)])\s+/;
+
+  const {
+    phase3PivotFired,
+    phase4GateFired,
+    prospectContinuedEngagement,
+    cobAssistantTurns,
+  } = useMemo(() => {
+    let pivotFired = false;
+    let pivotAtIndex = -1;
+    let gateFired = false;
+    let cobCount = 0;
+    const chatOnly = transcript.filter((t): t is ChatMessage => (t as ChatMessage).role !== undefined);
+    chatOnly.forEach((m, idx) => {
+      if (m.synthetic) return;
+      if (m.role === "cob" && (m.text || "").trim().length > 0) {
+        cobCount += 1;
+        const txt = m.text || "";
+        if (!pivotFired && phase3PivotRe.test(txt)) {
+          pivotFired = true;
+          pivotAtIndex = idx;
+        }
+        if (!gateFired) {
+          if (phase4GateRe.test(txt)) {
+            gateFired = true;
+          } else {
+            // Outline heuristic · 4+ bullet lines + deployment mention
+            const lines = txt.split("\n").filter((l) => l.trim().length > 0);
+            const bullets = lines.filter((l) => bulletLineRe.test(l)).length;
+            if (bullets >= 4 && bullets <= 8 && /deploy(ed|ment)/i.test(txt)) {
+              gateFired = true;
+            }
+          }
+        }
+      }
+    });
+    let continued = false;
+    if (pivotFired) {
+      for (let i = pivotAtIndex + 1; i < chatOnly.length; i++) {
+        const m = chatOnly[i];
+        if (m.role === "you" && (m.text || "").trim().length >= 12) {
+          continued = true;
+          break;
+        }
+      }
+    }
+    return {
+      phase3PivotFired: pivotFired,
+      phase4GateFired: gateFired,
+      prospectContinuedEngagement: continued,
+      cobAssistantTurns: cobCount,
+    };
+  }, [transcript]);
+
+  const blockA =
+    phase3PivotFired &&
+    prospectContinuedEngagement &&
+    phase4GateFired &&
+    cobAssistantTurns >= 12 &&
+    cobAssistantTurns <= 15;
+  const blockB = cobAssistantTurns >= 15;
+  const deploymentFormShouldOpen =
+    !deploymentInquirySent && voice === "cob" && (blockA || blockB);
+  const chatLocked = deploymentFormShouldOpen || deploymentInquirySent;
+
+  // Append disarming COB message once when the form opens.
+  const disarmingPushedRef = useRef(false);
+  useEffect(() => {
+    if (!deploymentFormShouldOpen || disarmingPushedRef.current) return;
+    disarmingPushedRef.current = true;
+    setTranscript((prev) => [
+      ...prev,
+      {
+        id: uid(),
+        role: "cob",
+        voice: "cob",
+        synthetic: true,
+        at: Date.now(),
+        trace: null,
+        text:
+          "Here's where the sandbox ends and the real conversation starts.\n\nWhat you just saw was me working with one slice of your situation in a 90-minute window. Deployed COB does this continuously, against every signal moving through your operation · email, calendar, docs, financials, customer and vendor traffic.\n\nIf the read landed, the next move is a conversation with the deployment team. Leave your email, your company, and one paragraph on where this sits for you. One business day · no list, no drip.\n\nNo pressure to act now. If you want to keep stress-testing the sandbox another day, close this tab and come back · the form will be here.\n\nForm's below.",
+      },
+    ]);
+  }, [deploymentFormShouldOpen]);
+
+
 
 
   const send = useCallback(
