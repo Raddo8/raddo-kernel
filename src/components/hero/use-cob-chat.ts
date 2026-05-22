@@ -146,6 +146,52 @@ export function useCobChat() {
     [voice, submittingLead],
   );
 
+  const [deploymentInquirySent, setDeploymentInquirySent] = useState(false);
+  const submitDeploymentInquiry = useCallback(
+    async (info: { email: string; company: string; situation: string }): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (submittingLead) return { ok: false, error: "Already submitting." };
+      setSubmittingLead(true);
+      setError(null);
+      try {
+        const resp = await fetch(LEAD_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: ANON_KEY,
+            Authorization: `Bearer ${ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            session_id: sessionIdRef.current,
+            voice,
+            stage: "deployment_inquiry",
+            email: info.email,
+            company: info.company,
+            situation: info.situation,
+            // carry forward gate-known identity when available
+            name: lead?.name,
+            title: lead?.title,
+          }),
+        });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = j?.error || "Could not submit. Try again.";
+          setError(String(msg));
+          return { ok: false, error: String(msg) };
+        }
+        setDeploymentInquirySent(true);
+        return { ok: true };
+      } catch (e: any) {
+        const msg = e?.message || "Network error.";
+        setError(msg);
+        return { ok: false, error: msg };
+      } finally {
+        setSubmittingLead(false);
+      }
+    },
+    [voice, submittingLead, lead],
+  );
+
+
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
