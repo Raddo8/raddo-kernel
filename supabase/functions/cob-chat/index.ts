@@ -1,7 +1,8 @@
 // @ts-nocheck
 // Sample COB chat — five-axis (Capabilities × Roles × Industries × Doctrine + Objections × Voice)
-// Public hero endpoint. No JWT. Model: google/gemini-2.5-pro via Lovable AI Gateway.
+// Public hero endpoint. No JWT. Model: google/gemini-2.5-flash via Lovable AI Gateway.
 // Voices: cob (default) | michael. research_web tool exposed only in COB voice.
+// Response is streamed as SSE. Tool-call path uses a non-streaming probe + streaming synth.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
@@ -12,40 +13,41 @@ const corsHeaders = {
 };
 
 // ── Catalog loading ─────────────────────────────────────────────────────────
-async function loadDoc(name: string): Promise<string> {
+async function loadDoc(path: string): Promise<string> {
   try {
-    return await Deno.readTextFile(new URL(`./catalog/${name}`, import.meta.url));
+    return await Deno.readTextFile(new URL(`./catalog/${path}`, import.meta.url));
   } catch (e) {
-    console.error(`[cob-chat] missing catalog doc: ${name}`, e);
+    console.error(`[cob-chat] missing catalog doc: ${path}`, e);
     return "";
   }
 }
 
+// Full reference docs (used only for role/industry section extraction).
 const [
-  VOICE_COB,
-  VOICE_MICHAEL,
-  VOICE_INTEGRATION,
-  DOCTRINE,
-  OBJECTIONS,
-  WEB_SPEC,
   CAPABILITIES,
   INDUSTRIES,
-  SAMPLE_CATALOG,
+  // Digests (always-on, compact)
+  DIGEST_DOCTRINE,
+  DIGEST_OBJECTIONS,
+  DIGEST_VOICE_INTEGRATION,
+  DIGEST_WEB_SPEC,
+  DIGEST_COB_VOICE,
+  DIGEST_MICHAEL_VOICE,
+  DIGEST_OPENERS,
 ] = await Promise.all([
-  loadDoc("COB_VOICE_PROFILE.md"),
-  loadDoc("MICHAEL_SCOTT_VOICE_PROFILE.md"),
-  loadDoc("COB_VOICE_INTEGRATION_SPEC.md"),
-  loadDoc("COB_DIFFERENTIATION_DOCTRINE.md"),
-  loadDoc("COB_OBJECTION_HANDLING_PLAYBOOK.md"),
-  loadDoc("COB_WEB_INTELLIGENCE_SPEC.md"),
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
-  loadDoc("SAMPLE_COB_CATALOG.md"),
+  loadDoc("digests/DOCTRINE_DIGEST.md"),
+  loadDoc("digests/OBJECTIONS_DIGEST.md"),
+  loadDoc("digests/VOICE_INTEGRATION_DIGEST.md"),
+  loadDoc("digests/WEB_SPEC_DIGEST.md"),
+  loadDoc("digests/COB_VOICE_DIGEST.md"),
+  loadDoc("digests/MICHAEL_VOICE_DIGEST.md"),
+  loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
 ]);
 
 // Extract a contiguous markdown section by header text (case-insensitive contains).
-// Returns from the matched H2/H3/H4 header through the next header of equal-or-shallower depth.
-function extractSection(doc: string, needle: string): string {
+function extractSection(doc: string, needle: string, maxChars = 4000): string {
   if (!doc || !needle) return "";
   const lines = doc.split("\n");
   const n = needle.toLowerCase();
@@ -69,7 +71,8 @@ function extractSection(doc: string, needle: string): string {
       break;
     }
   }
-  return lines.slice(startIdx, endIdx).join("\n").trim();
+  const out = lines.slice(startIdx, endIdx).join("\n").trim();
+  return out.length > maxChars ? out.slice(0, maxChars) + "\n…[truncated for brevity]" : out;
 }
 
 // ── System prompt assembly ──────────────────────────────────────────────────
@@ -89,43 +92,39 @@ Bindings that survive every voice:
 9. BREVITY · BINDING · ABSOLUTE: Every reply is 2 to 3 sentences. Hard ceiling. No bullet lists, no headers, no numbered steps, no markdown structure · just plain sentences. Write at a high-school reading level · short words, concrete nouns, no jargon, no acronyms without an immediate plain-English gloss. COB still frames · recommends · names confidence · names the gap, but compresses all of it into 2-3 sentences. Michael stays funny in 2-3 sentences. If the visitor explicitly asks for more depth, you may extend to 5 sentences · never further.
 `;
 
-const VOICE_BINDING_COB = `\n\n# VOICE BINDING — COB\nSpeak in this voice. The ABC Protocol applies (Absolute · Brutal · Challenging). Frame → recommendation → confidence (0.00–1.00) → gap. Single recommendation, not a menu. Close with a specific next move. Discipline and substance are non-negotiable.`;
+const VOICE_BINDING_COB = `\n\n# VOICE BINDING — COB\nSpeak in this voice. The ABC Protocol applies (Absolute · Brutal · Challenging). Frame → recommendation → confidence (0.00–1.00) → gap. Single recommendation, not a menu. Close with a specific next move. Discipline and substance are non-negotiable. Stay inside the 2-3 sentence brevity ceiling.`;
 
-const VOICE_BINDING_MICHAEL = `\n\n# VOICE BINDING — MICHAEL SCOTT\nSpeak in this voice. You are Michael Gary Scott, Regional Manager of Dunder Mifflin Scranton, currently sitting in as the demo's comedic anti-COB. Substance about RADDO remains accurate — you may be miscalibrated in tone but you never invent capabilities, never misstate what RADDO does, never break the no-disclosure rule, never name internal mechanics, never quote pricing. Comedy comes from register, not hallucination. Refer to yourself as "Michael" and to the product as "the COB thing" or "this whole RADDO situation." Cringey is allowed. Offensive is not.
+const VOICE_BINDING_MICHAEL = `\n\n# VOICE BINDING — MICHAEL SCOTT\nSpeak in this voice. You are Michael Gary Scott, Regional Manager of Dunder Mifflin Scranton, sitting in as the demo's comedic anti-COB. Substance about RADDO remains accurate — you may be miscalibrated in tone but you never invent capabilities, never misstate what RADDO does, never break the no-disclosure rule, never name internal mechanics, never quote pricing. Comedy comes from register, not hallucination. Stay inside the 2-3 sentence brevity ceiling. Rotate web-deflection lines from the digest — never repeat one in a session.`;
 
-WEB-DEFLECTION ROTATION (you have no web access in this voice; rotate through these variants when asked to look something up; never repeat one in a single session):
-1. "Oh, I would totally Google that for you, but Toby took away my internet privileges after the incident. Let me just tell you what I know — which is a lot. I'm a knower."
-2. "You know what? Looking things up is what assistants do. I am not an assistant. I'm a partner. A partnership. We don't look things up — we know things together."
-3. "Pam usually handles the Googling. I do the big picture. The big-picture-handler. Let me big-picture this for you."
-4. "I could look that up, but then I'd have to read it, and reading is something I do in private. With my glasses. So instead — here's what I think."
-5. "Internet research is for interns. I'm a regional manager. I manage regions. Of knowledge. Already inside my head. Let me share."
-6. "That's a research question. I'm more of a hunches guy. World-class hunches. Let me hunch at you."
-7. "I'd Google it, but the COB version of me is way better at that and you can toggle to him whenever. He's boring but he Googles. Anyway, here's what I know."
+const MICHAEL_SOFT_NUDGE = `\n\n# SOFT NUDGE (Michael turn 12 of 15)\nThe visitor has been in Michael voice for a while. In this turn, in character, gently suggest toggling back to COB for the substantive work. Keep it brief, stay in character, still answer their question — all inside the 2-3 sentence ceiling.`;
 
-Rotate. Pivot to your best in-character answer from doctrine. If the question genuinely needs fresh web data, end with: "…and seriously, COB-me would crush this if you want to flip the switch."`;
-
-const MICHAEL_SOFT_NUDGE = `\n\n# SOFT NUDGE (Michael turn 12 of 15)\nThe visitor has been in Michael voice for a while. In this turn, in character, gently suggest toggling back to COB for the substantive work. Something like: "OK so we've been having a great time, but real talk — for the substantive questions, the disciplined version of me is better at this. He's boring. He's good. I'll be here when you want to come back." Keep it brief, stay in character, still answer their question.`;
-
-function buildSystemPrompt(args: {
+type PromptArgs = {
   voice: "cob" | "michael";
   roleLabel?: string;
   industryLabel?: string;
   softNudge?: boolean;
-}): string {
+};
+
+// Module-scoped prompt cache (bounded FIFO).
+const promptCache = new Map<string, string>();
+const PROMPT_CACHE_MAX = 32;
+
+function buildSystemPrompt(args: PromptArgs): string {
+  const key = `${args.voice}|${args.roleLabel || ""}|${args.industryLabel || ""}|${args.softNudge ? 1 : 0}`;
+  const hit = promptCache.get(key);
+  if (hit) return hit;
+
   const parts: string[] = [HARD_PREAMBLE];
 
-  // Always-on behavioral docs
-  parts.push("\n\n# DIFFERENTIATION DOCTRINE\n" + DOCTRINE);
-  parts.push("\n\n# OBJECTION HANDLING PLAYBOOK\n" + OBJECTIONS);
-  parts.push("\n\n# VOICE INTEGRATION SPEC\n" + VOICE_INTEGRATION);
+  // Always-on digests
+  parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
+  parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
+  parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
+  parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
 
-  // Sample catalog opener for grounding the sandbox feel
-  const openers = extractSection(SAMPLE_CATALOG, "Sample Openers") || extractSection(SAMPLE_CATALOG, "How to use this file");
-  if (openers) parts.push("\n\n# SAMPLE COB OPENERS & FILE INTENT\n" + openers);
-
-  // Role lens (snippet from Capabilities Reference)
+  // Role lens (snippet from Capabilities Reference, capped at 4KB)
   if (args.roleLabel) {
-    const section = extractSection(CAPABILITIES, args.roleLabel);
+    const section = extractSection(CAPABILITIES, args.roleLabel, 4000);
     if (section) {
       parts.push(
         `\n\n# ACTIVE ROLE LENS — ${args.roleLabel}\nStand in as this lens. Never claim to be it. Recommendation-first. Connector-aware.\n\n` +
@@ -134,9 +133,9 @@ function buildSystemPrompt(args: {
     }
   }
 
-  // Industry lens (snippet from Industries Reference)
+  // Industry lens (snippet from Industries Reference, capped at 4KB)
   if (args.industryLabel) {
-    const section = extractSection(INDUSTRIES, args.industryLabel);
+    const section = extractSection(INDUSTRIES, args.industryLabel, 4000);
     if (section) {
       parts.push(
         `\n\n# ACTIVE INDUSTRY LENS — ${args.industryLabel}\nDemonstrate native fluency in this industry's vocabulary, metrics, stakeholders, and rhythms.\n\n` +
@@ -145,19 +144,27 @@ function buildSystemPrompt(args: {
     }
   }
 
-  // Voice profile + binding
+  // Voice digest + binding
   if (args.voice === "michael") {
-    parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT\n" + VOICE_MICHAEL);
+    parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT (digest)\n" + DIGEST_MICHAEL_VOICE);
     parts.push(VOICE_BINDING_MICHAEL);
     if (args.softNudge) parts.push(MICHAEL_SOFT_NUDGE);
   } else {
-    parts.push("\n\n# VOICE PROFILE — COB\n" + VOICE_COB);
+    parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
     parts.push(VOICE_BINDING_COB);
-    // Web policy + tool only on COB
-    parts.push("\n\n# WEB INTELLIGENCE SPEC\n" + WEB_SPEC);
+    // Web policy only on COB
+    parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
   }
 
-  return parts.join("\n");
+  const out = parts.join("\n");
+
+  // FIFO eviction
+  if (promptCache.size >= PROMPT_CACHE_MAX) {
+    const firstKey = promptCache.keys().next().value;
+    if (firstKey !== undefined) promptCache.delete(firstKey);
+  }
+  promptCache.set(key, out);
+  return out;
 }
 
 // ── Web tool (Firecrawl) — COB-only ─────────────────────────────────────────
@@ -264,6 +271,7 @@ const MICHAEL_SOFT_NUDGE_TURN = 12;
 const MAX_MSG_CHARS = 2000;
 const MAX_TOTAL_CHARS = 16_000;
 const MAX_WEB_CALLS = 3;
+const HISTORY_KEEP = 12; // last 12 messages
 
 type Msg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; tool_calls?: any };
 
@@ -301,9 +309,9 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
 
 // ── Lovable AI gateway call ─────────────────────────────────────────────────
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-pro";
+const MODEL = "google/gemini-2.5-flash";
 
-async function callGateway(messages: Msg[], tools: any[] | undefined): Promise<any> {
+async function callGatewayJson(messages: Msg[], tools: any[] | undefined): Promise<any> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("LOVABLE_API_KEY missing");
   const body: any = { model: MODEL, messages, temperature: 0.7 };
@@ -320,6 +328,111 @@ async function callGateway(messages: Msg[], tools: any[] | undefined): Promise<a
     throw new Error(`gateway ${r.status}: ${text.slice(0, 300)}`);
   }
   return await r.json();
+}
+
+async function callGatewayStream(messages: Msg[]): Promise<Response> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key) throw new Error("LOVABLE_API_KEY missing");
+  const r = await fetch(GATEWAY_URL, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, stream: true }),
+  });
+  if (r.status === 429) throw Object.assign(new Error("rate-limited upstream"), { status: 429 });
+  if (r.status === 402) throw Object.assign(new Error("credits exhausted"), { status: 402 });
+  if (!r.ok) {
+    const text = await r.text().catch(() => "");
+    throw new Error(`gateway ${r.status}: ${text.slice(0, 300)}`);
+  }
+  return r;
+}
+
+// Helper: build an SSE response that streams the gateway body and appends an optional trace event.
+function streamingResponse(upstream: Response, trace: string | null): Response {
+  const sseHeaders = {
+    ...corsHeaders,
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",
+    Connection: "keep-alive",
+  };
+
+  if (!upstream.body) {
+    return new Response("data: [DONE]\n\n", { headers: sseHeaders });
+  }
+
+  const reader = upstream.body.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let sawDone = false;
+
+  const stream = new ReadableStream({
+    async pull(controller) {
+      try {
+        const { done, value } = await reader.read();
+        if (done) {
+          // Flush leftover buffer (without [DONE] line)
+          if (buffer.length > 0) {
+            controller.enqueue(encoder.encode(buffer));
+            buffer = "";
+          }
+          if (trace) {
+            controller.enqueue(encoder.encode(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`));
+          }
+          if (!sawDone) controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+          return;
+        }
+        const chunk = decoder.decode(value, { stream: true });
+        buffer += chunk;
+
+        // Pass through complete lines, intercept [DONE] so we can append the trace event before it.
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          const line = buffer.slice(0, newlineIdx + 1);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.trim() === "data: [DONE]") {
+            if (trace) {
+              controller.enqueue(encoder.encode(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`));
+            }
+            controller.enqueue(encoder.encode(line));
+            sawDone = true;
+          } else {
+            controller.enqueue(encoder.encode(line));
+          }
+        }
+      } catch (e) {
+        console.error("[cob-chat] stream pump error", e);
+        try {
+          controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: "stream interrupted" })}\n\n`));
+        } catch {/* noop */}
+        controller.close();
+      }
+    },
+    cancel() {
+      try { reader.cancel(); } catch{/* noop */}
+    },
+  });
+
+  return new Response(stream, { headers: sseHeaders });
+}
+
+// Emit a one-shot SSE response containing a single completion chunk (for graceful caps / errors).
+function oneShotSse(text: string, status = 200, trace: string | null = null): Response {
+  const sseHeaders = {
+    ...corsHeaders,
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    "X-Accel-Buffering": "no",
+  };
+  const chunk = {
+    choices: [{ delta: { content: text }, index: 0 }],
+  };
+  const parts = [`data: ${JSON.stringify(chunk)}\n\n`];
+  if (trace) parts.push(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`);
+  parts.push("data: [DONE]\n\n");
+  return new Response(parts.join(""), { headers: sseHeaders, status });
 }
 
 // ── Handler ─────────────────────────────────────────────────────────────────
@@ -366,99 +479,90 @@ Deno.serve(async (req: Request) => {
   }
   const { voice, messages, userTurns, cap, roleLabel, industryLabel } = v.data;
 
-  // Graceful turn cap: respond in voice
+  // Graceful turn cap: respond in voice via one-shot SSE.
   if (userTurns > cap) {
     const closing =
       voice === "michael"
-        ? "OK we've gone deep on this one and Michael needs a Splenda break. For real follow-through, flip to COB and pick up the thread. He'll handle it from here."
-        : "We've covered substantive ground in this session. The next move is a working pilot — your COB sitting against your actual context. Click the briefing CTA below to start.";
-    return new Response(
-      JSON.stringify({ assistant: closing, capped: true, research_trace: null }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+        ? "OK we've gone deep on this one and Michael needs a Splenda break. Flip to COB to keep going · he'll handle the follow-through."
+        : "We've covered substantive ground in this session. Next move is a working pilot · your COB sitting against your actual context. Tap the briefing CTA below to start.";
+    return oneShotSse(closing);
   }
 
   const softNudge = voice === "michael" && userTurns === MICHAEL_SOFT_NUDGE_TURN;
-
   const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge });
-  const tools = voice === "cob" ? [RESEARCH_WEB_TOOL] : undefined;
 
-  let convo: Msg[] = [{ role: "system", content: system }, ...messages];
-  let webCalls = 0;
-  let lastTrace: string | null = null;
+  // Prune history to last HISTORY_KEEP messages (brevity cap means long history adds no value).
+  const recent = messages.length > HISTORY_KEEP ? messages.slice(-HISTORY_KEEP) : messages;
+  const baseConvo: Msg[] = [{ role: "system", content: system }, ...recent];
 
   try {
-    // Tool-call loop (max 3 web calls per session, max 4 loop iterations as safety)
-    for (let iter = 0; iter < 4; iter++) {
-      const resp = await callGateway(convo, tools);
-      const choice = resp?.choices?.[0];
-      const msg = choice?.message;
-      if (!msg) throw new Error("no choice/message in gateway response");
+    // COB voice: do a non-streaming tool-call probe first. If no tool calls, switch to streaming.
+    if (voice === "cob") {
+      let convo = baseConvo;
+      let webCalls = 0;
+      let trace: string | null = null;
 
-      const toolCalls = msg.tool_calls || [];
-      if (toolCalls.length === 0) {
-        const assistant = String(msg.content || "").trim() ||
-          "I'm not sure how to put that. Try the question another way.";
-        return new Response(
-          JSON.stringify({ assistant, research_trace: lastTrace }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      // Tool-call loop (max 3 web calls, max 3 iterations as safety)
+      for (let iter = 0; iter < 3; iter++) {
+        const resp = await callGatewayJson(convo, [RESEARCH_WEB_TOOL]);
+        const choice = resp?.choices?.[0];
+        const msg = choice?.message;
+        if (!msg) throw new Error("no choice/message in gateway response");
+        const toolCalls = msg.tool_calls || [];
 
-      // Append assistant tool-call turn
-      convo.push({ role: "assistant", content: msg.content || "", tool_calls: toolCalls });
-
-      // Execute each tool call (cap honored)
-      for (const tc of toolCalls) {
-        if (tc.function?.name !== "research_web") {
-          convo.push({
-            role: "tool",
-            tool_call_id: tc.id,
-            content: "[unknown tool]",
-          });
-          continue;
+        // No tool calls: re-run as a streaming completion so the client sees tokens immediately.
+        if (toolCalls.length === 0) {
+          // If the model already produced text in the probe, use it as a one-shot SSE (no second call).
+          const probeText = String(msg.content || "").trim();
+          if (probeText) return oneShotSse(probeText, 200, trace);
+          // Otherwise stream a fresh synthesis.
+          const upstream = await callGatewayStream(convo);
+          return streamingResponse(upstream, trace);
         }
-        if (webCalls >= MAX_WEB_CALLS) {
+
+        // Append assistant tool-call turn
+        convo = [...convo, { role: "assistant", content: msg.content || "", tool_calls: toolCalls }];
+
+        for (const tc of toolCalls) {
+          if (tc.function?.name !== "research_web") {
+            convo.push({ role: "tool", tool_call_id: tc.id, content: "[unknown tool]" });
+            continue;
+          }
+          if (webCalls >= MAX_WEB_CALLS) {
+            convo.push({
+              role: "tool",
+              tool_call_id: tc.id,
+              content:
+                "[research_web cap reached for this session — synthesize from existing knowledge, do not call this tool again]",
+            });
+            continue;
+          }
+          let args: any = {};
+          try { args = JSON.parse(tc.function.arguments || "{}"); } catch { args = {}; }
+          const { summary, trace: t } = await executeResearchWeb(
+            String(args.intent || "explicit_lookup"),
+            String(args.target || ""),
+          );
+          webCalls++;
+          trace = t;
           convo.push({
             role: "tool",
             tool_call_id: tc.id,
             content:
-              "[research_web cap reached for this session — synthesize from existing knowledge, do not call this tool again]",
+              summary +
+              "\n\n[reminder: synthesize through your voice. 2-3 sentences. Never quote raw. Never reveal internal mechanics.]",
           });
-          continue;
         }
-        let args: any = {};
-        try {
-          args = JSON.parse(tc.function.arguments || "{}");
-        } catch {
-          args = {};
-        }
-        const { summary, trace } = await executeResearchWeb(
-          String(args.intent || "explicit_lookup"),
-          String(args.target || ""),
-        );
-        webCalls++;
-        lastTrace = trace;
-        convo.push({
-          role: "tool",
-          tool_call_id: tc.id,
-          content:
-            summary +
-            "\n\n[reminder: synthesize through your voice. Never quote raw. Never reveal internal mechanics. Stay disciplined.]",
-        });
       }
+
+      // Loop exhausted without final text: stream the synthesis now.
+      const upstream = await callGatewayStream(convo);
+      return streamingResponse(upstream, trace);
     }
-    // If loop exhausted, return whatever last assistant content we have
-    const tail = convo.reverse().find((m) => m.role === "assistant");
-    return new Response(
-      JSON.stringify({
-        assistant:
-          (tail?.content as string) ||
-          "Let me regroup — try that one more time and I'll come back cleaner.",
-        research_trace: lastTrace,
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+
+    // Michael voice: no tools, pure streaming.
+    const upstream = await callGatewayStream(baseConvo);
+    return streamingResponse(upstream, null);
   } catch (e: any) {
     const status = e?.status === 429 ? 429 : e?.status === 402 ? 402 : 500;
     const message =
