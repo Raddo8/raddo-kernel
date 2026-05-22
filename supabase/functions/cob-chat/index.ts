@@ -147,6 +147,7 @@ function buildSystemPrompt(args: PromptArgs): string {
     const parts: string[] = [HARD_PREAMBLE];
     parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
     parts.push("\n\n# DEPLOYMENT AMPLIFICATION DOCTRINE (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
+    parts.push("\n\n# CONVICTION FUNNEL DOCTRINE (binding for sandbox COB · governs when AMPLIFICATION bridges fire, phase cadence, gated continuation, and close)\n" + DOC_CONVICTION_FUNNEL);
     parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
     parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
     parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
