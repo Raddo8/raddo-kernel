@@ -800,8 +800,9 @@ export function Hero() {
       {/* ====== PINNED SITE HEADER ====== */}
       <SiteHeader />
 
-      {/* ====== INTRODUCING COB (new top-of-fold) ====== */}
-      <IntroducingCob />
+      {/* ====== DOSSIER INTAKE (top-of-fold) ====== */}
+      <DossierIntake />
+
 
       {/* ====== HERO ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
@@ -905,15 +906,16 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Dossier Intake · confidential chat surface · 2400ms */}
+        {/* Introducing COB · folder system · 2400ms */}
         <motion.div
           variants={rise(800, 2400)}
           initial={INITIAL}
           animate="show"
           className="mt-14"
         >
-          <DossierIntake />
+          <IntroducingCob />
         </motion.div>
+
 
         {/* Briefing · Exhibit composition · 2600ms */}
         <motion.section
