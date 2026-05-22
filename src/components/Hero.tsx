@@ -800,8 +800,8 @@ export function Hero() {
       {/* ====== PINNED SITE HEADER ====== */}
       <SiteHeader />
 
-      {/* ====== DOSSIER INTAKE (top-of-fold) ====== */}
-      <DossierIntake />
+
+
 
 
       {/* ====== HERO ====== */}
