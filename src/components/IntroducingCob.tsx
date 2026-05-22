@@ -337,19 +337,6 @@ export function IntroducingCob() {
       className="relative z-10 mx-auto max-w-[1240px] px-8 pb-12 md:px-12 md:pb-16"
       style={{ paddingTop: "100vh" }}
     >
-      {/* Eyebrow */}
-      <p
-        className="uppercase font-mono"
-        style={{
-          color: "hsl(var(--raddo-brass))",
-          fontSize: 13,
-          fontWeight: 700,
-          letterSpacing: "0.32em",
-        }}
-      >
-        Introducing COB
-      </p>
-
       {/* Meta-headline */}
       <h1
         className="font-display"
@@ -359,12 +346,16 @@ export function IntroducingCob() {
           fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
           lineHeight: 1.08,
           letterSpacing: "-0.01em",
-          marginTop: 18,
           maxWidth: "22ch",
         }}
       >
-        Not just in your corner. Building your corner.
+        <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
+          Introducing COB.
+        </span>
+        Not just in your corner.<br />
+        Building your corner.
       </h1>
+
 
       {/* Folder tabs · 4×2 grid · back row peeks behind front row */}
       {(() => {
