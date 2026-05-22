@@ -53,6 +53,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const CHAT_URL = `${SUPABASE_URL}/functions/v1/cob-chat`;
 const LEAD_URL = `${SUPABASE_URL}/functions/v1/submit-chat-lead`;
+const TRANSCRIPT_URL = `${SUPABASE_URL}/functions/v1/send-chat-transcript`;
+
+// Idle send threshold · 5 min of no activity = "session ended"
+const IDLE_MS = 5 * 60_000;
 
 export function useCobChat() {
   const [voice, setVoiceState] = useState<VoiceId>(() => readStoredVoice() ?? DEFAULT_VOICE);
@@ -322,10 +326,112 @@ export function useCobChat() {
     [pending, transcript, voice, roleLabel, industryLabel, lead],
   );
 
+  // ── Transcript pipe · silent internal email at session end ─────────────
+  const transcriptRef = useRef<TranscriptItem[]>([]);
+  const voiceRef = useRef<VoiceId>(voice);
+  const leadRef = useRef<LeadInfo | null>(lead);
+  const sentReasonsRef = useRef<Set<string>>(new Set());
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+  useEffect(() => {
+    voiceRef.current = voice;
+  }, [voice]);
+  useEffect(() => {
+    leadRef.current = lead;
+  }, [lead]);
+
+  const buildTranscriptPayload = useCallback((reason: string) => {
+    const msgs = transcriptRef.current
+      .filter((t): t is ChatMessage => (t as ChatMessage).role !== undefined)
+      .map((m) => ({ role: m.role, voice: m.voice, text: m.text, at: m.at }));
+    return {
+      session_id: sessionIdRef.current,
+      voice: voiceRef.current,
+      reason,
+      lead: leadRef.current,
+      messages: msgs,
+    };
+  }, []);
+
+  const flushTranscript = useCallback(
+    (reason: string, useBeacon = false) => {
+      if (sentReasonsRef.current.has(reason)) return;
+      const hasUserTurn = transcriptRef.current.some(
+        (t) => (t as ChatMessage).role === "you" && ((t as ChatMessage).text || "").trim().length > 0,
+      );
+      if (!hasUserTurn) return;
+      sentReasonsRef.current.add(reason);
+
+      const payload = buildTranscriptPayload(reason);
+      const body = JSON.stringify(payload);
+
+      if (useBeacon && typeof navigator !== "undefined" && navigator.sendBeacon) {
+        try {
+          const blob = new Blob([body], { type: "application/json" });
+          navigator.sendBeacon(`${TRANSCRIPT_URL}?apikey=${encodeURIComponent(ANON_KEY)}`, blob);
+          return;
+        } catch {
+          // fall through to fetch
+        }
+      }
+
+      fetch(TRANSCRIPT_URL, {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          "Content-Type": "application/json",
+          apikey: ANON_KEY,
+          Authorization: `Bearer ${ANON_KEY}`,
+        },
+        body,
+      }).catch(() => {
+        // best-effort · don't surface to user
+      });
+    },
+    [buildTranscriptPayload],
+  );
+
+  const armIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      flushTranscript("idle");
+    }, IDLE_MS);
+  }, [flushTranscript]);
+
+  // Arm idle timer whenever transcript changes
+  useEffect(() => {
+    if (transcript.length > 0) armIdleTimer();
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [transcript, armIdleTimer]);
+
+  // Page-hide / unload · sendBeacon
+  useEffect(() => {
+    const onHide = () => flushTranscript("pagehide", true);
+    const onVis = () => {
+      if (document.visibilityState === "hidden") flushTranscript("hidden", true);
+    };
+    window.addEventListener("pagehide", onHide);
+    window.addEventListener("beforeunload", onHide);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      window.removeEventListener("beforeunload", onHide);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [flushTranscript]);
+
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
+      // Component unmount · best-effort flush
+      flushTranscript("unmount");
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
