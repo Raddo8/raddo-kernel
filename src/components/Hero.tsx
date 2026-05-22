@@ -805,17 +805,36 @@ export function Hero() {
 
 
       {/* ====== HERO ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
+      <section
+        className="relative z-10 mx-auto max-w-[1240px] px-8 pb-24 md:px-12 md:pb-32"
+        style={{ paddingTop: "calc(min(900px, 92vh) - 28px)" }}
+      >
 
-
-
-        {/* Introducing COB · folder system · first */}
+        {/* Introducing COB heading + Dossier Intake chat · first below the video */}
         <motion.div
           variants={rise(800, 2400)}
           initial={INITIAL}
           animate="show"
         >
-          <IntroducingCob />
+          <h2
+            className="font-display"
+            style={{
+              color: "hsl(var(--raddo-ink-deep))",
+              fontWeight: 800,
+              fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+              lineHeight: 1.08,
+              letterSpacing: "-0.01em",
+              maxWidth: "22ch",
+              marginBottom: 32,
+            }}
+          >
+            <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
+              Introducing COB.
+            </span>
+            Not just in your corner.<br />
+            Building your corner.
+          </h2>
+          <DossierIntake />
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
@@ -915,32 +934,15 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Introducing COB heading + Dossier Intake chat · last */}
+
+        {/* Introducing COB · folder system · after the headline image */}
         <motion.div
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
           className="mt-20 md:mt-28"
         >
-          <h2
-            className="font-display"
-            style={{
-              color: "hsl(var(--raddo-ink-deep))",
-              fontWeight: 800,
-              fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
-              lineHeight: 1.08,
-              letterSpacing: "-0.01em",
-              maxWidth: "22ch",
-              marginBottom: 32,
-            }}
-          >
-            <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
-              Introducing COB.
-            </span>
-            Not just in your corner.<br />
-            Building your corner.
-          </h2>
-          <DossierIntake />
+          <IntroducingCob />
         </motion.div>
 
 
