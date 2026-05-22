@@ -747,17 +747,27 @@ export default function DossierIntake() {
     submittingLead,
     submitDeploymentInquiry,
     deploymentInquirySent,
+    deploymentFormShouldOpen,
+    chatLocked,
   } = useCobChat();
 
-  // Hard-close CTA gating · COB voice, ≥12 user turns in COB, not yet sent.
-  const cobUserTurns = useMemo(
-    () =>
-      transcript.filter(
-        (t) => (t as ChatMessage).role === "you" && (t as ChatMessage).voice === "cob",
-      ).length,
-    [transcript],
+  const navigate = useNavigate();
+
+  // Hard-close CTA gating · Conviction Funnel phase detection from the hook.
+  const showDeploymentCta = !sealed && deploymentFormShouldOpen;
+  const composerLocked = !sealed && chatLocked;
+
+  const handleDeploymentSubmit = useCallback(
+    async (info: { email: string; company: string; situation: string }) => {
+      const res = await submitDeploymentInquiry(info);
+      if (res.ok) {
+        // Brief moment so the success state renders before route change.
+        setTimeout(() => navigate("/next-step"), 350);
+      }
+      return res;
+    },
+    [submitDeploymentInquiry, navigate],
   );
-  const showDeploymentCta = !sealed && voice === "cob" && cobUserTurns >= 12 && !deploymentInquirySent;
 
   const reducedMotion = useMemo(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
