@@ -1,8 +1,240 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useCobChat, type TranscriptItem, type ChatMessage } from "./use-cob-chat";
+import { useCobChat, type TranscriptItem, type ChatMessage, type LeadInfo } from "./use-cob-chat";
 import { VOICES, type VoiceId } from "./cob-voices";
 import { FEATURED_ROLES, FEATURED_INDUSTRIES, ALL_ROLES, ALL_INDUSTRIES } from "./cob-featured";
+
+// ── Gate form (inline) ─────────────────────────────────────────────────────
+function GateForm({
+  onSubmit,
+  submitting,
+  error,
+}: {
+  onSubmit: (lead: LeadInfo) => Promise<{ ok: true } | { ok: false; error: string }>;
+  submitting: boolean;
+  error: string | null;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [company, setCompany] = useState("");
+  const [title, setTitle] = useState("");
+  const [challenge, setChallenge] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    const lead: LeadInfo = {
+      name: name.trim(),
+      email: email.trim(),
+      company: company.trim(),
+      title: title.trim(),
+      challenge: challenge.trim(),
+    };
+    if (!lead.name || !lead.email || !lead.company || !lead.title) {
+      setLocalError("All fields are required.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(lead.email)) {
+      setLocalError("Use a real email address.");
+      return;
+    }
+    if (lead.challenge.length < 10) {
+      setLocalError("Tell us a bit more · at least one full sentence.");
+      return;
+    }
+    const res = await onSubmit(lead);
+    if (res.ok === false) setLocalError(res.error);
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    backgroundColor: "hsl(var(--raddo-paper))",
+    border: "1px solid hsl(var(--raddo-paper-edge))",
+    borderRadius: "4px",
+    padding: "10px 12px",
+    fontSize: "15px",
+    lineHeight: 1.5,
+    color: "hsl(var(--raddo-ink-deep))",
+    width: "100%",
+    outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    color: "hsl(var(--raddo-brass-deep))",
+    fontSize: "10px",
+    letterSpacing: "0.18em",
+    fontWeight: 600,
+    display: "block",
+    marginBottom: "6px",
+  };
+
+  const shown = localError || error;
+
+  return (
+    <motion.form
+      key="gate"
+      onSubmit={handle}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+      className="mt-8 flex flex-col gap-4"
+    >
+      <div>
+        <span
+          className="font-sans"
+          style={{
+            color: "hsl(var(--raddo-brass-deep))",
+            fontSize: "10px",
+            letterSpacing: "0.18em",
+            fontWeight: 600,
+          }}
+        >
+          INTAKE · BEFORE WE OPEN THE ROOM
+        </span>
+        <h3
+          className="font-display mt-2"
+          style={{
+            color: "hsl(var(--raddo-ink-deep))",
+            fontSize: "clamp(18px, 1.9vw, 22px)",
+            fontWeight: 700,
+            lineHeight: 1.3,
+            letterSpacing: "-0.01em",
+          }}
+        >
+          Tell your COB who's at the table. Then name the one thing on your mind.
+        </h3>
+        <p
+          className="font-sans mt-1"
+          style={{ color: "hsl(var(--raddo-ash))", fontSize: "13px", lineHeight: 1.55 }}
+        >
+          Five fields. Used to ground your COB's first read · nothing leaves this page.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div>
+          <label htmlFor="gate-name" className="font-sans" style={labelStyle}>NAME</label>
+          <input
+            id="gate-name"
+            type="text"
+            autoComplete="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="First and last"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={120}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="gate-email" className="font-sans" style={labelStyle}>EMAIL</label>
+          <input
+            id="gate-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={200}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="gate-company" className="font-sans" style={labelStyle}>COMPANY</label>
+          <input
+            id="gate-company"
+            type="text"
+            autoComplete="organization"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Where you run point"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={160}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="gate-title" className="font-sans" style={labelStyle}>TITLE</label>
+          <input
+            id="gate-title"
+            type="text"
+            autoComplete="organization-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="CFO · COO · CEO · Chief of Staff"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={160}
+            required
+          />
+        </div>
+      </div>
+
+      <div>
+        <label htmlFor="gate-challenge" className="font-sans" style={labelStyle}>
+          ONE CHALLENGING THING · PAST WEEK OR THE HORIZON AHEAD
+        </label>
+        <textarea
+          id="gate-challenge"
+          value={challenge}
+          onChange={(e) => setChallenge(e.target.value)}
+          placeholder="The thing eating your week · the call you're about to make · the number that won't sit right. One paragraph is plenty."
+          rows={4}
+          className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep resize-none"
+          style={{ ...fieldStyle, minHeight: "110px" }}
+          maxLength={2000}
+          required
+        />
+      </div>
+
+      <div className="flex flex-col-reverse items-stretch gap-3 md:flex-row md:items-center md:justify-between">
+        <span
+          className="font-sans"
+          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
+        >
+          Encrypted in transit · stored only for your COB's read · withdraw anytime.
+        </span>
+        <div className="flex items-center gap-3">
+          {shown && (
+            <span
+              className="font-sans"
+              style={{
+                color: "hsl(var(--raddo-brass-deep))",
+                fontSize: "11px",
+                letterSpacing: "0.04em",
+                borderBottom: "1px solid hsl(var(--raddo-brass-deep))",
+              }}
+            >
+              {shown}
+            </span>
+          )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+            style={{
+              backgroundColor: "hsl(var(--raddo-brass))",
+              color: "hsl(var(--raddo-ink-deep))",
+              border: "1px solid hsl(var(--raddo-brass-deep))",
+              borderRadius: "4px",
+              fontSize: "13px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              minWidth: "180px",
+            }}
+          >
+            {submitting ? "Opening…" : "Open the sample COB"}
+          </button>
+        </div>
+      </div>
+    </motion.form>
+  );
+}
 
 // RADDO brand motion curve
 const BRAND_EASE = [0.22, 1, 0.36, 1] as const;
@@ -310,6 +542,8 @@ export default function DossierIntake() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    submitLead,
+    submittingLead,
   } = useCobChat();
 
   const reducedMotion = useMemo(
@@ -334,11 +568,18 @@ export default function DossierIntake() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [transcript, pending]);
 
-  const unseal = () => {
-    if (!sealed) return;
-    setSealed(false);
-    primeIfEmpty();
-    requestAnimationFrame(() => taRef.current?.focus());
+  const handleGateSubmit = async (lead: LeadInfo) => {
+    const res = await submitLead(lead);
+    if (res.ok) {
+      setSealed(false);
+      primeIfEmpty(lead);
+      // Auto-send the visitor's stated challenge as the first user message · triggers Opus first-turn.
+      requestAnimationFrame(() => {
+        void send(lead.challenge);
+        taRef.current?.focus();
+      });
+    }
+    return res;
   };
 
   const submit = () => {
@@ -441,49 +682,11 @@ export default function DossierIntake() {
 
           <AnimatePresence mode="wait" initial={false}>
             {sealed ? (
-              <motion.button
-                key="sealed"
-                type="button"
-                onClick={unseal}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: reducedMotion ? 0 : 0.42, ease: BRAND_EASE }}
-                className="group mt-8 flex w-full flex-col items-center justify-center gap-4 py-16 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass rounded"
-                aria-label="Open the sample COB sandbox"
-              >
-                <span
-                  aria-hidden
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{
-                    border: "1px solid hsl(var(--raddo-brass) / 0.55)",
-                    backgroundColor: "hsl(var(--raddo-brass) / 0.12)",
-                    color: "hsl(var(--raddo-brass-deep))",
-                    fontFamily: "Fraunces, Georgia, serif",
-                    fontWeight: 700,
-                    fontSize: "16px",
-                  }}
-                >
-                  ❦
-                </span>
-                <span
-                  className="font-display"
-                  style={{
-                    color: "hsl(var(--raddo-ink-deep))",
-                    fontSize: "clamp(20px, 2vw, 24px)",
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  Open the sample COB
-                </span>
-                <span
-                  className="font-sans"
-                  style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
-                >
-                  TAP TO UNSEAL · ASK ANYTHING · NO ACCOUNT REQUIRED
-                </span>
-              </motion.button>
+              <GateForm
+                onSubmit={handleGateSubmit}
+                submitting={submittingLead}
+                error={error}
+              />
             ) : (
               <motion.div
                 key="open"
