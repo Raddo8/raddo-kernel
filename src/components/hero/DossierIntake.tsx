@@ -1116,13 +1116,13 @@ export default function DossierIntake() {
                   })()}
                 </div>
 
-                {/* Hard-close deployment CTA · fires after COB delivers the close (≥12 COB user turns) */}
+                {/* Hard-close deployment CTA · fires per Conviction Funnel phase detection */}
                 {showDeploymentCta && (
                   <DeploymentCtaCard
                     initialEmail={lead?.email ?? ""}
                     initialCompany={lead?.company ?? ""}
                     submitting={submittingLead}
-                    onSubmit={submitDeploymentInquiry}
+                    onSubmit={handleDeploymentSubmit}
                     reducedMotion={reducedMotion}
                   />
                 )}
