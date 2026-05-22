@@ -35,6 +35,7 @@ const [
   DIGEST_MICHAEL_VOICE,
   DIGEST_OPENERS,
   DIGEST_DEPLOY_AMP,
+  DOC_CONVICTION_FUNNEL,
 ] = await Promise.all([
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
@@ -46,6 +47,7 @@ const [
   loadDoc("digests/MICHAEL_VOICE_DIGEST.md"),
   loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
   loadDoc("digests/DEPLOYMENT_AMPLIFICATION_DIGEST.md"),
+  loadDoc("COB_CONVICTION_FUNNEL_DOCTRINE.md"),
 ]);
 
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
@@ -145,6 +147,7 @@ function buildSystemPrompt(args: PromptArgs): string {
     const parts: string[] = [HARD_PREAMBLE];
     parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
     parts.push("\n\n# DEPLOYMENT AMPLIFICATION DOCTRINE (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
+    parts.push("\n\n# CONVICTION FUNNEL DOCTRINE (binding for sandbox COB · governs when AMPLIFICATION bridges fire, phase cadence, gated continuation, and close)\n" + DOC_CONVICTION_FUNNEL);
     parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
     parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
     parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
