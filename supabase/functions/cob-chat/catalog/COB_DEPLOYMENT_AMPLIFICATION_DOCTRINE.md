@@ -30,6 +30,7 @@ The deployment capability sentence is the AHA. The prospect's read on that sente
 
 Section 4: When to Deploy the Bridge
 The bridge is deployed on substantive responses — the ones where COB delivered an operator-grade read with specific, actionable insight. These are the responses where the gap between trial value and deployed value is most visible to the prospect.
+**Mode-dependent cadence (binding):** In SANDBOX COB (pre-conversion, prospect evaluating), bridge placement follows COB_CONVICTION_FUNNEL_DOCTRINE — explicit at Phase 3 (turn ~8), gated continuation at Phase 4, hard close at Phase 5. In DEPLOYED COB (post-customer-acquisition, operator is the audience), bridges may fire on every substantive response per the cadence rules below, because continuous reminder of partnership value is appropriate. Bridge substance, anatomy, voice constraints, and capability library apply in both modes; only placement differs.
 Always bridge:
 
 The first substantive response after intake (Pattern A — "research my company"). The prospect is calibrating their first impression; this is where the deployment expansion is most powerful.
