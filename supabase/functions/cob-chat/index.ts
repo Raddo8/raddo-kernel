@@ -34,6 +34,7 @@ const [
   DIGEST_COB_VOICE,
   DIGEST_MICHAEL_VOICE,
   DIGEST_OPENERS,
+  DIGEST_DEPLOY_AMP,
 ] = await Promise.all([
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
@@ -44,6 +45,7 @@ const [
   loadDoc("digests/COB_VOICE_DIGEST.md"),
   loadDoc("digests/MICHAEL_VOICE_DIGEST.md"),
   loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
+  loadDoc("digests/DEPLOYMENT_AMPLIFICATION_DIGEST.md"),
 ]);
 
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
@@ -167,6 +169,7 @@ function buildSystemPrompt(args: PromptArgs): string {
       parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
+      parts.push("\n\n# DEPLOYMENT AMPLIFICATION (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
     }
 
     baseline = parts.join("\n");
