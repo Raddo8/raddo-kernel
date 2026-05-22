@@ -944,8 +944,7 @@ export function Hero() {
             <div
               className="absolute inset-0"
               style={{
-                background:
-                  "linear-gradient(90deg, hsl(var(--raddo-paper) / 0.78) 0%, hsl(var(--raddo-paper) / 0.5) 55%, hsl(var(--raddo-paper) / 0.35) 100%)",
+                background: "hsl(var(--raddo-paper) / 0.5)",
               }}
             />
             {/* Brass frame corners */}
