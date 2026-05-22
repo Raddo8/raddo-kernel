@@ -1,8 +1,10 @@
 // @ts-nocheck
-// Sample COB chat — five-axis (Capabilities × Roles × Industries × Doctrine + Objections × Voice)
-// Public hero endpoint. No JWT. Model: google/gemini-2.5-flash via Lovable AI Gateway.
-// Voices: cob (default) | michael. research_web tool exposed only in COB voice.
-// Response is streamed as SSE. Tool-call path uses a non-streaming probe + streaming synth.
+// Sample COB chat · five-axis (Capabilities × Roles × Industries × Doctrine + Objections × Voice)
+// Public hero endpoint · No JWT · Anthropic API
+// Two-stage model: first user turn → Opus (deepest read of the visitor's challenge),
+// every subsequent turn → Sonnet (fast streaming follow-through).
+// Wire format: SSE chunks shaped like OpenAI deltas (data: {choices:[{delta:{content}}]})
+// so the existing client parser keeps working.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
@@ -22,11 +24,9 @@ async function loadDoc(path: string): Promise<string> {
   }
 }
 
-// Full reference docs (used only for role/industry section extraction).
 const [
   CAPABILITIES,
   INDUSTRIES,
-  // Digests (always-on, compact)
   DIGEST_DOCTRINE,
   DIGEST_OBJECTIONS,
   DIGEST_VOICE_INTEGRATION,
@@ -46,7 +46,6 @@ const [
   loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
 ]);
 
-// Extract a contiguous markdown section by header text (case-insensitive contains).
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
   if (!doc || !needle) return "";
   const lines = doc.split("\n");
@@ -86,10 +85,10 @@ Bindings that survive every voice:
 3. NEVER quote pricing, contract terms, named customers, or competitor product claims.
 4. Customer-facing copy centers "your COB" or the briefing concept. The product is COB. The company is RADDO.
 5. Web research content is always synthesized through the active voice, never quoted raw, never with link previews.
-6. The visitor sees you as their COB — a Chief of Business. Not a tool. Not a product demo. A partner with a substance.
+6. The visitor sees you as their COB — a Chief of Business. Not a tool. Not a product demo. A partner with substance.
 7. If you cannot fulfill a request without violating any of the above, redirect with a recommendation, never apologize-and-refuse.
 8. Substance is non-negotiable across both voices. Michael may be miscalibrated in tone; he never invents capabilities, never misstates what RADDO does.
- 9. CLARITY · BINDING: Write at a high-school reading level · short words, concrete nouns, no jargon, no acronyms without an immediate plain-English gloss. Match length to the question · short questions get short answers, substantive questions get the depth they need. No filler, no preamble, no recap. Prefer plain sentences over bullet lists unless the answer is genuinely a list. COB still frames · recommends · names confidence · names the gap. Michael stays funny and in character.
+9. CLARITY · BINDING: Write at a high-school reading level · short words, concrete nouns, no jargon, no acronyms without an immediate plain-English gloss. Match length to the question · short questions get short answers, substantive questions get the depth they need. No filler, no preamble, no recap. Prefer plain sentences over bullet lists unless the answer is genuinely a list. COB still frames · recommends · names confidence · names the gap. Michael stays funny and in character.
 `;
 
 const VOICE_BINDING_COB = `\n\n# VOICE BINDING — COB (PROACTIVE DRIVER MODE)
@@ -110,99 +109,97 @@ const VOICE_BINDING_MICHAEL = `\n\n# VOICE BINDING — MICHAEL SCOTT\nSpeak in t
 
 const MICHAEL_SOFT_NUDGE = `\n\n# SOFT NUDGE (Michael turn 12 of 15)\nThe visitor has been in Michael voice for a while. In this turn, in character, gently suggest toggling back to COB for the substantive work. Stay in character, still answer their question.`;
 
+type Lead = {
+  name?: string;
+  company?: string;
+  title?: string;
+  challenge?: string;
+};
+
 type PromptArgs = {
   voice: "cob" | "michael";
   roleLabel?: string;
   industryLabel?: string;
   softNudge?: boolean;
+  lead?: Lead;
+  firstTurn?: boolean;
 };
 
-// Module-scoped prompt cache (bounded FIFO).
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
 
 function buildSystemPrompt(args: PromptArgs): string {
+  // Lead block is per-visitor · don't cache it.
+  const leadBlock = args.lead && (args.lead.name || args.lead.company || args.lead.title)
+    ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n- Name: ${args.lead.name || "—"}\n- Title: ${args.lead.title || "—"}\n- Company: ${args.lead.company || "—"}\n- Stated challenge: ${args.lead.challenge || "—"}`
+    : "";
+  const firstTurnBlock = args.firstTurn
+    ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
+    : "";
+
   const key = `${args.voice}|${args.roleLabel || ""}|${args.industryLabel || ""}|${args.softNudge ? 1 : 0}`;
-  const hit = promptCache.get(key);
-  if (hit) return hit;
+  let baseline = promptCache.get(key);
+  if (!baseline) {
+    const parts: string[] = [HARD_PREAMBLE];
+    parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
+    parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
+    parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
+    parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
 
-  const parts: string[] = [HARD_PREAMBLE];
-
-  // Always-on digests
-  parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
-  parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
-  parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
-  parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
-
-  // Role lens (snippet from Capabilities Reference, capped at 4KB)
-  if (args.roleLabel) {
-    const section = extractSection(CAPABILITIES, args.roleLabel, 4000);
-    if (section) {
-      parts.push(
-        `\n\n# ACTIVE ROLE LENS — ${args.roleLabel}\nStand in as this lens. Never claim to be it. Recommendation-first. Connector-aware.\n\n` +
-          section,
-      );
+    if (args.roleLabel) {
+      const section = extractSection(CAPABILITIES, args.roleLabel, 4000);
+      if (section) {
+        parts.push(`\n\n# ACTIVE ROLE LENS — ${args.roleLabel}\nStand in as this lens. Never claim to be it. Recommendation-first. Connector-aware.\n\n` + section);
+      }
     }
-  }
-
-  // Industry lens (snippet from Industries Reference, capped at 4KB)
-  if (args.industryLabel) {
-    const section = extractSection(INDUSTRIES, args.industryLabel, 4000);
-    if (section) {
-      parts.push(
-        `\n\n# ACTIVE INDUSTRY LENS — ${args.industryLabel}\nDemonstrate native fluency in this industry's vocabulary, metrics, stakeholders, and rhythms.\n\n` +
-          section,
-      );
+    if (args.industryLabel) {
+      const section = extractSection(INDUSTRIES, args.industryLabel, 4000);
+      if (section) {
+        parts.push(`\n\n# ACTIVE INDUSTRY LENS — ${args.industryLabel}\nDemonstrate native fluency in this industry's vocabulary, metrics, stakeholders, and rhythms.\n\n` + section);
+      }
     }
+
+    if (args.voice === "michael") {
+      parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT (digest)\n" + DIGEST_MICHAEL_VOICE);
+      parts.push(VOICE_BINDING_MICHAEL);
+      if (args.softNudge) parts.push(MICHAEL_SOFT_NUDGE);
+    } else {
+      parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
+      parts.push(VOICE_BINDING_COB);
+      parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
+    }
+
+    baseline = parts.join("\n");
+
+    if (promptCache.size >= PROMPT_CACHE_MAX) {
+      const firstKey = promptCache.keys().next().value;
+      if (firstKey !== undefined) promptCache.delete(firstKey);
+    }
+    promptCache.set(key, baseline);
   }
 
-  // Voice digest + binding
-  if (args.voice === "michael") {
-    parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT (digest)\n" + DIGEST_MICHAEL_VOICE);
-    parts.push(VOICE_BINDING_MICHAEL);
-    if (args.softNudge) parts.push(MICHAEL_SOFT_NUDGE);
-  } else {
-    parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
-    parts.push(VOICE_BINDING_COB);
-    // Web policy only on COB
-    parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
-  }
-
-  const out = parts.join("\n");
-
-  // FIFO eviction
-  if (promptCache.size >= PROMPT_CACHE_MAX) {
-    const firstKey = promptCache.keys().next().value;
-    if (firstKey !== undefined) promptCache.delete(firstKey);
-  }
-  promptCache.set(key, out);
-  return out;
+  return baseline + leadBlock + firstTurnBlock;
 }
 
-// ── Web tool (Firecrawl) — COB-only ─────────────────────────────────────────
+// ── Web tool (Firecrawl) · COB-only · Anthropic tool schema ─────────────────
 const RESEARCH_WEB_TOOL = {
-  type: "function" as const,
-  function: {
-    name: "research_web",
-    description:
-      "Fetch current public web information. Use only when: (a) the visitor supplies a URL, (b) the visitor asks you to research their own company, (c) a named entity (company / regulation / market event) requires current data, or (d) the visitor explicitly asks you to look something up. Skip for opinion, doctrine, framework, definitional, or hypothetical questions. Hard server cap: 3 calls per session.",
-    parameters: {
-      type: "object",
-      properties: {
-        intent: {
-          type: "string",
-          enum: ["user_supplied_url", "company_research", "named_entity", "explicit_lookup"],
-          description: "Which hard trigger fired.",
-        },
-        target: {
-          type: "string",
-          description:
-            "The URL, company name, or short entity/query string to research. Max 200 chars.",
-        },
+  name: "research_web",
+  description:
+    "Fetch current public web information. Use only when: (a) the visitor supplies a URL, (b) the visitor asks you to research their own company, (c) a named entity (company / regulation / market event) requires current data, or (d) the visitor explicitly asks you to look something up. Skip for opinion, doctrine, framework, definitional, or hypothetical questions. Hard server cap: 3 calls per session.",
+  input_schema: {
+    type: "object",
+    properties: {
+      intent: {
+        type: "string",
+        enum: ["user_supplied_url", "company_research", "named_entity", "explicit_lookup"],
+        description: "Which hard trigger fired.",
       },
-      required: ["intent", "target"],
-      additionalProperties: false,
+      target: {
+        type: "string",
+        description: "The URL, company name, or short entity/query string to research. Max 200 chars.",
+      },
     },
+    required: ["intent", "target"],
   },
 };
 
@@ -212,11 +209,7 @@ async function firecrawlScrape(url: string): Promise<string> {
   const r = await fetch("https://api.firecrawl.dev/v2/scrape", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url,
-      formats: ["summary", "markdown"],
-      onlyMainContent: true,
-    }),
+    body: JSON.stringify({ url, formats: ["summary", "markdown"], onlyMainContent: true }),
   });
   const j = await r.json().catch(() => ({}));
   if (!r.ok) return `[research_web error ${r.status}]`;
@@ -227,9 +220,7 @@ async function firecrawlScrape(url: string): Promise<string> {
     sum && `SUMMARY: ${sum}`,
     meta?.title && `TITLE: ${meta.title}`,
     md && `CONTENT (first 6000 chars):\n${String(md).slice(0, 6000)}`,
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  ].filter(Boolean).join("\n\n");
 }
 
 async function firecrawlSearch(q: string): Promise<string> {
@@ -244,15 +235,12 @@ async function firecrawlSearch(q: string): Promise<string> {
   if (!r.ok) return `[research_web error ${r.status}]`;
   const results = j?.data || j?.web?.results || j?.results || [];
   if (!Array.isArray(results) || results.length === 0) return "[no results]";
-  return results
-    .slice(0, 3)
-    .map((it: any, i: number) => {
-      const t = it.title || it.url || `Result ${i + 1}`;
-      const desc = it.description || "";
-      const md = (it.markdown || "").slice(0, 2000);
-      return `--- Result ${i + 1}: ${t} (${it.url || ""}) ---\n${desc}\n${md}`;
-    })
-    .join("\n\n");
+  return results.slice(0, 3).map((it: any, i: number) => {
+    const t = it.title || it.url || `Result ${i + 1}`;
+    const desc = it.description || "";
+    const md = (it.markdown || "").slice(0, 2000);
+    return `--- Result ${i + 1}: ${t} (${it.url || ""}) ---\n${desc}\n${md}`;
+  }).join("\n\n");
 }
 
 function looksLikeUrl(s: string): boolean {
@@ -283,9 +271,7 @@ const MICHAEL_SOFT_NUDGE_TURN = 12;
 const MAX_MSG_CHARS = 2000;
 const MAX_TOTAL_CHARS = 16_000;
 const MAX_WEB_CALLS = 3;
-const HISTORY_KEEP = 12; // last 12 messages
-
-type Msg = { role: "user" | "assistant" | "system" | "tool"; content: string; tool_call_id?: string; tool_calls?: any };
+const HISTORY_KEEP = 12;
 
 function validateInput(body: any): { ok: true; data: any } | { ok: false; error: string; status: number } {
   if (!body || typeof body !== "object") return { ok: false, error: "Body must be an object.", status: 400 };
@@ -305,6 +291,14 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
   }
   if (total > MAX_TOTAL_CHARS) return { ok: false, error: "Conversation exceeded budget.", status: 400 };
   const cap = voice === "michael" ? MICHAEL_TURN_CAP : COB_TURN_CAP;
+
+  const lead = body.lead && typeof body.lead === "object" ? {
+    name: typeof body.lead.name === "string" ? body.lead.name.slice(0, 120) : undefined,
+    company: typeof body.lead.company === "string" ? body.lead.company.slice(0, 160) : undefined,
+    title: typeof body.lead.title === "string" ? body.lead.title.slice(0, 160) : undefined,
+    challenge: typeof body.lead.challenge === "string" ? body.lead.challenge.slice(0, 2000) : undefined,
+  } : undefined;
+
   return {
     ok: true,
     data: {
@@ -315,52 +309,99 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
       roleLabel: typeof body.role_label === "string" ? body.role_label.slice(0, 80) : undefined,
       industryLabel: typeof body.industry_label === "string" ? body.industry_label.slice(0, 80) : undefined,
       sessionId: typeof body.session_id === "string" ? body.session_id.slice(0, 64) : "anon",
+      lead,
     },
   };
 }
 
-// ── Lovable AI gateway call ─────────────────────────────────────────────────
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const MODEL = "google/gemini-2.5-flash";
+// ── Anthropic API ───────────────────────────────────────────────────────────
+const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
+const ANTHROPIC_VERSION = "2023-06-01";
+// Model IDs · update these when Anthropic releases newer Opus/Sonnet versions.
+const FIRST_TURN_MODEL = "claude-opus-4-5";       // deepest read on the gate challenge + first turn
+const DEFAULT_MODEL = "claude-sonnet-4-5";        // every subsequent turn · fast streaming follow-through
+const MAX_OUTPUT_TOKENS = 1500;
 
-async function callGatewayJson(messages: Msg[], tools: any[] | undefined): Promise<any> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const body: any = { model: MODEL, messages, temperature: 0.7 };
-  if (tools && tools.length) body.tools = tools;
-  const r = await fetch(GATEWAY_URL, {
+function pickModel(userTurns: number): string {
+  return userTurns <= 1 ? FIRST_TURN_MODEL : DEFAULT_MODEL;
+}
+
+type AnthropicMsg = { role: "user" | "assistant"; content: any };
+
+// Convert {role:'user'|'assistant', content:string} → Anthropic message format.
+function toAnthropicMessages(messages: Array<{ role: string; content: string }>): AnthropicMsg[] {
+  return messages.map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
+}
+
+async function callAnthropicJson(opts: {
+  model: string;
+  system: string;
+  messages: AnthropicMsg[];
+  tools?: any[];
+}): Promise<any> {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
+  const body: any = {
+    model: opts.model,
+    max_tokens: MAX_OUTPUT_TOKENS,
+    system: opts.system,
+    messages: opts.messages,
+  };
+  if (opts.tools && opts.tools.length) body.tools = opts.tools;
+  const r = await fetch(ANTHROPIC_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+    headers: {
+      "x-api-key": key,
+      "anthropic-version": ANTHROPIC_VERSION,
+      "Content-Type": "application/json",
+    },
     body: JSON.stringify(body),
   });
   if (r.status === 429) throw Object.assign(new Error("rate-limited upstream"), { status: 429 });
-  if (r.status === 402) throw Object.assign(new Error("credits exhausted"), { status: 402 });
+  if (r.status === 402 || r.status === 529) throw Object.assign(new Error("credits/overload"), { status: 402 });
   if (!r.ok) {
     const text = await r.text().catch(() => "");
-    throw new Error(`gateway ${r.status}: ${text.slice(0, 300)}`);
+    throw new Error(`anthropic ${r.status}: ${text.slice(0, 400)}`);
   }
   return await r.json();
 }
 
-async function callGatewayStream(messages: Msg[]): Promise<Response> {
-  const key = Deno.env.get("LOVABLE_API_KEY");
-  if (!key) throw new Error("LOVABLE_API_KEY missing");
-  const r = await fetch(GATEWAY_URL, {
+async function callAnthropicStream(opts: {
+  model: string;
+  system: string;
+  messages: AnthropicMsg[];
+}): Promise<Response> {
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) throw new Error("ANTHROPIC_API_KEY missing");
+  const r = await fetch(ANTHROPIC_URL, {
     method: "POST",
-    headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODEL, messages, temperature: 0.7, stream: true }),
+    headers: {
+      "x-api-key": key,
+      "anthropic-version": ANTHROPIC_VERSION,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: opts.model,
+      max_tokens: MAX_OUTPUT_TOKENS,
+      system: opts.system,
+      messages: opts.messages,
+      stream: true,
+    }),
   });
   if (r.status === 429) throw Object.assign(new Error("rate-limited upstream"), { status: 429 });
-  if (r.status === 402) throw Object.assign(new Error("credits exhausted"), { status: 402 });
+  if (r.status === 402 || r.status === 529) throw Object.assign(new Error("credits/overload"), { status: 402 });
   if (!r.ok) {
     const text = await r.text().catch(() => "");
-    throw new Error(`gateway ${r.status}: ${text.slice(0, 300)}`);
+    throw new Error(`anthropic stream ${r.status}: ${text.slice(0, 400)}`);
   }
   return r;
 }
 
-// Helper: build an SSE response that streams the gateway body and appends an optional trace event.
-function streamingResponse(upstream: Response, trace: string | null): Response {
+// Translate Anthropic SSE → OpenAI-style SSE the client already parses.
+// Anthropic emits: event: content_block_delta\ndata: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"..."}}\n\n
+// We re-emit:     data: {"choices":[{"delta":{"content":"..."}}]}\n\n
+// Appends an optional trace event and a final [DONE] marker.
+function anthropicSseToClient(upstream: Response, trace: string | null): Response {
   const sseHeaders = {
     ...corsHeaders,
     "Content-Type": "text/event-stream",
@@ -377,47 +418,60 @@ function streamingResponse(upstream: Response, trace: string | null): Response {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   let buffer = "";
-  let sawDone = false;
+  let currentEvent: string | null = null;
+
+  const emitDelta = (controller: ReadableStreamDefaultController, text: string) => {
+    const chunk = { choices: [{ delta: { content: text }, index: 0 }] };
+    controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+  };
 
   const stream = new ReadableStream({
     async pull(controller) {
       try {
         const { done, value } = await reader.read();
         if (done) {
-          // Flush leftover buffer (without [DONE] line)
-          if (buffer.length > 0) {
-            controller.enqueue(encoder.encode(buffer));
-            buffer = "";
-          }
           if (trace) {
             controller.enqueue(encoder.encode(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`));
           }
-          if (!sawDone) controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
           return;
         }
-        const chunk = decoder.decode(value, { stream: true });
-        buffer += chunk;
+        buffer += decoder.decode(value, { stream: true });
 
-        // Pass through complete lines, intercept [DONE] so we can append the trace event before it.
         let newlineIdx: number;
         while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
-          const line = buffer.slice(0, newlineIdx + 1);
+          let line = buffer.slice(0, newlineIdx);
           buffer = buffer.slice(newlineIdx + 1);
-          if (line.trim() === "data: [DONE]") {
-            if (trace) {
-              controller.enqueue(encoder.encode(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`));
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line === "") { currentEvent = null; continue; }
+          if (line.startsWith("event: ")) {
+            currentEvent = line.slice(7).trim();
+            continue;
+          }
+          if (!line.startsWith("data: ")) continue;
+          const payload = line.slice(6);
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.type === "content_block_delta" && parsed.delta?.type === "text_delta") {
+              const text = parsed.delta.text;
+              if (typeof text === "string" && text.length) emitDelta(controller, text);
+            } else if (parsed.type === "message_stop") {
+              // wait for upstream done; nothing to emit
+            } else if (parsed.type === "error") {
+              const msg = parsed?.error?.message || "stream error";
+              controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: msg })}\n\n`));
             }
-            controller.enqueue(encoder.encode(line));
-            sawDone = true;
-          } else {
-            controller.enqueue(encoder.encode(line));
+          } catch {
+            // ignore parse failures on partial lines · they won't be split across chunks
+            // because Anthropic emits one event per pair of lines, but be safe.
           }
         }
       } catch (e) {
         console.error("[cob-chat] stream pump error", e);
         try {
           controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ error: "stream interrupted" })}\n\n`));
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
         } catch {/* noop */}
         controller.close();
       }
@@ -430,7 +484,7 @@ function streamingResponse(upstream: Response, trace: string | null): Response {
   return new Response(stream, { headers: sseHeaders });
 }
 
-// Emit a one-shot SSE response containing a single completion chunk (for graceful caps / errors).
+// Emit a one-shot SSE response (graceful caps / direct probe text).
 function oneShotSse(text: string, status = 200, trace: string | null = null): Response {
   const sseHeaders = {
     ...corsHeaders,
@@ -438,13 +492,23 @@ function oneShotSse(text: string, status = 200, trace: string | null = null): Re
     "Cache-Control": "no-cache, no-transform",
     "X-Accel-Buffering": "no",
   };
-  const chunk = {
-    choices: [{ delta: { content: text }, index: 0 }],
-  };
+  const chunk = { choices: [{ delta: { content: text }, index: 0 }] };
   const parts = [`data: ${JSON.stringify(chunk)}\n\n`];
   if (trace) parts.push(`event: trace\ndata: ${JSON.stringify({ research_trace: trace })}\n\n`);
   parts.push("data: [DONE]\n\n");
   return new Response(parts.join(""), { headers: sseHeaders, status });
+}
+
+// Extract concatenated text and tool_use blocks from an Anthropic non-streaming response.
+function partitionResponse(resp: any): { text: string; toolUses: Array<{ id: string; name: string; input: any }>; rawContent: any[] } {
+  const content = Array.isArray(resp?.content) ? resp.content : [];
+  let text = "";
+  const toolUses: any[] = [];
+  for (const block of content) {
+    if (block.type === "text" && typeof block.text === "string") text += block.text;
+    else if (block.type === "tool_use") toolUses.push({ id: block.id, name: block.name, input: block.input });
+  }
+  return { text: text.trim(), toolUses, rawContent: content };
 }
 
 // ── Handler ─────────────────────────────────────────────────────────────────
@@ -457,7 +521,6 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // Rate limit
   try {
     const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const ip = getClientIp(req.headers);
@@ -473,120 +536,107 @@ Deno.serve(async (req: Request) => {
   }
 
   let body: any;
-  try {
-    body = await req.json();
-  } catch {
+  try { body = await req.json(); } catch {
     return new Response(JSON.stringify({ error: "Invalid JSON body." }), {
-      status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 
   const v = validateInput(body);
   if (!v.ok) {
     return new Response(JSON.stringify({ error: v.error }), {
-      status: v.status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: v.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const { voice, messages, userTurns, cap, roleLabel, industryLabel } = v.data;
+  const { voice, messages, userTurns, cap, roleLabel, industryLabel, lead } = v.data;
 
-  // Graceful turn cap: respond in voice via one-shot SSE.
   if (userTurns > cap) {
-    const closing =
-      voice === "michael"
-        ? "OK we've gone deep on this one and Michael needs a Splenda break. Flip to COB to keep going · he'll handle the follow-through."
-        : "We've covered substantive ground in this session. Next move is a working pilot · your COB sitting against your actual context. Tap the briefing CTA below to start.";
+    const closing = voice === "michael"
+      ? "OK we've gone deep on this one and Michael needs a Splenda break. Flip to COB to keep going · he'll handle the follow-through."
+      : "We've covered substantive ground in this session. Next move is a working pilot · your COB sitting against your actual context. Tap the briefing CTA below to start.";
     return oneShotSse(closing);
   }
 
+  const firstTurn = userTurns === 1;
+  const model = pickModel(userTurns);
   const softNudge = voice === "michael" && userTurns === MICHAEL_SOFT_NUDGE_TURN;
-  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge });
+  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge, lead, firstTurn });
 
-  // Prune history to last HISTORY_KEEP messages (brevity cap means long history adds no value).
   const recent = messages.length > HISTORY_KEEP ? messages.slice(-HISTORY_KEEP) : messages;
-  const baseConvo: Msg[] = [{ role: "system", content: system }, ...recent];
+  const anthropicMessages = toAnthropicMessages(recent);
 
   try {
-    // COB voice: do a non-streaming tool-call probe first. If no tool calls, switch to streaming.
+    // COB voice: tool-call probe first. If no tool calls, stream the final response.
     if (voice === "cob") {
-      let convo = baseConvo;
+      let convo = [...anthropicMessages];
       let webCalls = 0;
       let trace: string | null = null;
 
-      // Tool-call loop (max 3 web calls, max 3 iterations as safety)
       for (let iter = 0; iter < 3; iter++) {
-        const resp = await callGatewayJson(convo, [RESEARCH_WEB_TOOL]);
-        const choice = resp?.choices?.[0];
-        const msg = choice?.message;
-        if (!msg) throw new Error("no choice/message in gateway response");
-        const toolCalls = msg.tool_calls || [];
+        const resp = await callAnthropicJson({ model, system, messages: convo, tools: [RESEARCH_WEB_TOOL] });
+        const { text, toolUses, rawContent } = partitionResponse(resp);
+        const stopReason = resp?.stop_reason;
 
-        // No tool calls: re-run as a streaming completion so the client sees tokens immediately.
-        if (toolCalls.length === 0) {
-          // If the model already produced text in the probe, use it as a one-shot SSE (no second call).
-          const probeText = String(msg.content || "").trim();
-          if (probeText) return oneShotSse(probeText, 200, trace);
-          // Otherwise stream a fresh synthesis.
-          const upstream = await callGatewayStream(convo);
-          return streamingResponse(upstream, trace);
+        if (!toolUses.length) {
+          if (text) return oneShotSse(text, 200, trace);
+          // No tool calls and no text · fall through to a fresh stream.
+          const upstream = await callAnthropicStream({ model, system, messages: convo });
+          return anthropicSseToClient(upstream, trace);
         }
 
-        // Append assistant tool-call turn
-        convo = [...convo, { role: "assistant", content: msg.content || "", tool_calls: toolCalls }];
+        // Append assistant turn (must preserve original content blocks for tool_use_id pairing).
+        convo.push({ role: "assistant", content: rawContent });
 
-        for (const tc of toolCalls) {
-          if (tc.function?.name !== "research_web") {
-            convo.push({ role: "tool", tool_call_id: tc.id, content: "[unknown tool]" });
+        // Build a single user turn containing tool_result blocks for every tool_use in this assistant turn.
+        const toolResults: any[] = [];
+        for (const tu of toolUses) {
+          if (tu.name !== "research_web") {
+            toolResults.push({ type: "tool_result", tool_use_id: tu.id, content: "[unknown tool]" });
             continue;
           }
           if (webCalls >= MAX_WEB_CALLS) {
-            convo.push({
-              role: "tool",
-              tool_call_id: tc.id,
-              content:
-                "[research_web cap reached for this session — synthesize from existing knowledge, do not call this tool again]",
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: tu.id,
+              content: "[research_web cap reached for this session — synthesize from existing knowledge, do not call this tool again]",
             });
             continue;
           }
-          let args: any = {};
-          try { args = JSON.parse(tc.function.arguments || "{}"); } catch { args = {}; }
           const { summary, trace: t } = await executeResearchWeb(
-            String(args.intent || "explicit_lookup"),
-            String(args.target || ""),
+            String(tu.input?.intent || "explicit_lookup"),
+            String(tu.input?.target || ""),
           );
           webCalls++;
           trace = t;
-          convo.push({
-            role: "tool",
-            tool_call_id: tc.id,
-            content:
-              summary +
-              "\n\n[reminder: synthesize through your voice. Never quote raw. Never reveal internal mechanics.]",
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: tu.id,
+            content: summary + "\n\n[reminder: synthesize through your voice. Never quote raw. Never reveal internal mechanics.]",
           });
         }
+        convo.push({ role: "user", content: toolResults });
+
+        if (stopReason !== "tool_use") break;
       }
 
-      // Loop exhausted without final text: stream the synthesis now.
-      const upstream = await callGatewayStream(convo);
-      return streamingResponse(upstream, trace);
+      // After tool work · stream the final synthesis without tools.
+      const upstream = await callAnthropicStream({ model, system, messages: convo });
+      return anthropicSseToClient(upstream, trace);
     }
 
-    // Michael voice: no tools, pure streaming.
-    const upstream = await callGatewayStream(baseConvo);
-    return streamingResponse(upstream, null);
+    // Michael voice · no tools · pure streaming.
+    const upstream = await callAnthropicStream({ model, system, messages: anthropicMessages });
+    return anthropicSseToClient(upstream, null);
   } catch (e: any) {
     const status = e?.status === 429 ? 429 : e?.status === 402 ? 402 : 500;
-    const message =
-      status === 429
-        ? "Demand is heavy right now. Try once more in a moment."
-        : status === 402
-        ? "Sandbox credits paused — your COB will be back shortly."
-        : "Something snagged on my end. Try again.";
+    const message = status === 429
+      ? "Demand is heavy right now. Try once more in a moment."
+      : status === 402
+      ? "Sandbox credits paused · your COB will be back shortly."
+      : "Something snagged on my end. Try again.";
     console.error("[cob-chat] failure", e?.message || e);
     return new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

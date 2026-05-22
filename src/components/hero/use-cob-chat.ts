@@ -4,7 +4,7 @@ import { DEFAULT_VOICE, readStoredVoice, writeStoredVoice, type VoiceId } from "
 export type ChatMessage = {
   id: string;
   role: "cob" | "you";
-  voice: VoiceId; // voice this message is rendered in (assistant) or was authored under (user)
+  voice: VoiceId;
   text: string;
   at: number;
   trace?: string | null;
@@ -20,19 +20,39 @@ export type VoiceDivider = {
 
 export type TranscriptItem = ChatMessage | VoiceDivider;
 
+export type LeadInfo = {
+  name: string;
+  email: string;
+  company: string;
+  title: string;
+  challenge: string;
+};
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function makeOpener(voice: VoiceId): string {
-  if (voice === "michael") {
-    return "Hey hey hey — it's Michael. Demo-Michael. Sample-Michael. Whatever. Picture me leaning on the doorframe with a coffee, ready to be useful in a deeply specific way. What's the thing on your plate? Walk me through it. I'll help in the only way I know how.";
-  }
-  return "I'm your COB — your Chief of Business — standing in for the sandbox. Two ways we can start: tell me the one thing eating your week, or pick a lens (CFO, COO, Chief of Staff, your industry) and I'll run the room from there.";
+function firstName(full?: string): string {
+  if (!full) return "";
+  return full.trim().split(/\s+/)[0] || "";
 }
 
-const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/cob-chat`;
+function makeOpener(voice: VoiceId, lead: LeadInfo | null): string {
+  const fn = firstName(lead?.name);
+  if (voice === "michael") {
+    return fn
+      ? `Hey ${fn} — Michael here. Demo-Michael. Sample-Michael. Whatever. Picture me leaning on the doorframe with a coffee. I read what you wrote. Walk me through it one more time, your way, and I'll help in the only way I know how.`
+      : "Hey hey hey — it's Michael. Demo-Michael. Sample-Michael. Whatever. Picture me leaning on the doorframe with a coffee, ready to be useful in a deeply specific way. What's the thing on your plate? Walk me through it. I'll help in the only way I know how.";
+  }
+  return fn
+    ? `${fn} — your COB is on. I read what you sent. Hit send on your first ask and I'll open with a read, a recommendation, and the next move. Or toggle a lens · CFO, COO, Chief of Staff, your industry · and I'll run the room from there.`
+    : "I'm your COB — your Chief of Business — standing in for the sandbox. Two ways we can start: tell me the one thing eating your week, or pick a lens (CFO, COO, Chief of Staff, your industry) and I'll run the room from there.";
+}
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+const CHAT_URL = `${SUPABASE_URL}/functions/v1/cob-chat`;
+const LEAD_URL = `${SUPABASE_URL}/functions/v1/submit-chat-lead`;
 
 export function useCobChat() {
   const [voice, setVoiceState] = useState<VoiceId>(() => readStoredVoice() ?? DEFAULT_VOICE);
@@ -41,28 +61,34 @@ export function useCobChat() {
   const [industryLabel, setIndustryLabel] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lead, setLead] = useState<LeadInfo | null>(null);
+  const [submittingLead, setSubmittingLead] = useState(false);
   const sessionIdRef = useRef<string>(uid());
   const initOpenerRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  const primeIfEmpty = useCallback(() => {
-    if (initOpenerRef.current) return;
-    initOpenerRef.current = true;
-    setTranscript((prev) =>
-      prev.length === 0
-        ? [
-            {
-              id: uid(),
-              role: "cob",
-              voice,
-              text: makeOpener(voice),
-              at: Date.now(),
-              trace: null,
-            },
-          ]
-        : prev,
-    );
-  }, [voice]);
+  const primeIfEmpty = useCallback(
+    (overrideLead?: LeadInfo | null) => {
+      if (initOpenerRef.current) return;
+      initOpenerRef.current = true;
+      const useLead = overrideLead ?? lead;
+      setTranscript((prev) =>
+        prev.length === 0
+          ? [
+              {
+                id: uid(),
+                role: "cob",
+                voice,
+                text: makeOpener(voice, useLead),
+                at: Date.now(),
+                trace: null,
+              },
+            ]
+          : prev,
+      );
+    },
+    [voice, lead],
+  );
 
   const setVoice = useCallback(
     (next: VoiceId) => {
@@ -77,19 +103,52 @@ export function useCobChat() {
     [voice],
   );
 
+  const submitLead = useCallback(
+    async (info: LeadInfo): Promise<{ ok: true } | { ok: false; error: string }> => {
+      if (submittingLead) return { ok: false, error: "Already submitting." };
+      setSubmittingLead(true);
+      setError(null);
+      try {
+        const resp = await fetch(LEAD_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: ANON_KEY,
+            Authorization: `Bearer ${ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            session_id: sessionIdRef.current,
+            voice,
+            ...info,
+          }),
+        });
+        const j = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          const msg = j?.error || "Could not submit. Try again.";
+          setError(String(msg));
+          return { ok: false, error: String(msg) };
+        }
+        if (j?.session_id) sessionIdRef.current = String(j.session_id);
+        setLead(info);
+        return { ok: true };
+      } catch (e: any) {
+        const msg = e?.message || "Network error.";
+        setError(msg);
+        return { ok: false, error: msg };
+      } finally {
+        setSubmittingLead(false);
+      }
+    },
+    [voice, submittingLead],
+  );
+
   const send = useCallback(
     async (raw: string) => {
       const text = raw.trim();
       if (!text || pending) return;
       setError(null);
 
-      const youMsg: ChatMessage = {
-        id: uid(),
-        role: "you",
-        voice,
-        text,
-        at: Date.now(),
-      };
+      const youMsg: ChatMessage = { id: uid(), role: "you", voice, text, at: Date.now() };
       const assistantId = uid();
       const assistantMsg: ChatMessage = {
         id: assistantId,
@@ -101,7 +160,6 @@ export function useCobChat() {
         streaming: true,
       };
 
-      // Snapshot history BEFORE the new turn for the wire payload.
       const prevChatMessages = transcript.filter(
         (t): t is ChatMessage => (t as ChatMessage).role !== undefined,
       );
@@ -162,13 +220,20 @@ export function useCobChat() {
             voice,
             role_label: roleLabel,
             industry_label: industryLabel,
+            lead: lead
+              ? {
+                  name: lead.name,
+                  company: lead.company,
+                  title: lead.title,
+                  challenge: lead.challenge,
+                }
+              : undefined,
             messages: wireMessages,
           }),
           signal: controller.signal,
         });
 
         if (!resp.ok || !resp.body) {
-          // Try to parse JSON error body.
           let errText = "Couldn't reach your COB. Try again.";
           try {
             const j = await resp.json();
@@ -194,7 +259,7 @@ export function useCobChat() {
             currentEvent = null;
             return;
           }
-          if (line.startsWith(":")) return; // SSE comment
+          if (line.startsWith(":")) return;
           if (line.startsWith("event: ")) {
             currentEvent = line.slice(7).trim();
             return;
@@ -218,7 +283,6 @@ export function useCobChat() {
             const content = parsed?.choices?.[0]?.delta?.content as string | undefined;
             if (content) appendDelta(content);
           } catch {
-            // Partial JSON — put back for next chunk.
             buffer = rawLine + "\n" + buffer;
           }
         };
@@ -235,7 +299,6 @@ export function useCobChat() {
             if (streamDone) break;
           }
         }
-        // Flush trailing line without newline.
         if (buffer.trim()) {
           for (const raw of buffer.split("\n")) flushLine(raw);
         }
@@ -256,7 +319,7 @@ export function useCobChat() {
         abortRef.current = null;
       }
     },
-    [pending, transcript, voice, roleLabel, industryLabel],
+    [pending, transcript, voice, roleLabel, industryLabel, lead],
   );
 
   useEffect(() => {
@@ -277,5 +340,8 @@ export function useCobChat() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    lead,
+    submitLead,
+    submittingLead,
   };
 }
