@@ -616,5 +616,7 @@ export function useCobChat() {
     submittingLead,
     submitDeploymentInquiry,
     deploymentInquirySent,
+    deploymentFormShouldOpen,
+    chatLocked,
   };
 }
