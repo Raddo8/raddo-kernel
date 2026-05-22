@@ -9,12 +9,10 @@ function GateForm({
   onSubmit,
   submitting,
   error,
-  brandEase,
 }: {
   onSubmit: (lead: LeadInfo) => Promise<{ ok: true } | { ok: false; error: string }>;
   submitting: boolean;
   error: string | null;
-  brandEase: readonly number[];
 }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -46,7 +44,7 @@ function GateForm({
       return;
     }
     const res = await onSubmit(lead);
-    if (!res.ok) setLocalError(res.error);
+    if (res.ok === false) setLocalError(res.error);
   };
 
   const fieldStyle: React.CSSProperties = {
@@ -78,7 +76,7 @@ function GateForm({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.42, ease: brandEase }}
+      transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
       className="mt-8 flex flex-col gap-4"
     >
       <div>
