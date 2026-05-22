@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCobChat, type TranscriptItem, type ChatMessage, type LeadInfo } from "./use-cob-chat";
 import { VOICES, type VoiceId } from "./cob-voices";
