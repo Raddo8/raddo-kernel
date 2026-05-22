@@ -573,6 +573,8 @@ export default function DossierIntake() {
                       );
                     }
                     const entry = item as ChatMessage;
+                    // Skip empty streaming placeholders — the IS WRITING indicator covers them.
+                    if (entry.role === "cob" && entry.streaming && !entry.text) return null;
                     return entry.role === "cob" ? (
                       <motion.div
                         key={entry.id}
@@ -661,22 +663,30 @@ export default function DossierIntake() {
                     );
                   })}
 
-                  {pending && (
-                    <div className="relative pl-4">
-                      <span
-                        aria-hidden
-                        className="absolute left-0 top-1 bottom-1 w-[3px]"
-                        style={{ backgroundColor: "hsl(var(--raddo-brass) / 0.5)" }}
-                      />
-                      <span
-                        className="font-sans"
-                        style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
-                      >
-                        <VoiceLabel voice={voice} /> IS WRITING
-                        <TypingDots />
-                      </span>
-                    </div>
-                  )}
+                  {pending && (() => {
+                    // Show writing indicator only until the in-flight assistant message has any text.
+                    const tail = [...transcript].reverse().find(
+                      (t) => (t as ChatMessage).role === "cob",
+                    ) as ChatMessage | undefined;
+                    const inFlightHasText = !!tail?.streaming && !!tail?.text;
+                    if (inFlightHasText) return null;
+                    return (
+                      <div className="relative pl-4">
+                        <span
+                          aria-hidden
+                          className="absolute left-0 top-1 bottom-1 w-[3px]"
+                          style={{ backgroundColor: "hsl(var(--raddo-brass) / 0.5)" }}
+                        />
+                        <span
+                          className="font-sans"
+                          style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
+                        >
+                          <VoiceLabel voice={voice} /> IS WRITING
+                          <TypingDots />
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Composer */}
