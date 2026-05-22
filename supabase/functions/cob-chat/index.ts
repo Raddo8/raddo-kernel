@@ -35,6 +35,7 @@ const [
   DIGEST_MICHAEL_VOICE,
   DIGEST_OPENERS,
   DIGEST_DEPLOY_AMP,
+  DOC_CONVICTION_FUNNEL,
 ] = await Promise.all([
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
@@ -46,6 +47,7 @@ const [
   loadDoc("digests/MICHAEL_VOICE_DIGEST.md"),
   loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
   loadDoc("digests/DEPLOYMENT_AMPLIFICATION_DIGEST.md"),
+  loadDoc("COB_CONVICTION_FUNNEL_DOCTRINE.md"),
 ]);
 
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
