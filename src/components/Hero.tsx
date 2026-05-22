@@ -807,7 +807,7 @@ export function Hero() {
       {/* ====== HERO ====== */}
       <section
         className="relative z-10 mx-auto max-w-[1240px] px-8 pb-24 md:px-12 md:pb-32"
-        style={{ paddingTop: "calc(min(900px, 92vh) - 28px)" }}
+        style={{ paddingTop: "calc(min(900px, 92vh) + 122px)" }}
       >
 
         {/* Introducing COB heading + Dossier Intake chat · first below the video */}
