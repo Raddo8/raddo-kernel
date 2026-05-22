@@ -542,9 +542,22 @@ export default function DossierIntake() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    lead,
     submitLead,
     submittingLead,
+    submitDeploymentInquiry,
+    deploymentInquirySent,
   } = useCobChat();
+
+  // Hard-close CTA gating · COB voice, ≥12 user turns in COB, not yet sent.
+  const cobUserTurns = useMemo(
+    () =>
+      transcript.filter(
+        (t) => (t as ChatMessage).role === "you" && (t as ChatMessage).voice === "cob",
+      ).length,
+    [transcript],
+  );
+  const showDeploymentCta = !sealed && voice === "cob" && cobUserTurns >= 12 && !deploymentInquirySent;
 
   const reducedMotion = useMemo(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
