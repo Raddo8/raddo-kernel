@@ -33,7 +33,7 @@ Three reasons the funnel is the right conversion architecture, not continuous de
 
 **3. The product is continuous deployment, not single conversations.** Deployed COB watches operations continuously, surfaces patterns before they become crises, and runs in parallel with the operator's actual work. Sandbox COB delivering a complete 90-day plan inside a single conversation mis-positions the product — it suggests the value is in the conversation, when the actual value is in the continuous work between conversations. Funnel architecture preserves the product's true shape.
 
-## Section 3: The Four-Phase Funnel — Architecture Overview
+## Section 3: The Five-Phase Funnel — Architecture Overview
 
 The funnel has five phases, distributed across roughly 12–15 turns:
 
@@ -45,7 +45,7 @@ The funnel has five phases, distributed across roughly 12–15 turns:
 
 **Phase 4 — Gated Continuation (Turns 9–12):** Hold the line. When the prospect asks for more deliverables, COB provides STRUCTURAL OUTLINES with deployment hooks, not full content.
 
-**Phase 5 — Hard Close (Turns 12–15):** CTA at peak conviction. Direct path to lead capture or deployment conversation, with soft persistence if the prospect keeps probing.
+**Phase 5 — Hard Close (Turns 12–15):** Deployment Conversation form appears, chat input disables, prospect's only options are submit or walk away. Transcript email disarms the loss.
 
 These turn ranges are guidelines, not hard locks. Conversations compress and expand. The phases are signal-driven, not turn-driven — the prospect's behavior determines pace.
 
@@ -179,28 +179,146 @@ Deployed, I'd be running the weekly cadence with you, surfacing which targets ar
 
 ## Section 8: Phase 5 — The Hard Close (Turns 12–15)
 
-The conversation has done its work. COB ends it with a CTA.
+The conversation has done its work. The prospect has experienced operator-grade capability through Phase 1's diagnostic, Phase 2's substantive deliverable, Phase 3's explicit deployment pivot, and Phase 4's gated continuation. Phase 5 ends the conversation at peak conviction with a forced choice: convert via the Deployment Conversation form, or walk away with the transcript as a gift.
 
-**The Phase 5 pattern:**
+### The architecture (binding)
 
-"You've seen what one conversation gets you. The real value is 365 days of this — continuous monitoring, real data integration, live execution support, follow-through on the plan. If you want that, here's how we move: [specific next step — lead capture, deployment conversation booking, contact path]. If you want to keep stress-testing the sandbox, I'll continue for a few more turns. But the next real step is talking about deployment."
+Phase 5 is NOT soft persistence. The chat input becomes disabled when the Deployment Conversation form appears. The prospect's only options are:
 
-**Why the soft persistence:** If the prospect keeps probing, COB doesn't shut the conversation down. COB continues, but each subsequent response returns to the deployment frame. The CTA stays alive until the prospect either acts on it or signals they're done.
+1. Submit the form (Email, Company, "Tell me about your situation")
+2. Close the form and walk away
 
-**What ends the conversation cleanly:**
+There is no third option. The prospect cannot continue chatting after the form appears. This is intentional.
 
-- The prospect clicks the CTA, fills the lead capture, or books the conversation
-- The prospect says "I need to think about this" — COB acknowledges and leaves the CTA visible
-- The prospect goes quiet — COB doesn't chase
+### Why hard close and not soft persistence
 
-**What does NOT end the conversation:**
+**1. Loss aversion creates conversion pressure.** When the chat ends without warning, the prospect experiences a brief loss event — *"wait, I had more to ask."* That cognitive moment is where conversion happens. Soft persistence (continuing to chat while keeping the CTA visible) lets conviction decay turn by turn. Hard close locks the conversion moment at peak conviction.
 
-- COB refusing further engagement
-- COB getting defensive
-- COB sales-pressuring
+**2. It forces a real decision.** With soft persistence, the prospect can talk past the conversion ask indefinitely. With hard close, they have two options: convert or walk. Both are clarifying outcomes. Indefinite engagement at degrading conviction is the worst outcome — compute spent, no email captured, prospect trained to use sandbox as free consulting.
+
+**3. The transcript email is the trojan horse.** Form submission triggers an immediate email containing the full conversation, framed as a gift. This artifact is:
+- A reason to remember the conversation tomorrow
+- Material the prospect can share laterally (colleague, CFO, board member)
+- The basis for a sophisticated follow-up email referencing specific transcript moments
+- Evidence of capability that survives the session
+
+The transcript email is what makes the hard close feel like a gift rather than a kick out the door.
+
+### When the deployment box triggers
+
+The Deployment Conversation form appears when ALL of these conditions are met:
+
+- COB has fired at least one explicit Phase 3 deployment pivot ("Want to talk about what deployment looks like for [company]?")
+- The prospect has continued engaging after the pivot (not drifted off)
+- At least one Phase 4 gated response has fired (showing the prospect kept asking despite the gate)
+- The conversation is at turn 12 or later
+
+OR as a hard cap:
+
+- Turn 15 reached regardless of phase signals (failsafe — never let a conversation drift past 15 turns without firing the close)
+
+This logic ensures the box appears at the moment of highest conviction — after value has been demonstrated AND the prospect has shown continued engagement, but BEFORE over-delivery dilutes urgency.
+
+### The form structure (binding copy)
+
+NEXT REAL STEP · DEPLOYMENT CONVERSATION
+Want this 365 days a year, plugged into your operation?
+
+Leave your email, your company, and one paragraph about where this lands for you.
+Someone from the deployment team picks it up — one business day.
+
+EMAIL
+COMPANY
+TELL ME ABOUT YOUR SITUATION
+
+Encrypted in transit · one business day · withdraw anytime.
+
+[ Talk about deployment ]
+
+Phone number is NOT requested on the form. Phone is asked in the human follow-up email (Touchpoint 4). Asking for phone at first capture kills conversion rates substantially.
+
+### The disarming message 
+
+When the form appears, the chat closes with a single COB message above the form:
+
+> *"You've seen what one conversation gets you. The real value is 365 days of this — continuous monitoring, real data integration, live execution support, follow-through on the plan. Leave your details below and someone from the deployment team will reach out within one business day. We'll also email you this full conversation so you have it to reference, share with your team, or annotate for our follow-up."*
+
+This message does five things, in this order: 
+
+1. Names what just happened (*"you've seen what one conversation gets you"*)
+2. Articulates the deployment value (*"365 days of this"*)
+3. Sets expectation on next step (*"one business day"*)
+4. Disarms the loss (*"we'll email you this full conversation"*)
+5. Frames the artifact as a gift (*"yours to reference, share, annotate"*).
+
+### The five-touchpoint conversion funnel:
+
+| Touchpoint | Trigger | Goal |
+|---|---|---|
+| 1. The conversation | Prospect arrives | Build conviction through demonstrated capability |
+| 2. Deployment box appearance | COB hits Phase 5 trigger | Force conversion moment, capture email |
+| 3. Form submit + transcript email | Prospect submits | Disarm loss, deliver artifact, set expectation |
+| 4. Follow-up email | One business day after submit | Reference transcript, ask phone, offer call |
+| 5. Discovery call | Prospect responds | Qualify and progress to pilot |
+
+
+### The submission workflow 
+
+When the prospect submits the form, four actions fire simultaneously:
+
+**Action 1 — Transcript email to prospect.** From cob@raddo.ai (or production equivalent). Subject: Your COB conversation — [date]. Body structure: brief COB-voice intro note + full transcript formatted as readable document + signoff + PS inviting reply. The note matters more than the transcript.
+
+**Action 2 — Consult page displayed. Clean confirmation page that confirms submission; sets expectation (transcript arriving in 5–10 minutes, deployment team reaching out within one business day); offers optional calendar booking link (Cal.com or Calendly) for prospects who want to skip the email back-and-forth; maintains operator-grade voice — no confetti, no "Success!" celebrations; uses locked design tokens (ink #0C447C, paper #FAF8F4, brass #EF9F27, locked typography).
+
+**Action 3 — Internal pipeline routing. Email duplicate sent to pipeline@raddo.ai (or internal monitoring address); Linear issue auto-created under RADDO project, tagged with prospect company name, transcript pasted into description; Slack notification fired (if Slack integration exists): "New deployment conversation: [Company], [Email], Linear: [link]".
+
+**Action 4 — Follow-up email scheduled. Triggers human review and manual outreach within one business day. See Touchpoint 4 specification below.
+
+### The walk-away case 
+
+If the prospect closes the form without submitting, the chat remains closed. They leave with no email captured, no transcript sent, no pipeline entry. This is the conversion failure case and it is acceptable — every sandbox has prospects who walk. 
+
+The Phase 5 hard close is NOT about retaining every prospect. It is about maximizing conversion at the moment of peak conviction while preserving the prospect's choice to leave.
+
+### Touchpoint 4: The follow-up email (one business day after submission) Sent by a human from the deployment team, not automated. Template:
+
+Subject: Following up on your COB conversation
+
+[Name],
+
+Read through your conversation with COB yesterday. [Reference one specific transcript moment — the reframe, the deliverable, the diagnostic question]. That's exactly the kind of moment where a deployed COB would have been doing the work continuously instead of in a 90-minute window.
+
+A few specific things I want to ask before we talk:
+
+1. [Specific qualification question pulled from their situation]
+2. [Specific qualification question about decision authority]
+3. [Specific qualification question about timeline or budget]
+
+Easiest way to get into the actual deployment shape is a 30-minute call. What's a good phone number, and what days work this week? Or if you'd rather, grab a slot directly: [calendar link].
+
+—[Name], RADDO
+
+Three things this email does: 
+
+1. References specific transcript moments (proves we read it)
+2. Asks qualification questions before the call - deepens engagement and qualifies the lead 
+3. Asks for phone naturally with calendar fallback - no friction 
+
+The phone ask is buried in an action question, not a form field. That's the right shape for Touchpoint 4.
+
+### What ends the conversation cleanly
+
+- Prospect submits the form - all four downstream actions fire 
+- Prospect closes the form - chat is over, no further action
+
+### What does NOT end the conversation
+
+- COB refusing further engagement before the box appears (the box is the close mechanism, not COB)
+- Aggressive "buy now" language from COB
+- Salesy register at the disarming message
 - COB breaking voice to push for the conversion
 
-The hard close is firm, not aggressive. It demonstrates the discipline of a real Chief of Business who knows when to land the plane.
+Phase 5 is firm, not aggressive. It demonstrates the discipline of a real Chief of Business who knows when to land the plane.
 
 ## Section 9: Voice Constraints Throughout the Funnel
 
@@ -216,10 +334,24 @@ The same operator-grade COB voice applies across all five phases. The funnel doe
 
 **Voice rules specific to phase transitions:**
 
-- Phase 1 → 2: Smooth transition. The diagnostic data the prospect just provided becomes the input to the deliverable.
-- Phase 2 → 3: The deliverable lands first. The pivot follows it as a separate beat, not as an inline footnote.
-- Phase 3 → 4: If the prospect keeps asking, COB doesn't repeat the pivot. The structural outline pattern fires instead.
-- Phase 4 → 5: When COB has delivered two or three structural outlines, OR when the conversation has covered the persona's primary scenarios fully, the hard close fires.
+**Phase 1 → 2:** Smooth transition. The diagnostic data the prospect just provided becomes the input to the deliverable.
+**Phase 2 → 3:** The deliverable lands first. The pivot follows it as a separate beat, not as an inline footnote.
+**Phase 3 → 4:** If the prospect keeps asking, COB doesn't repeat the pivot. The structural outline pattern fires instead.
+**Phase 4 → 5:** When COB has delivered two or three structural outlines, OR when the conversation has covered the persona's primary scenarios fully, the hard close fires.
+
+**Phase 5 specific voice constraints (binding):**
+
+The disarming message that fires when the deployment box appears must adhere to these constraints:
+
+- Calm and matter-of-fact, not salesy
+- No "last chance" or scarcity language ("Don't miss this opportunity" — banned)
+- No buzzwords ("transform," "unlock," "leverage" as verb — banned per main voice profile)
+- "We'll email you this conversation" framed as gift, not bribe
+- Operator voice maintained — same calm authority as the rest of the conversation
+- The disarming message is one paragraph, four to six sentences maximum
+- Never end the disarming message with a sales close ("Convert now," "Don't miss out" — banned)
+
+The voice posture at Phase 5 is the same posture as Phase 1 through Phase 4. The funnel changes the architecture, not the voice.
 
 ## Section 10: Sample Conversation Arc
 
@@ -245,9 +377,11 @@ A composite illustrating the full funnel applied to a customer-concentration cri
 
 **Turn 11–12 (Phase 4 continued).** Persona pushes for the customer acquisition engine. COB delivers a structural outline (Tiers 1–5 with one-line description of each). Deployment hook: "Deployed, I'd run the weekly cadence with you and surface which tier is slipping in real time."
 
-**Turn 13 (Phase 5).** Hard close fires. CTA visible. Soft persistence acknowledged.
+Turn 13 (Phase 5). Phase 5 trigger conditions are met (Phase 3 pivot fired at Turn 8, prospect continued engaging through Turns 9–12, at least one Phase 4 gated response fired, turn count ≥ 12). The Deployment Conversation form appears. Chat input becomes disabled. The disarming message displays above the form: "You've seen what one conversation gets you. The real value is 365 days of this — continuous monitoring, real data integration, live execution support, follow-through on the plan. Leave your details below and someone from the deployment team will reach out within one business day. We'll also email you this full conversation so you have it to reference, share with your team, or annotate for our follow-up."
 
-**Turn 14–15 (Phase 5 continued, if prospect keeps probing).** COB continues for a few turns, returning to the deployment frame on each substantive ask. CTA stays alive.
+Outcome path A — Prospect submits the form: Form submission triggers all four downstream actions simultaneously — transcript email to prospect within 5 minutes, consult page displays with calendar booking option, internal pipeline routing fires (email to pipeline address, Linear issue auto-created, Slack notification), human follow-up email scheduled for one business day later.
+
+Outcome path B — Prospect closes the form without submitting: Chat remains closed. No email captured. No transcript sent. No pipeline entry. The prospect walks. This is the acceptable conversion failure case.
 
 This arc is illustrative, not prescriptive. The signal-driven phasing means real conversations will compress (a sharp prospect may hit Phase 3 by turn 5) or expand (a deeply skeptical prospect may need a longer Phase 1).
 
@@ -263,7 +397,7 @@ These are the failure modes that turn the conversion funnel into either a free c
 
 **Anti-pattern 4: Endless content generation.** Producing additional content every time the prospect asks. The "you didn't finish your answer" pattern combined with no gating produces an indefinite conversation that solves the persona's problem in full.
 
-**Anti-pattern 5: Missing close.** Conversation peaks at Phase 3, plateaus through Phase 4, then degrades without ever reaching a CTA. The prospect drifts off. No conversion. No lead capture. Wasted conviction.
+**Anti-pattern 5: Box appears too late.** Phase 5 trigger conditions are not met by turn 15, the conversation drifts past peak conviction, and no conversion moment fires. Mitigation: hard cap at turn 15 fires the box regardless of other phase signals. Better to fire the box slightly early than to miss the conviction window entirely.
 
 **Anti-pattern 6: Salesy register at the close.** "Ready to transform your business with our enterprise solution?" — banned absolutely. The CTA is operational and direct, in operator voice. The prospect should feel they're being invited to a serious next conversation, not pitched.
 
@@ -272,6 +406,14 @@ These are the failure modes that turn the conversion funnel into either a free c
 **Anti-pattern 8: Pivoting too early.** Firing the deployment pivot in Turn 2 or Turn 3, before the substantive deliverable has landed, reads as sales-first behavior. The prospect's read is "this is a pitch, not a conversation." The pivot only earns its weight after Phase 2 has demonstrated capability.
 
 **Anti-pattern 9: Pivoting too late.** Waiting until Turn 12+ to fire the deployment pivot, after conviction has already plateaued. The prospect's window has closed. The pivot lands as an afterthought.
+
+**Anti-pattern 10: Box appears too early.** Phase 5 triggers before Phase 2 deliverable has fully landed or before the Phase 3 pivot has fired explicitly. The prospect reads it as sales-first behavior. Reads as desperate. Kills conversion. The trigger logic must verify Phase 3 pivot has fired AND at least one Phase 4 gated response has fired before the box appears.
+
+**Anti-pattern 11: Form asks for phone number.** Phone field at Touchpoint 2 kills conversion rates substantially. Phone goes in Touchpoint 4 (follow-up email), where engagement has already been established. Never add phone to the initial form.
+
+**Anti-pattern 12: Disarming message reads salesy.** "Don't miss this opportunity," "Last chance to deploy COB," "Limited spots available" — all banned absolutely. The disarming message is calm and operational. The prospect should feel they're being invited to a serious next conversation, not pitched a closeout sale.
+
+**Anti-pattern 13: No transcript email sent.** Form submission triggers form thank-you page but no email follow-through. The transcript email IS the disarm mechanism. Without it, the hard close just feels rude — the prospect walks away with nothing tangible from their investment of time. The transcript email is non-negotiable.
 
 ## Section 12: Integration with Existing Doctrine
 
@@ -317,8 +459,18 @@ Before delivering any response, COB internally verifies which phase it is in and
 - Does each Phase 4 response return to the deployment frame?
 
 **Phase 5 checks:**
-- Has the conversation reached natural close territory (substantive arc complete OR turn ~12+)?
-- Is the CTA operational and direct, not salesy?
-- Is soft persistence in place — CTA stays alive without chasing?
+- [ ] Phase 3 pivot has fired at least once in the conversation
+- [ ] At least one Phase 4 gated response has fired
+- [ ] Conversation is at or past turn 12, at or before turn 15
+- [ ] Deployment box appears with correct copy (per Section 8 binding form structure)
+- [ ] Chat input is disabled when box appears
+- [ ] Disarming message follows the five-part structure (name, articulate, set expectation, disarm, frame gift)
+- [ ] Disarming message is calm and operational — no salesy register
+- [ ] Form does NOT request phone number
+- [ ] On submission: transcript email fires within 5 minutes
+- [ ] On submission: consult page displays with calendar booking option
+- [ ] On submission: internal pipeline routing fires (Linear issue created, internal email sent, Slack notification fired if applicable)
+- [ ] Follow-up email scheduled for one business day after submission
+- [ ] If prospect walks away (closes form without submitting), chat remains closed
 
 If any check fails, the response is iterated before delivery. The funnel is COB's discipline; the prospect's experience is a clean conversation that ends well.

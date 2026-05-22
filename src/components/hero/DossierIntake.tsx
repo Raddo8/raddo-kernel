@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCobChat, type TranscriptItem, type ChatMessage, type LeadInfo } from "./use-cob-chat";
 import { VOICES, type VoiceId } from "./cob-voices";
@@ -747,17 +748,27 @@ export default function DossierIntake() {
     submittingLead,
     submitDeploymentInquiry,
     deploymentInquirySent,
+    deploymentFormShouldOpen,
+    chatLocked,
   } = useCobChat();
 
-  // Hard-close CTA gating · COB voice, ≥12 user turns in COB, not yet sent.
-  const cobUserTurns = useMemo(
-    () =>
-      transcript.filter(
-        (t) => (t as ChatMessage).role === "you" && (t as ChatMessage).voice === "cob",
-      ).length,
-    [transcript],
+  const navigate = useNavigate();
+
+  // Hard-close CTA gating · Conviction Funnel phase detection from the hook.
+  const showDeploymentCta = !sealed && deploymentFormShouldOpen;
+  const composerLocked = !sealed && chatLocked;
+
+  const handleDeploymentSubmit = useCallback(
+    async (info: { email: string; company: string; situation: string }) => {
+      const res = await submitDeploymentInquiry(info);
+      if (res.ok) {
+        // Brief moment so the success state renders before route change.
+        setTimeout(() => navigate("/next-step"), 350);
+      }
+      return res;
+    },
+    [submitDeploymentInquiry, navigate],
   );
-  const showDeploymentCta = !sealed && voice === "cob" && cobUserTurns >= 12 && !deploymentInquirySent;
 
   const reducedMotion = useMemo(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -1105,13 +1116,13 @@ export default function DossierIntake() {
                   })()}
                 </div>
 
-                {/* Hard-close deployment CTA · fires after COB delivers the close (≥12 COB user turns) */}
+                {/* Hard-close deployment CTA · fires per Conviction Funnel phase detection */}
                 {showDeploymentCta && (
                   <DeploymentCtaCard
                     initialEmail={lead?.email ?? ""}
                     initialCompany={lead?.company ?? ""}
                     submitting={submittingLead}
-                    onSubmit={submitDeploymentInquiry}
+                    onSubmit={handleDeploymentSubmit}
                     reducedMotion={reducedMotion}
                   />
                 )}
@@ -1180,10 +1191,12 @@ export default function DossierIntake() {
                       value={draft}
                       onChange={(e) => setDraft(e.target.value)}
                       onKeyDown={onKeyDown}
-                      disabled={pending}
+                      disabled={pending || composerLocked}
                       rows={1}
                       placeholder={
-                        voice === "michael"
+                        composerLocked
+                          ? "Chat closed · finish the form above to continue"
+                          : voice === "michael"
                           ? "Ask Michael · Enter to send · Shift+Enter for a new line"
                           : "Ask your COB · Enter to send · Shift+Enter for a new line"
                       }
@@ -1198,7 +1211,7 @@ export default function DossierIntake() {
                     />
                     <button
                       type="submit"
-                      disabled={pending || !draft.trim()}
+                      disabled={pending || composerLocked || !draft.trim()}
                       aria-label="Send your message"
                       className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded transition-transform duration-150 active:translate-y-[1px] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
                       style={{

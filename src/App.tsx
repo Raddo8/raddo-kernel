@@ -27,6 +27,7 @@ import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
 import Consult from "@/pages/Consult";
 import ConsultThankYou from "@/pages/ConsultThankYou";
+import NextStep from "@/pages/NextStep";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
 import StyleGuide from "@/pages/StyleGuide";
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/" element={<Hero />} />
             <Route path="/consult" element={<Consult />} />
             <Route path="/consult/thank-you" element={<ConsultThankYou />} />
+            <Route path="/next-step" element={<NextStep />} />
             <Route path="/style-guide" element={<StyleGuide />} />
             <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={
