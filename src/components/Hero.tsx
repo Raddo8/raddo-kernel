@@ -809,8 +809,17 @@ export function Hero() {
 
 
 
-        {/* Headline with Six-Source Mandala backdrop */}
-        <div className="relative mt-7">
+        {/* Introducing COB · folder system · first */}
+        <motion.div
+          variants={rise(800, 2400)}
+          initial={INITIAL}
+          animate="show"
+        >
+          <IntroducingCob />
+        </motion.div>
+
+        {/* Headline with Six-Source Mandala backdrop · middle */}
+        <div className="relative mt-20 md:mt-28">
           {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
@@ -906,12 +915,12 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Introducing COB heading + Dossier Intake chat · 2400ms */}
+        {/* Introducing COB heading + Dossier Intake chat · last */}
         <motion.div
-          variants={rise(800, 2400)}
+          variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-14"
+          className="mt-20 md:mt-28"
         >
           <h2
             className="font-display"
@@ -934,15 +943,6 @@ export function Hero() {
           <DossierIntake />
         </motion.div>
 
-        {/* Introducing COB · folder system · 2600ms */}
-        <motion.div
-          variants={rise(800, 2600)}
-          initial={INITIAL}
-          animate="show"
-          className="mt-14"
-        >
-          <IntroducingCob />
-        </motion.div>
 
 
 
