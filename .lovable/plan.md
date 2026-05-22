@@ -1,92 +1,75 @@
+## Part 1 — Doctrine replacement
 
-# Speed up the COB sandbox chat
+Overwrite `supabase/functions/cob-chat/catalog/COB_CONVICTION_FUNNEL_DOCTRINE.md` with the contents of `user-uploads://COB_CONVICTION_FUNNEL_DOCTRINE-2.md`. No catalog/system-prompt assembly changes needed — the slot is already wired.
 
-Goal: cut perceived response latency from ~10–20 s to first token in ~1–2 s, full reply in ~3–5 s, without changing voice, doctrine, or behavior.
+## Part 2 — Implementation
 
-Three coordinated changes to `supabase/functions/cob-chat/index.ts` + the client hook + a one-time content pass on the catalog docs.
+### 2.1 · Phase-aware trigger logic (replaces current `cobUserTurns >= 12` gate)
 
----
+In `src/components/hero/use-cob-chat.ts`, add detector state derived from the message stream:
 
-## A · Switch model to `google/gemini-2.5-flash`
+- `phase3PivotFired` · regex over assistant messages for: `want to talk about (what )?deployment`, `here'?s what (changes|happens) when (i'?m|cob is) deployed`, `deployed across your operation`, `at deployment scale`.
+- `phase4GateFired` · regex over assistant messages for: `that'?s deployment[- ]scope`, `here'?s the structure i'?d use`, `no\b[^.]{0,40}but i'?ll give you the structure`, or a message that is mostly a 4–6 bullet outline (>=4 lines starting with `- ` / `* ` / `• `) and contains the word "deployment" or "deployed".
+- `prospectContinuedEngagement` · at least one visitor message after the turn index where `phase3PivotFired` first became true, with `text.trim().length >= 12`.
+- `cobAssistantTurns` · count of `role==="cob"` non-empty messages.
 
-- Change `MODEL` constant from `google/gemini-2.5-pro` → `google/gemini-2.5-flash`.
-- Keep `temperature: 0.7`.
-- The 2–3 sentence brevity binding is already in place, so Flash is more than capable for both COB and Michael registers.
-- Pro stays available as a one-line flip if a future "deep mode" is added.
+Expose `deploymentFormShouldOpen` computed as:
 
-## B · Slim the system prompt (the biggest win)
+```
+BLOCK_A = phase3PivotFired && prospectContinuedEngagement && phase4GateFired
+         && cobAssistantTurns >= 12 && cobAssistantTurns <= 15
+BLOCK_B = cobAssistantTurns >= 15   // hard cap
+shouldOpen = !deploymentInquirySent && voice === "cob" && (BLOCK_A || BLOCK_B)
+```
 
-Today every turn ships ~180–250 KB of markdown to Gemini. We replace the always-on full-doc dumps with compact operational digests, and only pull full-doc snippets when relevant.
+Also expose `chatLocked = shouldOpen || deploymentInquirySent` so the composer can disable.
 
-### B.1 · Create digest files (one-time content authoring)
+### 2.2 · Disarming pre-form message
 
-Add seven new short files under `supabase/functions/cob-chat/catalog/digests/`, each ≤ 2 KB, distilled from the corresponding full doc:
+When `shouldOpen` flips true for the first time, push a synthetic `cob` message (role `cob`, voice `cob`, `synthetic: true` flag) with the five-part disarming copy from doctrine Section 8. Guard with a ref so it appears exactly once per session.
 
-- `DOCTRINE_DIGEST.md` — the 6–8 doctrine lines that actually steer replies
-- `OBJECTIONS_DIGEST.md` — the 8–10 highest-frequency objection patterns + the one-line reframe each
-- `VOICE_INTEGRATION_DIGEST.md` — the assembly-order rules + escalation triggers
-- `WEB_SPEC_DIGEST.md` — when to call `research_web` (the trigger list already in the tool description, condensed)
-- `COB_VOICE_DIGEST.md` — fingerprint, banned phrases, signature patterns (5 bullets)
-- `MICHAEL_VOICE_DIGEST.md` — fingerprint, deflection rule, never-cross lines
-- `SAMPLE_OPENERS_DIGEST.md` — the opener intent paragraph only
+### 2.3 · DossierIntake wiring
 
-Full files stay on disk for future RAG lookup but are no longer injected by default.
+In `src/components/hero/DossierIntake.tsx`:
 
-### B.2 · Rewrite `buildSystemPrompt`
+- Replace the current `cobUserTurns >= 12` condition with `deploymentFormShouldOpen` from the hook.
+- Keep `DeploymentCtaCard` (already brand-aligned) as the rendered form, fed by `submitDeploymentInquiry`.
+- When `chatLocked`, disable the input/textarea and submit button in the composer and show muted helper text: "Chat closed · finish the form below to continue".
+- On successful `submitDeploymentInquiry`, navigate (via `useNavigate`) to `/next-step`.
 
-- Always-on: HARD_PREAMBLE + DOCTRINE_DIGEST + OBJECTIONS_DIGEST + VOICE_INTEGRATION_DIGEST + SAMPLE_OPENERS_DIGEST + active voice digest (COB or Michael) + voice binding + (COB only) WEB_SPEC_DIGEST.
-- Role lens: keep current `extractSection(CAPABILITIES, roleLabel)` but cap the extracted section at 4 KB (slice with note).
-- Industry lens: same — `extractSection(INDUSTRIES, industryLabel)` capped at 4 KB.
-- Target ceiling: total system prompt ≤ 25 KB (down from ~250 KB). That's a ~10× reduction in input tokens.
+### 2.4 · `/next-step` confirmation page
 
-### B.3 · Cache assembled prompts in module scope
+Create `src/pages/NextStep.tsx` and register it in `src/App.tsx` as `<Route path="/next-step">`. Paper background, Fraunces heading "You're on the list.", Inter body with the locked copy from spec §2.2, brass button "Book a 30-min slot" (href = `VITE_CAL_BOOKING_URL` env, falls back to `https://cal.com/raddo`), text link "Back to home" → `/`. Honors `prefers-reduced-motion`; entrance is a 220ms fade-in-from-below per RADDO motion tokens. No celebration UI.
 
-`const promptCache = new Map<string, string>()` keyed by `${voice}|${roleLabel||''}|${industryLabel||''}|${softNudge?1:0}`. First turn builds, subsequent turns in the same isolate reuse the string. Bounded to 32 entries with simple FIFO eviction.
+(`/consult` already serves the long-form diagnostic form — we use `/next-step` to avoid collision, which the spec explicitly permits.)
 
-### B.4 · Prune conversation history
+### 2.5 · Transcript + pipeline emails on submission
 
-Before sending to the gateway, keep only the last 12 messages (6 user / 6 assistant pairs). The brevity cap means there's no long-context value worth the token cost.
+Update `supabase/functions/submit-chat-lead/index.ts` so that when `stage === "deployment_inquiry"` AND the insert succeeds, it fires two Resend emails in parallel (best-effort, never blocks the 200):
 
-## C · Stream the response (SSE)
+1. **Prospect transcript** — from `cob@raddo.ai` (fallback to current `FROM_ADDRESS` if `RADDO_FROM_EMAIL` env unset), to the prospect email, subject `Your COB conversation — <Month DD, YYYY>`, body per spec §2.3 with intro note + rendered HTML transcript + signoff + PS. Reply-to `deployment@raddo.ai`.
+2. **Pipeline duplicate** — to `pipeline@raddo.ai` (env `RADDO_PIPELINE_EMAIL`, fallback to current internal recipient), subject `New deployment request: <Company> — <Email>`, body per spec §2.4 with timestamp, email, company, situation paragraph, full transcript, conversation ID (= `session_id`), referer.
 
-### C.1 · Edge function changes
+The client must pass the transcript with the deployment-inquiry POST. Extend `submitDeploymentInquiry` in `use-cob-chat.ts` to include `messages: [{role, voice, text, at}]` (filtered to non-synthetic, non-empty), `lead: {name, email, company, title, challenge}` (gate-known), and `started_at`. The submit handler shares the HTML builder pattern from `send-chat-transcript/index.ts` (extracted into a small helper inside `submit-chat-lead`, or duplicated inline — duplicated inline is simpler and acceptable given scope).
 
-- Replace the JSON return path with `stream: true` on the gateway call.
-- Set `Content-Type: text/event-stream` and pipe `response.body` straight back to the client when **no tool calls** are detected mid-stream. Standard SSE relay pattern from the AI Gateway docs.
-- For the tool-call path (COB + `research_web`): do a first **non-streaming** call to detect tool intent (already what the loop does). If tools fire, run them, then make a **streaming** second call for the synthesized reply. Tool-call sessions are <10% of traffic, so this hybrid keeps the common path fast and the tool path correct.
-- Keep all current guardrails: rate limit, turn cap, validation, hard preamble assembly order, 429/402 handling, voice fallbacks.
-- Trailer for `research_trace`: emit a final SSE event `event: trace\ndata: {"research_trace":"..."}\n\n` before `data: [DONE]` when a tool ran.
+Failures of either email are logged but do not flip the response from `ok: true` — pipeline reliability comes from logs/retry, not from blocking the user.
 
-### C.2 · Client changes (`src/components/hero/use-cob-chat.ts`)
+### 2.6 · max_tokens
 
-- Replace the current `supabase.functions.invoke('cob-chat', ...)` JSON call with a raw `fetch(${VITE_SUPABASE_URL}/functions/v1/cob-chat, ...)` using the standard SSE line-by-line parser from the AI Gateway streaming reference.
-- Append tokens to the in-flight assistant message as they arrive (mutate the last assistant message, never push per token).
-- Honor `prefers-reduced-motion`: still stream, just skip any cursor blink animation.
-- Capture the `trace` SSE event into the existing `research_trace` state.
-- Keep current error handling: surface 429/402/500 toasts in the existing in-character copy.
-
-### C.3 · `DossierIntake.tsx`
-
-- No structural changes — the component already reads from the hook.
-- Replace the static "thinking" dots with a subtle skeleton-style placeholder that disappears as soon as the first token arrives (matches brand "no spinners" rule).
-
----
-
-## Out of scope
-
-- No RAG / vector store yet. Full docs stay on disk; we just stop shoving them all into every call. RAG can be a follow-up if the digests prove too thin.
-- No change to turn caps (30 COB / 15 Michael / nudge at 12), the brevity binding, the catalog contents themselves, or the brass voice toggle UI.
-- No change to rate limits, auth posture, or `verify_jwt`.
-
-## Validation
-
-- Curl two turns against the deployed function with `Accept: text/event-stream`; confirm first byte arrives within ~1 s and full stream completes within ~5 s for a typical COB turn.
-- Run the preview, send "I need help" in COB voice, then toggle to Michael and send "tell me a Dunder Mifflin joke" — confirm streaming visible, replies stay 2–3 sentences, doctrine bindings honored, banned phrases absent.
-- Spot-check that `research_web` still fires when a URL is pasted (e.g., "what does stripe.com do?") and the trace returns at the end of the stream.
+Already at 8192 per prior turn — no change. (Verify the constant in `supabase/functions/cob-chat/index.ts` before shipping.)
 
 ## Files touched
 
-- `supabase/functions/cob-chat/index.ts` — model swap, prompt slim, cache, history prune, SSE
-- `supabase/functions/cob-chat/catalog/digests/*.md` — 7 new digest files
-- `src/components/hero/use-cob-chat.ts` — SSE client
-- `src/components/hero/DossierIntake.tsx` — streaming placeholder (minor)
+- `supabase/functions/cob-chat/catalog/COB_CONVICTION_FUNNEL_DOCTRINE.md` (overwrite)
+- `supabase/functions/submit-chat-lead/index.ts` (add transcript + pipeline email fan-out on `deployment_inquiry`)
+- `src/components/hero/use-cob-chat.ts` (phase detectors, `deploymentFormShouldOpen`, `chatLocked`, synthetic disarming message, transcript payload on submit)
+- `src/components/hero/DossierIntake.tsx` (replace trigger condition, lock composer, navigate to `/next-step` on success)
+- `src/pages/NextStep.tsx` (new)
+- `src/App.tsx` (register `/next-step` route)
+
+## Open items / assumptions
+
+- Production email addresses (`cob@raddo.ai`, `pipeline@raddo.ai`, `deployment@raddo.ai`) are not yet verified in Resend. I'll wire them via env vars (`RADDO_FROM_EMAIL`, `RADDO_PIPELINE_EMAIL`, `RADDO_REPLY_TO`) with the current `onboarding@resend.dev` + `cob.brahan@gmail.com` as safe fallbacks so staging keeps working.
+- Calendar URL via `VITE_CAL_BOOKING_URL` (fallback `https://cal.com/raddo`).
+- Existing `/consult` page (long-form diagnostic) is left untouched; new confirmation lives at `/next-step`.
+- Phase detectors are regex-based heuristics; they are conservative by design (Block B hard-cap at turn 15 guarantees the form fires even if detectors miss).
