@@ -906,15 +906,44 @@ export function Hero() {
           </motion.h1>
         </div>
 
-        {/* Introducing COB · folder system · 2400ms */}
+        {/* Introducing COB heading + Dossier Intake chat · 2400ms */}
         <motion.div
           variants={rise(800, 2400)}
           initial={INITIAL}
           animate="show"
           className="mt-14"
         >
+          <h2
+            className="font-display"
+            style={{
+              color: "hsl(var(--raddo-ink-deep))",
+              fontWeight: 800,
+              fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+              lineHeight: 1.08,
+              letterSpacing: "-0.01em",
+              maxWidth: "22ch",
+              marginBottom: 32,
+            }}
+          >
+            <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
+              Introducing COB.
+            </span>
+            Not just in your corner.<br />
+            Building your corner.
+          </h2>
+          <DossierIntake />
+        </motion.div>
+
+        {/* Introducing COB · folder system · 2600ms */}
+        <motion.div
+          variants={rise(800, 2600)}
+          initial={INITIAL}
+          animate="show"
+          className="mt-14"
+        >
           <IntroducingCob />
         </motion.div>
+
 
 
         {/* Briefing · Exhibit composition · 2600ms */}
