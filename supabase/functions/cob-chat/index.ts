@@ -169,6 +169,7 @@ function buildSystemPrompt(args: PromptArgs): string {
       parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
+      parts.push("\n\n# DEPLOYMENT AMPLIFICATION (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
     }
 
     baseline = parts.join("\n");
