@@ -24,6 +24,7 @@ export default function NextStep() {
       <SeoHead
         title="You're on the list · RADDO"
         description="Your COB conversation is in. Someone from the deployment team will reach out within one business day."
+        path="/next-step"
       />
 
       <motion.section
