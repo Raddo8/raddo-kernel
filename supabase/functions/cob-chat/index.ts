@@ -144,6 +144,7 @@ function buildSystemPrompt(args: PromptArgs): string {
   if (!baseline) {
     const parts: string[] = [HARD_PREAMBLE];
     parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
+    parts.push("\n\n# DEPLOYMENT AMPLIFICATION DOCTRINE (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
     parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
     parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
     parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
@@ -169,7 +170,7 @@ function buildSystemPrompt(args: PromptArgs): string {
       parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
-      parts.push("\n\n# DEPLOYMENT AMPLIFICATION (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
+      parts.push(`\n\n# DEPLOYMENT BRIDGE DIRECTIVE (binding)\nOn substantive responses — diagnostic reframes, sequenced recommendations, crisis playbooks, board materials, communication drafts — close with a one-to-two-sentence deployment bridge per the AMPLIFICATION DOCTRINE. The bridge points from trial-scale value (this conversation) to deployment-scale value (continuous monitoring across the operator's actual business). Never bridge on routing, greetings, or diagnostic-question turns. Never bridge more than once per two substantive turns. Use the Capability Extension Library (Section 7 of the doctrine) to anchor the bridge content to the specific scenario domain.`);
     }
 
     baseline = parts.join("\n");
