@@ -672,7 +672,7 @@ export function Hero() {
   useEffect(() => {
     // If the preloaded image is already cached, mark it loaded on mount.
     const img = new Image();
-    img.src = "/brand/hero-mandala-bg.png";
+    img.src = "/brand/corner-cubicle.png";
     if (img.complete) setHeroImgLoaded(true);
     else img.addEventListener("load", () => setHeroImgLoaded(true), { once: true });
   }, []);
