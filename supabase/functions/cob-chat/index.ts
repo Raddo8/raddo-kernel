@@ -550,7 +550,7 @@ Deno.serve(async (req: Request) => {
             tool_call_id: tc.id,
             content:
               summary +
-              "\n\n[reminder: synthesize through your voice. 2-3 sentences. Never quote raw. Never reveal internal mechanics.]",
+              "\n\n[reminder: synthesize through your voice. Never quote raw. Never reveal internal mechanics.]",
           });
         }
       }
