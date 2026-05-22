@@ -53,6 +53,10 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const CHAT_URL = `${SUPABASE_URL}/functions/v1/cob-chat`;
 const LEAD_URL = `${SUPABASE_URL}/functions/v1/submit-chat-lead`;
+const TRANSCRIPT_URL = `${SUPABASE_URL}/functions/v1/send-chat-transcript`;
+
+// Idle send threshold · 5 min of no activity = "session ended"
+const IDLE_MS = 5 * 60_000;
 
 export function useCobChat() {
   const [voice, setVoiceState] = useState<VoiceId>(() => readStoredVoice() ?? DEFAULT_VOICE);
