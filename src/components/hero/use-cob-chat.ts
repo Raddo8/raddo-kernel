@@ -504,5 +504,7 @@ export function useCobChat() {
     lead,
     submitLead,
     submittingLead,
+    submitDeploymentInquiry,
+    deploymentInquirySent,
   };
 }
