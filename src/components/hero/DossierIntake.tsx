@@ -542,6 +542,8 @@ export default function DossierIntake() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    submitLead,
+    submittingLead,
   } = useCobChat();
 
   const reducedMotion = useMemo(
@@ -566,11 +568,18 @@ export default function DossierIntake() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [transcript, pending]);
 
-  const unseal = () => {
-    if (!sealed) return;
-    setSealed(false);
-    primeIfEmpty();
-    requestAnimationFrame(() => taRef.current?.focus());
+  const handleGateSubmit = async (lead: LeadInfo) => {
+    const res = await submitLead(lead);
+    if (res.ok) {
+      setSealed(false);
+      primeIfEmpty(lead);
+      // Auto-send the visitor's stated challenge as the first user message · triggers Opus first-turn.
+      requestAnimationFrame(() => {
+        void send(lead.challenge);
+        taRef.current?.focus();
+      });
+    }
+    return res;
   };
 
   const submit = () => {
