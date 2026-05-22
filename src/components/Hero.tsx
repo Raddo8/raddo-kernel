@@ -800,8 +800,9 @@ export function Hero() {
       {/* ====== PINNED SITE HEADER ====== */}
       <SiteHeader />
 
-      {/* ====== INTRODUCING COB (new top-of-fold) ====== */}
-      <IntroducingCob />
+      {/* ====== DOSSIER INTAKE (top-of-fold) ====== */}
+      <DossierIntake />
+
 
       {/* ====== HERO ====== */}
       <section className="relative z-10 mx-auto max-w-[1240px] px-8 pt-16 pb-24 md:px-12 md:pt-24 md:pb-32">
