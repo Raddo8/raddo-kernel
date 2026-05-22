@@ -168,8 +168,8 @@ export function useCobChat() {
         (t): t is ChatMessage => (t as ChatMessage).role !== undefined,
       );
       // Keep recent history only · server caps total at 24k chars / 30 turns
-      const MAX_MSG_CHARS = 4000;
-      const MAX_TOTAL_CHARS = 20_000; // leave headroom under server's 24k
+      const MAX_MSG_CHARS = 6000;
+      const MAX_TOTAL_CHARS = 24_000; // matches server cap
       const HISTORY_KEEP = 12;
       const recent = prevChatMessages.slice(-HISTORY_KEEP).map((m) => ({
         role: m.role === "you" ? ("user" as const) : ("assistant" as const),
