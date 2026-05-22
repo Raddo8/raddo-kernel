@@ -268,8 +268,8 @@ async function executeResearchWeb(intent: string, target: string): Promise<{ sum
 const COB_TURN_CAP = 30;
 const MICHAEL_TURN_CAP = 15;
 const MICHAEL_SOFT_NUDGE_TURN = 12;
-const MAX_MSG_CHARS = 2000;
-const MAX_TOTAL_CHARS = 16_000;
+const MAX_MSG_CHARS = 4000;
+const MAX_TOTAL_CHARS = 24_000;
 const MAX_WEB_CALLS = 3;
 const HISTORY_KEEP = 12;
 
