@@ -522,6 +522,206 @@ function VoiceLabel({ voice }: { voice: VoiceId }) {
   return <>{voice === "michael" ? "MICHAEL" : "COB"}</>;
 }
 
+// ── Hard-close deployment CTA ──────────────────────────────────────────────
+function DeploymentCtaCard({
+  initialEmail,
+  initialCompany,
+  submitting,
+  onSubmit,
+  reducedMotion,
+}: {
+  initialEmail: string;
+  initialCompany: string;
+  submitting: boolean;
+  onSubmit: (info: { email: string; company: string; situation: string }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  reducedMotion: boolean;
+}) {
+  const [email, setEmail] = useState(initialEmail);
+  const [company, setCompany] = useState(initialCompany);
+  const [situation, setSituation] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  const handle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLocalError(null);
+    const payload = { email: email.trim(), company: company.trim(), situation: situation.trim() };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payload.email)) {
+      setLocalError("Use a real email address.");
+      return;
+    }
+    if (!payload.company) {
+      setLocalError("Company is required.");
+      return;
+    }
+    if (payload.situation.length < 14) {
+      setLocalError("One full sentence about your situation, please.");
+      return;
+    }
+    const res = await onSubmit(payload);
+    if (res.ok === false) setLocalError(res.error);
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    backgroundColor: "hsl(var(--raddo-paper))",
+    border: "1px solid hsl(var(--raddo-paper-edge))",
+    borderRadius: "4px",
+    padding: "9px 11px",
+    fontSize: "14px",
+    lineHeight: 1.5,
+    color: "hsl(var(--raddo-ink-deep))",
+    width: "100%",
+    outline: "none",
+  };
+  const labelStyle: React.CSSProperties = {
+    color: "hsl(var(--raddo-brass-deep))",
+    fontSize: "10px",
+    letterSpacing: "0.18em",
+    fontWeight: 600,
+    display: "block",
+    marginBottom: "5px",
+  };
+
+  return (
+    <motion.form
+      onSubmit={handle}
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.42, ease: BRAND_EASE }}
+      className="mt-5 p-5"
+      style={{
+        backgroundColor: "hsl(var(--raddo-paper))",
+        border: "1px solid hsl(var(--raddo-brass-deep) / 0.6)",
+        borderRadius: "4px",
+        boxShadow: "0 4px 12px -8px hsl(var(--raddo-ink-deep) / 0.2)",
+      }}
+      aria-labelledby="deployment-cta-heading"
+    >
+      <span
+        className="font-sans"
+        style={{
+          color: "hsl(var(--raddo-brass-deep))",
+          fontSize: "10px",
+          letterSpacing: "0.18em",
+          fontWeight: 600,
+        }}
+      >
+        NEXT REAL STEP · DEPLOYMENT CONVERSATION
+      </span>
+      <h3
+        id="deployment-cta-heading"
+        className="font-display mt-2"
+        style={{
+          color: "hsl(var(--raddo-ink-deep))",
+          fontSize: "clamp(17px, 1.7vw, 20px)",
+          fontWeight: 700,
+          lineHeight: 1.3,
+          letterSpacing: "-0.01em",
+        }}
+      >
+        Want this 365 days a year, plugged into your operation?
+      </h3>
+      <p
+        className="font-sans mt-1"
+        style={{ color: "hsl(var(--raddo-ash))", fontSize: "13px", lineHeight: 1.55 }}
+      >
+        Leave your email, your company, and one paragraph about where this lands for you. Someone from the deployment team picks it up · one business day.
+      </p>
+
+      <div className="grid gap-3 md:grid-cols-2 mt-4">
+        <div>
+          <label htmlFor="cta-email" className="font-sans" style={labelStyle}>EMAIL</label>
+          <input
+            id="cta-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={200}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="cta-company" className="font-sans" style={labelStyle}>COMPANY</label>
+          <input
+            id="cta-company"
+            type="text"
+            autoComplete="organization"
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+            placeholder="Where you'd deploy"
+            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            style={fieldStyle}
+            maxLength={160}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="mt-3">
+        <label htmlFor="cta-situation" className="font-sans" style={labelStyle}>
+          TELL ME ABOUT YOUR SITUATION
+        </label>
+        <textarea
+          id="cta-situation"
+          value={situation}
+          onChange={(e) => setSituation(e.target.value)}
+          placeholder="The shape of the operation, the moment you're in, what you'd want deployed COB watching first."
+          rows={3}
+          className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep resize-none"
+          style={{ ...fieldStyle, minHeight: "84px" }}
+          maxLength={2000}
+          required
+        />
+      </div>
+
+      <div className="flex flex-col-reverse items-stretch gap-3 md:flex-row md:items-center md:justify-between mt-4">
+        <span
+          className="font-sans"
+          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
+        >
+          Encrypted in transit · one business day · withdraw anytime.
+        </span>
+        <div className="flex items-center gap-3">
+          {localError && (
+            <span
+              className="font-sans"
+              style={{
+                color: "hsl(var(--raddo-brass-deep))",
+                fontSize: "11px",
+                letterSpacing: "0.04em",
+                borderBottom: "1px solid hsl(var(--raddo-brass-deep))",
+              }}
+            >
+              {localError}
+            </span>
+          )}
+          <button
+            type="submit"
+            disabled={submitting}
+            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+            style={{
+              backgroundColor: "hsl(var(--raddo-brass))",
+              color: "hsl(var(--raddo-ink-deep))",
+              border: "1px solid hsl(var(--raddo-brass-deep))",
+              borderRadius: "4px",
+              fontSize: "13px",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              minWidth: "200px",
+            }}
+          >
+            {submitting ? "Sending…" : "Talk about deployment"}
+          </button>
+        </div>
+      </div>
+    </motion.form>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 export default function DossierIntake() {
   const [sealed, setSealed] = useState(true);
@@ -542,9 +742,22 @@ export default function DossierIntake() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    lead,
     submitLead,
     submittingLead,
+    submitDeploymentInquiry,
+    deploymentInquirySent,
   } = useCobChat();
+
+  // Hard-close CTA gating · COB voice, ≥12 user turns in COB, not yet sent.
+  const cobUserTurns = useMemo(
+    () =>
+      transcript.filter(
+        (t) => (t as ChatMessage).role === "you" && (t as ChatMessage).voice === "cob",
+      ).length,
+    [transcript],
+  );
+  const showDeploymentCta = !sealed && voice === "cob" && cobUserTurns >= 12 && !deploymentInquirySent;
 
   const reducedMotion = useMemo(
     () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -891,6 +1104,54 @@ export default function DossierIntake() {
                     );
                   })()}
                 </div>
+
+                {/* Hard-close deployment CTA · fires after COB delivers the close (≥12 COB user turns) */}
+                {showDeploymentCta && (
+                  <DeploymentCtaCard
+                    initialEmail={lead?.email ?? ""}
+                    initialCompany={lead?.company ?? ""}
+                    submitting={submittingLead}
+                    onSubmit={submitDeploymentInquiry}
+                    reducedMotion={reducedMotion}
+                  />
+                )}
+                {deploymentInquirySent && (
+                  <motion.div
+                    initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.42, ease: BRAND_EASE }}
+                    className="mt-5 p-4"
+                    style={{
+                      backgroundColor: "hsl(var(--raddo-paper))",
+                      border: "1px solid hsl(var(--raddo-brass-deep) / 0.5)",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    <span
+                      className="font-sans block"
+                      style={{
+                        color: "hsl(var(--raddo-brass-deep))",
+                        fontSize: "10px",
+                        letterSpacing: "0.18em",
+                        fontWeight: 600,
+                      }}
+                    >
+                      DEPLOYMENT · RECEIVED
+                    </span>
+                    <p
+                      className="font-display mt-2"
+                      style={{
+                        color: "hsl(var(--raddo-ink-deep))",
+                        fontSize: "16px",
+                        lineHeight: 1.45,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Got it. Someone from the deployment team will be in touch within one business day. Keep stress-testing the sandbox if you like — the next real step is the conversation we'll have offline.
+                    </p>
+                  </motion.div>
+                )}
+
 
                 {/* Composer */}
                 <form

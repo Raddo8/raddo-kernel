@@ -58,15 +58,29 @@ Deno.serve(async (req: Request) => {
   const email = clean(body?.email, 200).toLowerCase();
   const company = clean(body?.company, 160);
   const title = clean(body?.title, 160);
-  const challenge = clean(body?.challenge, 2000);
+  const rawChallenge = clean(body?.challenge, 2000);
   const sessionId = clean(body?.session_id, 64) || crypto.randomUUID();
   const voice = clean(body?.voice, 32) || "cob";
+  const stage = clean(body?.stage, 32); // "gate" (default) | "deployment_inquiry"
+  const situation = clean(body?.situation, 2000); // used when stage === deployment_inquiry
 
-  if (!name) return jsonResponse({ error: "Name is required." }, 400);
+  const isDeploymentInquiry = stage === "deployment_inquiry";
+
+  // Deployment-inquiry path · only requires email + company + situation.
+  // Name/title fall back to placeholders so the existing NOT NULL columns stay happy.
+  const effectiveName = name || (isDeploymentInquiry ? "Deployment Inquiry" : "");
+  const effectiveTitle = title || (isDeploymentInquiry ? "—" : "");
+  const challenge = isDeploymentInquiry
+    ? `[DEPLOYMENT_INQUIRY] ${situation || rawChallenge}`.slice(0, 2000)
+    : rawChallenge;
+
+  if (!effectiveName) return jsonResponse({ error: "Name is required." }, 400);
   if (!email || !EMAIL_RE.test(email)) return jsonResponse({ error: "A valid email is required." }, 400);
   if (!company) return jsonResponse({ error: "Company is required." }, 400);
-  if (!title) return jsonResponse({ error: "Title is required." }, 400);
-  if (challenge.length < 10) return jsonResponse({ error: "Tell us a bit more · at least one sentence." }, 400);
+  if (!effectiveTitle) return jsonResponse({ error: "Title is required." }, 400);
+  if (challenge.length < (isDeploymentInquiry ? 14 : 10)) {
+    return jsonResponse({ error: "Tell us a bit more · at least one sentence." }, 400);
+  }
 
   const userAgent = clean(req.headers.get("user-agent"), 500);
   const referer = clean(req.headers.get("referer"), 500);
@@ -75,10 +89,10 @@ Deno.serve(async (req: Request) => {
     .from("chat_leads")
     .insert({
       session_id: sessionId,
-      name,
+      name: effectiveName,
       email,
       company,
-      title,
+      title: effectiveTitle,
       challenge,
       voice,
       user_agent: userAgent,
