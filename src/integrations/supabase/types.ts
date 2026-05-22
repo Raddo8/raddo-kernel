@@ -236,6 +236,48 @@ export type Database = {
           },
         ]
       }
+      chat_leads: {
+        Row: {
+          challenge: string
+          company: string
+          created_at: string
+          email: string
+          id: string
+          name: string
+          referer: string | null
+          session_id: string
+          title: string
+          user_agent: string | null
+          voice: string | null
+        }
+        Insert: {
+          challenge: string
+          company: string
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          referer?: string | null
+          session_id: string
+          title: string
+          user_agent?: string | null
+          voice?: string | null
+        }
+        Update: {
+          challenge?: string
+          company?: string
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          referer?: string | null
+          session_id?: string
+          title?: string
+          user_agent?: string | null
+          voice?: string | null
+        }
+        Relationships: []
+      }
       connector_accounts: {
         Row: {
           account_id: string
