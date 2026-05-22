@@ -167,13 +167,22 @@ export function useCobChat() {
       const prevChatMessages = transcript.filter(
         (t): t is ChatMessage => (t as ChatMessage).role !== undefined,
       );
-      const wireMessages = [
-        ...prevChatMessages.map((m) => ({
-          role: m.role === "you" ? "user" : "assistant",
-          content: m.text,
-        })),
-        { role: "user" as const, content: text },
-      ];
+      // Keep recent history only · server caps total at 24k chars / 30 turns
+      const MAX_MSG_CHARS = 4000;
+      const MAX_TOTAL_CHARS = 20_000; // leave headroom under server's 24k
+      const HISTORY_KEEP = 12;
+      const recent = prevChatMessages.slice(-HISTORY_KEEP).map((m) => ({
+        role: m.role === "you" ? ("user" as const) : ("assistant" as const),
+        content: (m.text || "").slice(0, MAX_MSG_CHARS),
+      }));
+      const currentTurn = { role: "user" as const, content: text.slice(0, MAX_MSG_CHARS) };
+      // Drop oldest until under budget
+      let total = recent.reduce((n, m) => n + m.content.length, 0) + currentTurn.content.length;
+      while (recent.length > 1 && total > MAX_TOTAL_CHARS) {
+        total -= recent[0].content.length;
+        recent.shift();
+      }
+      const wireMessages = [...recent, currentTurn];
 
       setTranscript((prev) => [...prev, youMsg, assistantMsg]);
       setPending(true);
