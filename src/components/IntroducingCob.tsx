@@ -335,26 +335,9 @@ export function IntroducingCob() {
       aria-roledescription="carousel"
       aria-label="Introducing COB"
       className="relative z-10 mx-auto max-w-[1240px] px-8 pb-12 md:px-12 md:pb-16"
-      style={{ paddingTop: "100vh" }}
     >
-      {/* Meta-headline */}
-      <h1
-        className="font-display"
-        style={{
-          color: "hsl(var(--raddo-ink-deep))",
-          fontWeight: 800,
-          fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
-          lineHeight: 1.08,
-          letterSpacing: "-0.01em",
-          maxWidth: "22ch",
-        }}
-      >
-        <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
-          Introducing COB.
-        </span>
-        Not just in your corner.<br />
-        Building your corner.
-      </h1>
+
+
 
 
       {/* Folder tabs · 4×2 grid · back row peeks behind front row */}
