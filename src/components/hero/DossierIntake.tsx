@@ -682,49 +682,11 @@ export default function DossierIntake() {
 
           <AnimatePresence mode="wait" initial={false}>
             {sealed ? (
-              <motion.button
-                key="sealed"
-                type="button"
-                onClick={unseal}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: reducedMotion ? 0 : 0.42, ease: BRAND_EASE }}
-                className="group mt-8 flex w-full flex-col items-center justify-center gap-4 py-16 text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass rounded"
-                aria-label="Open the sample COB sandbox"
-              >
-                <span
-                  aria-hidden
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full"
-                  style={{
-                    border: "1px solid hsl(var(--raddo-brass) / 0.55)",
-                    backgroundColor: "hsl(var(--raddo-brass) / 0.12)",
-                    color: "hsl(var(--raddo-brass-deep))",
-                    fontFamily: "Fraunces, Georgia, serif",
-                    fontWeight: 700,
-                    fontSize: "16px",
-                  }}
-                >
-                  ❦
-                </span>
-                <span
-                  className="font-display"
-                  style={{
-                    color: "hsl(var(--raddo-ink-deep))",
-                    fontSize: "clamp(20px, 2vw, 24px)",
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  Open the sample COB
-                </span>
-                <span
-                  className="font-sans"
-                  style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
-                >
-                  TAP TO UNSEAL · ASK ANYTHING · NO ACCOUNT REQUIRED
-                </span>
-              </motion.button>
+              <GateForm
+                onSubmit={handleGateSubmit}
+                submitting={submittingLead}
+                error={error}
+              />
             ) : (
               <motion.div
                 key="open"
