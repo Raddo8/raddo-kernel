@@ -749,7 +749,7 @@ export function Hero() {
       <div
         aria-hidden
         className="pointer-events-none absolute left-0 right-0 z-0 overflow-hidden"
-        style={{ top: 60, height: "min(900px, 92vh)" }}
+        style={{ top: 60, height: "min(900px, clamp(420px, 65vh, 92vh))" }}
       >
         <video
           autoPlay
