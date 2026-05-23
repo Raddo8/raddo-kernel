@@ -1074,7 +1074,7 @@ export function Hero() {
               },
             },
           }}
-          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
+          className="mt-16 md:mt-20 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <motion.div
