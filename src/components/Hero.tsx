@@ -1110,7 +1110,7 @@ export function Hero() {
       </section>
 
       {/* ====== EDITORIAL INDEX ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
+      <section className="relative z-10 mx-auto w-full max-w-[1240px] border-t border-raddo-paper-edge px-6 py-32 sm:px-8 md:px-12 md:py-40 lg:px-16">
 
         <motion.div
           variants={fade(600, 0)}
