@@ -964,7 +964,7 @@ export function Hero() {
           variants={scaleX(600, 3000)}
           initial={INITIAL}
           animate="show"
-          className="mt-10 h-px origin-left"
+          className="mt-32 md:mt-40 h-px origin-left"
           style={{
             width: 280,
             backgroundColor: "hsl(var(--raddo-brass))",
