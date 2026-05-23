@@ -971,7 +971,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-20 md:mt-28"
+          className="mt-[150px] md:mt-[200px]"
         >
           <IntroducingCob />
         </motion.div>
@@ -984,7 +984,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-12"
+          className="mt-[150px] md:mt-[200px]"
           style={{ maxWidth: "1180px" }}
         >
           <BriefingComposition />
