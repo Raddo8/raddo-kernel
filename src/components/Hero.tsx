@@ -766,11 +766,11 @@ export function Hero() {
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Manifesto · vertically centered, aligned to page content container */}
-        <div className="absolute inset-0 flex items-center pointer-events-none">
+        {/* Manifesto · starts at vertical midpoint of the video frame */}
+        <div className="absolute inset-0 flex items-start pointer-events-none" style={{ paddingTop: "50%" }}>
           <div className="mx-auto w-full max-w-[1240px] px-8 md:px-12">
             <div
-              className="text-left max-w-[26ch]"
+              className="text-left"
               style={{
                 textShadow:
                   "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
@@ -780,9 +780,10 @@ export function Hero() {
                 "Institutional Memory.",
                 "the Infrastructure of Execution.",
                 "the Autonomous C-Suite.",
-              ].map((tail) => (
-                <p
-                  key={tail}
+                null,
+              ].map((tail, idx) => (
+                <div
+                  key={idx}
                   className="font-display tracking-tight"
                   style={{
                     color: "hsl(var(--raddo-ink-deep))",
@@ -790,13 +791,16 @@ export function Hero() {
                     fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
                     lineHeight: 1.05,
                     letterSpacing: "-0.02em",
-                    marginBottom: "0.15em",
+                    marginBottom: tail ? "0.6em" : "0",
                   }}
                 >
-                  We{" "}
-                  <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
-                  {tail}
-                </p>
+                  <div>
+                    We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? "" : "."}
+                  </div>
+                  {tail && (
+                    <div style={{ paddingLeft: "8ch" }}>{tail}</div>
+                  )}
+                </div>
               ))}
               <p
                 className="font-sans"
@@ -806,7 +810,7 @@ export function Hero() {
                   fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
                   lineHeight: 1.4,
                   letterSpacing: "0.01em",
-                  marginTop: "1.25rem",
+                  marginTop: "1.75rem",
                 }}
               >
                 COB: The Operating Partner for the Principal.
