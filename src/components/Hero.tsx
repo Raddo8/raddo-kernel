@@ -806,8 +806,8 @@ export function Hero() {
 
       {/* ====== HERO ====== */}
       <section
-        className="relative z-10 mx-auto max-w-[1240px] px-8 pb-24 md:px-12 md:pb-32"
-        style={{ paddingTop: "calc(min(900px, 92vh) + 122px)" }}
+        className="relative z-10 mx-auto w-full max-w-[1240px] px-6 pb-32 sm:px-8 md:px-12 md:pb-40 lg:px-16"
+        style={{ paddingTop: "calc(min(900px, 92vh) + 200px)" }}
       >
 
         {/* Introducing COB heading + Dossier Intake chat · first below the video */}
@@ -838,7 +838,7 @@ export function Hero() {
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
-        <div className="relative mt-20 md:mt-28">
+        <div className="relative mt-40 md:mt-52">
           {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
@@ -940,7 +940,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-20 md:mt-28"
+          className="mt-40 md:mt-52"
         >
           <IntroducingCob />
         </motion.div>
@@ -953,7 +953,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-12"
+          className="mt-40 md:mt-52 mx-auto"
           style={{ maxWidth: "1180px" }}
         >
           <BriefingComposition />
@@ -964,7 +964,7 @@ export function Hero() {
           variants={scaleX(600, 3000)}
           initial={INITIAL}
           animate="show"
-          className="mt-10 h-px origin-left"
+          className="mt-32 md:mt-40 h-px origin-left"
           style={{
             width: 280,
             backgroundColor: "hsl(var(--raddo-brass))",
@@ -977,7 +977,7 @@ export function Hero() {
           variants={rise(700, 3200)}
           initial={INITIAL}
           animate="show"
-          className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
+          className="mt-12 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
         >
           <a
             href="/consult"
@@ -1017,7 +1017,7 @@ export function Hero() {
           variants={rise(900, 3500)}
           initial={INITIAL}
           animate="show"
-          className="relative mt-16 overflow-hidden bg-raddo-paper"
+          className="relative mt-40 md:mt-52 overflow-hidden bg-raddo-paper"
           style={{
             borderRadius: 8,
             border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
@@ -1074,7 +1074,7 @@ export function Hero() {
               },
             },
           }}
-          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
+          className="mt-16 md:mt-20 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <motion.div
@@ -1110,14 +1110,14 @@ export function Hero() {
       </section>
 
       {/* ====== EDITORIAL INDEX ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
+      <section className="relative z-10 mx-auto w-full max-w-[1240px] border-t border-raddo-paper-edge px-6 py-32 sm:px-8 md:px-12 md:py-40 lg:px-16">
 
         <motion.div
           variants={fade(600, 0)}
           initial={INITIAL}
           whileInView="show"
           viewport={{ once: true, margin: "-15%" }}
-          className="mb-12 flex items-baseline justify-between"
+          className="mb-16 md:mb-20 flex items-baseline justify-between"
         >
           <span
             className="font-sans uppercase text-raddo-brass"
@@ -1189,7 +1189,7 @@ export function Hero() {
       </section>
 
       {/* ====== CLOSING CTA ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-24 md:px-12 md:py-32">
+      <section className="relative z-10 mx-auto w-full max-w-[1240px] border-t border-raddo-paper-edge px-6 py-32 sm:px-8 md:px-12 md:py-40 lg:px-16">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <span
@@ -1263,7 +1263,7 @@ export function Hero() {
       </section>
 
       {/* ====== FOOTER ====== */}
-      <footer className="relative z-10 mx-auto flex max-w-[1240px] flex-col gap-3 border-t border-raddo-paper-edge px-8 py-8 md:flex-row md:items-center md:justify-between md:px-12">
+      <footer className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-col gap-3 border-t border-raddo-paper-edge px-6 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12 lg:px-16">
         <div className="flex items-baseline gap-3">
           <span className="font-display text-[15px] font-black tracking-[-0.02em] text-raddo-ink-deep">
             RADDO
