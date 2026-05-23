@@ -1189,7 +1189,7 @@ export function Hero() {
       </section>
 
       {/* ====== CLOSING CTA ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-24 md:px-12 md:py-32">
+      <section className="relative z-10 mx-auto w-full max-w-[1240px] border-t border-raddo-paper-edge px-6 py-32 sm:px-8 md:px-12 md:py-40 lg:px-16">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <span
