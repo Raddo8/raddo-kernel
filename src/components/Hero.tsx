@@ -1117,7 +1117,7 @@ export function Hero() {
           initial={INITIAL}
           whileInView="show"
           viewport={{ once: true, margin: "-15%" }}
-          className="mb-12 flex items-baseline justify-between"
+          className="mb-16 md:mb-20 flex items-baseline justify-between"
         >
           <span
             className="font-sans uppercase text-raddo-brass"
