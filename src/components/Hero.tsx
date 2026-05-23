@@ -977,7 +977,7 @@ export function Hero() {
           variants={rise(700, 3200)}
           initial={INITIAL}
           animate="show"
-          className="mt-10 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
+          className="mt-12 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
         >
           <a
             href="/consult"
