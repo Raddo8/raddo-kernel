@@ -769,7 +769,7 @@ export function Hero() {
         {/* Hovering headline · bottom third of video */}
         <div className="absolute inset-x-0 bottom-[80px] h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
           <div
-            className="font-display text-left max-w-[56ch]"
+            className="font-display text-left max-w-[68ch]"
             style={{
               color: "hsl(var(--raddo-ink-deep))",
               fontWeight: 900,
@@ -786,13 +786,13 @@ export function Hero() {
               { verb: "BUILDS", rest: "Infrastructures of Execution." },
               { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
               { verb: "DEPLOYS", rest: "Strategic Clarity." },
-            ].map(({ verb, rest }) => (
-              <p key={verb} className="m-0">
+            ].map(({ verb, rest }, i) => (
+              <p key={verb} className="m-0" style={{ paddingLeft: `${i * 1.5}ch` }}>
                 COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
               </p>
             ))}
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
-            <p className="m-0">
+            <p className="m-0" style={{ paddingLeft: "7.5ch" }}>
               COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
             </p>
           </div>
