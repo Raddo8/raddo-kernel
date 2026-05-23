@@ -767,20 +767,19 @@ export function Hero() {
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
         {/* Hovering headline · bottom third of video */}
-        <div className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-center px-4 sm:px-8 md:px-16 pointer-events-none">
+        <div className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none">
           <div
             className="font-display w-full"
             style={{
               color: "hsl(var(--raddo-ink-deep))",
               fontWeight: 900,
-              fontSize: "clamp(20px, 3.6vw, 40px)",
               lineHeight: 1.22,
               letterSpacing: "-0.01em",
               textShadow:
                 "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
             }}
           >
-            <div className="text-left max-w-[68ch]">
+            <div className="text-left max-w-[72ch]" style={{ fontSize: "clamp(16px, 3.2vw, 40px)" }}>
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
                 { verb: "CREATES", rest: "Institutional Memory." },
@@ -788,13 +787,14 @@ export function Hero() {
                 { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
                 { verb: "DEPLOYS", rest: "Strategic Clarity." },
               ].map(({ verb, rest }, i) => (
-                <p key={verb} className="m-0" style={{ paddingLeft: `${i * 1.5}ch` }}>
+                <p key={verb} className="m-0" style={{ paddingLeft: `${i * 2}ch` }}>
                   COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
             </div>
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
-            <p className="m-0 text-center">
+            <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
+            <p className="m-0 text-center" style={{ fontSize: "clamp(22px, 4.3vw, 52px)" }}>
               COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
             </p>
           </div>
