@@ -766,50 +766,52 @@ export function Hero() {
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Manifesto · vertically centered, left-aligned to match RADDO · EDITION 001 */}
-        <div className="absolute inset-0 flex items-center justify-start px-8 md:px-16 pointer-events-none">
-          <div
-            className="text-left max-w-[26ch]"
-            style={{
-              textShadow:
-                "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
-            }}
-          >
-            {[
-              "Institutional Memory.",
-              "the Infrastructure of Execution.",
-              "the Autonomous C-Suite.",
-            ].map((tail) => (
-              <p
-                key={tail}
-                className="font-display tracking-tight"
-                style={{
-                  color: "hsl(var(--raddo-ink-deep))",
-                  fontWeight: 900,
-                  fontSize: "clamp(2.25rem, 4.4vw, 3.75rem)",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.02em",
-                  marginBottom: "0.15em",
-                }}
-              >
-                We{" "}
-                <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
-                {tail}
-              </p>
-            ))}
-            <p
-              className="font-sans"
+        {/* Manifesto · vertically centered, aligned to page content container */}
+        <div className="absolute inset-0 flex items-center pointer-events-none">
+          <div className="mx-auto w-full max-w-[1240px] px-8 md:px-12">
+            <div
+              className="text-left max-w-[26ch]"
               style={{
-                color: "hsl(var(--raddo-ink-deep))",
-                fontWeight: 500,
-                fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
-                lineHeight: 1.4,
-                letterSpacing: "0.01em",
-                marginTop: "1.25rem",
+                textShadow:
+                  "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
               }}
             >
-              COB: The Operating Partner for the Principal.
-            </p>
+              {[
+                "Institutional Memory.",
+                "the Infrastructure of Execution.",
+                "the Autonomous C-Suite.",
+              ].map((tail) => (
+                <p
+                  key={tail}
+                  className="font-display tracking-tight"
+                  style={{
+                    color: "hsl(var(--raddo-ink-deep))",
+                    fontWeight: 900,
+                    fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+                    lineHeight: 1.05,
+                    letterSpacing: "-0.02em",
+                    marginBottom: "0.15em",
+                  }}
+                >
+                  We{" "}
+                  <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
+                  {tail}
+                </p>
+              ))}
+              <p
+                className="font-sans"
+                style={{
+                  color: "hsl(var(--raddo-ink-deep))",
+                  fontWeight: 500,
+                  fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
+                  lineHeight: 1.4,
+                  letterSpacing: "0.01em",
+                  marginTop: "1.25rem",
+                }}
+              >
+                COB: The Operating Partner for the Principal.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -867,7 +869,7 @@ export function Hero() {
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
-        <div className="relative mt-20 md:mt-28">
+        <div className="relative mt-[150px] md:mt-[200px]">
           {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
@@ -969,7 +971,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-20 md:mt-28"
+          className="mt-[150px] md:mt-[200px]"
         >
           <IntroducingCob />
         </motion.div>
@@ -982,7 +984,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-12"
+          className="mt-[150px] md:mt-[200px]"
           style={{ maxWidth: "1180px" }}
         >
           <BriefingComposition />
@@ -993,7 +995,7 @@ export function Hero() {
           variants={scaleX(600, 3000)}
           initial={INITIAL}
           animate="show"
-          className="mt-10 h-px origin-left"
+          className="mt-24 md:mt-32 h-px origin-left"
           style={{
             width: 280,
             backgroundColor: "hsl(var(--raddo-brass))",
@@ -1046,7 +1048,7 @@ export function Hero() {
           variants={rise(900, 3500)}
           initial={INITIAL}
           animate="show"
-          className="relative mt-16 overflow-hidden bg-raddo-paper"
+          className="relative mt-[150px] md:mt-[200px] overflow-hidden bg-raddo-paper"
           style={{
             borderRadius: 8,
             border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
@@ -1103,7 +1105,7 @@ export function Hero() {
               },
             },
           }}
-          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
+          className="mt-16 md:mt-24 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <motion.div
@@ -1139,7 +1141,7 @@ export function Hero() {
       </section>
 
       {/* ====== EDITORIAL INDEX ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
+      <section className="relative z-10 mx-auto max-w-[1240px] mt-[150px] md:mt-[200px] border-t border-raddo-paper-edge px-8 py-28 md:px-12 md:py-40">
 
         <motion.div
           variants={fade(600, 0)}
