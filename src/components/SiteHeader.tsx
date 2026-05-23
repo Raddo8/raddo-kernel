@@ -106,7 +106,7 @@ export function SiteHeader() {
               textTransform: "uppercase",
             }}
           >
-            <span>RADDO · EDITION 001</span>
+            <span>COB · EDITION 001</span>
             <span className="flex items-center gap-2">
               <span
                 aria-hidden
