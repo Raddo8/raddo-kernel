@@ -838,7 +838,7 @@ export function Hero() {
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
-        <div className="relative mt-20 md:mt-28">
+        <div className="relative mt-40 md:mt-52">
           {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
