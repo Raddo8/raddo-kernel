@@ -755,24 +755,26 @@ export function Hero() {
       >
         <video
           autoPlay
+          loop
           muted
           playsInline
           preload="auto"
           className="h-full w-full object-cover"
           style={{ opacity: 0.7 }}
           src="/brand/still-waters.mp4"
-          onEnded={() => setVideoEnded(true)}
+          onPlaying={() => {
+            if (litanyShown) return;
+            setTimeout(() => setLitanyShown(true), 2000);
+            setTimeout(() => setFinaleShown(true), 4000);
+          }}
         />
         {/* Soft paper tint so headline contrast holds */}
         <div
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Hovering headline · revealed after video completes */}
-        <div
-          className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none transition-opacity duration-700 ease-out"
-          style={{ opacity: videoEnded || reduce ? 1 : 0 }}
-        >
+        {/* Hovering headline · litany reveals 2s after video starts, finale 2s after that */}
+        <div className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none">
           <div
             className="font-display w-full"
             style={{
@@ -784,7 +786,10 @@ export function Hero() {
                 "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
             }}
           >
-            <div className="text-left max-w-[72ch]" style={{ fontSize: "clamp(10px, 2.6vw, 40px)" }}>
+            <div
+              className="text-left max-w-[72ch] transition-opacity duration-700 ease-out"
+              style={{ fontSize: "clamp(10px, 2.6vw, 40px)", opacity: litanyShown || reduce ? 1 : 0 }}
+            >
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
                 { verb: "CREATES", rest: "Institutional Memory." },
@@ -800,7 +805,10 @@ export function Hero() {
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
-            <p className="m-0 text-center" style={{ fontSize: "clamp(22px, 4.3vw, 52px)" }}>
+            <p
+              className="m-0 text-center transition-opacity duration-700 ease-out"
+              style={{ fontSize: "clamp(22px, 4.3vw, 52px)", opacity: finaleShown || reduce ? 1 : 0 }}
+            >
               COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
             </p>
           </div>
