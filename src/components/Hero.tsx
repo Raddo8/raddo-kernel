@@ -768,20 +768,34 @@ export function Hero() {
         />
         {/* Hovering headline · bottom third of video */}
         <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
-          <p
-            className="font-display text-left max-w-[34ch]"
+          <div
+            className="font-display text-left max-w-[56ch]"
             style={{
               color: "hsl(var(--raddo-ink-deep))",
               fontWeight: 900,
-              fontSize: "48px",
-              lineHeight: 1.18,
+              fontSize: "40px",
+              lineHeight: 1.22,
               letterSpacing: "-0.01em",
               textShadow:
                 "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
             }}
           >
-            Imagine an executive who never forgets, never loses context, and never stops working in your best interest. <span style={{ color: "hsl(var(--raddo-brass))" }}>RADDO</span> builds that executive.
-          </p>
+            {[
+              { verb: "INITIATES", rest: "Operating Leverage." },
+              { verb: "CREATES", rest: "Institutional Memory." },
+              { verb: "BUILDS", rest: "Infrastructures of Execution." },
+              { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
+              { verb: "DEPLOYS", rest: "Strategic Clarity." },
+            ].map(({ verb, rest }) => (
+              <p key={verb} className="m-0">
+                COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
+              </p>
+            ))}
+            <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
+            <p className="m-0">
+              COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
+            </p>
+          </div>
         </div>
 
       </div>
