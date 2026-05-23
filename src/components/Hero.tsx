@@ -669,7 +669,8 @@ export function Hero() {
   // Rotating COB title — only the trailing word changes
   const [titleIdx, setTitleIdx] = useState(0);
   const [heroImgLoaded, setHeroImgLoaded] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
+  const [litanyShown, setLitanyShown] = useState(false);
+  const [finaleShown, setFinaleShown] = useState(false);
   useEffect(() => {
     // If the preloaded image is already cached, mark it loaded on mount.
     const img = new Image();
