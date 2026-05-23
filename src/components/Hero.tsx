@@ -766,57 +766,22 @@ export function Hero() {
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Manifesto · starts at vertical midpoint of the video frame */}
-        <div className="absolute inset-0 flex items-start pointer-events-none" style={{ paddingTop: "calc(50% - 500px)" }}>
-          <div className="mx-auto w-full max-w-[1240px] px-8 md:px-12">
-            <div
-              className="text-left"
-              style={{
-                textShadow:
-                  "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
-              }}
-            >
-              {[
-                "Institutional Memory.",
-                "the Infrastructure of Execution.",
-                "the Autonomous C-Suite.",
-                null,
-              ].map((tail, idx) => (
-                <div
-                  key={idx}
-                  className="font-display tracking-tight"
-                  style={{
-                    color: "hsl(var(--raddo-ink-deep))",
-                    fontWeight: 900,
-                    fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
-                    lineHeight: 1.05,
-                    letterSpacing: "-0.02em",
-                    marginBottom: tail ? "0.6em" : "0",
-                  }}
-                >
-                  <div>
-                    We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? "" : "."}
-                  </div>
-                  {tail && (
-                    <div style={{ paddingLeft: "4ch" }}>{tail}</div>
-                  )}
-                </div>
-              ))}
-              <p
-                className="font-sans"
-                style={{
-                  color: "hsl(var(--raddo-ink-deep))",
-                  fontWeight: 500,
-                  fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
-                  lineHeight: 1.4,
-                  letterSpacing: "0.01em",
-                  marginTop: "1.75rem",
-                }}
-              >
-                COB: The Operating Partner for the Principal.
-              </p>
-            </div>
-          </div>
+        {/* Hovering headline · bottom third of video */}
+        <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
+          <p
+            className="font-display text-left max-w-[34ch]"
+            style={{
+              color: "hsl(var(--raddo-ink-deep))",
+              fontWeight: 900,
+              fontSize: "48px",
+              lineHeight: 1.18,
+              letterSpacing: "-0.01em",
+              textShadow:
+                "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
+            }}
+          >
+            Imagine an executive who never forgets, never loses context, and never stops working in your best interest. <span style={{ color: "hsl(var(--raddo-brass))" }}>RADDO</span> builds that executive.
+          </p>
         </div>
 
       </div>
@@ -842,7 +807,7 @@ export function Hero() {
       {/* ====== HERO ====== */}
       <section
         className="relative z-10 mx-auto max-w-[1240px] px-8 pb-24 md:px-12 md:pb-32"
-        style={{ paddingTop: "calc(min(900px, 92vh) + 200px)" }}
+        style={{ paddingTop: "calc(min(900px, 92vh) + 122px)" }}
       >
 
         {/* Introducing COB heading + Dossier Intake chat · first below the video */}
@@ -873,7 +838,7 @@ export function Hero() {
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
-        <div className="relative mt-[150px] md:mt-[200px]">
+        <div className="relative mt-20 md:mt-28">
           {/* Mandala backdrop · leads the page */}
           <motion.div
             aria-hidden
@@ -975,7 +940,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-[150px] md:mt-[200px]"
+          className="mt-20 md:mt-28"
         >
           <IntroducingCob />
         </motion.div>
@@ -988,7 +953,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-[150px] md:mt-[200px]"
+          className="mt-12"
           style={{ maxWidth: "1180px" }}
         >
           <BriefingComposition />
@@ -999,7 +964,7 @@ export function Hero() {
           variants={scaleX(600, 3000)}
           initial={INITIAL}
           animate="show"
-          className="mt-24 md:mt-32 h-px origin-left"
+          className="mt-10 h-px origin-left"
           style={{
             width: 280,
             backgroundColor: "hsl(var(--raddo-brass))",
@@ -1052,7 +1017,7 @@ export function Hero() {
           variants={rise(900, 3500)}
           initial={INITIAL}
           animate="show"
-          className="relative mt-[150px] md:mt-[200px] overflow-hidden bg-raddo-paper"
+          className="relative mt-16 overflow-hidden bg-raddo-paper"
           style={{
             borderRadius: 8,
             border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
@@ -1109,7 +1074,7 @@ export function Hero() {
               },
             },
           }}
-          className="mt-16 md:mt-24 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
+          className="mt-10 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-5 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <motion.div
@@ -1145,7 +1110,7 @@ export function Hero() {
       </section>
 
       {/* ====== EDITORIAL INDEX ====== */}
-      <section className="relative z-10 mx-auto max-w-[1240px] mt-[150px] md:mt-[200px] border-t border-raddo-paper-edge px-8 py-28 md:px-12 md:py-40">
+      <section className="relative z-10 mx-auto max-w-[1240px] border-t border-raddo-paper-edge px-8 py-20 md:px-12 md:py-28">
 
         <motion.div
           variants={fade(600, 0)}
