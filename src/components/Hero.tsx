@@ -940,7 +940,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-20 md:mt-28"
+          className="mt-40 md:mt-52"
         >
           <IntroducingCob />
         </motion.div>
