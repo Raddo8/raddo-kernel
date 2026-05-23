@@ -1263,7 +1263,7 @@ export function Hero() {
       </section>
 
       {/* ====== FOOTER ====== */}
-      <footer className="relative z-10 mx-auto flex max-w-[1240px] flex-col gap-3 border-t border-raddo-paper-edge px-8 py-8 md:flex-row md:items-center md:justify-between md:px-12">
+      <footer className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-col gap-3 border-t border-raddo-paper-edge px-6 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12 lg:px-16">
         <div className="flex items-baseline gap-3">
           <span className="font-display text-[15px] font-black tracking-[-0.02em] text-raddo-ink-deep">
             RADDO
