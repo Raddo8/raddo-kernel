@@ -1017,7 +1017,7 @@ export function Hero() {
           variants={rise(900, 3500)}
           initial={INITIAL}
           animate="show"
-          className="relative mt-16 overflow-hidden bg-raddo-paper"
+          className="relative mt-40 md:mt-52 overflow-hidden bg-raddo-paper"
           style={{
             borderRadius: 8,
             border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
