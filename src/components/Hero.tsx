@@ -762,8 +762,18 @@ export function Hero() {
           className="h-full w-full object-cover"
           style={{ opacity: 0.7 }}
           src="/brand/still-waters.mp4"
-          onPlaying={() => {
+          onLoadedData={(e) => {
             if (litanyShown) return;
+            const v = e.currentTarget;
+            // Only start timers once the video has actual buffered data ready to play
+            if (v.readyState < 2) return;
+            setTimeout(() => setLitanyShown(true), 2000);
+            setTimeout(() => setFinaleShown(true), 6000);
+          }}
+          onCanPlay={(e) => {
+            if (litanyShown) return;
+            const v = e.currentTarget;
+            if (v.readyState < 3) return;
             setTimeout(() => setLitanyShown(true), 2000);
             setTimeout(() => setFinaleShown(true), 6000);
           }}
