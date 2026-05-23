@@ -334,7 +334,7 @@ export function IntroducingCob() {
       role="region"
       aria-roledescription="carousel"
       aria-label="Introducing COB"
-      className="relative z-10 mx-auto max-w-[1240px] px-8 pb-12 md:px-12 md:pb-16"
+      className="relative z-10 pb-12 md:pb-16"
     >
 
 
