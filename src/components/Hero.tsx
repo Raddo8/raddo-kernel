@@ -798,7 +798,7 @@ export function Hero() {
                     We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? "" : "."}
                   </div>
                   {tail && (
-                    <div style={{ paddingLeft: "8ch" }}>{tail}</div>
+                    <div style={{ paddingLeft: "4ch" }}>{tail}</div>
                   )}
                 </div>
               ))}
