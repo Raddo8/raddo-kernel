@@ -798,7 +798,7 @@ export function Hero() {
           >
             <div
               className="text-left max-w-[72ch]"
-              style={{ fontSize: "clamp(10px, 2.6vw, 40px)" }}
+              style={{ fontSize: "clamp(14px, 2.6vw, 40px)" }}
             >
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
