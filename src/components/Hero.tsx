@@ -767,7 +767,7 @@ export function Hero() {
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
         {/* Hovering headline · bottom third of video */}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
+        <div className="absolute inset-x-0 bottom-[80px] h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
           <div
             className="font-display text-left max-w-[56ch]"
             style={{
