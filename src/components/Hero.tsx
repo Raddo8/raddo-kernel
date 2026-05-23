@@ -765,7 +765,7 @@ export function Hero() {
           onPlaying={() => {
             if (litanyShown) return;
             setTimeout(() => setLitanyShown(true), 2000);
-            setTimeout(() => setFinaleShown(true), 4000);
+            setTimeout(() => setFinaleShown(true), 6000);
           }}
         />
         {/* Soft paper tint so headline contrast holds */}
