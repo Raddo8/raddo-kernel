@@ -919,9 +919,9 @@ export default function DossierIntake() {
                 transition={{ duration: reducedMotion ? 0 : 0.42, ease: BRAND_EASE }}
                 className="mt-6"
               >
-                {/* Voice toggle + chip strips */}
+                {/* Chip strips */}
                 <div className="grid gap-5 mb-6">
-                  <VoiceToggle value={voice} onChange={setVoice} />
+
                   <ChipStrip
                     eyebrow="ROLE LENS"
                     featured={FEATURED_ROLES}
