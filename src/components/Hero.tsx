@@ -791,7 +791,7 @@ export function Hero() {
                 { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
                 { verb: "DEPLOYS", rest: "Strategic Clarity." },
               ].map(({ verb, rest }, i) => (
-                <p key={verb} className="m-0 whitespace-nowrap" style={{ paddingLeft: `${i * 2}ch` }}>
+                <p key={verb} className="m-0 whitespace-nowrap" style={{ paddingLeft: `${i * 2}ch`, marginTop: i === 0 ? 0 : "1.2em" }}>
                   COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
