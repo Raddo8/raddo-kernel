@@ -766,50 +766,52 @@ export function Hero() {
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Manifesto · vertically centered, left-aligned to match RADDO · EDITION 001 */}
-        <div className="absolute inset-0 flex items-center justify-start px-8 md:px-16 pointer-events-none">
-          <div
-            className="text-left max-w-[26ch]"
-            style={{
-              textShadow:
-                "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
-            }}
-          >
-            {[
-              "Institutional Memory.",
-              "the Infrastructure of Execution.",
-              "the Autonomous C-Suite.",
-            ].map((tail) => (
-              <p
-                key={tail}
-                className="font-display tracking-tight"
-                style={{
-                  color: "hsl(var(--raddo-ink-deep))",
-                  fontWeight: 900,
-                  fontSize: "clamp(2.25rem, 4.4vw, 3.75rem)",
-                  lineHeight: 1.05,
-                  letterSpacing: "-0.02em",
-                  marginBottom: "0.15em",
-                }}
-              >
-                We{" "}
-                <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
-                {tail}
-              </p>
-            ))}
-            <p
-              className="font-sans"
+        {/* Manifesto · vertically centered, aligned to page content container */}
+        <div className="absolute inset-0 flex items-center pointer-events-none">
+          <div className="mx-auto w-full max-w-[1240px] px-8 md:px-12">
+            <div
+              className="text-left max-w-[26ch]"
               style={{
-                color: "hsl(var(--raddo-ink-deep))",
-                fontWeight: 500,
-                fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
-                lineHeight: 1.4,
-                letterSpacing: "0.01em",
-                marginTop: "1.25rem",
+                textShadow:
+                  "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
               }}
             >
-              COB: The Operating Partner for the Principal.
-            </p>
+              {[
+                "Institutional Memory.",
+                "the Infrastructure of Execution.",
+                "the Autonomous C-Suite.",
+              ].map((tail) => (
+                <p
+                  key={tail}
+                  className="font-display tracking-tight"
+                  style={{
+                    color: "hsl(var(--raddo-ink-deep))",
+                    fontWeight: 900,
+                    fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+                    lineHeight: 1.05,
+                    letterSpacing: "-0.02em",
+                    marginBottom: "0.15em",
+                  }}
+                >
+                  We{" "}
+                  <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
+                  {tail}
+                </p>
+              ))}
+              <p
+                className="font-sans"
+                style={{
+                  color: "hsl(var(--raddo-ink-deep))",
+                  fontWeight: 500,
+                  fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
+                  lineHeight: 1.4,
+                  letterSpacing: "0.01em",
+                  marginTop: "1.25rem",
+                }}
+              >
+                COB: The Operating Partner for the Principal.
+              </p>
+            </div>
           </div>
         </div>
 
