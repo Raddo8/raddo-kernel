@@ -766,22 +766,51 @@ export function Hero() {
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Hovering headline · bottom third of video */}
-        <div className="absolute inset-x-0 bottom-0 h-1/3 flex items-center justify-start px-8 md:px-16 pointer-events-none">
-          <p
-            className="font-display text-left max-w-[34ch]"
+        {/* Manifesto · vertically centered, left-aligned to match RADDO · EDITION 001 */}
+        <div className="absolute inset-0 flex items-center justify-start px-8 md:px-16 pointer-events-none">
+          <div
+            className="text-left max-w-[26ch]"
             style={{
-              color: "hsl(var(--raddo-ink-deep))",
-              fontWeight: 900,
-              fontSize: "48px",
-              lineHeight: 1.18,
-              letterSpacing: "-0.01em",
               textShadow:
-                "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
+                "0 2px 8px hsl(0 0% 0% / 0.35), 0 0 24px hsl(0 0% 100% / 0.45)",
             }}
           >
-            Imagine an executive who never forgets, never loses context, and never stops working in your best interest. <span style={{ color: "hsl(var(--raddo-brass))" }}>RADDO</span> builds that executive.
-          </p>
+            {[
+              "Institutional Memory.",
+              "the Infrastructure of Execution.",
+              "the Autonomous C-Suite.",
+            ].map((tail) => (
+              <p
+                key={tail}
+                className="font-display tracking-tight"
+                style={{
+                  color: "hsl(var(--raddo-ink-deep))",
+                  fontWeight: 900,
+                  fontSize: "clamp(2.25rem, 4.4vw, 3.75rem)",
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.02em",
+                  marginBottom: "0.15em",
+                }}
+              >
+                We{" "}
+                <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{" "}
+                {tail}
+              </p>
+            ))}
+            <p
+              className="font-sans"
+              style={{
+                color: "hsl(var(--raddo-ink-deep))",
+                fontWeight: 500,
+                fontSize: "clamp(1rem, 1.5vw, 1.25rem)",
+                lineHeight: 1.4,
+                letterSpacing: "0.01em",
+                marginTop: "1.25rem",
+              }}
+            >
+              COB: The Operating Partner for the Principal.
+            </p>
+          </div>
         </div>
 
       </div>
