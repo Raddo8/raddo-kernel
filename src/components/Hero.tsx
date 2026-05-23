@@ -788,13 +788,18 @@ export function Hero() {
                   style={{
                     color: "hsl(var(--raddo-ink-deep))",
                     fontWeight: 900,
-                    fontSize: "clamp(1.75rem, 2.6vw, 2.5rem)",
-                    lineHeight: 1.15,
+                    fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
+                    lineHeight: 1.05,
                     letterSpacing: "-0.02em",
-                    marginBottom: tail ? "0.35em" : "0",
+                    marginBottom: tail ? "0.6em" : "0",
                   }}
                 >
-                  We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? ` ${tail}` : "."}
+                  <div>
+                    We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? "" : "."}
+                  </div>
+                  {tail && (
+                    <div style={{ paddingLeft: "4ch" }}>{tail}</div>
+                  )}
                 </div>
               ))}
               <p
