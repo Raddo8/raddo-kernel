@@ -143,10 +143,6 @@ export function SiteHeader() {
                   lineHeight: 1,
                 }}
               >
-                RADDO.ai{" "}
-                <span className="hidden sm:inline" style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
-                  · introducing
-                </span>{" "}
                 <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>COB</span>{" "}
                 <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
                   · Chief Of Business
