@@ -242,9 +242,9 @@ const BRAND_EASE = [0.22, 1, 0.36, 1] as const;
 
 const INTAKE_HEADER = {
   eyebrow: "SAMPLE COB · CONFIDENTIAL · SESSION 001",
-  title: "Meet your COB. Same brain, your call on the voice.",
+  title: "Meet your COB.",
   subtitle:
-    "Pick a lens, name your industry, ask one real question. Two voices, one substance. Nothing leaves this page.",
+    "Pick a lens, name your industry, ask one real question. Nothing leaves this page.",
 };
 
 function fmtClock(d: Date) {
