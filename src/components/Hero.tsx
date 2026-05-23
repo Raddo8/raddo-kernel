@@ -767,7 +767,7 @@ export function Hero() {
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
         {/* Manifesto · starts at vertical midpoint of the video frame */}
-        <div className="absolute inset-0 flex items-start pointer-events-none" style={{ paddingTop: "calc(50% - 300px)" }}>
+        <div className="absolute inset-0 flex items-start pointer-events-none" style={{ paddingTop: "calc(50% - 500px)" }}>
           <div className="mx-auto w-full max-w-[1240px] px-8 md:px-12">
             <div
               className="text-left"
@@ -798,7 +798,7 @@ export function Hero() {
                     We <span style={{ color: "hsl(var(--raddo-brass))" }}>BUILD</span>{tail ? "" : "."}
                   </div>
                   {tail && (
-                    <div style={{ paddingLeft: "8ch" }}>{tail}</div>
+                    <div style={{ paddingLeft: "4ch" }}>{tail}</div>
                   )}
                 </div>
               ))}
