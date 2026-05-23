@@ -669,6 +669,7 @@ export function Hero() {
   // Rotating COB title — only the trailing word changes
   const [titleIdx, setTitleIdx] = useState(0);
   const [heroImgLoaded, setHeroImgLoaded] = useState(false);
+  const [videoEnded, setVideoEnded] = useState(false);
   useEffect(() => {
     // If the preloaded image is already cached, mark it loaded on mount.
     const img = new Image();
@@ -753,21 +754,24 @@ export function Hero() {
       >
         <video
           autoPlay
-          loop
           muted
           playsInline
           preload="auto"
           className="h-full w-full object-cover"
           style={{ opacity: 0.7 }}
           src="/brand/still-waters.mp4"
+          onEnded={() => setVideoEnded(true)}
         />
         {/* Soft paper tint so headline contrast holds */}
         <div
           className="absolute inset-0"
           style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
         />
-        {/* Hovering headline · bottom third of video */}
-        <div className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none">
+        {/* Hovering headline · revealed after video completes */}
+        <div
+          className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none transition-opacity duration-700 ease-out"
+          style={{ opacity: videoEnded || reduce ? 1 : 0 }}
+        >
           <div
             className="font-display w-full"
             style={{
