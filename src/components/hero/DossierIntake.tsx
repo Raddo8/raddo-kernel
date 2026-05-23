@@ -242,9 +242,9 @@ const BRAND_EASE = [0.22, 1, 0.36, 1] as const;
 
 const INTAKE_HEADER = {
   eyebrow: "SAMPLE COB · CONFIDENTIAL · SESSION 001",
-  title: "Meet your COB. Same brain, your call on the voice.",
+  title: "Meet your COB.",
   subtitle:
-    "Pick a lens, name your industry, ask one real question. Two voices, one substance. Nothing leaves this page.",
+    "Pick a lens, name your industry, ask one real question. Nothing leaves this page.",
 };
 
 function fmtClock(d: Date) {
@@ -919,9 +919,9 @@ export default function DossierIntake() {
                 transition={{ duration: reducedMotion ? 0 : 0.42, ease: BRAND_EASE }}
                 className="mt-6"
               >
-                {/* Voice toggle + chip strips */}
+                {/* Chip strips */}
                 <div className="grid gap-5 mb-6">
-                  <VoiceToggle value={voice} onChange={setVoice} />
+
                   <ChipStrip
                     eyebrow="ROLE LENS"
                     featured={FEATURED_ROLES}
