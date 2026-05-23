@@ -779,7 +779,7 @@ export function Hero() {
                 "0 0 18px hsl(0 0% 100% / 0.65), 0 0 36px hsl(0 0% 100% / 0.45), 0 0 64px hsl(0 0% 100% / 0.3)",
             }}
           >
-            <div className="text-left max-w-[72ch]" style={{ fontSize: "clamp(16px, 3.2vw, 40px)" }}>
+            <div className="text-left max-w-[72ch]" style={{ fontSize: "clamp(10px, 2.6vw, 40px)" }}>
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
                 { verb: "CREATES", rest: "Institutional Memory." },
@@ -787,7 +787,7 @@ export function Hero() {
                 { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
                 { verb: "DEPLOYS", rest: "Strategic Clarity." },
               ].map(({ verb, rest }, i) => (
-                <p key={verb} className="m-0" style={{ paddingLeft: `${i * 2}ch` }}>
+                <p key={verb} className="m-0 whitespace-nowrap" style={{ paddingLeft: `${i * 2}ch` }}>
                   COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
