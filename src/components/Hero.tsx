@@ -765,7 +765,7 @@ export function Hero() {
           onPlaying={() => {
             if (litanyShown) return;
             setTimeout(() => setLitanyShown(true), 2000);
-            setTimeout(() => setFinaleShown(true), 4000);
+            setTimeout(() => setFinaleShown(true), 6000);
           }}
         />
         {/* Soft paper tint so headline contrast holds */}
@@ -787,8 +787,8 @@ export function Hero() {
             }}
           >
             <div
-              className="text-left max-w-[72ch] transition-opacity duration-700 ease-out"
-              style={{ fontSize: "clamp(10px, 2.6vw, 40px)", opacity: litanyShown || reduce ? 1 : 0 }}
+              className="text-left max-w-[72ch]"
+              style={{ fontSize: "clamp(10px, 2.6vw, 40px)" }}
             >
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
@@ -797,7 +797,16 @@ export function Hero() {
                 { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
                 { verb: "DEPLOYS", rest: "Strategic Clarity." },
               ].map(({ verb, rest }, i) => (
-                <p key={verb} className="m-0 whitespace-nowrap" style={{ paddingLeft: `${i * 2}ch`, marginTop: i === 0 ? 0 : "1.2em" }}>
+                <p
+                  key={verb}
+                  className="m-0 whitespace-nowrap transition-opacity duration-500 ease-out"
+                  style={{
+                    paddingLeft: `${i * 2}ch`,
+                    marginTop: i === 0 ? 0 : "1.2em",
+                    opacity: reduce ? 1 : litanyShown ? 1 : 0,
+                    transitionDelay: reduce ? "0ms" : litanyShown ? `${i * 400}ms` : "0ms",
+                  }}
+                >
                   COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
