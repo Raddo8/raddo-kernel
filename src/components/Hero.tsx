@@ -794,6 +794,7 @@ export function Hero() {
             </div>
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
             <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
+            <p className="m-0" style={{ height: "1.22em" }} aria-hidden />
             <p className="m-0 text-center" style={{ fontSize: "clamp(22px, 4.3vw, 52px)" }}>
               COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
             </p>
