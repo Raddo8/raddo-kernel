@@ -953,7 +953,7 @@ export function Hero() {
           variants={rise(800, 2600)}
           initial={INITIAL}
           animate="show"
-          className="mt-12"
+          className="mt-40 md:mt-52 mx-auto"
           style={{ maxWidth: "1180px" }}
         >
           <BriefingComposition />
