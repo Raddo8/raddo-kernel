@@ -798,7 +798,7 @@ export function Hero() {
           >
             <div
               className="text-left max-w-[72ch]"
-              style={{ fontSize: "clamp(10px, 2.6vw, 40px)" }}
+              style={{ fontSize: "clamp(14px, 2.6vw, 40px)" }}
             >
               {[
                 { verb: "INITIATES", rest: "Operating Leverage." },
@@ -855,8 +855,7 @@ export function Hero() {
 
       {/* ====== HERO ====== */}
       <section
-        className="relative z-10 mx-auto w-full max-w-[1240px] px-6 pb-32 sm:px-8 md:px-12 md:pb-40 lg:px-16"
-        style={{ paddingTop: "calc(min(900px, 92vh) + 200px)" }}
+        className="relative z-10 mx-auto w-full max-w-[1240px] px-6 pb-32 sm:px-8 md:px-12 md:pb-40 lg:px-16 pt-[calc(55vh+40px)] sm:pt-[calc(70vh+72px)] md:pt-[calc(min(900px,92vh)+200px)]"
       >
 
         {/* Introducing COB heading + Dossier Intake chat · first below the video */}
