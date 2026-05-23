@@ -2,7 +2,6 @@ export type VoiceId = "cob" | "michael";
 
 export const VOICES: { id: VoiceId; label: string; tagline: string }[] = [
   { id: "cob", label: "COB", tagline: "Your Chief of Business." },
-  { id: "michael", label: "Michael Scott", tagline: "World's Best Boss. Allegedly." },
 ];
 
 export const DEFAULT_VOICE: VoiceId = "cob";
