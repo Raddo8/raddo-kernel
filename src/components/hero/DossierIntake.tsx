@@ -1060,19 +1060,18 @@ export default function DossierIntake() {
                                 : "hsl(var(--raddo-brass))",
                           }}
                         />
-                        <p
-                          className={entry.voice === "michael" ? "font-sans" : "font-display"}
+                        <div
+                          className={entry.voice === "michael" ? "font-sans cob-md" : "font-display cob-md"}
                           style={{
                             color: "hsl(var(--raddo-ink-deep))",
                             fontSize: entry.voice === "michael" ? "15px" : "17px",
                             lineHeight: 1.5,
                             fontWeight: entry.voice === "michael" ? 500 : 600,
                             letterSpacing: "-0.005em",
-                            whiteSpace: "pre-wrap",
                           }}
                         >
-                          {entry.text}
-                        </p>
+                          <CobMarkdown text={entry.text} />
+                        </div>
                         <span
                           className="font-sans mt-1 block tabular-nums"
                           style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
