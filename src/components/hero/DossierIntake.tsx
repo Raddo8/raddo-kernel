@@ -1,9 +1,49 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import ReactMarkdown from "react-markdown";
 import { useCobChat, type TranscriptItem, type ChatMessage, type LeadInfo } from "./use-cob-chat";
 import { VOICES, type VoiceId } from "./cob-voices";
 import { FEATURED_ROLES, FEATURED_INDUSTRIES, ALL_ROLES, ALL_INDUSTRIES } from "./cob-featured";
+
+// Scoped markdown renderer for COB assistant messages. Inherits typography
+// from the surrounding container. No HTML passthrough, no GFM extensions —
+// doctrine-shaped output only needs bold, italic, paragraphs, soft breaks,
+// and the occasional list.
+function CobMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ node, ...props }) => (
+          <p style={{ margin: 0, marginTop: "0.6em" }} {...props} />
+        ),
+        strong: ({ node, ...props }) => (
+          <strong style={{ fontWeight: 700 }} {...props} />
+        ),
+        em: ({ node, ...props }) => (
+          <em style={{ fontStyle: "italic" }} {...props} />
+        ),
+        ul: ({ node, ...props }) => (
+          <ul style={{ margin: "0.4em 0", paddingLeft: "1.2em", listStyle: "disc" }} {...props} />
+        ),
+        ol: ({ node, ...props }) => (
+          <ol style={{ margin: "0.4em 0", paddingLeft: "1.2em" }} {...props} />
+        ),
+        li: ({ node, ...props }) => (
+          <li style={{ marginTop: "0.2em" }} {...props} />
+        ),
+        a: ({ node, ...props }) => (
+          <a style={{ color: "inherit", textDecoration: "underline" }} {...props} />
+        ),
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  );
+}
+
+// First-paragraph margin reset — applied via a wrapper class
+const cobMarkdownWrapperStyle: React.CSSProperties = {};
 
 // ── Gate form (inline) ─────────────────────────────────────────────────────
 function GateForm({
@@ -1020,19 +1060,18 @@ export default function DossierIntake() {
                                 : "hsl(var(--raddo-brass))",
                           }}
                         />
-                        <p
-                          className={entry.voice === "michael" ? "font-sans" : "font-display"}
+                        <div
+                          className={entry.voice === "michael" ? "font-sans cob-md" : "font-display cob-md"}
                           style={{
                             color: "hsl(var(--raddo-ink-deep))",
                             fontSize: entry.voice === "michael" ? "15px" : "17px",
                             lineHeight: 1.5,
                             fontWeight: entry.voice === "michael" ? 500 : 600,
                             letterSpacing: "-0.005em",
-                            whiteSpace: "pre-wrap",
                           }}
                         >
-                          {entry.text}
-                        </p>
+                          <CobMarkdown text={entry.text} />
+                        </div>
                         <span
                           className="font-sans mt-1 block tabular-nums"
                           style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.06em" }}

@@ -1,75 +1,54 @@
-## Part 1 — Doctrine replacement
+## Diagnosis
 
-Overwrite `supabase/functions/cob-chat/catalog/COB_CONVICTION_FUNNEL_DOCTRINE.md` with the contents of `user-uploads://COB_CONVICTION_FUNNEL_DOCTRINE-2.md`. No catalog/system-prompt assembly changes needed — the slot is already wired.
+The COB chat is rendering message text as raw strings inside `<p>` / `<div>` with `white-space: pre-wrap`. There is no markdown parser anywhere in the chat surface. The model is correctly emitting doctrine-shaped `**bold**`, `·` bullets, and em-dash asides, but the UI shows the literal `**` characters around words.
 
-## Part 2 — Implementation
+This is a UI bug, not a voice/doctrine issue. The voice profile and source documents stay untouched.
 
-### 2.1 · Phase-aware trigger logic (replaces current `cobUserTurns >= 12` gate)
+**File:** `src/components/hero/DossierIntake.tsx`
+- Line ~1034: assistant message body renders `{entry.text}` as raw text
+- Line ~1081: user message body renders `{entry.text}` as raw text (no markdown emitted here, but keep consistent)
 
-In `src/components/hero/use-cob-chat.ts`, add detector state derived from the message stream:
+## Plan
 
-- `phase3PivotFired` · regex over assistant messages for: `want to talk about (what )?deployment`, `here'?s what (changes|happens) when (i'?m|cob is) deployed`, `deployed across your operation`, `at deployment scale`.
-- `phase4GateFired` · regex over assistant messages for: `that'?s deployment[- ]scope`, `here'?s the structure i'?d use`, `no\b[^.]{0,40}but i'?ll give you the structure`, or a message that is mostly a 4–6 bullet outline (>=4 lines starting with `- ` / `* ` / `• `) and contains the word "deployment" or "deployed".
-- `prospectContinuedEngagement` · at least one visitor message after the turn index where `phase3PivotFired` first became true, with `text.trim().length >= 12`.
-- `cobAssistantTurns` · count of `role==="cob"` non-empty messages.
+### 1. Add a minimal, scoped markdown renderer for COB messages
 
-Expose `deploymentFormShouldOpen` computed as:
+Install `react-markdown` (and nothing else — no remark-gfm, no rehype-raw, no syntax-highlighter). Doctrine-shaped output only needs: `**bold**`, `*italic*`, paragraphs, soft line breaks, and the occasional list. `react-markdown` core handles all of that. No HTML passthrough, no tables, no code highlighting — keeps the attack surface and visual surface clean.
 
-```
-BLOCK_A = phase3PivotFired && prospectContinuedEngagement && phase4GateFired
-         && cobAssistantTurns >= 12 && cobAssistantTurns <= 15
-BLOCK_B = cobAssistantTurns >= 15   // hard cap
-shouldOpen = !deploymentInquirySent && voice === "cob" && (BLOCK_A || BLOCK_B)
-```
+### 2. Build a small `CobMarkdown` component co-located in DossierIntake
 
-Also expose `chatLocked = shouldOpen || deploymentInquirySent` so the composer can disable.
+A tiny wrapper that:
+- Passes `entry.text` through `react-markdown`
+- Maps `p`, `strong`, `em`, `ul`, `ol`, `li` to elements that inherit the surrounding Fraunces/Inter typography already set on the message container
+- Strips the default browser margins on `p` so streaming text doesn't reflow into block paragraphs (use `margin: 0` on `p`, with a small `marginTop` on every `p` after the first to preserve paragraph breaks the model emits)
+- `strong` uses `fontWeight: 700` (Fraunces 600 base → 700 bold reads as proper emphasis without becoming heavy)
+- Leaves `whiteSpace: "pre-wrap"` off (markdown handles line breaks); single `\n` in source becomes a soft break, double `\n` becomes a paragraph
 
-### 2.2 · Disarming pre-form message
+### 3. Wire it into the COB message branch only
 
-When `shouldOpen` flips true for the first time, push a synthetic `cob` message (role `cob`, voice `cob`, `synthetic: true` flag) with the five-part disarming copy from doctrine Section 8. Guard with a ref so it appears exactly once per session.
+- Line 1034 (assistant `<p>`): replace `{entry.text}` with `<CobMarkdown text={entry.text} />` and change the wrapping `<p>` to a `<div>` (can't nest block markdown inside `<p>`). Keep all existing inline styles on the wrapper.
+- Line 1081 (user message): leave as raw `{entry.text}` — users don't type markdown and we don't want their literal `**` interpreted.
 
-### 2.3 · DossierIntake wiring
+### 4. Streaming behavior
 
-In `src/components/hero/DossierIntake.tsx`:
+`react-markdown` re-parses on every render, which is fine at the token rates we stream (Lovable AI gateway chunks are small and infrequent enough). No memoization needed; the message list is short.
 
-- Replace the current `cobUserTurns >= 12` condition with `deploymentFormShouldOpen` from the hook.
-- Keep `DeploymentCtaCard` (already brand-aligned) as the rendered form, fed by `submitDeploymentInquiry`.
-- When `chatLocked`, disable the input/textarea and submit button in the composer and show muted helper text: "Chat closed · finish the form below to continue".
-- On successful `submitDeploymentInquiry`, navigate (via `useNavigate`) to `/next-step`.
+### 5. Verify, then re-evaluate density
 
-### 2.4 · `/next-step` confirmation page
+After this ships:
+1. Send a fresh COB message and confirm `**bold**` renders as visual bold (not literal asterisks).
+2. Confirm `·` bullets, em-dashes, and confidence numerics still render cleanly.
+3. Confirm user messages still show their text literally (no markdown interpretation).
+4. Confirm streaming doesn't flicker or double-render.
 
-Create `src/pages/NextStep.tsx` and register it in `src/App.tsx` as `<Route path="/next-step">`. Paper background, Fraunces heading "You're on the list.", Inter body with the locked copy from spec §2.2, brass button "Book a 30-min slot" (href = `VITE_CAL_BOOKING_URL` env, falls back to `https://cal.com/raddo`), text link "Back to home" → `/`. Honors `prefers-reduced-motion`; entrance is a 220ms fade-in-from-below per RADDO motion tokens. No celebration UI.
+**Then** judge whether bold density still reads as too much. If it does, the next step is a voice-profile calibration line (e.g. "Use bold sparingly — for the recommendation verb and the confidence numeric only") added to `COB_VOICE_DIGEST.md` and mirrored in the `cob-chat/index.ts` preamble. We do not touch the doctrine source files (`COB_CAPABILITIES_REFERENCE.md`, etc.) under any branch of this plan.
 
-(`/consult` already serves the long-form diagnostic form — we use `/next-step` to avoid collision, which the spec explicitly permits.)
+## Files changed
 
-### 2.5 · Transcript + pipeline emails on submission
+- `package.json` — add `react-markdown` dependency
+- `src/components/hero/DossierIntake.tsx` — add `CobMarkdown` component, swap assistant render path, change wrapping `<p>` to `<div>`
 
-Update `supabase/functions/submit-chat-lead/index.ts` so that when `stage === "deployment_inquiry"` AND the insert succeeds, it fires two Resend emails in parallel (best-effort, never blocks the 200):
+## What is explicitly NOT changing
 
-1. **Prospect transcript** — from `cob@raddo.ai` (fallback to current `FROM_ADDRESS` if `RADDO_FROM_EMAIL` env unset), to the prospect email, subject `Your COB conversation — <Month DD, YYYY>`, body per spec §2.3 with intro note + rendered HTML transcript + signoff + PS. Reply-to `deployment@raddo.ai`.
-2. **Pipeline duplicate** — to `pipeline@raddo.ai` (env `RADDO_PIPELINE_EMAIL`, fallback to current internal recipient), subject `New deployment request: <Company> — <Email>`, body per spec §2.4 with timestamp, email, company, situation paragraph, full transcript, conversation ID (= `session_id`), referer.
-
-The client must pass the transcript with the deployment-inquiry POST. Extend `submitDeploymentInquiry` in `use-cob-chat.ts` to include `messages: [{role, voice, text, at}]` (filtered to non-synthetic, non-empty), `lead: {name, email, company, title, challenge}` (gate-known), and `started_at`. The submit handler shares the HTML builder pattern from `send-chat-transcript/index.ts` (extracted into a small helper inside `submit-chat-lead`, or duplicated inline — duplicated inline is simpler and acceptable given scope).
-
-Failures of either email are logged but do not flip the response from `ok: true` — pipeline reliability comes from logs/retry, not from blocking the user.
-
-### 2.6 · max_tokens
-
-Already at 8192 per prior turn — no change. (Verify the constant in `supabase/functions/cob-chat/index.ts` before shipping.)
-
-## Files touched
-
-- `supabase/functions/cob-chat/catalog/COB_CONVICTION_FUNNEL_DOCTRINE.md` (overwrite)
-- `supabase/functions/submit-chat-lead/index.ts` (add transcript + pipeline email fan-out on `deployment_inquiry`)
-- `src/components/hero/use-cob-chat.ts` (phase detectors, `deploymentFormShouldOpen`, `chatLocked`, synthetic disarming message, transcript payload on submit)
-- `src/components/hero/DossierIntake.tsx` (replace trigger condition, lock composer, navigate to `/next-step` on success)
-- `src/pages/NextStep.tsx` (new)
-- `src/App.tsx` (register `/next-step` route)
-
-## Open items / assumptions
-
-- Production email addresses (`cob@raddo.ai`, `pipeline@raddo.ai`, `deployment@raddo.ai`) are not yet verified in Resend. I'll wire them via env vars (`RADDO_FROM_EMAIL`, `RADDO_PIPELINE_EMAIL`, `RADDO_REPLY_TO`) with the current `onboarding@resend.dev` + `cob.brahan@gmail.com` as safe fallbacks so staging keeps working.
-- Calendar URL via `VITE_CAL_BOOKING_URL` (fallback `https://cal.com/raddo`).
-- Existing `/consult` page (long-form diagnostic) is left untouched; new confirmation lives at `/next-step`.
-- Phase detectors are regex-based heuristics; they are conservative by design (Block B hard-cap at turn 15 guarantees the form fires even if detectors miss).
+- No edits to any file under `docs/cob/` or `supabase/functions/cob-chat/catalog/`
+- No edits to `supabase/functions/cob-chat/index.ts` system prompt
+- No edits to `COB_VOICE_DIGEST.md` (yet — only if post-render review confirms density is still wrong)
