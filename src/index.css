@@ -94,6 +94,10 @@
   .font-sans {
     font-family: 'Inter', system-ui, sans-serif;
   }
+
+  .cob-md > p:first-child {
+    margin-top: 0 !important;
+  }
 }
 
 @keyframes raddo-shimmer {
