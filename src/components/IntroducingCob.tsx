@@ -120,12 +120,8 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
   };
   const s = toneStyle[panel.tone];
 
-  const imageSrc: Partial<Record<HeroArchetype, string>> = {
-    professional: cobProfessionalImg,
-    executive: cobExecutiveImg,
-    owner: cobBusinessImg,
-    enterprise: cobEnterpriseImg,
-  };
+  const imageSrc: Partial<Record<HeroArchetype, string>> = {};
+
   const src = imageSrc[panel.slug];
 
   if (src) {
