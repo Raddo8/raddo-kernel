@@ -251,7 +251,7 @@ async function firecrawlSearch(q: string): Promise<string> {
     const t = it.title || it.url || `Result ${i + 1}`;
     const desc = it.description || "";
     const md = (it.markdown || "").slice(0, 2000);
-    return `--- Result ${i + 1}: ${t} (${it.url || ""}) ---\n${desc}\n${md}`;
+    return `··· Result ${i + 1}: ${t} (${it.url || ""}) ···\n${desc}\n${md}`;
   }).join("\n\n");
 }
 
