@@ -12,6 +12,7 @@ import {
   type HeroPanelDirection,
 } from "@/lib/panel-telemetry";
 import dossier01BuiltForYou from "@/assets/dossier-01-built-for-you.png";
+import dossier02Personality from "@/assets/dossier-02-personality.png";
 
 // Motion curve · matches project doctrine.
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -123,6 +124,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
 
   const imageSrc: Partial<Record<HeroArchetype, string>> = {
     "built-for-you": dossier01BuiltForYou,
+    "personality": dossier02Personality,
   };
 
   const src = imageSrc[panel.slug];
