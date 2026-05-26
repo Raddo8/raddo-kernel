@@ -709,6 +709,7 @@ function VaultExhibit({
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <a
                   href="/consult"
+                  onClick={(e) => e.stopPropagation()}
                   className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
