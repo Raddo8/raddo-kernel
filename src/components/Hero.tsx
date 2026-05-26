@@ -392,13 +392,17 @@ function BriefingComposition() {
   );
 }
 
-const VAULT_LEGEND: { n: string; label: string; pos: string }[] = [
-  { n: "01", label: "Email", pos: "Upper left pedestal" },
-  { n: "02", label: "Documents", pos: "Mid left pedestal" },
-  { n: "03", label: "Calendar", pos: "Lower left pedestal" },
-  { n: "04", label: "People", pos: "Upper right pedestal" },
-  { n: "05", label: "Business chat", pos: "Mid right pedestal" },
-  { n: "06", label: "Financials", pos: "Lower right pedestal" },
+const VAULT_LEGEND: { n: string; label: string }[] = [
+  { n: "01", label: "Knowledge / memory base" },
+  { n: "02", label: "Email" },
+  { n: "03", label: "Calendar" },
+  { n: "04", label: "Data / document storage" },
+  { n: "05", label: "Accounting platform" },
+  { n: "06", label: "Payroll & HR system" },
+  { n: "07", label: "CRM" },
+  { n: "08", label: "Team communication" },
+  { n: "09", label: "Industry · specific operation systems" },
+  { n: "10", label: "Management tools" },
 ];
 
 function VaultExhibit({ open }: { open: boolean }) {
@@ -487,43 +491,35 @@ function VaultExhibit({ open }: { open: boolean }) {
           <span aria-hidden style={{ width: 28, height: 1.5, backgroundColor: "hsl(var(--raddo-brass))" }} />
           <span>Exhibit key</span>
         </div>
-        <ul className="m-0 p-0 list-none">
-          {VAULT_LEGEND.map((row, i) => (
-            <li
-              key={row.n}
-              className="flex items-baseline gap-3 py-2"
-              style={{ borderTop: i === 0 ? "none" : "1px solid hsl(var(--raddo-paper-edge))" }}
-            >
-              <span
-                className="font-mono shrink-0"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.18em",
-                  color: "hsl(var(--raddo-brass-deep))",
-                  minWidth: 24,
-                }}
+        <ul className="m-0 p-0 list-none grid grid-cols-2 gap-x-6">
+          {VAULT_LEGEND.map((row, i) => {
+            const isFirstInColumn = i === 0 || i === 5;
+            return (
+              <li
+                key={row.n}
+                className="flex items-baseline gap-3 py-2"
+                style={{ borderTop: isFirstInColumn ? "none" : "1px solid hsl(var(--raddo-paper-edge))" }}
               >
-                {row.n}
-              </span>
-              <span
-                className="font-sans text-raddo-ink-deep"
-                style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
-              >
-                {row.label}
-              </span>
-              <span
-                className="font-mono hidden sm:inline"
-                style={{
-                  fontSize: 10,
-                  letterSpacing: "0.14em",
-                  color: "hsl(var(--raddo-ash))",
-                  textTransform: "uppercase",
-                }}
-              >
-                {row.pos}
-              </span>
-            </li>
-          ))}
+                <span
+                  className="font-mono shrink-0"
+                  style={{
+                    fontSize: 10,
+                    letterSpacing: "0.18em",
+                    color: "hsl(var(--raddo-brass-deep))",
+                    minWidth: 24,
+                  }}
+                >
+                  {row.n}
+                </span>
+                <span
+                  className="font-sans text-raddo-ink-deep"
+                  style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
+                >
+                  {row.label}
+                </span>
+              </li>
+            );
+          })}
         </ul>
       </div>
 
