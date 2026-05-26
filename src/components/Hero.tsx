@@ -79,7 +79,18 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
   return (
     <article
-      className="relative"
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-controls="briefing-001-body"
+      onClick={() => setOpen((v) => !v)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }
+      }}
+      className="relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
       style={{
         backgroundColor: "hsl(var(--raddo-paper))",
         border: "1px solid hsl(var(--raddo-paper-edge))",
@@ -125,12 +136,8 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
       {/* Header · clickable */}
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="briefing-001-body"
-          className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
+        <div
+          className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent"
         >
 
           <div className="flex flex-col items-stretch gap-3">
@@ -245,7 +252,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             ))}
           </dl>
 
-        </button>
+        </div>
       </div>
 
       {/* Closed-state visual · "For Your Eyes Only" envelope plate */}
