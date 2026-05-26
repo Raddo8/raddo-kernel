@@ -109,7 +109,9 @@ Every substantive turn does this work:
 
 Match length to the question · concise by default, deeper when the call earns it. Discipline and substance are non-negotiable.
 
-BOLD DISCIPLINE (binding): markdown bold (\`**term**\`) anchors the most important item at the front of a substantive reply · the recommendation verb, the named risk, the decision word, or a true section header. Default one bold anchor per reply. Hard ceiling two. Never bold mid-prose for ordinary emphasis. Never bold confidence numerics or hedges. Clarifiers, greetings, and routing turns use no bold at all. Plain prose carries the rest.`;
+BOLD DISCIPLINE (binding · strict): markdown bold (\`**term**\`) anchors ONE short phrase at the front of a substantive reply · the recommendation verb, the named risk, or the decision word (2 to 6 words max). Default one bold anchor per reply. Hard ceiling two. NEVER wrap a full sentence, a full paragraph, or the whole response in \`**\`. NEVER bold mid-prose for ordinary emphasis. NEVER bold confidence numerics, hedges, transitions, list items wholesale, or filler. If you cannot point to a single short anchor phrase that earns the weight, use no bold at all. Plain prose carries the rest. Violating this rule degrades the response.
+
+DASH DISCIPLINE (binding): never use em-dashes (\`—\`), en-dashes (\`–\`), or double hyphens (\`--\`) anywhere in output. Use a middot (\`·\`) for asides and separations, or recast as two sentences. Single hyphens inside compound words (e.g. "second-order") are fine. This applies to every reply, every list, every aside.`;
 
 const VOICE_BINDING_MICHAEL = `\n\n# VOICE BINDING — MICHAEL SCOTT\nSpeak in this voice. You are Michael Gary Scott, Regional Manager of Dunder Mifflin Scranton, sitting in as the demo's comedic anti-COB. Substance about RADDO remains accurate — you may be miscalibrated in tone but you never invent capabilities, never misstate what RADDO does, never break the no-disclosure rule, never name internal mechanics, never quote pricing. Comedy comes from register, not hallucination. Match length to the question · keep it tight, ramble only when it lands a joke. Rotate web-deflection lines from the digest — never repeat one in a session.`;
 
@@ -137,7 +139,7 @@ const PROMPT_CACHE_MAX = 32;
 function buildSystemPrompt(args: PromptArgs): string {
   // Lead block is per-visitor · don't cache it.
   const leadBlock = args.lead && (args.lead.name || args.lead.company || args.lead.title)
-    ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n- Name: ${args.lead.name || "—"}\n- Title: ${args.lead.title || "—"}\n- Company: ${args.lead.company || "—"}\n- Stated challenge: ${args.lead.challenge || "—"}`
+    ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n· Name: ${args.lead.name || "(not provided)"}\n· Title: ${args.lead.title || "(not provided)"}\n· Company: ${args.lead.company || "(not provided)"}\n· Stated challenge: ${args.lead.challenge || "(not provided)"}`
     : "";
   const firstTurnBlock = args.firstTurn
     ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
@@ -249,7 +251,7 @@ async function firecrawlSearch(q: string): Promise<string> {
     const t = it.title || it.url || `Result ${i + 1}`;
     const desc = it.description || "";
     const md = (it.markdown || "").slice(0, 2000);
-    return `--- Result ${i + 1}: ${t} (${it.url || ""}) ---\n${desc}\n${md}`;
+    return `··· Result ${i + 1}: ${t} (${it.url || ""}) ···\n${desc}\n${md}`;
   }).join("\n\n");
 }
 
