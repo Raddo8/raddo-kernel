@@ -405,6 +405,49 @@ const VAULT_LEGEND: { n: string; label: string }[] = [
   { n: "10", label: "Management tools" },
 ];
 
+const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
+  {
+    title: "Strategy & decisions",
+    items: ["Quarterly reviews", "Annual planning", "Decision stress · tests", "Option analysis", "Board packs"],
+  },
+  {
+    title: "Finance",
+    items: ["Cash forecasting", "Bank reconciliation", "AR collections", "Cost ratios", "Covenant compliance"],
+  },
+  {
+    title: "Operations",
+    items: ["Store KPIs", "Maintenance tracking", "Delivery monitoring", "SOP enforcement", "Contract audits"],
+  },
+  {
+    title: "Revenue & sales",
+    items: ["Pipeline tracking", "Sales outreach", "Conversion analysis", "Launch coordination", "Loss analysis"],
+  },
+  {
+    title: "People & HR",
+    items: ["Org charts", "Hiring tracking", "Retention monitoring", "Onboarding plans", "Comp benchmarking"],
+  },
+  {
+    title: "Legal & compliance",
+    items: ["Contract tracking", "Licensing calendar", "Entity audits", "Policy review", "Regulatory watch"],
+  },
+  {
+    title: "Customer & growth",
+    items: ["Customer health", "Customer comms", "Upsell signals", "Win · loss analysis", "Advisory boards"],
+  },
+  {
+    title: "Vendors & spend",
+    items: ["Vendor tracking", "RFP drafting", "Vendor consolidation", "SaaS audits", "Insurance tracking"],
+  },
+  {
+    title: "Meetings & time",
+    items: ["Meeting prep", "Meeting notes", "Commitment tracking", "Meeting scheduling", "Follow · throughs"],
+  },
+  {
+    title: "Memory & coordination",
+    items: ["Decision recall", "Conflict detection", "Pattern recognition", "Institutional search", "Exec onboarding"],
+  },
+];
+
 function VaultExhibit({ open }: { open: boolean }) {
   const reduce = useReducedMotion();
   return (
