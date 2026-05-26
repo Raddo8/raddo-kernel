@@ -252,7 +252,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             ))}
           </dl>
 
-        </button>
+        </div>
       </div>
 
       {/* Closed-state visual · "For Your Eyes Only" envelope plate */}
