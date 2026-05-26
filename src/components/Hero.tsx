@@ -323,7 +323,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 </strong>{" "}
                 built around one person · or one business. It reads what you read,
                 sits in your meetings, and holds the full context of your operation:
-                finance, legal, people, risk, every functional domain. It learns how
+                finance, operations, people, legal, every functional domain. It learns how
                 you think, how you write, what you weigh, what you cut. From that
                 foundation, it produces the briefings, drafts, projects, reports,
                 presentations, and counsel that let you show up as the sharpest
