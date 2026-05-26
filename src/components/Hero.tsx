@@ -392,7 +392,7 @@ function BriefingComposition() {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
       <BriefingDossier open={open} setOpen={setOpen} />
-      <VaultExhibit open={open} />
+      <VaultExhibit open={open} setOpen={setOpen} />
     </div>
   );
 }
@@ -453,11 +453,29 @@ const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
   },
 ];
 
-function VaultExhibit({ open }: { open: boolean }) {
+function VaultExhibit({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (v: boolean | ((p: boolean) => boolean)) => void;
+}) {
   const reduce = useReducedMotion();
+  const toggle = () => setOpen((v) => !v);
   return (
     <article
-      className="relative h-full flex flex-col"
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-controls="briefing-001-body"
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      }}
+      className="relative h-full flex flex-col cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
       style={{
         backgroundColor: "hsl(var(--raddo-paper))",
         border: "1px solid hsl(var(--raddo-paper-edge))",
@@ -566,7 +584,54 @@ function VaultExhibit({ open }: { open: boolean }) {
             </li>
           ))}
         </ul>
+
+        {/* Vault toggle indicator · mirrors the dossier toggle, bottom-right of collapsed section */}
+        <div className="mt-5 flex items-center justify-between gap-4">
+          <span
+            className="font-mono"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "hsl(var(--raddo-brass-deep))",
+              textTransform: "uppercase",
+            }}
+          >
+            {open ? "Tap to seal" : "Tap dossier or exhibit to unseal"}
+          </span>
+          <span
+            aria-hidden
+            className="flex items-center gap-2 font-mono"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "hsl(var(--raddo-ash))",
+              textTransform: "uppercase",
+            }}
+          >
+            <span>{open ? "Close" : "Open exhibit"}</span>
+            <span
+              className="grid place-items-center"
+              style={{
+                width: 28,
+                height: 28,
+                border: "1px solid hsl(var(--raddo-brass))",
+                borderRadius: 4,
+                color: "hsl(var(--raddo-brass-deep))",
+                transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                backgroundColor: open
+                  ? "hsl(var(--raddo-brass) / 0.12)"
+                  : "transparent",
+              }}
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+              </svg>
+            </span>
+          </span>
+        </div>
       </div>
+
 
       <AnimatePresence initial={false}>
         {open && (
@@ -644,6 +709,7 @@ function VaultExhibit({ open }: { open: boolean }) {
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
                 <a
                   href="/consult"
+                  onClick={(e) => e.stopPropagation()}
                   className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
