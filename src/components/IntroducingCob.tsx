@@ -2,10 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion, type PanInfo, type Transition } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import cobProfessionalImg from "@/assets/cob-professional.png";
-import cobExecutiveImg from "@/assets/cob-executive.png";
-import cobBusinessImg from "@/assets/cob-business.png";
-import cobEnterpriseImg from "@/assets/cob-enterprise.png";
+
 import {
   fireHeroCtaClick,
   fireHeroPanelDwell,
