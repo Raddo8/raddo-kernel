@@ -2,14 +2,14 @@
 // Goal names must match the Plausible dashboard configuration.
 
 export type HeroArchetype =
-  | "raddo-ai"
-  | "dossier-02"
-  | "dossier-03"
-  | "dossier-04"
-  | "professional"
-  | "executive"
-  | "owner"
-  | "enterprise";
+  | "built-for-you"
+  | "personality"
+  | "alignment"
+  | "strategy"
+  | "truth"
+  | "loyalty"
+  | "anticipation"
+  | "compounding";
 export type HeroPanelDirection = "left" | "right" | "dot";
 
 function track(name: string, props: Record<string, string | number | boolean>) {
