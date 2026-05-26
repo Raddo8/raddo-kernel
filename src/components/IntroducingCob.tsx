@@ -130,7 +130,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
   if (src) {
     return (
       <div
-        className="relative w-full aspect-[4/5] md:aspect-[16/10] overflow-hidden"
+        className="relative w-full overflow-hidden"
         style={{ borderRadius: 4, border: `1px solid ${s.border}` }}
       >
         <img
@@ -138,7 +138,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
           alt={panel.imageAlt}
           loading={eager ? "eager" : "lazy"}
           decoding="async"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="block w-full h-auto"
         />
       </div>
     );
