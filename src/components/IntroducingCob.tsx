@@ -14,6 +14,7 @@ import {
 import dossier01BuiltForYou from "@/assets/dossier-01-built-for-you.png";
 import dossier02Personality from "@/assets/dossier-02-personality.png";
 import dossier03Alignment from "@/assets/dossier-03-alignment.png";
+import dossier04Strategy from "@/assets/dossier-04-strategy.png";
 
 // Motion curve · matches project doctrine.
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -127,6 +128,7 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
     "built-for-you": dossier01BuiltForYou,
     "personality": dossier02Personality,
     "alignment": dossier03Alignment,
+    "strategy": dossier04Strategy,
   };
 
   const src = imageSrc[panel.slug];
