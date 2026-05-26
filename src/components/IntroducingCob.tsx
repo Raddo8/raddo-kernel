@@ -546,7 +546,7 @@ export function IntroducingCob() {
                   }}
                 >
                   <div className="px-6 md:px-10 py-8 md:py-12">
-                    <div className="grid gap-8 md:grid-cols-[1.1fr_1fr] md:gap-12 items-center">
+                    <div className="grid gap-8 lg:grid-cols-[1.1fr_1fr] lg:gap-12 items-center">
                       <div>
                         <p
                           className="uppercase font-mono"
