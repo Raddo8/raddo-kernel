@@ -1,12 +1,23 @@
-## Fix vault legend top borders
+## Replace dossier panels with new 8-card doctrine
 
-The 2-column grid currently suppresses the top border on the first item in each column (indexes 0 and 5), so rows `01` and `06` have no separator above them while the other rows do. The user wants those separators present for visual consistency.
+**File:** `src/components/IntroducingCob.tsx`
 
-### Change
+Replace the `PANELS` array with the 8 new entries using the labels, slugs, and full scenario copy provided (em dashes → middot `·` per no-dash rule):
 
-In `src/components/Hero.tsx`, inside the `VAULT_LEGEND.map(...)` render:
+| # | Label | Slug | Tone |
+|---|---|---|---|
+| 01 | BUILT FOR YOU | `built-for-you` | lamp |
+| 02 | PERSONALITY | `personality` | dawn |
+| 03 | ALIGNMENT | `alignment` | dusk |
+| 04 | STRATEGY | `strategy` | atrium |
+| 05 | TRUTH | `truth` | lamp |
+| 06 | LOYALTY | `loyalty` | dusk |
+| 07 | ANTICIPATION | `anticipation` | dawn |
+| 08 | COMPOUNDING | `compounding` | atrium |
 
-- Remove the `isFirstInColumn` check.
-- Apply `borderTop: "1px solid hsl(var(--raddo-paper-edge))"` to every `<li>` unconditionally.
+**Supporting changes:**
+- `src/lib/panel-telemetry.ts` — widen `HeroArchetype` to include the 8 new slugs so telemetry + types stay clean.
+- `PlaceholderFigure` image map — drop the old slug keys (professional/executive/owner/enterprise). All 8 panels fall through to the tone-block placeholder with their `imageAlt` caption until you supply the new visuals.
+- `imageAlt` set to short placeholder strings ("Dossier 01 · Built for you · figure pending") — to be replaced when you drop in the new images next turn.
 
-That's it — one-line behavior change, no other surfaces touched.
+**Out of scope:** Hero, new image wiring, tab/folder layout, carousel behavior, CTA. Only copy + types change.
