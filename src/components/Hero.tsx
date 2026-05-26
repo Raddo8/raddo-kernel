@@ -653,15 +653,6 @@ function VaultExhibit({ open }: { open: boolean }) {
                   <span>Begin the consult</span>
                   <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
                 </a>
-                <a
-                  href="/capability-brief.html"
-                  className="inline-flex items-center font-sans text-raddo-ink-deep"
-                  style={{ fontSize: 13, fontWeight: 500, letterSpacing: "0.02em" }}
-                >
-                  <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
-                    Read the Capability Brief
-                  </span>
-                </a>
               </div>
             </div>
           </motion.div>
