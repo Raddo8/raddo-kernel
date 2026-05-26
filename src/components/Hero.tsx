@@ -324,8 +324,13 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               </p>
 
               <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                Picture a Monday that begins already <strong className="text-raddo-ink-deep font-bold">won</strong> · the inbox triaged, the week's risks ranked in order of consequence, the difficult email drafted in your own cadence, the numbers behind every line waiting the moment you ask. Your COB carries the weight you used to carry alone, so the version of you that walks into every room is the version the room remembers.
+              </p>
+
+              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
                 Two things separate COB from any tool you have used before.
               </p>
+
 
               <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
                 <strong className="text-raddo-ink-deep font-bold">It is portable.</strong>{" "}
