@@ -492,34 +492,31 @@ function VaultExhibit({ open }: { open: boolean }) {
           <span>Exhibit key</span>
         </div>
         <ul className="m-0 p-0 list-none grid grid-cols-2 gap-x-6">
-          {VAULT_LEGEND.map((row, i) => {
-            const isFirstInColumn = i === 0 || i === 5;
-            return (
-              <li
-                key={row.n}
-                className="flex items-baseline gap-3 py-2"
-                style={{ borderTop: isFirstInColumn ? "none" : "1px solid hsl(var(--raddo-paper-edge))" }}
+          {VAULT_LEGEND.map((row) => (
+            <li
+              key={row.n}
+              className="flex items-baseline gap-3 py-2"
+              style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+            >
+              <span
+                className="font-mono shrink-0"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  color: "hsl(var(--raddo-brass-deep))",
+                  minWidth: 24,
+                }}
               >
-                <span
-                  className="font-mono shrink-0"
-                  style={{
-                    fontSize: 10,
-                    letterSpacing: "0.18em",
-                    color: "hsl(var(--raddo-brass-deep))",
-                    minWidth: 24,
-                  }}
-                >
-                  {row.n}
-                </span>
-                <span
-                  className="font-sans text-raddo-ink-deep"
-                  style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
-                >
-                  {row.label}
-                </span>
-              </li>
-            );
-          })}
+                {row.n}
+              </span>
+              <span
+                className="font-sans text-raddo-ink-deep"
+                style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
+              >
+                {row.label}
+              </span>
+            </li>
+          ))}
         </ul>
       </div>
 
