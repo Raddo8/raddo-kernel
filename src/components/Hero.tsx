@@ -136,12 +136,8 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
       {/* Header · clickable */}
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          aria-controls="briefing-001-body"
-          className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent cursor-pointer"
+        <div
+          className="w-full text-left group px-6 pt-7 pb-8 md:px-10 md:pt-8 md:pb-9 bg-transparent"
         >
 
           <div className="flex flex-col items-stretch gap-3">
