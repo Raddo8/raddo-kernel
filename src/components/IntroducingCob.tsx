@@ -11,6 +11,7 @@ import {
   type HeroArchetype,
   type HeroPanelDirection,
 } from "@/lib/panel-telemetry";
+import dossier01BuiltForYou from "@/assets/dossier-01-built-for-you.png";
 
 // Motion curve · matches project doctrine.
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -120,7 +121,9 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
   };
   const s = toneStyle[panel.tone];
 
-  const imageSrc: Partial<Record<HeroArchetype, string>> = {};
+  const imageSrc: Partial<Record<HeroArchetype, string>> = {
+    "built-for-you": dossier01BuiltForYou,
+  };
 
   const src = imageSrc[panel.slug];
 
