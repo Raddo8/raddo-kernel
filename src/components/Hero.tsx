@@ -405,6 +405,49 @@ const VAULT_LEGEND: { n: string; label: string }[] = [
   { n: "10", label: "Management tools" },
 ];
 
+const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
+  {
+    title: "Strategy & decisions",
+    items: ["Quarterly reviews", "Annual planning", "Decision stress · tests", "Option analysis", "Board packs"],
+  },
+  {
+    title: "Finance",
+    items: ["Cash forecasting", "Bank reconciliation", "AR collections", "Cost ratios", "Covenant compliance"],
+  },
+  {
+    title: "Operations",
+    items: ["Store KPIs", "Maintenance tracking", "Delivery monitoring", "SOP enforcement", "Contract audits"],
+  },
+  {
+    title: "Revenue & sales",
+    items: ["Pipeline tracking", "Sales outreach", "Conversion analysis", "Launch coordination", "Loss analysis"],
+  },
+  {
+    title: "People & HR",
+    items: ["Org charts", "Hiring tracking", "Retention monitoring", "Onboarding plans", "Comp benchmarking"],
+  },
+  {
+    title: "Legal & compliance",
+    items: ["Contract tracking", "Licensing calendar", "Entity audits", "Policy review", "Regulatory watch"],
+  },
+  {
+    title: "Customer & growth",
+    items: ["Customer health", "Customer comms", "Upsell signals", "Win · loss analysis", "Advisory boards"],
+  },
+  {
+    title: "Vendors & spend",
+    items: ["Vendor tracking", "RFP drafting", "Vendor consolidation", "SaaS audits", "Insurance tracking"],
+  },
+  {
+    title: "Meetings & time",
+    items: ["Meeting prep", "Meeting notes", "Commitment tracking", "Meeting scheduling", "Follow · throughs"],
+  },
+  {
+    title: "Memory & coordination",
+    items: ["Decision recall", "Conflict detection", "Pattern recognition", "Institutional search", "Exec onboarding"],
+  },
+];
+
 function VaultExhibit({ open }: { open: boolean }) {
   const reduce = useReducedMotion();
   return (
@@ -537,6 +580,51 @@ function VaultExhibit({ open }: { open: boolean }) {
                 borderTop: "1px solid hsl(var(--raddo-paper-edge))",
               }}
             >
+              <div
+                className="font-display mb-3"
+                style={{
+                  fontVariant: "small-caps",
+                  fontSize: 11,
+                  letterSpacing: "0.22em",
+                  color: "hsl(var(--raddo-brass))",
+                }}
+              >
+                What he takes on
+              </div>
+              <p
+                className="font-sans text-raddo-charcoal m-0 mb-5"
+                style={{ fontSize: 14, lineHeight: 1.55 }}
+              >
+                Once connected, your COB quietly absorbs the work that fills your week. A partial view of what he picks up:
+              </p>
+              <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 mb-6">
+                {VAULT_CAPABILITIES.map((group) => (
+                  <li key={group.title} className="m-0 p-0">
+                    <div
+                      className="font-mono mb-2"
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: "0.18em",
+                        color: "hsl(var(--raddo-brass-deep))",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {group.title}
+                    </div>
+                    <ul className="m-0 p-0 list-none flex flex-col gap-[6px]">
+                      {group.items.map((item) => (
+                        <li
+                          key={item}
+                          className="font-sans text-raddo-ink-deep"
+                          style={{ fontSize: 13, lineHeight: 1.45 }}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
               <div
                 className="font-display mb-3"
                 style={{
