@@ -573,7 +573,7 @@ export function IntroducingCob() {
                           style={{
                             color: "hsl(var(--raddo-ink-deep))",
                             fontWeight: 700,
-                            fontSize: "clamp(1.45rem, 2.5vw, 2.15rem)",
+                            fontSize: "clamp(1.2rem, 2.25vw, 1.9rem)",
                             lineHeight: 1.18,
                             letterSpacing: "-0.005em",
                           }}
