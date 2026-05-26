@@ -139,7 +139,7 @@ const PROMPT_CACHE_MAX = 32;
 function buildSystemPrompt(args: PromptArgs): string {
   // Lead block is per-visitor · don't cache it.
   const leadBlock = args.lead && (args.lead.name || args.lead.company || args.lead.title)
-    ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n- Name: ${args.lead.name || "—"}\n- Title: ${args.lead.title || "—"}\n- Company: ${args.lead.company || "—"}\n- Stated challenge: ${args.lead.challenge || "—"}`
+    ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n· Name: ${args.lead.name || "(not provided)"}\n· Title: ${args.lead.title || "(not provided)"}\n· Company: ${args.lead.company || "(not provided)"}\n· Stated challenge: ${args.lead.challenge || "(not provided)"}`
     : "";
   const firstTurnBlock = args.firstTurn
     ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
