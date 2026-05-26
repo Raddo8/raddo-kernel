@@ -79,7 +79,18 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
   return (
     <article
-      className="relative"
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-controls="briefing-001-body"
+      onClick={() => setOpen((v) => !v)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          setOpen((v) => !v);
+        }
+      }}
+      className="relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
       style={{
         backgroundColor: "hsl(var(--raddo-paper))",
         border: "1px solid hsl(var(--raddo-paper-edge))",
