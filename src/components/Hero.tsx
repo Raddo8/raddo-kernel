@@ -702,22 +702,23 @@ function VaultExhibit({
                   </li>
                 ))}
               </ul>
-              <div
-                className="font-display mb-3"
-                style={{
-                  fontVariant: "small-caps",
-                  fontSize: 11,
-                  letterSpacing: "0.22em",
-                  color: "hsl(var(--raddo-brass))",
-                }}
-              >
-                Your move
-              </div>
-              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div
+                  className="font-display leading-none"
+                  style={{
+                    fontVariant: "small-caps",
+                    fontSize: "clamp(28px, 4vw, 44px)",
+                    fontWeight: 800,
+                    letterSpacing: "0.08em",
+                    color: "hsl(var(--raddo-brass))",
+                  }}
+                >
+                  Your move
+                </div>
                 <a
                   href="/consult"
                   onClick={(e) => e.stopPropagation()}
-                  className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+                  className="raddo-cta-brass group inline-flex items-center gap-2 font-sans sm:ml-auto"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
                     color: "hsl(var(--raddo-ink-deep))",
