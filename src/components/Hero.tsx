@@ -546,6 +546,51 @@ function VaultExhibit({ open }: { open: boolean }) {
                   color: "hsl(var(--raddo-brass))",
                 }}
               >
+                What he takes on
+              </div>
+              <p
+                className="font-sans text-raddo-charcoal m-0 mb-5"
+                style={{ fontSize: 14, lineHeight: 1.55 }}
+              >
+                Once connected, your COB quietly absorbs the work that fills your week. A partial view of what he picks up:
+              </p>
+              <ul className="m-0 p-0 list-none grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5 mb-6">
+                {VAULT_CAPABILITIES.map((group) => (
+                  <li key={group.title} className="m-0 p-0">
+                    <div
+                      className="font-mono mb-2"
+                      style={{
+                        fontSize: 10,
+                        letterSpacing: "0.18em",
+                        color: "hsl(var(--raddo-brass-deep))",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {group.title}
+                    </div>
+                    <ul className="m-0 p-0 list-none flex flex-col gap-[6px]">
+                      {group.items.map((item) => (
+                        <li
+                          key={item}
+                          className="font-sans text-raddo-ink-deep"
+                          style={{ fontSize: 13, lineHeight: 1.45 }}
+                        >
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+              <div
+                className="font-display mb-3"
+                style={{
+                  fontVariant: "small-caps",
+                  fontSize: 11,
+                  letterSpacing: "0.22em",
+                  color: "hsl(var(--raddo-brass))",
+                }}
+              >
                 Your move
               </div>
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
