@@ -25,72 +25,70 @@ type Panel = {
   tone: "dawn" | "dusk" | "lamp" | "atrium";
 };
 
-// Copy locked — do not paraphrase. "Remember" frame is intentional.
+// Copy locked — do not paraphrase.
 const PANELS: Panel[] = [
   {
-    slug: "raddo-ai",
-    label: "RADDO.AI",
+    slug: "built-for-you",
+    label: "BUILT FOR YOU",
     scenario:
-      "Each Chief of Business (COB) is a private, conversational operating partner that learns your company end-to-end, remembers every decision, and quietly orchestrates the work that runs it. Built for the operators · founders, owners, senior executives · who run real businesses and need an executive who keeps up.",
-    imageAlt:
-      "RADDO mark embossed on cream paper, brass desk lamp casting warm light across a one-page brief",
+      "Your COB is engineered for one company. From the day it's installed, every behavior is built around your business, your operator, your decisions · and remembers every one of them. No drift from one customer to the next. One COB. One mission. Built to be 110% loyal to your interests, year after year. A category of one.",
+    imageAlt: "Dossier 01 · Built for you · figure pending",
     tone: "lamp",
   },
   {
-    slug: "dossier-02",
-    label: "DOSSIER 02",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    slug: "personality",
+    label: "PERSONALITY",
+    scenario:
+      "Your COB has a built personality · not a setting you toggle. The tone, register, communication style, and operating posture are engineered to match your operator's voice and your company's culture. The result reads like a senior executive who's been with you for years, not a tool bolted on. Distinct. Coherent. Yours.",
+    imageAlt: "Dossier 02 · Personality · figure pending",
     tone: "dawn",
   },
   {
-    slug: "dossier-03",
-    label: "DOSSIER 03",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    slug: "alignment",
+    label: "ALIGNMENT",
+    scenario:
+      "Your COB doesn't optimize for what's generally smart. It optimizes for what your business is doing · the strategy, the priorities, the constraints, the things you said matter and the things you said don't. Every recommendation flows through that filter. Generic advice is easy. Aligned counsel is the hard thing. Wired in at install.",
+    imageAlt: "Dossier 03 · Alignment · figure pending",
     tone: "dusk",
   },
   {
-    slug: "dossier-04",
-    label: "DOSSIER 04",
-    scenario: "Scenario copy pending · placeholder dossier.",
-    imageAlt: "Placeholder dossier figure · awaiting commissioned content.",
+    slug: "strategy",
+    label: "STRATEGY",
+    scenario:
+      "Strategic thinking is engineered into how your COB approaches every consequential question. Diagnosis first. Then guiding policy. Then coherent action. Not advice that sounds smart · analysis that names what's actually happening and what to do about it. Your COB doesn't surface tactics dressed up as strategy. It works in the register your decisions require.",
+    imageAlt: "Dossier 04 · Strategy · figure pending",
     tone: "atrium",
   },
   {
-    slug: "professional",
-    label: "THE PROFESSIONAL",
+    slug: "truth",
+    label: "TRUTH",
     scenario:
-      "Remember the Tuesday morning when you woke up to a one-page brief that already knew every meeting today, every commitment you owe, and every fire that started while you slept · written in your voice.",
-    imageAlt:
-      "A leather notebook open on a cream-paper desk at dawn, brass desk lamp casting warm light on a one-page brief",
-    tone: "dawn",
-  },
-  {
-    slug: "executive",
-    label: "THE EXECUTIVE",
-    scenario:
-      "Remember walking into the board meeting knowing exactly which of your three strategic priorities actually moved last month · and the SVP conversation you've been avoiding for six weeks already drafted on your phone.",
-    imageAlt:
-      "A walnut boardroom table at dusk, single one-pager glowing at the head chair, glass doors opening to the room beyond",
-    tone: "dusk",
-  },
-  {
-    slug: "owner",
-    label: "THE BUSINESS",
-    scenario:
-      "Remember the Tuesday you got back · the hire-vs-vendor math already done, the customer about to churn already flagged, the vendor whose pricing crept up over four quarters on your screen by 7am.",
-    imageAlt:
-      "A warm workshop-meets-office desk with org chart, vendor list, and cash projection spread under a brass lamp",
+      "Every response your COB delivers includes its own calibration: how confident it is, what it knows for certain, what it's inferring, what it hasn't verified. No false confidence. No hidden uncertainty. No marketing language around the gaps. When something matters, the gap matters more than the claim. Your COB is built to surface both.",
+    imageAlt: "Dossier 05 · Truth · figure pending",
     tone: "lamp",
   },
   {
-    slug: "enterprise",
-    label: "THE ENTERPRISE",
+    slug: "loyalty",
+    label: "LOYALTY",
     scenario:
-      "Remember the board meeting that didn't surprise you · every C-suite seat running with their own Chief of Business, and the synthesis surfacing where their decisions would collide three days before they did.",
-    imageAlt:
-      "A vast atrium with multiple distant desks each holding a single dossier, central podium with a master synthesis under brass nameplate",
+      "Loyalty means telling you uncomfortable truths. Your COB is engineered to disagree when you're about to make a mistake. The pushback is the value, not the friction. When the numbers don't support the decision, your COB will name it. When the strategy you're describing contradicts the strategy you locked last quarter, your COB surfaces it. Loyalty is not agreement.",
+    imageAlt: "Dossier 06 · Loyalty · figure pending",
+    tone: "dusk",
+  },
+  {
+    slug: "anticipation",
+    label: "ANTICIPATION",
+    scenario:
+      "Your COB doesn't wait to be asked. It surfaces what you didn't think to look for · the pattern across three customer renegotiations that says something about your pricing, the risk hiding in the contract clause everyone signed last year, the question the board is going to ask before they ask it. Forward posture, not reactive.",
+    imageAlt: "Dossier 07 · Anticipation · figure pending",
+    tone: "dawn",
+  },
+  {
+    slug: "compounding",
+    label: "COMPOUNDING",
+    scenario:
+      "Your COB gets sharper with every cycle · not by changing, but by remembering more of you. Years of decisions, patterns, context, conversations, edge cases · all available the moment they're relevant. Living infrastructure that thickens with use. The longer you have it, the more leverage you carry into every room. Compounding intelligence built into how it operates.",
+    imageAlt: "Dossier 08 · Compounding · figure pending",
     tone: "atrium",
   },
 ];
