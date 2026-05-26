@@ -392,13 +392,17 @@ function BriefingComposition() {
   );
 }
 
-const VAULT_LEGEND: { n: string; label: string; pos: string }[] = [
-  { n: "01", label: "Email", pos: "Upper left pedestal" },
-  { n: "02", label: "Documents", pos: "Mid left pedestal" },
-  { n: "03", label: "Calendar", pos: "Lower left pedestal" },
-  { n: "04", label: "People", pos: "Upper right pedestal" },
-  { n: "05", label: "Business chat", pos: "Mid right pedestal" },
-  { n: "06", label: "Financials", pos: "Lower right pedestal" },
+const VAULT_LEGEND: { n: string; label: string }[] = [
+  { n: "01", label: "Knowledge / memory base" },
+  { n: "02", label: "Email" },
+  { n: "03", label: "Calendar" },
+  { n: "04", label: "Data / document storage" },
+  { n: "05", label: "Accounting platform" },
+  { n: "06", label: "Payroll & HR system" },
+  { n: "07", label: "CRM" },
+  { n: "08", label: "Team communication" },
+  { n: "09", label: "Industry · specific operation systems" },
+  { n: "10", label: "Management tools" },
 ];
 
 function VaultExhibit({ open }: { open: boolean }) {
