@@ -453,11 +453,29 @@ const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
   },
 ];
 
-function VaultExhibit({ open }: { open: boolean }) {
+function VaultExhibit({
+  open,
+  setOpen,
+}: {
+  open: boolean;
+  setOpen: (v: boolean | ((p: boolean) => boolean)) => void;
+}) {
   const reduce = useReducedMotion();
+  const toggle = () => setOpen((v) => !v);
   return (
     <article
-      className="relative h-full flex flex-col"
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-controls="briefing-001-body"
+      onClick={toggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggle();
+        }
+      }}
+      className="relative h-full flex flex-col cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
       style={{
         backgroundColor: "hsl(var(--raddo-paper))",
         border: "1px solid hsl(var(--raddo-paper-edge))",
