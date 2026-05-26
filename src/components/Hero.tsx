@@ -323,7 +323,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 </strong>{" "}
                 built around one person · or one business. It reads what you read,
                 sits in your meetings, and holds the full context of your operation:
-                finance, legal, people, risk, every functional domain. It learns how
+                finance, operations, people, legal, every functional domain. It learns how
                 you think, how you write, what you weigh, what you cut. From that
                 foundation, it produces the briefings, drafts, projects, reports,
                 presentations, and counsel that let you show up as the sharpest
@@ -331,7 +331,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               </p>
 
               <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                Picture a Monday that begins already <strong className="text-raddo-ink-deep font-bold">won</strong> · the inbox triaged, the week's risks ranked in order of consequence, the difficult email drafted in your own cadence, the numbers behind every line waiting the moment you ask. Your COB carries the weight you used to carry alone, so the version of you that walks into every room is the version the room remembers.
+                Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-raddo-ink-deep font-bold">light</strong>.
               </p>
 
               <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
