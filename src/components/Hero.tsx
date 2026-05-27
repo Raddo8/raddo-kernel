@@ -510,7 +510,7 @@ function VaultExhibit({
         }}
       >
         <span>EXHIBIT · 002</span>
-        <span>The six · source vault</span>
+        <span>The ten · source vault</span>
       </div>
 
       <div style={{ padding: "20px 20px 0" }}>
