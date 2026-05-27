@@ -1,7 +1,7 @@
 // @ts-nocheck
-// Silently emails the COB chat transcript to internal recipients at end-of-session.
-// Public endpoint (no JWT) · rate-limited · service-role insert into timeline if needed.
-// The visiting customer is NOT notified · this is a one-way internal pipe.
+// Dual-send chat transcript dispatcher · routes both visitor + pipeline emails
+// through the consolidated `send-email` Edge Function. No direct Resend usage.
+// Public endpoint (no JWT) · rate-limited · idempotent per (session,reason) 24h.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
@@ -11,9 +11,8 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Internal recipients · edit here to add more inboxes
-const INTERNAL_RECIPIENTS = ["cob.brahan@gmail.com"];
-const FROM_ADDRESS = "SAMPLE COB <onboarding@resend.dev>";
+const PIPELINE_RECIPIENT = "pipeline@chiefofbusiness.ai";
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -54,7 +53,57 @@ interface WireLead {
   challenge?: string;
 }
 
-function buildHtml(opts: {
+// ──────────────────────────────────────────────────────────────────────────
+// EMAIL A · visitor template (cream paper · brand-correct · measured)
+// ──────────────────────────────────────────────────────────────────────────
+function buildVisitorHtml(opts: {
+  leadName: string;
+  voice: string;
+  messages: WireMsg[];
+}): string {
+  const { leadName, voice, messages } = opts;
+  const greeting = leadName.trim() ? `Hi ${esc(leadName.trim())},` : "Hi there,";
+
+  const msgBlocks = messages
+    .map((m) => {
+      const who = m.role === "you" ? "You" : `Your COB · ${esc(m.voice || voice)}`;
+      const tone = m.role === "you" ? "#0C447C" : "#854F0B";
+      return `
+        <div style="margin:0 0 18px;">
+          <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${tone};font-weight:600;margin:0 0 4px;">${who}</div>
+          <div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#2C2C2A;line-height:1.6;white-space:pre-wrap;background:#FFFFFF;border-left:2px solid ${tone};padding:10px 16px;border-radius:2px;">${esc(m.text)}</div>
+        </div>`;
+    })
+    .join("");
+
+  return `<!doctype html><html><head><meta charset="utf-8"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  </head><body style="margin:0;padding:0;background:#FAF8F4;">
+    <div style="max-width:680px;margin:0 auto;padding:40px 28px;background:#FAF8F4;">
+      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:#854F0B;font-weight:600;margin:0 0 8px;">Clarity · Origin · Decision</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:800;color:#042C53;line-height:1.15;margin:0 0 28px;">A note from your COB</div>
+
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 18px;">${greeting}</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 28px;">Thanks for spending a few minutes with your COB. Below is a record of what was discussed, kept for your own reference.</div>
+
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:18px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:8px;">Conversation</div>
+      ${msgBlocks || '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#5F5E5A;">(no messages exchanged)</div>'}
+
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:32px 0 0;padding:20px 22px;background:#FFFFFF;border:1px solid #E5E3DE;border-radius:4px;">If you'd like to take this further, you can reply directly to this email. We read every reply.</div>
+
+      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:36px;padding-top:16px;border-top:1px solid #E5E3DE;line-height:1.6;">
+        <div style="font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;color:#042C53;letter-spacing:0.04em;margin:0 0 4px;">RADDO</div>
+        Sent because you spoke with COB at chiefofbusiness.ai.
+      </div>
+    </div>
+  </body></html>`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// EMAIL B · internal pipeline template (functional · metadata-dense)
+// ──────────────────────────────────────────────────────────────────────────
+function buildPipelineHtml(opts: {
   sessionId: string;
   voice: string;
   lead: WireLead | null;
@@ -64,8 +113,13 @@ function buildHtml(opts: {
   reason: string;
   userAgent: string;
   referer: string;
+  visitorEmailStatus: string;
+  visitorMessageId: string | null;
 }): string {
-  const { sessionId, voice, lead, messages, startedAt, endedAt, reason, userAgent, referer } = opts;
+  const {
+    sessionId, voice, lead, messages, startedAt, endedAt, reason,
+    userAgent, referer, visitorEmailStatus, visitorMessageId,
+  } = opts;
   const turnCount = messages.filter((m) => m.role === "you").length;
 
   const leadBlock = lead
@@ -99,20 +153,62 @@ function buildHtml(opts: {
 
   return `<!doctype html><html><body style="margin:0;padding:0;background:#FFFFFF;">
     <div style="max-width:720px;margin:0 auto;padding:28px 24px;">
-      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">SAMPLE COB · session transcript</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">COB · session transcript</div>
       <div style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#5F5E5A;margin:0 0 24px;">Session ${esc(sessionId)} · ${turnCount} visitor turn${turnCount === 1 ? "" : "s"} · closed: ${esc(reason)}</div>
       ${leadBlock}
       <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Conversation</div>
       ${msgBlocks || '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#5F5E5A;">(no messages exchanged)</div>'}
-      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:32px;padding-top:14px;border-top:1px solid #E5E3DE;line-height:1.5;">
-        Started: ${esc(startedAt)}<br/>
-        Ended: ${esc(endedAt)}<br/>
-        Voice: ${esc(voice)}<br/>
-        Referer: ${esc(referer || "—")}<br/>
-        UA: ${esc(userAgent || "—")}
+      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:32px;padding-top:14px;border-top:1px solid #E5E3DE;line-height:1.6;">
+        <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;">
+          <tr><td style="padding:1px 12px 1px 0;width:140px;">Started</td><td>${esc(startedAt)}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">Ended</td><td>${esc(endedAt)}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">Voice</td><td>${esc(voice)}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">Referer</td><td>${esc(referer || "·")}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">UA</td><td>${esc(userAgent || "·")}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">Visitor email</td><td>${esc(visitorEmailStatus)}</td></tr>
+          <tr><td style="padding:1px 12px 1px 0;">Visitor message id</td><td>${esc(visitorMessageId || "·")}</td></tr>
+        </table>
       </div>
     </div>
   </body></html>`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Helper · invoke send-email with anon key (verify_jwt=false on send-email)
+// ──────────────────────────────────────────────────────────────────────────
+async function sendViaSendEmail(opts: {
+  fromAddress: string;
+  fromDisplayName: string;
+  to: string | string[];
+  subject: string;
+  html: string;
+  replyTo?: string;
+}): Promise<{ ok: boolean; messageId?: string | null; error?: string; status?: number }> {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+  const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+  const url = `${SUPABASE_URL}/functions/v1/send-email`;
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        apikey: SUPABASE_ANON_KEY,
+      },
+      body: JSON.stringify(opts),
+    });
+    const payload = await resp.json().catch(() => ({} as Record<string, unknown>));
+    if (!resp.ok || !(payload as any)?.success) {
+      const err = (payload as any)?.error || `status_${resp.status}`;
+      console.error("[send-chat-transcript] send-email rejected", resp.status, err);
+      return { ok: false, error: String(err), status: resp.status };
+    }
+    return { ok: true, messageId: (payload as any)?.messageId ?? null, status: resp.status };
+  } catch (e: any) {
+    console.error("[send-chat-transcript] send-email threw", e?.message || e);
+    return { ok: false, error: "fetch_threw" };
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -169,12 +265,6 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ ok: true, skipped: "already_sent" });
   }
 
-  const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-  if (!RESEND_API_KEY) {
-    console.error("[send-chat-transcript] RESEND_API_KEY missing");
-    return jsonResponse({ error: "email_provider_not_configured" }, 500);
-  }
-
   const userAgent = String(req.headers.get("user-agent") || "").slice(0, 500);
   const referer = String(req.headers.get("referer") || "").slice(0, 500);
   const endedAt = new Date().toISOString();
@@ -184,9 +274,39 @@ Deno.serve(async (req: Request) => {
   const turnCount = messages.filter((m) => m.role === "you").length;
   const leadName = lead?.name?.trim() || "Anonymous";
   const leadCompany = lead?.company?.trim() ? ` · ${lead.company.trim()}` : "";
-  const subject = `[Sample COB] ${leadName}${leadCompany} · ${turnCount} turn${turnCount === 1 ? "" : "s"} · ${voice}`;
 
-  const html = buildHtml({
+  // ── EMAIL A · visitor (optional · only when valid email present) ────────
+  let visitorEmailStatus = "visitor_email_unavailable";
+  let visitorMessageId: string | null = null;
+  const visitorEmail = lead?.email?.trim();
+
+  if (visitorEmail) {
+    if (!EMAIL_REGEX.test(visitorEmail)) {
+      visitorEmailStatus = "visitor_email_invalid";
+    } else {
+      const visitorHtml = buildVisitorHtml({
+        leadName: lead?.name || "",
+        voice,
+        messages,
+      });
+      const visitorRes = await sendViaSendEmail({
+        fromAddress: "cob@chiefofbusiness.ai",
+        fromDisplayName: "Your COB",
+        to: visitorEmail,
+        subject: "A note from your COB",
+        html: visitorHtml,
+      });
+      if (visitorRes.ok) {
+        visitorEmailStatus = "sent";
+        visitorMessageId = visitorRes.messageId ?? null;
+      } else {
+        visitorEmailStatus = `send_failed:${visitorRes.error || "unknown"}`.slice(0, 64);
+      }
+    }
+  }
+
+  // ── EMAIL B · pipeline (always · B-critical) ────────────────────────────
+  const pipelineHtml = buildPipelineHtml({
     sessionId,
     voice,
     lead,
@@ -196,37 +316,36 @@ Deno.serve(async (req: Request) => {
     reason,
     userAgent,
     referer,
+    visitorEmailStatus,
+    visitorMessageId,
+  });
+  const pipelineSubject = `[Pipeline] ${leadName}${leadCompany} · ${turnCount} turn${turnCount === 1 ? "" : "s"} · ${voice}`;
+
+  const pipelineRes = await sendViaSendEmail({
+    fromAddress: "noreply@chiefofbusiness.ai",
+    fromDisplayName: "COB Pipeline",
+    to: PIPELINE_RECIPIENT,
+    subject: pipelineSubject,
+    html: pipelineHtml,
+    ...(visitorEmail && EMAIL_REGEX.test(visitorEmail) ? { replyTo: visitorEmail } : {}),
   });
 
-  try {
-    const resp = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: INTERNAL_RECIPIENTS,
-        reply_to: lead?.email || undefined,
-        subject,
-        html,
-      }),
-    });
-    if (!resp.ok) {
-      const txt = await resp.text();
-      console.error("[send-chat-transcript] resend failed", resp.status, txt);
-      return jsonResponse({ error: "send_failed", detail: txt.slice(0, 200) }, 502);
-    }
-
-    // Mark as sent (idempotency marker via rate_limits row)
-    await supabase
-      .from("rate_limits")
-      .upsert({ key: dedupeKey, window_start: new Date().toISOString(), request_count: 1 });
-
-    return jsonResponse({ ok: true });
-  } catch (e: any) {
-    console.error("[send-chat-transcript] threw", e?.message || e);
-    return jsonResponse({ error: "send_threw" }, 500);
+  if (!pipelineRes.ok) {
+    return jsonResponse(
+      { error: "pipeline_send_failed", detail: pipelineRes.error, visitorEmailStatus, visitorMessageId },
+      502,
+    );
   }
+
+  // Mark as sent (idempotency marker via rate_limits row) · only after B succeeds
+  await supabase
+    .from("rate_limits")
+    .upsert({ key: dedupeKey, window_start: new Date().toISOString(), request_count: 1 });
+
+  return jsonResponse({
+    ok: true,
+    visitorEmailStatus,
+    visitorMessageId,
+    pipelineMessageId: pipelineRes.messageId ?? null,
+  });
 });
