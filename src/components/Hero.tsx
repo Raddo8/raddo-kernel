@@ -1310,25 +1310,31 @@ export function Hero() {
 
 
       {/* ====== FOOTER ====== */}
-      <footer className="relative z-10 mx-auto flex w-full max-w-[1240px] flex-col gap-3 border-t border-raddo-paper-edge px-6 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12 lg:px-16">
-        <div className="flex items-baseline gap-3">
-          <span className="font-display text-[15px] font-black tracking-[-0.02em] text-raddo-ink-deep">
-            RADDO
-          </span>
-          <span
-            className="font-sans uppercase text-raddo-ash"
-            style={{ fontSize: "10px", letterSpacing: "0.28em" }}
+      <footer
+        className="relative z-10 w-full"
+        style={{ backgroundColor: "hsl(var(--raddo-ink-deep))" }}
+      >
+        <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-3 px-6 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12 lg:px-16">
+          <div className="flex items-baseline gap-3">
+            <span className="font-display text-[15px] font-black tracking-[-0.02em] text-raddo-paper">
+              COB
+            </span>
+            <span
+              className="font-sans uppercase text-raddo-paper/70"
+              style={{ fontSize: "10px", letterSpacing: "0.28em" }}
+            >
+              chiefofbusiness.ai
+            </span>
+          </div>
+          <div
+            className="font-sans text-raddo-paper/70"
+            style={{ fontSize: "11px", letterSpacing: "0.18em" }}
           >
-            raddo.ai
-          </span>
-        </div>
-        <div
-          className="font-sans text-raddo-ash"
-          style={{ fontSize: "11px", letterSpacing: "0.18em" }}
-        >
-          © 2026 · Built for the chair the day answers to.
+            © 2026 · Built for the chair the day answers to.
+          </div>
         </div>
       </footer>
+
 
       <style>{`
         .raddo-cta-brass {
