@@ -61,12 +61,13 @@ function buildVisitorHtml(opts: {
   voice: string;
   messages: WireMsg[];
 }): string {
-  const { leadName, voice, messages } = opts;
-  const greeting = leadName.trim() ? `Hi ${esc(leadName.trim())},` : "Hi there,";
+  const { leadName, messages } = opts;
+
+
 
   const msgBlocks = messages
     .map((m) => {
-      const who = m.role === "you" ? "You" : `Your COB · ${esc(m.voice || voice)}`;
+      const who = m.role === "you" ? "You" : "COB";
       const tone = m.role === "you" ? "#0C447C" : "#854F0B";
       return `
         <div style="margin:0 0 18px;">
@@ -76,29 +77,31 @@ function buildVisitorHtml(opts: {
     })
     .join("");
 
+  const openingName = leadName.trim() ? esc(leadName.trim()) : "there";
+
   return `<!doctype html><html><head><meta charset="utf-8"/>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   </head><body style="margin:0;padding:0;background:#FAF8F4;">
     <div style="max-width:680px;margin:0 auto;padding:40px 28px;background:#FAF8F4;">
-      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:#854F0B;font-weight:600;margin:0 0 8px;">Clarity · Origin · Decision</div>
-      <div style="font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:800;color:#042C53;line-height:1.15;margin:0 0 28px;">A note from your COB</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:800;color:#042C53;line-height:1.15;margin:0 0 28px;">Your conversation, held by COB</div>
 
-      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 18px;">${greeting}</div>
-      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 28px;">Thanks for spending a few minutes with your COB. Below is a record of what was discussed, kept for your own reference.</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 18px;">Hi ${openingName},</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 12px;">Your conversation, held by COB.</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:0 0 28px;">The record lives here &mdash; yours to revisit anytime.</div>
 
       <div style="font-family:'Fraunces',Georgia,serif;font-size:18px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:8px;">Conversation</div>
       ${msgBlocks || '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#5F5E5A;">(no messages exchanged)</div>'}
 
-      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:32px 0 0;padding:20px 22px;background:#FFFFFF;border:1px solid #E5E3DE;border-radius:4px;">If you'd like to take this further, you can reply directly to this email. We read every reply.</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:15px;color:#2C2C2A;line-height:1.6;margin:32px 0 0;padding:20px 22px;background:#FFFFFF;border:1px solid #E5E3DE;border-radius:4px;">If something came up that you'd like to carry forward, reply to this email. We read every reply.</div>
 
       <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:36px;padding-top:16px;border-top:1px solid #E5E3DE;line-height:1.6;">
-        <div style="font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;color:#042C53;letter-spacing:0.04em;margin:0 0 4px;">RADDO</div>
-        Sent because you spoke with COB at chiefofbusiness.ai.
+        COB &middot; chiefofbusiness.ai
       </div>
     </div>
   </body></html>`;
 }
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // EMAIL B · internal pipeline template (functional · metadata-dense)
@@ -140,38 +143,31 @@ function buildPipelineHtml(opts: {
 
   const msgBlocks = messages
     .map((m) => {
-      const who = m.role === "you" ? "Visitor" : `COB · ${esc(m.voice || voice)}`;
+      const who = m.role === "you" ? "You" : "COB";
       const tone = m.role === "you" ? "#0C447C" : "#854F0B";
       const ts = m.at ? fmtTime(m.at) : "";
       return `
         <div style="margin:0 0 18px;">
-          <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${tone};font-weight:600;margin:0 0 4px;">${who}${ts ? ` · <span style="color:#5F5E5A;font-weight:400;letter-spacing:0;">${ts}</span>` : ""}</div>
+          <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${tone};font-weight:600;margin:0 0 4px;">${who}${ts ? ` &middot; <span style="color:#5F5E5A;font-weight:400;letter-spacing:0;">${ts}</span>` : ""}</div>
           <div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#2C2C2A;line-height:1.55;white-space:pre-wrap;background:#FFFFFF;border-left:2px solid ${tone};padding:8px 14px;">${esc(m.text)}</div>
         </div>`;
     })
     .join("");
 
+  void startedAt; void endedAt; void reason; void userAgent; void referer; void visitorEmailStatus; void visitorMessageId;
+
   return `<!doctype html><html><body style="margin:0;padding:0;background:#FFFFFF;">
     <div style="max-width:720px;margin:0 auto;padding:28px 24px;">
-      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">COB · session transcript</div>
-      <div style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#5F5E5A;margin:0 0 24px;">Session ${esc(sessionId)} · ${turnCount} visitor turn${turnCount === 1 ? "" : "s"} · closed: ${esc(reason)}</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">COB &middot; session transcript</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#5F5E5A;margin:0 0 24px;">Session ${esc(sessionId)} &middot; ${turnCount} visitor turn${turnCount === 1 ? "" : "s"} &middot; voice ${esc(voice)} &middot; closed: ${esc(reason)}</div>
       ${leadBlock}
       <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Conversation</div>
       ${msgBlocks || '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#5F5E5A;">(no messages exchanged)</div>'}
-      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:32px;padding-top:14px;border-top:1px solid #E5E3DE;line-height:1.6;">
-        <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;">
-          <tr><td style="padding:1px 12px 1px 0;width:140px;">Started</td><td>${esc(startedAt)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Ended</td><td>${esc(endedAt)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Voice</td><td>${esc(voice)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Referer</td><td>${esc(referer || "·")}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">UA</td><td>${esc(userAgent || "·")}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Visitor email</td><td>${esc(visitorEmailStatus)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Visitor message id</td><td>${esc(visitorMessageId || "·")}</td></tr>
-        </table>
-      </div>
     </div>
   </body></html>`;
 }
+
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helper · invoke send-email with anon key (verify_jwt=false on send-email)
@@ -293,7 +289,7 @@ Deno.serve(async (req: Request) => {
         fromAddress: "cob@chiefofbusiness.ai",
         fromDisplayName: "Your COB",
         to: visitorEmail,
-        subject: "A note from your COB",
+        subject: "Your conversation, held by COB",
         html: visitorHtml,
       });
       if (visitorRes.ok) {
