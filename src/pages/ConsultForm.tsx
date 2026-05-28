@@ -425,6 +425,14 @@ export function ConsultForm() {
         </Panel>
       </header>
 
+      {launched ? (
+        <MeetYourCobLaunch
+          firstName={firstName}
+          onLaunch={() => setChatOpen(true)}
+        />
+      ) : null}
+
+
       <form
         onSubmit={handleSubmit}
         className="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[300px_minmax(0,1fr)]"
