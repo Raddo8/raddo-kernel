@@ -58,6 +58,61 @@ const CONFIDENT_POS_THEMES = new Set<ThemeId>([
 
 
 const wordIndex = new Map(CURRENT_STATE_WORDS.map((w) => [w.id, w]));
+const aspirationIndex = new Map(ASPIRATION_WORDS.map((w) => [w.id, w]));
+
+export type FocusSignal = {
+  heaviestPainBucket: Category | null;
+  topPainBuckets: Array<{ bucket: Category; negativeCount: number }>;
+  biggestGapBucket: Category | null;
+  lightSignalBuckets: Category[];
+};
+
+// Tally each of the 9 categories across selected current + desired chips,
+// then derive: heaviest pain (argmax neg), top 3 pain buckets (drop zeros),
+// biggest gap (neg>=3 AND desired>=2, argmax of sum), light-signal buckets
+// (neg+pos+desired <= 1 · stays in context but skipped in opening).
+export function computeFocusSignal(
+  currentStateWordIds: string[],
+  aspirationWordIds: string[],
+): FocusSignal {
+  const counts = new Map<Category, { neg: number; pos: number; desired: number }>();
+  for (const c of CATEGORY_ORDER) counts.set(c, { neg: 0, pos: 0, desired: 0 });
+
+  for (const id of currentStateWordIds) {
+    const w = wordIndex.get(id);
+    if (!w) continue;
+    const slot = counts.get(w.category)!;
+    if (w.sentiment === "negative") slot.neg += 1;
+    else slot.pos += 1;
+  }
+  for (const id of aspirationWordIds) {
+    const w = aspirationIndex.get(id);
+    if (!w) continue;
+    counts.get(w.category)!.desired += 1;
+  }
+
+  const buckets = CATEGORY_ORDER.map((bucket) => ({ bucket, ...counts.get(bucket)! }));
+
+  const heaviest = buckets.filter((b) => b.neg > 0).sort((a, b) => b.neg - a.neg)[0];
+  const heaviestPainBucket: Category | null = heaviest ? heaviest.bucket : null;
+
+  const topPainBuckets = buckets
+    .filter((b) => b.neg > 0)
+    .sort((a, b) => b.neg - a.neg)
+    .slice(0, 3)
+    .map((b) => ({ bucket: b.bucket, negativeCount: b.neg }));
+
+  const gapCandidate = buckets
+    .filter((b) => b.neg >= 3 && b.desired >= 2)
+    .sort((a, b) => b.neg + b.desired - (a.neg + a.desired))[0];
+  const biggestGapBucket: Category | null = gapCandidate ? gapCandidate.bucket : null;
+
+  const lightSignalBuckets = buckets
+    .filter((b) => b.neg + b.pos + b.desired <= 1)
+    .map((b) => b.bucket);
+
+  return { heaviestPainBucket, topPainBuckets, biggestGapBucket, lightSignalBuckets };
+}
 
 export type WarmStartPayload = {
   identity: {
