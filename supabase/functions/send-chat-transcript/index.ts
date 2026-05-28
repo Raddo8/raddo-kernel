@@ -62,7 +62,7 @@ function buildVisitorHtml(opts: {
   messages: WireMsg[];
 }): string {
   const { leadName, messages } = opts;
-  void voice;
+
 
 
   const msgBlocks = messages
