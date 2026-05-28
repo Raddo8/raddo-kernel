@@ -719,7 +719,11 @@ Deno.serve(async (req: Request) => {
   const firstTurn = userTurns === 1;
   const model = pickModel(userTurns);
   const softNudge = voice === "michael" && userTurns === MICHAEL_SOFT_NUDGE_TURN;
-  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge, lead, firstTurn });
+  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge, lead, firstTurn, warmStart });
+  if (warmStart) {
+    console.log("[cob-chat] warm_start present · DISC=", warmStart.disc?.primary, "emotion=", warmStart.emotion?.sentiment, "/", warmStart.emotion?.cluster);
+  }
+
 
   const recent = messages.length > HISTORY_KEEP ? messages.slice(-HISTORY_KEEP) : messages;
   const anthropicMessages = toAnthropicMessages(recent);
