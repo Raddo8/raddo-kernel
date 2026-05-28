@@ -61,8 +61,9 @@ function buildVisitorHtml(opts: {
   voice: string;
   messages: WireMsg[];
 }): string {
-  const { leadName, voice, messages } = opts;
-  const greeting = leadName.trim() ? `Hi ${esc(leadName.trim())},` : "Hi there,";
+  const { leadName, messages } = opts;
+  void voice;
+
 
   const msgBlocks = messages
     .map((m) => {
