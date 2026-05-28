@@ -269,6 +269,7 @@ export function buildWarmStartPayload(opts: {
       count: opts.payload.appSelections.length,
       selectedLabels: opts.appLabels,
       otherText: opts.payload.otherAppsText?.trim() || undefined,
+      byCategory: opts.toolsByCategory,
     },
     disc: {
       scores: summary.discScores,
