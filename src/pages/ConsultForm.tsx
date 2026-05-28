@@ -647,18 +647,31 @@ export function ConsultForm() {
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
               Select as many as fit.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {aspirationWords.map((word) => (
-                <Chip
-                  key={word.id}
-                  label={word.label}
-                  selected={aspirationSelections.includes(word.id)}
-                  onToggle={() =>
-                    toggleSelection(aspirationSelections, word.id, setAspirationSelections)
-                  }
-                />
+            <div className="mt-6 space-y-6">
+              {aspirationBuckets.map((bucket) => (
+                <div key={bucket.category}>
+                  <div
+                    className="text-[11px] tracking-[0.18em] font-medium"
+                    style={{ color: "hsl(var(--raddo-ash))" }}
+                  >
+                    {bucket.label}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {bucket.items.map((word) => (
+                      <Chip
+                        key={word.id}
+                        label={word.label}
+                        selected={aspirationSelections.includes(word.id)}
+                        onToggle={() =>
+                          toggleSelection(aspirationSelections, word.id, setAspirationSelections)
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
+
           </Panel>
 
           <Panel className="p-6 md:p-8">
