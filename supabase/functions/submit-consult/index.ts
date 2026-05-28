@@ -219,8 +219,13 @@ function buildPipelineHtml(opts: {
 
       <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Inventory</div>
       <div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#2C2C2A;line-height:1.6;margin:0 0 24px;">
-        Current-state words: ${payload.currentStateWordIds.length} &middot; Aspiration words: ${payload.aspirationWordIds.length}<br/>
-        Apps tagged: ${payload.appSelections.length}${payload.otherAppsText ? `<br/>Other apps: ${esc(payload.otherAppsText)}` : ""}
+        Current-state words: ${payload.currentStateWordIds.length} &middot; Aspiration words: ${payload.aspirationWordIds.length} &middot; Apps tagged: ${payload.appSelections.length}
+        ${Array.isArray(payload.toolsByCategory) && payload.toolsByCategory.length ? `
+          <table cellpadding="0" cellspacing="0" border="0" style="margin-top:10px;font-family:Inter,Arial,sans-serif;font-size:13px;color:#2C2C2A;line-height:1.6;">
+            ${payload.toolsByCategory.map((g) => `
+              <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;vertical-align:top;white-space:nowrap;">${esc(g.label)}</td><td style="padding:2px 0;">${esc((g.items || []).join(", "))}</td></tr>
+            `).join("")}
+          </table>` : (payload.otherAppsText ? `<br/>Other apps: ${esc(payload.otherAppsText)}` : "")}
       </div>
 
       ${computedReadBlock}
