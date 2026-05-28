@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_VOICE, readStoredVoice, writeStoredVoice, type VoiceId } from "./cob-voices";
+import type { WarmStartPayload } from "@/lib/consult-warm-start";
 
 export type ChatMessage = {
   id: string;
