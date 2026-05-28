@@ -20,7 +20,7 @@ import {
 import { ToolLogo } from "@/components/consult/ToolLogo";
 
 import type { DiscResponse } from "@/lib/consult-analysis";
-import { buildSelectedApps } from "@/lib/consult-analysis";
+
 import {
   buildWarmStartPayload,
   type WarmStartPayload,
