@@ -68,6 +68,7 @@ export function useCobChat() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lead, setLead] = useState<LeadInfo | null>(null);
+  const [warmStart, setWarmStart] = useState<WarmStartPayload | null>(null);
   const [submittingLead, setSubmittingLead] = useState(false);
   const sessionIdRef = useRef<string>(uid());
   const initOpenerRef = useRef(false);
@@ -94,6 +95,24 @@ export function useCobChat() {
       );
     },
     [voice, lead],
+  );
+
+  // Primed warm-start entry · used by the /consult launch path.
+  // Sets lead + warmStart in one shot, primes the opener, applies any
+  // suggested role lens. Idempotent · safe to call from mount effect.
+  const primedRef = useRef(false);
+  const primeWithLead = useCallback(
+    (info: LeadInfo, warm?: WarmStartPayload | null) => {
+      if (primedRef.current) return;
+      primedRef.current = true;
+      setLead(info);
+      if (warm) {
+        setWarmStart(warm);
+        if (warm.roleLensSuggested) setRoleLabel(warm.roleLensSuggested);
+      }
+      primeIfEmpty(info);
+    },
+    [primeIfEmpty],
   );
 
   const setVoice = useCallback(
