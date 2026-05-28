@@ -115,6 +115,97 @@ export function computeFocusSignal(
   return { heaviestPainBucket, topPainBuckets, biggestGapBucket, lightSignalBuckets };
 }
 
+// ─── INTEGRATION PLAYS · Layer 2 of Integration Sell ──────────────────────────
+// Keyword map per category bucket · used to score moves against pain context.
+// Lowercased substring match against the move text.
+const BUCKET_KEYWORDS: Record<Category, string[]> = {
+  money: ["money", "cash", "finance", "revenue", "mrr", "arr", "p&l", "a/r", "ar ", "invoice", "payment", "payroll", "cost", "spend", "budget", "burn", "runway", "cac", "ltv", "churn", "billing", "expense"],
+  market_position: ["market", "brand", "competitor", "positioning", "differentiation", "messaging", "category"],
+  operations: ["operation", "workflow", "process", "delivery", "throughput", "ops ", "fulfillment", "execution"],
+  systems: ["system", "integration", "automation", "infrastructure", "tool", "stack", "access", "data source", "audit", "permission"],
+  customers: ["customer", "client", "ticket", "csat", "support", "account", "churn", "renewal", "onboarding"],
+  people: ["people", "team", "employee", "headcount", "talent", "hiring", "hr ", "payroll", "comp", "contractor"],
+  culture: ["culture", "engagement", "morale", "values", "review"],
+  risk: ["risk", "compliance", "audit", "security", "legal", "liability", "deprovision"],
+  you: ["focus", "attention", "calendar", "meeting", "inbox", "brief", "priority", "1:1", "agenda"],
+};
+
+function matchesAnyKeyword(move: string, bucket: Category | null): boolean {
+  if (!bucket) return false;
+  const m = move.toLowerCase();
+  return BUCKET_KEYWORDS[bucket].some((k) => m.includes(k));
+}
+
+// Score moves drawn from the catalog entries for the prospect's selected tool
+// slugs. Higher = more relevant. Returns top 3 move strings. Stub entries
+// contribute their generic moves; rich entries dominate when scoring ties.
+export function computeIntegrationPlays(
+  selectedSlugs: string[],
+  focus: FocusSignal,
+): string[] {
+  const uniqueSlugs = Array.from(new Set(selectedSlugs));
+  const hits: Array<{ slug: string; cap: ToolCapability }> = [];
+  for (const slug of uniqueSlugs) {
+    const cap = INTEGRATION_CAPABILITIES[slug];
+    if (cap) hits.push({ slug, cap });
+  }
+  if (hits.length === 0) return [];
+
+  // Build lowercased name set of all SELECTED catalog entries for bridge detection.
+  const selectedNamesLower = hits.map((h) => h.cap.name.toLowerCase());
+
+  type Scored = { move: string; score: number; order: number };
+  const scored: Scored[] = [];
+  let order = 0;
+  const topPainBucketsSet = new Set<Category>(
+    focus.topPainBuckets.map((p) => p.bucket),
+  );
+
+  for (const { cap } of hits) {
+    for (const move of cap.moves) {
+      let score = 0;
+      const lower = move.toLowerCase();
+      // +2 heaviest pain keyword
+      if (matchesAnyKeyword(move, focus.heaviestPainBucket)) score += 2;
+      // +1 starts with "Bridge"
+      const isBridge = lower.startsWith("bridge ");
+      if (isBridge) score += 1;
+      // +1 bridge tool is also in selection (parse "Bridge X plus Y")
+      if (isBridge) {
+        // Both X and Y must be selected. Cheap check: count selected names that
+        // appear in the move text · need 2+ matches (the bridging tool itself
+        // plus at least one partner).
+        const matches = selectedNamesLower.filter((n) => lower.includes(n)).length;
+        if (matches >= 2) score += 1;
+      }
+      // +1 mentions a topPainBuckets category
+      for (const bucket of topPainBucketsSet) {
+        if (bucket === focus.heaviestPainBucket) continue;
+        if (matchesAnyKeyword(move, bucket)) {
+          score += 1;
+          break;
+        }
+      }
+      scored.push({ move, score, order: order++ });
+    }
+  }
+
+  scored.sort((a, b) => (b.score - a.score) || (a.order - b.order));
+  const top = scored.filter((s) => s.score > 0).slice(0, 3).map((s) => s.move);
+  if (top.length >= 3) return top;
+
+  // Fallback · first 3 moves in catalog order from the prospect's tools.
+  const fallback: string[] = [];
+  for (const { cap } of hits) {
+    for (const move of cap.moves) {
+      if (fallback.length >= 3) break;
+      if (!fallback.includes(move)) fallback.push(move);
+    }
+    if (fallback.length >= 3) break;
+  }
+  return fallback;
+}
+
 export type WarmStartPayload = {
   identity: {
     name?: string;
