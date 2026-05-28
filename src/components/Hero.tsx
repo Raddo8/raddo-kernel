@@ -282,6 +282,18 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   className="block w-full h-auto select-none"
                 />
               </div>
+              <p
+                className="font-sans italic text-center"
+                style={{
+                  marginTop: 14,
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  color: "hsl(var(--raddo-ash))",
+                  letterSpacing: "0.01em",
+                }}
+              >
+                Prepared for one reader.
+              </p>
             </div>
           </motion.div>
         )}
