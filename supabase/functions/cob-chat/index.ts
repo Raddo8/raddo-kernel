@@ -406,6 +406,56 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
     challenge: typeof body.lead.challenge === "string" ? body.lead.challenge.slice(0, 2000) : undefined,
   } : undefined;
 
+  // warm_start · accepted shape from primed chat handoff. Defensive clamp;
+  // any malformed sub-field is dropped silently rather than rejected so the
+  // chat itself never breaks if the payload drifts.
+  const ws = body.warm_start;
+  let warmStart: WarmStart | null = null;
+  if (ws && typeof ws === "object") {
+    const clampStr = (v: unknown, n: number) => typeof v === "string" ? v.slice(0, n) : undefined;
+    const clampNum = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : 0;
+    const clampArr = (v: unknown, n: number, m: number) =>
+      Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(0, n).map((s) => s.slice(0, m)) : [];
+    warmStart = {
+      identity: ws.identity && typeof ws.identity === "object" ? {
+        name: clampStr(ws.identity.name, 120),
+        email: clampStr(ws.identity.email, 240),
+        phone: clampStr(ws.identity.phone, 60),
+        occupation: clampStr(ws.identity.occupation, 160),
+      } : undefined,
+      roleLensSuggested: clampStr(ws.roleLensSuggested, 80),
+      currentState: ws.currentState && typeof ws.currentState === "object" ? {
+        positiveCount: clampNum(ws.currentState.positiveCount),
+        negativeCount: clampNum(ws.currentState.negativeCount),
+        topThemes: clampArr(ws.currentState.topThemes, 6, 60),
+      } : undefined,
+      desiredState: ws.desiredState && typeof ws.desiredState === "object" ? {
+        aspirationCount: clampNum(ws.desiredState.aspirationCount),
+        topThemes: clampArr(ws.desiredState.topThemes, 6, 60),
+      } : undefined,
+      tools: ws.tools && typeof ws.tools === "object" ? {
+        count: clampNum(ws.tools.count),
+        selectedLabels: clampArr(ws.tools.selectedLabels, 24, 80),
+        otherText: clampStr(ws.tools.otherText, 400),
+      } : undefined,
+      disc: ws.disc && typeof ws.disc === "object" ? {
+        scores: ws.disc.scores && typeof ws.disc.scores === "object" ? {
+          D: clampNum(ws.disc.scores.D),
+          I: clampNum(ws.disc.scores.I),
+          S: clampNum(ws.disc.scores.S),
+          C: clampNum(ws.disc.scores.C),
+        } : undefined,
+        primary: clampStr(ws.disc.primary, 4),
+        secondary: clampStr(ws.disc.secondary, 4),
+        isHybrid: Boolean(ws.disc.isHybrid),
+      } : undefined,
+      emotion: ws.emotion && typeof ws.emotion === "object" ? {
+        sentiment: clampStr(ws.emotion.sentiment, 16),
+        cluster: clampStr(ws.emotion.cluster, 24),
+      } : undefined,
+    };
+  }
+
   return {
     ok: true,
     data: {
@@ -417,9 +467,11 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
       industryLabel: typeof body.industry_label === "string" ? body.industry_label.slice(0, 80) : undefined,
       sessionId: typeof body.session_id === "string" ? body.session_id.slice(0, 64) : "anon",
       lead,
+      warmStart,
     },
   };
 }
+
 
 // ── Anthropic API ───────────────────────────────────────────────────────────
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
