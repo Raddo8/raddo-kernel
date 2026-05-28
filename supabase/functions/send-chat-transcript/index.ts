@@ -290,7 +290,7 @@ Deno.serve(async (req: Request) => {
         fromAddress: "cob@chiefofbusiness.ai",
         fromDisplayName: "Your COB",
         to: visitorEmail,
-        subject: "A note from your COB",
+        subject: "Your conversation, held by COB",
         html: visitorHtml,
       });
       if (visitorRes.ok) {
