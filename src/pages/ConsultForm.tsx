@@ -3,22 +3,24 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SeoHead } from "@/components/SeoHead";
 import {
-  APP_CATEGORIES,
   ASPIRATION_WORDS,
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   CURRENT_STATE_WORDS,
   DISC_ROWS,
-  type AppCategory,
+  TOOL_CATEGORIES,
   type AspirationWord,
   type Category,
   type CurrentWord,
   type DiscOption,
   type DiscRow,
+  type Tool,
+  type ToolCategory,
 } from "@/lib/consult-data";
+import { ToolLogo } from "@/components/consult/ToolLogo";
 
 import type { DiscResponse } from "@/lib/consult-analysis";
-import { buildSelectedApps } from "@/lib/consult-analysis";
+
 import {
   buildWarmStartPayload,
   type WarmStartPayload,
@@ -165,15 +167,106 @@ function Chip({
   );
 }
 
-function CategoryCard({
-  category,
-  selectedIds,
+// Tools v2 selection model · per-category.
+type ToolCategorySelection = { slugs: string[]; custom: string[] };
+type ToolsSelectedState = Record<string, ToolCategorySelection>;
+
+const MAX_CUSTOM_PER_CATEGORY = 5;
+
+function ToolChip({
+  tool,
+  selected,
   onToggle,
 }: {
-  category: AppCategory;
-  selectedIds: Set<string>;
-  onToggle: (id: string) => void;
+  tool: Tool;
+  selected: boolean;
+  onToggle: () => void;
 }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm transition-colors duration-150"
+      style={{
+        border: "1px solid",
+        borderColor: selected ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))",
+        backgroundColor: selected ? "hsl(var(--raddo-ink-deep))" : "white",
+        color: selected ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-charcoal))",
+      }}
+    >
+      <ToolLogo name={tool.name} slug={tool.slug} domain={tool.domain} size={16} />
+      <span>{tool.name}</span>
+    </button>
+  );
+}
+
+function CustomChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm"
+      style={{
+        border: "1px solid hsl(var(--raddo-paper-edge))",
+        backgroundColor: "hsl(var(--raddo-paper))",
+        color: "hsl(var(--raddo-charcoal))",
+      }}
+    >
+      <span>{label}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label}`}
+        className="rounded-full leading-none"
+        style={{
+          width: 16,
+          height: 16,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "hsl(var(--raddo-ash))",
+          fontSize: 14,
+        }}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+function ToolCategoryCard({
+  category,
+  selection,
+  onToggleSlug,
+  onAddCustom,
+  onRemoveCustom,
+}: {
+  category: ToolCategory;
+  selection: ToolCategorySelection;
+  onToggleSlug: (slug: string) => void;
+  onAddCustom: (value: string) => void;
+  onRemoveCustom: (index: number) => void;
+}) {
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [otherDraft, setOtherDraft] = useState("");
+
+  const existingNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of category.tools) set.add(t.name.trim().toLowerCase());
+    for (const c of selection.custom) set.add(c.trim().toLowerCase());
+    return set;
+  }, [category.tools, selection.custom]);
+
+  const handleAdd = () => {
+    const trimmed = otherDraft.trim();
+    if (!trimmed) return;
+    if (existingNames.has(trimmed.toLowerCase())) {
+      setOtherDraft("");
+      return;
+    }
+    if (selection.custom.length >= MAX_CUSTOM_PER_CATEGORY) return;
+    onAddCustom(trimmed);
+    setOtherDraft("");
+  };
+
   return (
     <div
       style={{
@@ -187,14 +280,98 @@ function CategoryCard({
         {category.label}
       </h3>
       <div className="mt-3 flex flex-wrap gap-2">
-        {category.options.map((option) => (
-          <Chip
-            key={option.id}
-            label={option.label}
-            selected={selectedIds.has(option.id)}
-            onToggle={() => onToggle(option.id)}
+        {category.tools.map((tool) => (
+          <ToolChip
+            key={`${category.id}-${tool.slug}`}
+            tool={tool}
+            selected={selection.slugs.includes(tool.slug)}
+            onToggle={() => onToggleSlug(tool.slug)}
           />
         ))}
+        {selection.custom.map((label, index) => (
+          <CustomChip
+            key={`${category.id}-custom-${index}`}
+            label={label}
+            onRemove={() => onRemoveCustom(index)}
+          />
+        ))}
+      </div>
+      <div className="mt-3">
+        {otherOpen ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={otherDraft}
+              onChange={(e) => setOtherDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
+              placeholder="Tool name…"
+              className="text-sm outline-none"
+              style={{
+                border: "1px solid hsl(var(--raddo-paper-edge))",
+                backgroundColor: "white",
+                color: "hsl(var(--raddo-charcoal))",
+                borderRadius: 8,
+                padding: "8px 10px",
+                minWidth: 180,
+              }}
+              disabled={selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!otherDraft.trim() || selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+              className="font-mono text-xs"
+              style={{
+                border: "1px solid hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--raddo-ink-deep))",
+                color: "hsl(var(--raddo-paper))",
+                borderRadius: 8,
+                padding: "8px 12px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                opacity:
+                  !otherDraft.trim() || selection.custom.length >= MAX_CUSTOM_PER_CATEGORY ? 0.5 : 1,
+              }}
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOtherOpen(false);
+                setOtherDraft("");
+              }}
+              className="text-xs"
+              style={{ color: "hsl(var(--raddo-ash))" }}
+            >
+              cancel
+            </button>
+            {selection.custom.length >= MAX_CUSTOM_PER_CATEGORY ? (
+              <span className="text-xs" style={{ color: "hsl(var(--raddo-ash))" }}>
+                Max {MAX_CUSTOM_PER_CATEGORY} reached
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOtherOpen(true)}
+            className="text-xs font-mono"
+            style={{
+              color: "hsl(var(--raddo-ink))",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+            disabled={selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+          >
+            + Other
+          </button>
+        )}
       </div>
     </div>
   );
@@ -241,8 +418,7 @@ export function ConsultForm() {
   const [occupation, setOccupation] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
-  const [appSelections, setAppSelections] = useState<string[]>([]);
-  const [otherAppsText, setOtherAppsText] = useState("");
+  const [toolsSelected, setToolsSelected] = useState<ToolsSelectedState>({});
   const [discResponses, setDiscResponses] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState>({ kind: "idle", message: "" });
@@ -296,9 +472,29 @@ export function ConsultForm() {
       selections: discResponses[row.id] ?? [],
     }));
 
-    // Build the warm-start payload client-side so the server can re-role
-    // the pipeline email and the chat can pick it up on launch.
-    const appLabels = buildSelectedApps(appSelections, otherAppsText);
+    // Derive legacy flat shapes + per-category groupings from toolsSelected.
+    const appSelections: string[] = [];
+    const appLabels: string[] = [];
+    const customStrings: string[] = [];
+    const toolsByCategory: Array<{ label: string; items: string[] }> = [];
+    for (const category of TOOL_CATEGORIES) {
+      const sel = toolsSelected[category.id];
+      if (!sel) continue;
+      const chipNames: string[] = [];
+      for (const slug of sel.slugs) {
+        const tool = category.tools.find((t) => t.slug === slug);
+        if (!tool) continue;
+        appSelections.push(`${category.id}-${slug}`);
+        appLabels.push(tool.name);
+        chipNames.push(tool.name);
+      }
+      const customs = sel.custom.map((c) => c.trim()).filter(Boolean);
+      for (const c of customs) customStrings.push(`${category.label}: ${c}`);
+      const items = [...chipNames, ...customs.map((c) => `Custom: ${c}`)];
+      if (items.length) toolsByCategory.push({ label: category.label, items });
+    }
+    const otherAppsText = customStrings.join(" · ");
+
     const warm = buildWarmStartPayload({
       payload: {
         email,
@@ -313,6 +509,7 @@ export function ConsultForm() {
       phone,
       occupation,
       appLabels,
+      toolsByCategory,
     });
 
     const { data, error } = await supabase.functions.invoke("submit-consult", {
@@ -325,6 +522,8 @@ export function ConsultForm() {
         aspirationWordIds: aspirationSelections,
         appSelections,
         otherAppsText,
+        toolsSelected,
+        toolsByCategory,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
         mode: "launch_to_chat",
@@ -686,34 +885,48 @@ export function ConsultForm() {
               Tap every tool you use. So we know what your COB needs to plug into.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {APP_CATEGORIES.map((category) => (
-                <CategoryCard
-                  key={category.id}
-                  category={category}
-                  selectedIds={new Set(appSelections)}
-                  onToggle={(id) => toggleSelection(appSelections, id, setAppSelections)}
-                />
-              ))}
+              {TOOL_CATEGORIES.map((category) => {
+                const selection = toolsSelected[category.id] ?? { slugs: [], custom: [] };
+                return (
+                  <ToolCategoryCard
+                    key={category.id}
+                    category={category}
+                    selection={selection}
+                    onToggleSlug={(slug) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        const nextSlugs = prev.slugs.includes(slug)
+                          ? prev.slugs.filter((s) => s !== slug)
+                          : [...prev.slugs, slug];
+                        return { ...curr, [category.id]: { ...prev, slugs: nextSlugs } };
+                      })
+                    }
+                    onAddCustom={(value) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        if (prev.custom.length >= MAX_CUSTOM_PER_CATEGORY) return curr;
+                        return {
+                          ...curr,
+                          [category.id]: { ...prev, custom: [...prev.custom, value] },
+                        };
+                      })
+                    }
+                    onRemoveCustom={(index) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        return {
+                          ...curr,
+                          [category.id]: {
+                            ...prev,
+                            custom: prev.custom.filter((_, i) => i !== index),
+                          },
+                        };
+                      })
+                    }
+                  />
+                );
+              })}
             </div>
-            <label className="mt-6 block space-y-2">
-              <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
-                Other tools (optional)
-              </span>
-              <textarea
-                value={otherAppsText}
-                onChange={(event) => setOtherAppsText(event.target.value)}
-                rows={3}
-                className="w-full text-sm outline-none transition-colors"
-                style={{
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
-                  backgroundColor: "white",
-                  color: "hsl(var(--raddo-charcoal))",
-                  borderRadius: 8,
-                  padding: "12px 14px",
-                }}
-                placeholder="List any other tools your business depends on."
-              />
-            </label>
           </Panel>
 
           <Panel className="p-6 md:p-8">

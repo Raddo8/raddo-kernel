@@ -135,7 +135,7 @@ type WarmStart = {
   roleLensSuggested?: string;
   currentState?: { positiveCount?: number; negativeCount?: number; topThemes?: string[] };
   desiredState?: { aspirationCount?: number; topThemes?: string[] };
-  tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
+  tools?: { count?: number; selectedLabels?: string[]; otherText?: string; byCategory?: Array<{ label?: string; items?: string[] }> };
   disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
   emotion?: { sentiment?: string; cluster?: string };
   focus?: {
@@ -230,7 +230,14 @@ function formatWarmStartForPrompt(w: WarmStart): string {
     w.roleLensSuggested ? `Suggested role lens · ${w.roleLensSuggested}` : "",
     `Current state · ${cs.negativeCount ?? 0} negative / ${cs.positiveCount ?? 0} positive · top friction themes: ${topFriction || "none"}`,
     `Desired state · ${ds.aspirationCount ?? 0} aspirations · top desired themes: ${topDesired || "none"}`,
-    `Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`,
+    ...(Array.isArray(tools.byCategory) && tools.byCategory.length
+      ? [
+          `Tools in hand · ${tools.count ?? 0} apps · by category:`,
+          ...tools.byCategory
+            .filter((g) => g && typeof g.label === "string" && Array.isArray(g.items) && g.items.length)
+            .map((g) => `  · ${g.label}: ${(g.items as string[]).slice(0, 20).join(", ")}`),
+        ]
+      : [`Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`]),
     `DISC tally · D=${scores.D ?? 0} I=${scores.I ?? 0} S=${scores.S ?? 0} C=${scores.C ?? 0} · primary ${disc.primary || "?"}${disc.isHybrid ? `/${disc.secondary || "?"}` : ""}`,
     `Emotion read · ${emotion.sentiment || "neutral"}${emotion.cluster && emotion.cluster !== "neutral" ? ` · ${emotion.cluster}` : ""}`,
     "",
@@ -489,6 +496,16 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         count: clampNum(ws.tools.count),
         selectedLabels: clampArr(ws.tools.selectedLabels, 24, 80),
         otherText: clampStr(ws.tools.otherText, 400),
+        byCategory: Array.isArray(ws.tools.byCategory)
+          ? ws.tools.byCategory
+              .filter((g: any) => g && typeof g === "object")
+              .slice(0, 20)
+              .map((g: any) => ({
+                label: clampStr(g.label, 60) || "",
+                items: clampArr(g.items, 20, 80),
+              }))
+              .filter((g: any) => g.label && g.items.length)
+          : undefined,
       } : undefined,
       disc: ws.disc && typeof ws.disc === "object" ? {
         scores: ws.disc.scores && typeof ws.disc.scores === "object" ? {
