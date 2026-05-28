@@ -359,9 +359,16 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
   lines.push(
     `Desired state · ${w.desiredState.aspirationCount} aspirations · top desired themes: ${w.desiredState.topThemes.join(", ") || "none"}`,
   );
-  lines.push(
-    `Tools in hand · ${w.tools.count} apps${w.tools.selectedLabels.length ? ` · ${w.tools.selectedLabels.slice(0, 12).join(", ")}` : ""}${w.tools.otherText ? ` · other: ${w.tools.otherText.slice(0, 200)}` : ""}`,
-  );
+  if (w.tools.byCategory && w.tools.byCategory.length) {
+    lines.push(`Tools in hand · ${w.tools.count} apps · by category:`);
+    for (const group of w.tools.byCategory) {
+      lines.push(`  · ${group.label}: ${group.items.join(", ")}`);
+    }
+  } else {
+    lines.push(
+      `Tools in hand · ${w.tools.count} apps${w.tools.selectedLabels.length ? ` · ${w.tools.selectedLabels.slice(0, 12).join(", ")}` : ""}${w.tools.otherText ? ` · other: ${w.tools.otherText.slice(0, 200)}` : ""}`,
+    );
+  }
   lines.push(
     `DISC tally · D=${w.disc.scores.D} I=${w.disc.scores.I} S=${w.disc.scores.S} C=${w.disc.scores.C} · primary ${w.disc.primary}${w.disc.isHybrid ? `/${w.disc.secondary}` : ""}`,
   );
