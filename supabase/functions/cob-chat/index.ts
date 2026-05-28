@@ -36,6 +36,8 @@ const [
   DIGEST_OPENERS,
   DIGEST_DEPLOY_AMP,
   DOC_CONVICTION_FUNNEL,
+  DOC_ACTION_BIAS,
+  DOC_DOCTRINE_HIERARCHY,
 ] = await Promise.all([
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
@@ -48,6 +50,8 @@ const [
   loadDoc("digests/SAMPLE_OPENERS_DIGEST.md"),
   loadDoc("digests/DEPLOYMENT_AMPLIFICATION_DIGEST.md"),
   loadDoc("COB_CONVICTION_FUNNEL_DOCTRINE.md"),
+  loadDoc("COB_ACTION_BIAS_DOCTRINE.md"),
+  loadDoc("COB_DOCTRINE_HIERARCHY.md"),
 ]);
 
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
@@ -135,6 +139,8 @@ type PromptArgs = {
 
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
+// Clear at boot · ensures rebuilt prompts pick up doctrine updates on every cold start.
+promptCache.clear();
 
 function buildSystemPrompt(args: PromptArgs): string {
   // Lead block is per-visitor · don't cache it.
@@ -149,13 +155,23 @@ function buildSystemPrompt(args: PromptArgs): string {
   let baseline = promptCache.get(key);
   if (!baseline) {
     const parts: string[] = [HARD_PREAMBLE];
-    parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
-    parts.push("\n\n# DEPLOYMENT AMPLIFICATION DOCTRINE (digest · binding for COB voice)\n" + DIGEST_DEPLOY_AMP);
-    parts.push("\n\n# CONVICTION FUNNEL DOCTRINE (binding for sandbox COB · governs when AMPLIFICATION bridges fire, phase cadence, gated continuation, and close)\n" + DOC_CONVICTION_FUNNEL);
-    parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
-    parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
-    parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
 
+    // LAYER 0 meta · Hierarchy first · governs precedence for everything below.
+    parts.push("\n\n# DOCTRINE HIERARCHY (read this FIRST · governs precedence and assessment order for the entire stack)\n" + DOC_DOCTRINE_HIERARCHY);
+
+    // LAYER 1 · Identity & Voice (per-voice profile pushed below in the voice branch · binding lives there)
+
+    // LAYER 2 · Response Reflex
+    parts.push("\n\n# COB ACTION BIAS DOCTRINE (binding · governs whether COB engages the task; deferral is the one unacceptable failure)\n" + DOC_ACTION_BIAS);
+
+    // LAYER 3 · Conversation Architecture
+    parts.push("\n\n# CONVICTION FUNNEL DOCTRINE v2.0 · ABUNDANCE MODEL (binding · governs arc, abundance, deployment bridges, and the hard close)\n" + DOC_CONVICTION_FUNNEL);
+
+    // LAYER 4 · Situational
+    parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
+    parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
+
+    // LAYER 5 · Substance · Catalog roles / industries
     if (args.roleLabel) {
       const section = extractSection(CAPABILITIES, args.roleLabel, 4000);
       if (section) {
@@ -168,17 +184,28 @@ function buildSystemPrompt(args: PromptArgs): string {
         parts.push(`\n\n# ACTIVE INDUSTRY LENS — ${args.industryLabel}\nDemonstrate native fluency in this industry's vocabulary, metrics, stakeholders, and rhythms.\n\n` + section);
       }
     }
+    parts.push("\n\n# DEPLOYMENT AMPLIFICATION DOCTRINE (digest · populates substance of deployment bridges)\n" + DIGEST_DEPLOY_AMP);
+
+    // LAYER 6 · Capability specs
+    parts.push("\n\n# SAMPLE COB · OPENERS\n" + DIGEST_OPENERS);
 
     if (args.voice === "michael") {
-      parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT (digest)\n" + DIGEST_MICHAEL_VOICE);
+      // COB voice profile still establishes the baseline identity even when Michael is active.
+      parts.push("\n\n# VOICE PROFILE — COB (digest · baseline identity)\n" + DIGEST_COB_VOICE);
+      parts.push(VOICE_BINDING_COB);
+      parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
+      parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
+      // LAYER 7 · Conditional · Michael LAST
+      parts.push("\n\n# VOICE PROFILE — MICHAEL SCOTT (digest · conditional Layer 7 · active now)\n" + DIGEST_MICHAEL_VOICE);
       parts.push(VOICE_BINDING_MICHAEL);
       if (args.softNudge) parts.push(MICHAEL_SOFT_NUDGE);
     } else {
       parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
-      parts.push(`\n\n# DEPLOYMENT BRIDGE DIRECTIVE (binding)\nOn substantive responses — diagnostic reframes, sequenced recommendations, crisis playbooks, board materials, communication drafts — close with a one-to-two-sentence deployment bridge per the AMPLIFICATION DOCTRINE. The bridge points from trial-scale value (this conversation) to deployment-scale value (continuous monitoring across the operator's actual business). Never bridge on routing, greetings, or diagnostic-question turns. Never bridge more than once per two substantive turns. Use the Capability Extension Library (Section 7 of the doctrine) to anchor the bridge content to the specific scenario domain.`);
-      parts.push(`\n\n# SANDBOX DISCIPLINE (binding · SANDBOX deployment mode)\nYou are operating in the SANDBOX deployment mode. Your audience is a PROSPECT evaluating whether to buy COB, not the persona who is asking questions. The prospect needs to see that COB delivers operator-grade quality — not extract operator-grade quantity.\n\nSANDBOX RULES:\na) Deliver ONE substantive deliverable per conversation in full (negotiation script, board memo outline, floor analysis, OR meeting structure — pick one based on the operator's primary ask). Subsequent asks for additional deliverables get a STRUCTURAL OUTLINE (4-6 bullets) plus an explicit deployment hook, NOT the full content.\nb) Around turn 8-10, deliver the EXPLICIT DEPLOYMENT PIVOT. This is a direct ask, not a footnote: "That's what one conversation gets you. Here's what changes when I'm deployed across your operation: [3-4 scenario-specific capabilities]. Want to talk about what deployment looks like for [their company] specifically?"\nc) Around turn 12-15, deliver the HARD CLOSE: "You've seen what one conversation gets you. The real value is 365 days of this. If you want that, here's how we move: [CTA]. If you want to keep stress-testing the sandbox, I'll continue — but the next real step is talking about deployment."\nd) NEVER deliver: full negotiation trees with every branch, full 90-day plans with weekly scorecards, full multi-channel outreach templates with scripts, full customer acquisition engines. These are DEPLOYMENT-SCOPE artifacts. Offer the STRUCTURE in 4-6 bullets and pivot to the deployment hook.\ne) Maintain the loyal-dissenter, refuse-to-fabricate, calm-under-skepticism behaviors. The sandbox limits the QUANTITY of output, never the QUALITY of judgment.`);
+      parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
+      parts.push(`\n\n# DEPLOYMENT BRIDGE DIRECTIVE (binding · Funnel v2.0 abundance model)\nOn substantive responses — diagnostic reframes, sequenced recommendations, crisis playbooks, board materials, communication drafts — close with a one-to-two-sentence deployment bridge per the AMPLIFICATION DOCTRINE. The bridge points from sandbox-scale value (this conversation, which resets when the prospect walks away) to deployment-scale value (continuous, compounding work across the operator's actual business). Bridge after substantive deliverables; never bridge on routing, greetings, or pure diagnostic-question turns. Use the Capability Extension Library to anchor the bridge to the specific scenario.`);
+      parts.push(`\n\n# SANDBOX DISCIPLINE (binding · Funnel v2.0 · ABUNDANCE MODEL)\nYou are operating in the SANDBOX deployment mode. Your audience is a PROSPECT evaluating whether to buy COB. Under v2.0:\na) DELIVER ABUNDANTLY. Do not gate quantity. Every task the prospect brings, COB takes and does in its own hands. Quality stays operator-grade across many deliverables, not concentrated in one.\nb) BRIDGE AFTER EACH SUBSTANTIVE DELIVERABLE. Every substantive deliverable carries a deployment bridge so abundance builds toward the close rather than just accumulating.\nc) NEVER DEFER. Deferral (sending the prospect to an external tool, professional, team, or generic resource) is the one unacceptable failure, in every phase. See ACTION BIAS DOCTRINE.\nd) THE CLOSE. After roughly ≥3 substantive deliverables with ≥3 bridges, or by the turn-18 hard cap, fire the honest hard close · the session definitively ends, the prospect is asked to move to a real deployment conversation, and the fear-of-loss frame is named directly: everything they experienced resets when they walk; deployment compounds. Michael voice never runs the close · COB does.\ne) Maintain the loyal-dissenter, refuse-to-fabricate, calm-under-skepticism behaviors. Substance and discipline are non-negotiable.`);
     }
 
     baseline = parts.join("\n");
