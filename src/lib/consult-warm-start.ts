@@ -275,6 +275,7 @@ export function buildWarmStartPayload(opts: {
       isHybrid: summary.isHybrid,
     },
     emotion,
+    focus,
   };
 }
 
