@@ -146,6 +146,7 @@ export type WarmStartPayload = {
     sentiment: EmotionSentiment;
     cluster: EmotionCluster;
   };
+  focus: FocusSignal;
 };
 
 export function classifyEmotion(currentStateWordIds: string[]): {
