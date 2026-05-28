@@ -212,8 +212,9 @@ function OptionButton({
 
 export function ConsultForm() {
   const navigate = useNavigate();
-  const [currentWords] = useState(() => shuffleArray(CURRENT_STATE_WORDS as CurrentWord[]));
-  const [aspirationWords] = useState(() => shuffleArray(ASPIRATION_WORDS as AspirationWord[]));
+  const [currentBuckets] = useState(() => groupAndShuffle(CURRENT_STATE_WORDS as CurrentWord[]));
+  const [aspirationBuckets] = useState(() => groupAndShuffle(ASPIRATION_WORDS as AspirationWord[]));
+
   const [discRows] = useState(() => buildShuffledDiscRows(DISC_ROWS));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
