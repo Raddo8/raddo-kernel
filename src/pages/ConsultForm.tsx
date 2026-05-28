@@ -863,34 +863,48 @@ export function ConsultForm() {
               Tap every tool you use. So we know what your COB needs to plug into.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {APP_CATEGORIES.map((category) => (
-                <CategoryCard
-                  key={category.id}
-                  category={category}
-                  selectedIds={new Set(appSelections)}
-                  onToggle={(id) => toggleSelection(appSelections, id, setAppSelections)}
-                />
-              ))}
+              {TOOL_CATEGORIES.map((category) => {
+                const selection = toolsSelected[category.id] ?? { slugs: [], custom: [] };
+                return (
+                  <ToolCategoryCard
+                    key={category.id}
+                    category={category}
+                    selection={selection}
+                    onToggleSlug={(slug) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        const nextSlugs = prev.slugs.includes(slug)
+                          ? prev.slugs.filter((s) => s !== slug)
+                          : [...prev.slugs, slug];
+                        return { ...curr, [category.id]: { ...prev, slugs: nextSlugs } };
+                      })
+                    }
+                    onAddCustom={(value) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        if (prev.custom.length >= MAX_CUSTOM_PER_CATEGORY) return curr;
+                        return {
+                          ...curr,
+                          [category.id]: { ...prev, custom: [...prev.custom, value] },
+                        };
+                      })
+                    }
+                    onRemoveCustom={(index) =>
+                      setToolsSelected((curr) => {
+                        const prev = curr[category.id] ?? { slugs: [], custom: [] };
+                        return {
+                          ...curr,
+                          [category.id]: {
+                            ...prev,
+                            custom: prev.custom.filter((_, i) => i !== index),
+                          },
+                        };
+                      })
+                    }
+                  />
+                );
+              })}
             </div>
-            <label className="mt-6 block space-y-2">
-              <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
-                Other tools (optional)
-              </span>
-              <textarea
-                value={otherAppsText}
-                onChange={(event) => setOtherAppsText(event.target.value)}
-                rows={3}
-                className="w-full text-sm outline-none transition-colors"
-                style={{
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
-                  backgroundColor: "white",
-                  color: "hsl(var(--raddo-charcoal))",
-                  borderRadius: 8,
-                  padding: "12px 14px",
-                }}
-                placeholder="List any other tools your business depends on."
-              />
-            </label>
           </Panel>
 
           <Panel className="p-6 md:p-8">
