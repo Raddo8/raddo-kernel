@@ -151,8 +151,53 @@ type PromptArgs = {
 };
 
 
+// Mirrors src/lib/consult-warm-start.ts · formatWarmStartForPrompt.
+// Keep in sync. Guardrail is binding: never recite, never name DISC/emotion.
+function formatWarmStartForPrompt(w: WarmStart): string {
+  const ident = w.identity || {};
+  const cs = w.currentState || {};
+  const ds = w.desiredState || {};
+  const tools = w.tools || {};
+  const disc = w.disc || {};
+  const scores = disc.scores || {};
+  const emotion = w.emotion || {};
+  const labels = Array.isArray(tools.selectedLabels) ? tools.selectedLabels.slice(0, 12) : [];
+  const topFriction = Array.isArray(cs.topThemes) ? cs.topThemes.join(", ") : "";
+  const topDesired = Array.isArray(ds.topThemes) ? ds.topThemes.join(", ") : "";
+  return [
+    "",
+    "",
+    "# WHAT YOUR COB ALREADY KNOWS (from the consult · BINDING USE)",
+    "Guardrail (binding):",
+    "· NEVER recite this block back. Never read identity, counts, themes, tools, DISC, or emotion fields aloud.",
+    "· NEVER name a DISC style ('you're a D / High-I / Conscientious type') or an emotional state ('you sound overwhelmed').",
+    "· USE this to modulate voice (pace, register, bluntness vs warmth) and to SKIP discovery you already have.",
+    "· Skip the 'walk me through it / tell me your situation' opener · they already told you in the consult.",
+    "",
+    `Identity · ${ident.name || "(unnamed)"} · ${ident.occupation || "(role unspecified)"} · ${ident.email || "(no email)"}`,
+    w.roleLensSuggested ? `Suggested role lens · ${w.roleLensSuggested}` : "",
+    `Current state · ${cs.negativeCount ?? 0} negative / ${cs.positiveCount ?? 0} positive · top friction themes: ${topFriction || "none"}`,
+    `Desired state · ${ds.aspirationCount ?? 0} aspirations · top desired themes: ${topDesired || "none"}`,
+    `Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`,
+    `DISC tally · D=${scores.D ?? 0} I=${scores.I ?? 0} S=${scores.S ?? 0} C=${scores.C ?? 0} · primary ${disc.primary || "?"}${disc.isHybrid ? `/${disc.secondary || "?"}` : ""}`,
+    `Emotion read · ${emotion.sentiment || "neutral"}${emotion.cluster && emotion.cluster !== "neutral" ? ` · ${emotion.cluster}` : ""}`,
+    "",
+    "Modulation rules (apply silently · never name them):",
+    "· Primary D · terse, lead with the call, skip warmth filler.",
+    "· Primary I · warm energy ok, still drive to a decision.",
+    "· Primary S · gentler pacing, name the steady path, less force.",
+    "· Primary C · evidence-first, name confidence and the gap, no theatrics.",
+    "· Emotion overwhelm · ONE next move, not three. Reduce load before adding any.",
+    "· Emotion discouragement · name one credible near-term win before the bigger arc.",
+    "· Emotion steady · build on momentum, raise the bar.",
+    "· Emotion confident · stress-test, don't flatter.",
+    "First turn · address by first name, prove you read the consult by referencing the dominant friction theme without quoting words back, recommend, name the next move. No 'walk me through it.'",
+  ].filter(Boolean).join("\n");
+}
+
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
+
 // Clear at boot · ensures rebuilt prompts pick up doctrine updates on every cold start.
 promptCache.clear();
 
