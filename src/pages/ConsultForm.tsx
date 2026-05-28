@@ -472,9 +472,29 @@ export function ConsultForm() {
       selections: discResponses[row.id] ?? [],
     }));
 
-    // Build the warm-start payload client-side so the server can re-role
-    // the pipeline email and the chat can pick it up on launch.
-    const appLabels = buildSelectedApps(appSelections, otherAppsText);
+    // Derive legacy flat shapes + per-category groupings from toolsSelected.
+    const appSelections: string[] = [];
+    const appLabels: string[] = [];
+    const customStrings: string[] = [];
+    const toolsByCategory: Array<{ label: string; items: string[] }> = [];
+    for (const category of TOOL_CATEGORIES) {
+      const sel = toolsSelected[category.id];
+      if (!sel) continue;
+      const chipNames: string[] = [];
+      for (const slug of sel.slugs) {
+        const tool = category.tools.find((t) => t.slug === slug);
+        if (!tool) continue;
+        appSelections.push(`${category.id}-${slug}`);
+        appLabels.push(tool.name);
+        chipNames.push(tool.name);
+      }
+      const customs = sel.custom.map((c) => c.trim()).filter(Boolean);
+      for (const c of customs) customStrings.push(`${category.label}: ${c}`);
+      const items = [...chipNames, ...customs.map((c) => `Custom: ${c}`)];
+      if (items.length) toolsByCategory.push({ label: category.label, items });
+    }
+    const otherAppsText = customStrings.join(" · ");
+
     const warm = buildWarmStartPayload({
       payload: {
         email,
@@ -489,6 +509,7 @@ export function ConsultForm() {
       phone,
       occupation,
       appLabels,
+      toolsByCategory,
     });
 
     const { data, error } = await supabase.functions.invoke("submit-consult", {
@@ -501,6 +522,8 @@ export function ConsultForm() {
         aspirationWordIds: aspirationSelections,
         appSelections,
         otherAppsText,
+        toolsSelected,
+        toolsByCategory,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
         mode: "launch_to_chat",
