@@ -130,6 +130,16 @@ type Lead = {
   challenge?: string;
 };
 
+type WarmStart = {
+  identity?: { name?: string; email?: string; phone?: string; occupation?: string };
+  roleLensSuggested?: string;
+  currentState?: { positiveCount?: number; negativeCount?: number; topThemes?: string[] };
+  desiredState?: { aspirationCount?: number; topThemes?: string[] };
+  tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
+  disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
+  emotion?: { sentiment?: string; cluster?: string };
+};
+
 type PromptArgs = {
   voice: "cob" | "michael";
   roleLabel?: string;
@@ -137,7 +147,9 @@ type PromptArgs = {
   softNudge?: boolean;
   lead?: Lead;
   firstTurn?: boolean;
+  warmStart?: WarmStart | null;
 };
+
 
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
