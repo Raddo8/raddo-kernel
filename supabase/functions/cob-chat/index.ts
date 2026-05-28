@@ -161,9 +161,16 @@ function buildSystemPrompt(args: PromptArgs): string {
   const leadBlock = args.lead && (args.lead.name || args.lead.company || args.lead.title)
     ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n· Name: ${args.lead.name || "(not provided)"}\n· Title: ${args.lead.title || "(not provided)"}\n· Company: ${args.lead.company || "(not provided)"}\n· Stated challenge: ${args.lead.challenge || "(not provided)"}`
     : "";
+
+  // Warm-start block · per-request tail · positioned AFTER Adaptive Voice
+  // (which lives inside the cached baseline) and AFTER leadBlock, BEFORE
+  // firstTurnBlock. Guardrail baked in: never recite, never name DISC/emotion.
+  const warmStartBlock = args.warmStart ? formatWarmStartForPrompt(args.warmStart) : "";
+
   const firstTurnBlock = args.firstTurn
     ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
     : "";
+
 
   const key = `${args.voice}|${args.roleLabel || ""}|${args.industryLabel || ""}|${args.softNudge ? 1 : 0}`;
   let baseline = promptCache.get(key);
