@@ -151,8 +151,26 @@ function buildPipelineHtml(opts: {
   themeGap: ReturnType<typeof analyzeThemeGap>;
   visitorEmailStatus: string;
   visitorMessageId: string | null;
+  mode: string;
+  warmStart: any | null;
 }): string {
-  const { payload, submissionId, disc, themeGap, visitorEmailStatus, visitorMessageId } = opts;
+  const { payload, submissionId, disc, themeGap, visitorEmailStatus, visitorMessageId, mode, warmStart } = opts;
+
+  // COMPUTED READ block · only rendered for launch_to_chat mode where the
+  // warm-start payload was computed client-side and forwarded with the submission.
+  const computedReadBlock = (mode === "launch_to_chat" && warmStart) ? `
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#854F0B;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Computed read &middot; launch_to_chat</div>
+      <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#2C2C2A;line-height:1.6;margin:0 0 24px;">
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;width:160px;">Mode</td><td>launch_to_chat (visitor email skipped &middot; chat is the confirmation surface)</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">DISC tally</td><td>D=${esc(warmStart?.disc?.scores?.D ?? 0)} &middot; I=${esc(warmStart?.disc?.scores?.I ?? 0)} &middot; S=${esc(warmStart?.disc?.scores?.S ?? 0)} &middot; C=${esc(warmStart?.disc?.scores?.C ?? 0)}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">DISC primary</td><td>${esc(warmStart?.disc?.primary ?? "&mdash;")}${warmStart?.disc?.isHybrid ? ` / ${esc(warmStart?.disc?.secondary)} (hybrid)` : ""}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">Emotion sentiment</td><td>${esc(warmStart?.emotion?.sentiment ?? "&mdash;")}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">Emotion cluster</td><td>${esc(warmStart?.emotion?.cluster ?? "&mdash;")}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">Top friction themes</td><td>${esc((warmStart?.currentState?.topThemes ?? []).join(", ") || "&mdash;")}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">Top desired themes</td><td>${esc((warmStart?.desiredState?.topThemes ?? []).join(", ") || "&mdash;")}</td></tr>
+        <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;">Suggested role lens</td><td>${esc(warmStart?.roleLensSuggested ?? "&mdash;")}</td></tr>
+      </table>` : "";
+
 
   const themeRows = themeGap
     .map(
@@ -200,6 +218,8 @@ function buildPipelineHtml(opts: {
         Current-state words: ${payload.currentStateWordIds.length} &middot; Aspiration words: ${payload.aspirationWordIds.length}<br/>
         Apps tagged: ${payload.appSelections.length}${payload.otherAppsText ? `<br/>Other apps: ${esc(payload.otherAppsText)}` : ""}
       </div>
+
+      ${computedReadBlock}
 
       <div style="font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;color:#0C447C;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Delivery</div>
       <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#2C2C2A;line-height:1.6;">
@@ -359,6 +379,8 @@ Deno.serve(async (request) => {
       themeGap: themeGapAnalysis,
       visitorEmailStatus,
       visitorMessageId,
+      mode,
+      warmStart,
     }),
     replyTo: EMAIL_REGEX.test(payload.email) ? payload.email : undefined,
   });

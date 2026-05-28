@@ -130,6 +130,16 @@ type Lead = {
   challenge?: string;
 };
 
+type WarmStart = {
+  identity?: { name?: string; email?: string; phone?: string; occupation?: string };
+  roleLensSuggested?: string;
+  currentState?: { positiveCount?: number; negativeCount?: number; topThemes?: string[] };
+  desiredState?: { aspirationCount?: number; topThemes?: string[] };
+  tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
+  disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
+  emotion?: { sentiment?: string; cluster?: string };
+};
+
 type PromptArgs = {
   voice: "cob" | "michael";
   roleLabel?: string;
@@ -137,10 +147,57 @@ type PromptArgs = {
   softNudge?: boolean;
   lead?: Lead;
   firstTurn?: boolean;
+  warmStart?: WarmStart | null;
 };
+
+
+// Mirrors src/lib/consult-warm-start.ts · formatWarmStartForPrompt.
+// Keep in sync. Guardrail is binding: never recite, never name DISC/emotion.
+function formatWarmStartForPrompt(w: WarmStart): string {
+  const ident = w.identity || {};
+  const cs = w.currentState || {};
+  const ds = w.desiredState || {};
+  const tools = w.tools || {};
+  const disc = w.disc || {};
+  const scores = disc.scores || {};
+  const emotion = w.emotion || {};
+  const labels = Array.isArray(tools.selectedLabels) ? tools.selectedLabels.slice(0, 12) : [];
+  const topFriction = Array.isArray(cs.topThemes) ? cs.topThemes.join(", ") : "";
+  const topDesired = Array.isArray(ds.topThemes) ? ds.topThemes.join(", ") : "";
+  return [
+    "",
+    "",
+    "# WHAT YOUR COB ALREADY KNOWS (from the consult · BINDING USE)",
+    "Guardrail (binding):",
+    "· NEVER recite this block back. Never read identity, counts, themes, tools, DISC, or emotion fields aloud.",
+    "· NEVER name a DISC style ('you're a D / High-I / Conscientious type') or an emotional state ('you sound overwhelmed').",
+    "· USE this to modulate voice (pace, register, bluntness vs warmth) and to SKIP discovery you already have.",
+    "· Skip the 'walk me through it / tell me your situation' opener · they already told you in the consult.",
+    "",
+    `Identity · ${ident.name || "(unnamed)"} · ${ident.occupation || "(role unspecified)"} · ${ident.email || "(no email)"}`,
+    w.roleLensSuggested ? `Suggested role lens · ${w.roleLensSuggested}` : "",
+    `Current state · ${cs.negativeCount ?? 0} negative / ${cs.positiveCount ?? 0} positive · top friction themes: ${topFriction || "none"}`,
+    `Desired state · ${ds.aspirationCount ?? 0} aspirations · top desired themes: ${topDesired || "none"}`,
+    `Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`,
+    `DISC tally · D=${scores.D ?? 0} I=${scores.I ?? 0} S=${scores.S ?? 0} C=${scores.C ?? 0} · primary ${disc.primary || "?"}${disc.isHybrid ? `/${disc.secondary || "?"}` : ""}`,
+    `Emotion read · ${emotion.sentiment || "neutral"}${emotion.cluster && emotion.cluster !== "neutral" ? ` · ${emotion.cluster}` : ""}`,
+    "",
+    "Modulation rules (apply silently · never name them):",
+    "· Primary D · terse, lead with the call, skip warmth filler.",
+    "· Primary I · warm energy ok, still drive to a decision.",
+    "· Primary S · gentler pacing, name the steady path, less force.",
+    "· Primary C · evidence-first, name confidence and the gap, no theatrics.",
+    "· Emotion overwhelm · ONE next move, not three. Reduce load before adding any.",
+    "· Emotion discouragement · name one credible near-term win before the bigger arc.",
+    "· Emotion steady · build on momentum, raise the bar.",
+    "· Emotion confident · stress-test, don't flatter.",
+    "First turn · address by first name, prove you read the consult by referencing the dominant friction theme without quoting words back, recommend, name the next move. No 'walk me through it.'",
+  ].filter(Boolean).join("\n");
+}
 
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
+
 // Clear at boot · ensures rebuilt prompts pick up doctrine updates on every cold start.
 promptCache.clear();
 
@@ -149,9 +206,16 @@ function buildSystemPrompt(args: PromptArgs): string {
   const leadBlock = args.lead && (args.lead.name || args.lead.company || args.lead.title)
     ? `\n\n# VISITOR DOSSIER (from the gate · use it; address them by first name; reference their company by name when relevant; weave their stated challenge into your read)\n· Name: ${args.lead.name || "(not provided)"}\n· Title: ${args.lead.title || "(not provided)"}\n· Company: ${args.lead.company || "(not provided)"}\n· Stated challenge: ${args.lead.challenge || "(not provided)"}`
     : "";
+
+  // Warm-start block · per-request tail · positioned AFTER Adaptive Voice
+  // (which lives inside the cached baseline) and AFTER leadBlock, BEFORE
+  // firstTurnBlock. Guardrail baked in: never recite, never name DISC/emotion.
+  const warmStartBlock = args.warmStart ? formatWarmStartForPrompt(args.warmStart) : "";
+
   const firstTurnBlock = args.firstTurn
     ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
     : "";
+
 
   const key = `${args.voice}|${args.roleLabel || ""}|${args.industryLabel || ""}|${args.softNudge ? 1 : 0}`;
   let baseline = promptCache.get(key);
@@ -221,7 +285,7 @@ function buildSystemPrompt(args: PromptArgs): string {
     promptCache.set(key, baseline);
   }
 
-  return baseline + leadBlock + firstTurnBlock;
+  return baseline + leadBlock + warmStartBlock + firstTurnBlock;
 }
 
 // ── Web tool (Firecrawl) · COB-only · Anthropic tool schema ─────────────────
@@ -342,6 +406,56 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
     challenge: typeof body.lead.challenge === "string" ? body.lead.challenge.slice(0, 2000) : undefined,
   } : undefined;
 
+  // warm_start · accepted shape from primed chat handoff. Defensive clamp;
+  // any malformed sub-field is dropped silently rather than rejected so the
+  // chat itself never breaks if the payload drifts.
+  const ws = body.warm_start;
+  let warmStart: WarmStart | null = null;
+  if (ws && typeof ws === "object") {
+    const clampStr = (v: unknown, n: number) => typeof v === "string" ? v.slice(0, n) : undefined;
+    const clampNum = (v: unknown) => typeof v === "number" && Number.isFinite(v) ? v : 0;
+    const clampArr = (v: unknown, n: number, m: number) =>
+      Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(0, n).map((s) => s.slice(0, m)) : [];
+    warmStart = {
+      identity: ws.identity && typeof ws.identity === "object" ? {
+        name: clampStr(ws.identity.name, 120),
+        email: clampStr(ws.identity.email, 240),
+        phone: clampStr(ws.identity.phone, 60),
+        occupation: clampStr(ws.identity.occupation, 160),
+      } : undefined,
+      roleLensSuggested: clampStr(ws.roleLensSuggested, 80),
+      currentState: ws.currentState && typeof ws.currentState === "object" ? {
+        positiveCount: clampNum(ws.currentState.positiveCount),
+        negativeCount: clampNum(ws.currentState.negativeCount),
+        topThemes: clampArr(ws.currentState.topThemes, 6, 60),
+      } : undefined,
+      desiredState: ws.desiredState && typeof ws.desiredState === "object" ? {
+        aspirationCount: clampNum(ws.desiredState.aspirationCount),
+        topThemes: clampArr(ws.desiredState.topThemes, 6, 60),
+      } : undefined,
+      tools: ws.tools && typeof ws.tools === "object" ? {
+        count: clampNum(ws.tools.count),
+        selectedLabels: clampArr(ws.tools.selectedLabels, 24, 80),
+        otherText: clampStr(ws.tools.otherText, 400),
+      } : undefined,
+      disc: ws.disc && typeof ws.disc === "object" ? {
+        scores: ws.disc.scores && typeof ws.disc.scores === "object" ? {
+          D: clampNum(ws.disc.scores.D),
+          I: clampNum(ws.disc.scores.I),
+          S: clampNum(ws.disc.scores.S),
+          C: clampNum(ws.disc.scores.C),
+        } : undefined,
+        primary: clampStr(ws.disc.primary, 4),
+        secondary: clampStr(ws.disc.secondary, 4),
+        isHybrid: Boolean(ws.disc.isHybrid),
+      } : undefined,
+      emotion: ws.emotion && typeof ws.emotion === "object" ? {
+        sentiment: clampStr(ws.emotion.sentiment, 16),
+        cluster: clampStr(ws.emotion.cluster, 24),
+      } : undefined,
+    };
+  }
+
   return {
     ok: true,
     data: {
@@ -353,9 +467,11 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
       industryLabel: typeof body.industry_label === "string" ? body.industry_label.slice(0, 80) : undefined,
       sessionId: typeof body.session_id === "string" ? body.session_id.slice(0, 64) : "anon",
       lead,
+      warmStart,
     },
   };
 }
+
 
 // ── Anthropic API ───────────────────────────────────────────────────────────
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -591,7 +707,7 @@ Deno.serve(async (req: Request) => {
       status: v.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const { voice, messages, userTurns, cap, roleLabel, industryLabel, lead } = v.data;
+  const { voice, messages, userTurns, cap, roleLabel, industryLabel, lead, warmStart } = v.data;
 
   if (userTurns > cap) {
     const closing = voice === "michael"
@@ -603,7 +719,11 @@ Deno.serve(async (req: Request) => {
   const firstTurn = userTurns === 1;
   const model = pickModel(userTurns);
   const softNudge = voice === "michael" && userTurns === MICHAEL_SOFT_NUDGE_TURN;
-  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge, lead, firstTurn });
+  const system = buildSystemPrompt({ voice, roleLabel, industryLabel, softNudge, lead, firstTurn, warmStart });
+  if (warmStart) {
+    console.log("[cob-chat] warm_start present · DISC=", warmStart.disc?.primary, "emotion=", warmStart.emotion?.sentiment, "/", warmStart.emotion?.cluster);
+  }
+
 
   const recent = messages.length > HISTORY_KEEP ? messages.slice(-HISTORY_KEEP) : messages;
   const anthropicMessages = toAnthropicMessages(recent);
