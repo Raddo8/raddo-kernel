@@ -38,6 +38,7 @@ const [
   DOC_CONVICTION_FUNNEL,
   DOC_ACTION_BIAS,
   DOC_DOCTRINE_HIERARCHY,
+  DOC_ADAPTIVE_VOICE,
 ] = await Promise.all([
   loadDoc("COB_CAPABILITIES_REFERENCE.md"),
   loadDoc("COB_INDUSTRIES_REFERENCE.md"),
@@ -52,6 +53,7 @@ const [
   loadDoc("COB_CONVICTION_FUNNEL_DOCTRINE.md"),
   loadDoc("COB_ACTION_BIAS_DOCTRINE.md"),
   loadDoc("COB_DOCTRINE_HIERARCHY.md"),
+  loadDoc("COB_ADAPTIVE_VOICE_DOCTRINE.md"),
 ]);
 
 function extractSection(doc: string, needle: string, maxChars = 4000): string {
@@ -192,6 +194,7 @@ function buildSystemPrompt(args: PromptArgs): string {
     if (args.voice === "michael") {
       // COB voice profile still establishes the baseline identity even when Michael is active.
       parts.push("\n\n# VOICE PROFILE — COB (digest · baseline identity)\n" + DIGEST_COB_VOICE);
+      parts.push("\n\n# COB ADAPTIVE VOICE DOCTRINE (Layer 1 companion · per-prospect DISC + emotional-state modulation · binding · subordinate to Voice Profile non-negotiables and Layer 0)\n" + DOC_ADAPTIVE_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
       parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
@@ -201,6 +204,7 @@ function buildSystemPrompt(args: PromptArgs): string {
       if (args.softNudge) parts.push(MICHAEL_SOFT_NUDGE);
     } else {
       parts.push("\n\n# VOICE PROFILE — COB (digest)\n" + DIGEST_COB_VOICE);
+      parts.push("\n\n# COB ADAPTIVE VOICE DOCTRINE (Layer 1 companion · per-prospect DISC + emotional-state modulation · binding · subordinate to Voice Profile non-negotiables and Layer 0)\n" + DOC_ADAPTIVE_VOICE);
       parts.push(VOICE_BINDING_COB);
       parts.push("\n\n# WEB INTELLIGENCE (digest)\n" + DIGEST_WEB_SPEC);
       parts.push("\n\n# VOICE INTEGRATION (digest)\n" + DIGEST_VOICE_INTEGRATION);
