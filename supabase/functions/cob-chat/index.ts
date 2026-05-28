@@ -138,7 +138,27 @@ type WarmStart = {
   tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
   disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
   emotion?: { sentiment?: string; cluster?: string };
+  focus?: {
+    heaviestPainBucket?: string | null;
+    topPainBuckets?: Array<{ bucket?: string; negativeCount?: number }>;
+    biggestGapBucket?: string | null;
+    lightSignalBuckets?: string[];
+  };
 };
+
+// Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
+const CATEGORY_LABELS: Record<string, string> = {
+  money: "MONEY",
+  market_position: "MARKET POSITION",
+  operations: "OPERATIONS",
+  systems: "SYSTEMS",
+  customers: "CUSTOMERS",
+  people: "PEOPLE",
+  culture: "CULTURE",
+  risk: "RISK",
+  you: "YOU",
+};
+const labelOfBucket = (b?: string | null) => (b && CATEGORY_LABELS[b]) || (b ? b : "none");
 
 type PromptArgs = {
   voice: "cob" | "michael";
