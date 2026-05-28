@@ -282,6 +282,30 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   className="block w-full h-auto select-none"
                 />
               </div>
+
+              {/* Embedded CTA · carved out from dossier expand area */}
+              <div className="mt-6 flex justify-center">
+                <a
+                  href="/consult"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  role="link"
+                  tabIndex={0}
+                  className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
+                  style={{
+                    backgroundColor: "hsl(var(--raddo-brass))",
+                    color: "hsl(var(--raddo-ink-deep))",
+                    padding: "16px 28px",
+                    borderRadius: "4px",
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  <span>Begin your 5-minute consult</span>
+                  <span aria-hidden className="transition-transform duration-220 group-hover:translate-x-[3px]">→</span>
+                </a>
+              </div>
             </div>
           </motion.div>
         )}
@@ -1167,22 +1191,7 @@ export function Hero() {
           animate="show"
           className="mt-12 flex flex-col items-start gap-5 sm:flex-row sm:items-center"
         >
-          <a
-            href="/consult"
-            className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
-            style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
-              padding: "16px 28px",
-              borderRadius: "4px",
-              fontSize: "15px",
-              fontWeight: 600,
-              letterSpacing: "0.01em",
-            }}
-          >
-            <span>Begin your 5-minute consult</span>
-            <span aria-hidden className="transition-transform duration-220 group-hover:translate-x-[3px]">→</span>
-          </a>
+          {/* Consult CTA moved into the "What is COB?" dossier (closed state) */}
           <a
             href="/capability-brief.html"
             className="raddo-cta-ghost inline-flex items-center gap-2 font-sans text-raddo-ink-deep"
