@@ -5,6 +5,17 @@ import ReactMarkdown from "react-markdown";
 import { useCobChat, type TranscriptItem, type ChatMessage, type LeadInfo } from "./use-cob-chat";
 import { VOICES, type VoiceId } from "./cob-voices";
 import { FEATURED_ROLES, FEATURED_INDUSTRIES, ALL_ROLES, ALL_INDUSTRIES } from "./cob-featured";
+import type { WarmStartPayload } from "@/lib/consult-warm-start";
+
+export const GATE_HANDOFF_KEY = "cob.gate.v1";
+export type GateHandoff = {
+  name: string;
+  email: string;
+  company: string;
+  title: string;
+  challenge: string;
+  ts: number;
+};
 
 // Scoped markdown renderer for COB assistant messages. Inherits typography
 // from the surrounding container. No HTML passthrough, no GFM extensions —
