@@ -51,6 +51,25 @@ function buildShuffledDiscRows(rows: DiscRow[]) {
   }));
 }
 
+// Partition chips by category, then shuffle within each bucket. Emit buckets
+// in CATEGORY_ORDER so render iterates in the binding top-to-bottom order.
+function groupAndShuffle<T extends { category: Category }>(
+  items: T[],
+): Array<{ category: Category; label: string; items: T[] }> {
+  const byCategory = new Map<Category, T[]>();
+  for (const item of items) {
+    const list = byCategory.get(item.category) ?? [];
+    list.push(item);
+    byCategory.set(item.category, list);
+  }
+  return CATEGORY_ORDER.map((category) => ({
+    category,
+    label: CATEGORY_LABELS[category],
+    items: shuffleArray(byCategory.get(category) ?? []),
+  })).filter((bucket) => bucket.items.length > 0);
+}
+
+
 function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   const base: React.CSSProperties = {
     position: "absolute",
