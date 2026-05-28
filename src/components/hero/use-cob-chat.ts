@@ -417,6 +417,7 @@ export function useCobChat() {
                   challenge: lead.challenge,
                 }
               : undefined,
+            warm_start: warmStart ?? undefined,
             messages: wireMessages,
           }),
           signal: controller.signal,
