@@ -167,8 +167,7 @@ function buildPipelineHtml(opts: {
   </body></html>`;
 }
 
-  </body></html>`;
-}
+
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helper · invoke send-email with anon key (verify_jwt=false on send-email)
