@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SeoHead } from "@/components/SeoHead";
@@ -14,6 +14,18 @@ import {
   type DiscRow,
 } from "@/lib/consult-data";
 import type { DiscResponse } from "@/lib/consult-analysis";
+import { buildSelectedApps } from "@/lib/consult-analysis";
+import {
+  buildWarmStartPayload,
+  type WarmStartPayload,
+} from "@/lib/consult-warm-start";
+import { ConfirmMeetDialog } from "@/components/consult/ConfirmMeetDialog";
+import { MeetYourCobLaunch } from "@/components/consult/MeetYourCobLaunch";
+import DossierIntake, {
+  GATE_HANDOFF_KEY,
+  type GateHandoff,
+} from "@/components/hero/DossierIntake";
+import type { LeadInfo } from "@/components/hero/use-cob-chat";
 
 type ToastState =
   | { kind: "idle"; message: string }
