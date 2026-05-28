@@ -219,6 +219,7 @@ export function buildWarmStartPayload(opts: {
   phone?: string;
   occupation?: string;
   appLabels: string[];
+  toolsByCategory?: Array<{ label: string; items: string[] }>;
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
