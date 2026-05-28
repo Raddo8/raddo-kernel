@@ -9,7 +9,15 @@
 // That guardrail is baked into the prompt block emitted by
 // formatWarmStartForPrompt() and re-stated here so future edits respect it.
 
-import { CURRENT_STATE_WORDS, type ThemeId } from "./consult-data";
+import {
+  ASPIRATION_WORDS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  CURRENT_STATE_WORDS,
+  type Category,
+  type ThemeId,
+} from "./consult-data";
+
 import { ALL_ROLES } from "@/components/hero/cob-featured";
 import {
   analyzeConsult,
