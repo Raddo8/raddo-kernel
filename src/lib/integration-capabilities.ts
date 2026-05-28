@@ -789,7 +789,7 @@ export const INTEGRATION_CAPABILITIES: Record<string, ToolCapability> = {
       "Bridge Lever with the rest of your stack via Zapier or Make so your COB can act on changes from Lever in other tools",
     ],
   },
-  15five: { name: "15Five", category: "hr",
+  "15five": { name: "15Five", category: "hr",
     reads: ["relevant data from 15Five"],
     writes: ["actions in 15Five with appropriate permissions"],
     moves: [
