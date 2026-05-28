@@ -459,7 +459,7 @@ export function ConsultForm() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || launched}
               className="mt-6 w-full font-mono transition-colors"
               style={{
                 backgroundColor: "hsl(var(--raddo-brass))",
@@ -470,12 +470,12 @@ export function ConsultForm() {
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 fontWeight: 600,
-                opacity: submitting ? 0.6 : 1,
-                cursor: submitting ? "not-allowed" : "pointer",
+                opacity: submitting || launched ? 0.6 : 1,
+                cursor: submitting || launched ? "not-allowed" : "pointer",
                 boxShadow: "0 4px 12px -6px hsl(var(--raddo-brass-deep) / 0.4)",
               }}
             >
-              {submitting ? "Submitting…" : "Submit consult"}
+              {launched ? "Submitted" : submitting ? "Submitting…" : "Submit consult"}
             </button>
           </Panel>
         </aside>
