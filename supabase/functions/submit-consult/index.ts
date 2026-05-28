@@ -379,6 +379,8 @@ Deno.serve(async (request) => {
       themeGap: themeGapAnalysis,
       visitorEmailStatus,
       visitorMessageId,
+      mode,
+      warmStart,
     }),
     replyTo: EMAIL_REGEX.test(payload.email) ? payload.email : undefined,
   });
