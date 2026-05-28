@@ -135,6 +135,7 @@ export type WarmStartPayload = {
     count: number;
     selectedLabels: string[];
     otherText?: string;
+    byCategory?: Array<{ label: string; items: string[] }>;
   };
   disc: {
     scores: DiscScores;
