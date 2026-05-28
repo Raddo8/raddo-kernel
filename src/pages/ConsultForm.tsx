@@ -437,7 +437,7 @@ export function ConsultForm() {
               className="mt-5"
               style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
-              Answer what's useful, skip the rest. Submit when you're done · we'll review and reply within 2 business days.
+              Answer what's useful, skip the rest. Submit when you're ready. COB (pre-install) is waiting.
             </p>
 
             {toast.kind === "error" ? (
