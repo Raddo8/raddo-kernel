@@ -280,7 +280,7 @@ function GateForm({
               minWidth: "180px",
             }}
           >
-            {submitting ? "Opening…" : "Open the sample COB"}
+            {submitting ? "Routing…" : "Brief consult with COB"}
           </button>
         </div>
       </div>
