@@ -13,6 +13,8 @@ type DiscResponse = {
   selections: string[];
 };
 
+type ToolsSelected = Record<string, { slugs?: string[]; custom?: string[] }>;
+
 type ConsultSubmissionPayload = {
   email: string;
   name: string;
@@ -22,6 +24,8 @@ type ConsultSubmissionPayload = {
   aspirationWordIds: string[];
   appSelections: string[];
   otherAppsText?: string;
+  toolsSelected?: ToolsSelected;
+  toolsByCategory?: Array<{ label: string; items: string[] }>;
   discResponses: DiscResponse[];
   discAllowMultiSelect: boolean;
 };
