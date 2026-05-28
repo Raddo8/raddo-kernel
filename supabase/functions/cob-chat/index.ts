@@ -496,6 +496,16 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         count: clampNum(ws.tools.count),
         selectedLabels: clampArr(ws.tools.selectedLabels, 24, 80),
         otherText: clampStr(ws.tools.otherText, 400),
+        byCategory: Array.isArray(ws.tools.byCategory)
+          ? ws.tools.byCategory
+              .filter((g: any) => g && typeof g === "object")
+              .slice(0, 20)
+              .map((g: any) => ({
+                label: clampStr(g.label, 60) || "",
+                items: clampArr(g.items, 20, 80),
+              }))
+              .filter((g: any) => g.label && g.items.length)
+          : undefined,
       } : undefined,
       disc: ws.disc && typeof ws.disc === "object" ? {
         scores: ws.disc.scores && typeof ws.disc.scores === "object" ? {
