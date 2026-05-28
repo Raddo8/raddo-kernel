@@ -221,6 +221,11 @@ export function buildWarmStartPayload(opts: {
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
+  const focus = computeFocusSignal(
+    opts.payload.currentStateWordIds,
+    opts.payload.aspirationWordIds,
+  );
+
 
   const topThemesCurrent = summary.themeGapAnalysis
     .filter((t) => t.currentNegative > 0)
