@@ -418,8 +418,7 @@ export function ConsultForm() {
   const [occupation, setOccupation] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
-  const [appSelections, setAppSelections] = useState<string[]>([]);
-  const [otherAppsText, setOtherAppsText] = useState("");
+  const [toolsSelected, setToolsSelected] = useState<ToolsSelectedState>({});
   const [discResponses, setDiscResponses] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState>({ kind: "idle", message: "" });
