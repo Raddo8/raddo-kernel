@@ -5,14 +5,18 @@ import { SeoHead } from "@/components/SeoHead";
 import {
   APP_CATEGORIES,
   ASPIRATION_WORDS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
   CURRENT_STATE_WORDS,
   DISC_ROWS,
   type AppCategory,
   type AspirationWord,
+  type Category,
   type CurrentWord,
   type DiscOption,
   type DiscRow,
 } from "@/lib/consult-data";
+
 import type { DiscResponse } from "@/lib/consult-analysis";
 import { buildSelectedApps } from "@/lib/consult-analysis";
 import {
