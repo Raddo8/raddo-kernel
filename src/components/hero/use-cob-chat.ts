@@ -509,7 +509,7 @@ export function useCobChat() {
         abortRef.current = null;
       }
     },
-    [pending, transcript, voice, roleLabel, industryLabel, lead],
+    [pending, transcript, voice, roleLabel, industryLabel, lead, warmStart],
   );
 
   // ── Transcript pipe · silent internal email at session end ─────────────
