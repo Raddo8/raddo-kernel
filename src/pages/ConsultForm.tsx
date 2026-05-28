@@ -5,14 +5,18 @@ import { SeoHead } from "@/components/SeoHead";
 import {
   APP_CATEGORIES,
   ASPIRATION_WORDS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
   CURRENT_STATE_WORDS,
   DISC_ROWS,
   type AppCategory,
   type AspirationWord,
+  type Category,
   type CurrentWord,
   type DiscOption,
   type DiscRow,
 } from "@/lib/consult-data";
+
 import type { DiscResponse } from "@/lib/consult-analysis";
 import { buildSelectedApps } from "@/lib/consult-analysis";
 import {
@@ -46,6 +50,25 @@ function buildShuffledDiscRows(rows: DiscRow[]) {
     options: shuffleArray(row.options),
   }));
 }
+
+// Partition chips by category, then shuffle within each bucket. Emit buckets
+// in CATEGORY_ORDER so render iterates in the binding top-to-bottom order.
+function groupAndShuffle<T extends { category: Category }>(
+  items: T[],
+): Array<{ category: Category; label: string; items: T[] }> {
+  const byCategory = new Map<Category, T[]>();
+  for (const item of items) {
+    const list = byCategory.get(item.category) ?? [];
+    list.push(item);
+    byCategory.set(item.category, list);
+  }
+  return CATEGORY_ORDER.map((category) => ({
+    category,
+    label: CATEGORY_LABELS[category],
+    items: shuffleArray(byCategory.get(category) ?? []),
+  })).filter((bucket) => bucket.items.length > 0);
+}
+
 
 function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   const base: React.CSSProperties = {
@@ -208,8 +231,9 @@ function OptionButton({
 
 export function ConsultForm() {
   const navigate = useNavigate();
-  const [currentWords] = useState(() => shuffleArray(CURRENT_STATE_WORDS as CurrentWord[]));
-  const [aspirationWords] = useState(() => shuffleArray(ASPIRATION_WORDS as AspirationWord[]));
+  const [currentBuckets] = useState(() => groupAndShuffle(CURRENT_STATE_WORDS as CurrentWord[]));
+  const [aspirationBuckets] = useState(() => groupAndShuffle(ASPIRATION_WORDS as AspirationWord[]));
+
   const [discRows] = useState(() => buildShuffledDiscRows(DISC_ROWS));
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -585,18 +609,31 @@ export function ConsultForm() {
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
               Select as many as you want. The good, the bad, and everything in between.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {currentWords.map((word) => (
-                <Chip
-                  key={word.id}
-                  label={word.label}
-                  selected={currentStateSelections.includes(word.id)}
-                  onToggle={() =>
-                    toggleSelection(currentStateSelections, word.id, setCurrentStateSelections)
-                  }
-                />
+            <div className="mt-6 space-y-6">
+              {currentBuckets.map((bucket) => (
+                <div key={bucket.category}>
+                  <div
+                    className="text-[11px] tracking-[0.18em] font-medium"
+                    style={{ color: "hsl(var(--raddo-ash))" }}
+                  >
+                    {bucket.label}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {bucket.items.map((word) => (
+                      <Chip
+                        key={word.id}
+                        label={word.label}
+                        selected={currentStateSelections.includes(word.id)}
+                        onToggle={() =>
+                          toggleSelection(currentStateSelections, word.id, setCurrentStateSelections)
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
+
           </Panel>
 
           <Panel className="p-6 md:p-8">
@@ -610,18 +647,31 @@ export function ConsultForm() {
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
               Select as many as fit.
             </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              {aspirationWords.map((word) => (
-                <Chip
-                  key={word.id}
-                  label={word.label}
-                  selected={aspirationSelections.includes(word.id)}
-                  onToggle={() =>
-                    toggleSelection(aspirationSelections, word.id, setAspirationSelections)
-                  }
-                />
+            <div className="mt-6 space-y-6">
+              {aspirationBuckets.map((bucket) => (
+                <div key={bucket.category}>
+                  <div
+                    className="text-[11px] tracking-[0.18em] font-medium"
+                    style={{ color: "hsl(var(--raddo-ash))" }}
+                  >
+                    {bucket.label}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {bucket.items.map((word) => (
+                      <Chip
+                        key={word.id}
+                        label={word.label}
+                        selected={aspirationSelections.includes(word.id)}
+                        onToggle={() =>
+                          toggleSelection(aspirationSelections, word.id, setAspirationSelections)
+                        }
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
+
           </Panel>
 
           <Panel className="p-6 md:p-8">

@@ -1,3 +1,8 @@
+// CONSULT WORD SETS v5 · 9 buckets · 153 chips.
+// 16 theme tags. 9 category buckets. Each chip declares both — theme drives
+// the warm-start classifier (DISC + emotion), category drives bucket UI and
+// the focus signal. Full replacement: zero duplicate labels by construction.
+
 export type ThemeId =
   | "clarity"
   | "cash"
@@ -8,7 +13,24 @@ export type ThemeId =
   | "leadership"
   | "capacity"
   | "visibility"
-  | "strategy";
+  | "strategy"
+  | "self"
+  | "marketing"
+  | "ai"
+  | "customers"
+  | "culture"
+  | "risk";
+
+export type Category =
+  | "money"
+  | "market_position"
+  | "operations"
+  | "systems"
+  | "people"
+  | "you"
+  | "customers"
+  | "culture"
+  | "risk";
 
 export type DiscStyle = "D" | "I" | "S" | "C";
 
@@ -17,12 +39,14 @@ export type CurrentWord = {
   label: string;
   theme: ThemeId;
   sentiment: "positive" | "negative";
+  category: Category;
 };
 
 export type AspirationWord = {
   id: string;
   label: string;
   theme: ThemeId;
+  category: Category;
 };
 
 export type AppOption = {
@@ -48,6 +72,32 @@ export type DiscRow = {
   options: DiscOption[];
 };
 
+// Bucket display order (Step 5): MONEY · MARKET POSITION · OPERATIONS ·
+// SYSTEMS · CUSTOMERS · PEOPLE · CULTURE · RISK · YOU
+export const CATEGORY_ORDER: Category[] = [
+  "money",
+  "market_position",
+  "operations",
+  "systems",
+  "customers",
+  "people",
+  "culture",
+  "risk",
+  "you",
+];
+
+export const CATEGORY_LABELS: Record<Category, string> = {
+  money: "MONEY",
+  market_position: "MARKET POSITION",
+  operations: "OPERATIONS",
+  systems: "SYSTEMS",
+  customers: "CUSTOMERS",
+  people: "PEOPLE",
+  culture: "CULTURE",
+  risk: "RISK",
+  you: "YOU",
+};
+
 export const THEMES: { id: ThemeId; label: string; prompt: string }[] = [
   { id: "clarity", label: "Clarity", prompt: "How clear is the work in front of you?" },
   { id: "cash", label: "Cash", prompt: "What does the business feel like financially?" },
@@ -59,199 +109,137 @@ export const THEMES: { id: ThemeId; label: string; prompt: string }[] = [
   { id: "capacity", label: "Capacity", prompt: "How much room is left in the tank?" },
   { id: "visibility", label: "Visibility", prompt: "How visible is the truth of the business?" },
   { id: "strategy", label: "Strategy", prompt: "How coherent is the direction?" },
+  { id: "self", label: "Self", prompt: "How are you holding up personally?" },
+  { id: "marketing", label: "Marketing", prompt: "How present are you in the market?" },
+  { id: "ai", label: "AI", prompt: "Where do you stand on AI leverage?" },
+  { id: "customers", label: "Customers", prompt: "How do customers behave after the first sale?" },
+  { id: "culture", label: "Culture", prompt: "What does it feel like to work here?" },
+  { id: "risk", label: "Risk", prompt: "How protected is the business?" },
 ];
 
-const CURRENT_WORD_SETS: Record<
-  ThemeId,
-  { positive: string[]; negative: string[]; aspiration: string[] }
-> = {
-  clarity: {
-    positive: ["focused", "ordered", "decisive", "structured", "legible"],
-    negative: ["foggy", "reactive", "fragmented", "stalled", "noisy"],
-    aspiration: [
-      "calm",
-      "sequenced",
-      "certain",
-      "prioritized",
-      "clean",
-      "aligned",
-      "transparent",
-      "predictable",
-      "usable",
-      "steady",
-    ],
-  },
-  cash: {
-    positive: ["stable", "bankable", "profitable", "collected", "disciplined"],
-    negative: ["tight", "late", "leaking", "uncertain", "stretched"],
-    aspiration: [
-      "cash-rich",
-      "measured",
-      "forecastable",
-      "timely",
-      "durable",
-      "margin-safe",
-      "funded",
-      "sharp",
-      "accountable",
-      "controlled",
-    ],
-  },
-  delivery: {
-    positive: ["reliable", "on-time", "repeatable", "complete", "clean-handed"],
-    negative: ["dropped", "late", "uneven", "rushed", "slipping"],
-    aspiration: [
-      "cadenced",
-      "polished",
-      "trustworthy",
-      "frictionless",
-      "finish-first",
-      "dependable",
-      "stable",
-      "measured",
-      "fast",
-      "professional",
-    ],
-  },
-  sales: {
-    positive: ["active", "warm", "compelling", "responsive", "advancing"],
-    negative: ["quiet", "stalled", "unclear", "thin", "ghosted"],
-    aspiration: [
-      "consistent",
-      "qualified",
-      "confident",
-      "conversion-ready",
-      "well-timed",
-      "magnetic",
-      "healthy",
-      "tracked",
-      "sharp",
-      "trusted",
-    ],
-  },
-  people: {
-    positive: ["committed", "coachable", "supportive", "honest", "engaged"],
-    negative: ["drained", "confused", "siloed", "fragile", "checked-out"],
-    aspiration: [
-      "clear-eyed",
-      "energized",
-      "responsible",
-      "direct",
-      "safe",
-      "collaborative",
-      "steady",
-      "capable",
-      "mature",
-      "present",
-    ],
-  },
-  systems: {
-    positive: ["documented", "stable", "connected", "searchable", "repeatable"],
-    negative: ["manual", "brittle", "duplicated", "scattered", "opaque"],
-    aspiration: [
-      "integrated",
-      "traceable",
-      "automated",
-      "auditable",
-      "simple",
-      "durable",
-      "centralized",
-      "indexed",
-      "clean",
-      "trusted",
-    ],
-  },
-  leadership: {
-    positive: ["available", "candid", "steady", "visible", "intentional"],
-    negative: ["overloaded", "avoidant", "scattered", "inconsistent", "isolated"],
-    aspiration: [
-      "composed",
-      "truthful",
-      "disciplined",
-      "present",
-      "calibrated",
-      "clear",
-      "effective",
-      "respected",
-      "credible",
-      "confident",
-    ],
-  },
-  capacity: {
-    positive: ["sustainable", "paced", "protected", "rested", "resilient"],
-    negative: ["maxed", "interrupt-driven", "brittle", "fatigued", "behind"],
-    aspiration: [
-      "spacious",
-      "buffered",
-      "deliberate",
-      "protected",
-      "recoverable",
-      "balanced",
-      "durable",
-      "stable",
-      "human",
-      "repeatable",
-    ],
-  },
-  visibility: {
-    positive: ["measured", "current", "factual", "searchable", "shared"],
-    negative: ["buried", "guessing", "late", "partial", "manual"],
-    aspiration: [
-      "live",
-      "trusted",
-      "decision-ready",
-      "obvious",
-      "coherent",
-      "current",
-      "shared",
-      "verifiable",
-      "actionable",
-      "consistent",
-    ],
-  },
-  strategy: {
-    positive: ["intentional", "coherent", "sequenced", "specific", "grounded"],
-    negative: ["wandering", "split", "uncertain", "overbuilt", "improvised"],
-    aspiration: [
-      "focused",
-      "durable",
-      "timed",
-      "evidence-led",
-      "simple",
-      "sharp",
-      "anchored",
-      "credible",
-      "practical",
-      "compounding",
-    ],
-  },
+// Slug helper · stable id from label.
+const slug = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+type CurrentSpec = { theme: ThemeId; sentiment: "positive" | "negative"; labels: string[] };
+type AspirationSpec = { theme: ThemeId; labels: string[] };
+
+const CURRENT_BY_CATEGORY: Record<Category, CurrentSpec[]> = {
+  money: [
+    { theme: "cash", sentiment: "negative", labels: ["bleeding cash", "feast-or-famine", "undercharging", "runway-tight", "margin-thin"] },
+    { theme: "cash", sentiment: "positive", labels: ["profitable"] },
+    { theme: "sales", sentiment: "negative", labels: ["dry pipeline", "stalled deals", "discounting"] },
+    { theme: "sales", sentiment: "positive", labels: ["steady demand"] },
+  ],
+  market_position: [
+    { theme: "marketing", sentiment: "negative", labels: ["no marketing engine", "invisible in the market", "undifferentiated", "wasted ad spend"] },
+    { theme: "marketing", sentiment: "positive", labels: ["known brand"] },
+    { theme: "ai", sentiment: "negative", labels: ["behind on AI", "AI tools collecting dust"] },
+    { theme: "strategy", sentiment: "negative", labels: ["no game plan", "stuck at a ceiling"] },
+    { theme: "strategy", sentiment: "positive", labels: ["clear positioning"] },
+  ],
+  operations: [
+    { theme: "delivery", sentiment: "negative", labels: ["dropping balls", "inconsistent", "rework", "deadlines slip", "rushed", "no playbooks", "quality dipping", "ad hoc"] },
+    { theme: "delivery", sentiment: "positive", labels: ["reliable", "repeatable"] },
+  ],
+  systems: [
+    { theme: "systems", sentiment: "negative", labels: ["duct-taped", "everything's manual", "scattered tools", "in my head", "breaks under load"] },
+    { theme: "visibility", sentiment: "negative", labels: ["blind spots", "no dashboard", "finding out late"] },
+    { theme: "systems", sentiment: "positive", labels: ["documented"] },
+    { theme: "visibility", sentiment: "positive", labels: ["tracked"] },
+  ],
+  people: [
+    { theme: "people", sentiment: "negative", labels: ["short-staffed", "doing it all myself", "can't delegate", "key-person risk", "wrong seats"] },
+    { theme: "people", sentiment: "positive", labels: ["strong team"] },
+    { theme: "leadership", sentiment: "negative", labels: ["bottlenecked on me", "no accountability", "micromanaging"] },
+    { theme: "leadership", sentiment: "positive", labels: ["aligned"] },
+  ],
+  you: [
+    { theme: "self", sentiment: "negative", labels: ["burned out", "running on fumes", "in over my head", "grinding nonstop"] },
+    { theme: "self", sentiment: "positive", labels: ["sharp"] },
+    { theme: "capacity", sentiment: "negative", labels: ["maxed out", "firefighting"] },
+    { theme: "clarity", sentiment: "negative", labels: ["flying blind", "guessing"] },
+    { theme: "clarity", sentiment: "positive", labels: ["decisive"] },
+  ],
+  customers: [
+    { theme: "customers", sentiment: "negative", labels: ["losing customers", "high churn", "one-and-done buyers", "complaints piling up", "no referrals", "slipping retention", "customers going quiet", "low NPS"] },
+    { theme: "customers", sentiment: "positive", labels: ["loyal customers", "repeat buyers"] },
+  ],
+  culture: [
+    { theme: "culture", sentiment: "negative", labels: ["low trust", "gossip", "fear of speaking up", "burnout culture", "us vs them", "walking on eggshells", "no energy in the room", "going through the motions"] },
+    { theme: "culture", sentiment: "positive", labels: ["candid culture", "team energy"] },
+  ],
+  risk: [
+    { theme: "risk", sentiment: "negative", labels: ["legal exposure", "no contracts", "regulatory gaps", "cyber-vulnerable", "no succession plan", "key-person disaster", "IP undocumented", "uninsured"] },
+    { theme: "risk", sentiment: "positive", labels: ["protected", "well-papered"] },
+  ],
 };
 
-export const CURRENT_STATE_WORDS: CurrentWord[] = Object.entries(CURRENT_WORD_SETS).flatMap(
-  ([theme, set]) => [
-    ...set.positive.map((label, index) => ({
-      id: `${theme}-positive-${index + 1}`,
-      label,
-      theme: theme as ThemeId,
-      sentiment: "positive" as const,
-    })),
-    ...set.negative.map((label, index) => ({
-      id: `${theme}-negative-${index + 1}`,
-      label,
-      theme: theme as ThemeId,
-      sentiment: "negative" as const,
-    })),
+const ASPIRATION_BY_CATEGORY: Record<Category, AspirationSpec[]> = {
+  money: [
+    { theme: "cash", labels: ["predictable revenue", "margin-safe", "paying myself well", "cash cushion"] },
+    { theme: "sales", labels: ["full pipeline", "in demand", "pulling ahead"] },
   ],
-);
+  market_position: [
+    { theme: "marketing", labels: ["known for something", "differentiated", "market-leading"] },
+    { theme: "ai", labels: ["AI as edge", "AI-augmented"] },
+    { theme: "strategy", labels: ["ahead of the market", "clear plan"] },
+  ],
+  operations: [
+    { theme: "delivery", labels: ["on time every time", "clockwork", "consistent quality", "dependable output", "scales clean", "repeatable wins", "nothing slips"] },
+  ],
+  systems: [
+    { theme: "systems", labels: ["connected", "automated", "one source of truth", "self-running", "built to scale"] },
+    { theme: "visibility", labels: ["full visibility", "real-time numbers"] },
+  ],
+  people: [
+    { theme: "people", labels: ["A-team", "runs without me", "leaders I trust", "deep bench"] },
+    { theme: "leadership", labels: ["accountable team", "decisions pushed down", "I lead not manage"] },
+  ],
+  you: [
+    { theme: "self", labels: ["in command", "clear-headed", "doing my best work"] },
+    { theme: "capacity", labels: ["breathing room", "real time off"] },
+    { theme: "clarity", labels: ["data-backed", "confident calls"] },
+  ],
+  customers: [
+    { theme: "customers", labels: ["sticky customers", "raving fans", "high retention", "customers for life", "referrals flowing", "high LTV", "easy renewals"] },
+  ],
+  culture: [
+    { theme: "culture", labels: ["high-trust culture", "energy you can feel", "everyone's engaged", "magnet for talent", "candid + kind", "world-class place to work", "culture people stay for"] },
+  ],
+  risk: [
+    { theme: "risk", labels: ["bulletproof", "regulatory-clear", "succession-ready", "cyber-secure", "insured", "audit-ready", "sleep-at-night"] },
+  ],
+};
 
-export const ASPIRATION_WORDS: AspirationWord[] = Object.entries(CURRENT_WORD_SETS).flatMap(
-  ([theme, set]) =>
-    set.aspiration.map((label, index) => ({
-      id: `${theme}-aspiration-${index + 1}`,
-      label,
-      theme: theme as ThemeId,
-    })),
-);
+export const CURRENT_STATE_WORDS: CurrentWord[] = (Object.keys(CURRENT_BY_CATEGORY) as Category[])
+  .flatMap((category) =>
+    CURRENT_BY_CATEGORY[category].flatMap((spec) =>
+      spec.labels.map((label) => ({
+        id: `cur-${slug(label)}`,
+        label,
+        theme: spec.theme,
+        sentiment: spec.sentiment,
+        category,
+      })),
+    ),
+  );
+
+export const ASPIRATION_WORDS: AspirationWord[] = (Object.keys(ASPIRATION_BY_CATEGORY) as Category[])
+  .flatMap((category) =>
+    ASPIRATION_BY_CATEGORY[category].flatMap((spec) =>
+      spec.labels.map((label) => ({
+        id: `asp-${slug(label)}`,
+        label,
+        theme: spec.theme,
+        category,
+      })),
+    ),
+  );
+
 
 export const APP_CATEGORIES: AppCategory[] = [
   {

@@ -25,23 +25,29 @@ export type EmotionCluster =
   | "confident"
   | "neutral";
 
-// Theme partition rules (Resolution 1 in the plan):
-//   Negative · Overwhelm     · cash, capacity, leadership, people
-//   Negative · Discouragement · clarity, sales, strategy, visibility, delivery, systems
-//   Positive · Confident     · cash, sales, strategy, clarity
-//   Positive · Steady        · capacity, people, systems, visibility, delivery, leadership
+// Theme partition rules (final · v5 16-theme architecture):
+//   Negative · Overwhelm      · cash, capacity, leadership, people, self, culture
+//   Negative · Discouragement · clarity, sales, strategy, visibility, delivery, systems, marketing, ai, customers, risk
+//   Positive · Confident      · cash, sales, strategy, clarity, marketing, ai, risk
+//   Positive · Steady         · capacity, people, systems, visibility, delivery, leadership, self, customers, culture
 const OVERWHELM_NEG_THEMES = new Set<ThemeId>([
   "cash",
   "capacity",
   "leadership",
   "people",
+  "self",
+  "culture",
 ]);
 const CONFIDENT_POS_THEMES = new Set<ThemeId>([
   "cash",
   "sales",
   "strategy",
   "clarity",
+  "marketing",
+  "ai",
+  "risk",
 ]);
+
 
 const wordIndex = new Map(CURRENT_STATE_WORDS.map((w) => [w.id, w]));
 
