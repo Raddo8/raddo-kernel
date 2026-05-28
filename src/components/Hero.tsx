@@ -532,22 +532,11 @@ function VaultExhibit({
       </div>
 
       <div className="px-6 md:px-10 pt-6">
-        <div
-          className="font-display mb-2"
-          style={{
-            fontVariant: "small-caps",
-            fontSize: 11,
-            letterSpacing: "0.22em",
-            color: "hsl(var(--raddo-brass))",
-          }}
-        >
-          What you are seeing
-        </div>
         <p
           className="font-sans text-raddo-charcoal m-0"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
-          The vault is the operation. The plaque is one expression of it.
+          Once we get access: We build it. Wire it. Calibrate it. Install it. All in two weeks.
         </p>
       </div>
 
