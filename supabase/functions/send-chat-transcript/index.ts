@@ -143,36 +143,30 @@ function buildPipelineHtml(opts: {
 
   const msgBlocks = messages
     .map((m) => {
-      const who = m.role === "you" ? "Visitor" : `COB · ${esc(m.voice || voice)}`;
+      const who = m.role === "you" ? "You" : "COB";
       const tone = m.role === "you" ? "#0C447C" : "#854F0B";
       const ts = m.at ? fmtTime(m.at) : "";
       return `
         <div style="margin:0 0 18px;">
-          <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${tone};font-weight:600;margin:0 0 4px;">${who}${ts ? ` · <span style="color:#5F5E5A;font-weight:400;letter-spacing:0;">${ts}</span>` : ""}</div>
+          <div style="font-family:Inter,Arial,sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:${tone};font-weight:600;margin:0 0 4px;">${who}${ts ? ` &middot; <span style="color:#5F5E5A;font-weight:400;letter-spacing:0;">${ts}</span>` : ""}</div>
           <div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#2C2C2A;line-height:1.55;white-space:pre-wrap;background:#FFFFFF;border-left:2px solid ${tone};padding:8px 14px;">${esc(m.text)}</div>
         </div>`;
     })
     .join("");
 
+  void startedAt; void endedAt; void reason; void userAgent; void referer; void visitorEmailStatus; void visitorMessageId;
+
   return `<!doctype html><html><body style="margin:0;padding:0;background:#FFFFFF;">
     <div style="max-width:720px;margin:0 auto;padding:28px 24px;">
-      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">COB · session transcript</div>
-      <div style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#5F5E5A;margin:0 0 24px;">Session ${esc(sessionId)} · ${turnCount} visitor turn${turnCount === 1 ? "" : "s"} · closed: ${esc(reason)}</div>
+      <div style="font-family:'Fraunces',Georgia,serif;font-size:24px;font-weight:800;color:#042C53;margin:0 0 4px;">COB &middot; session transcript</div>
+      <div style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#5F5E5A;margin:0 0 24px;">Session ${esc(sessionId)} &middot; ${turnCount} visitor turn${turnCount === 1 ? "" : "s"} &middot; voice ${esc(voice)} &middot; closed: ${esc(reason)}</div>
       ${leadBlock}
       <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Conversation</div>
       ${msgBlocks || '<div style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#5F5E5A;">(no messages exchanged)</div>'}
-      <div style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;margin-top:32px;padding-top:14px;border-top:1px solid #E5E3DE;line-height:1.6;">
-        <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:11px;color:#5F5E5A;">
-          <tr><td style="padding:1px 12px 1px 0;width:140px;">Started</td><td>${esc(startedAt)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Ended</td><td>${esc(endedAt)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Voice</td><td>${esc(voice)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Referer</td><td>${esc(referer || "·")}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">UA</td><td>${esc(userAgent || "·")}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Visitor email</td><td>${esc(visitorEmailStatus)}</td></tr>
-          <tr><td style="padding:1px 12px 1px 0;">Visitor message id</td><td>${esc(visitorMessageId || "·")}</td></tr>
-        </table>
-      </div>
     </div>
+  </body></html>`;
+}
+
   </body></html>`;
 }
 
