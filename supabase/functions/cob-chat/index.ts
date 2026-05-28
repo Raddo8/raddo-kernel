@@ -557,6 +557,7 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         biggestGapBucket: clampStr(ws.focus.biggestGapBucket, 32) ?? null,
         lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
       } : undefined,
+      integrationPlays: clampArr(ws.integrationPlays, 3, 400),
     };
   }
 
