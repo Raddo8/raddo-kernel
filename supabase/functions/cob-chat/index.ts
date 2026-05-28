@@ -505,8 +505,23 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         sentiment: clampStr(ws.emotion.sentiment, 16),
         cluster: clampStr(ws.emotion.cluster, 24),
       } : undefined,
+      focus: ws.focus && typeof ws.focus === "object" ? {
+        heaviestPainBucket: clampStr(ws.focus.heaviestPainBucket, 32) ?? null,
+        topPainBuckets: Array.isArray(ws.focus.topPainBuckets)
+          ? ws.focus.topPainBuckets
+              .filter((p: unknown): p is { bucket?: unknown; negativeCount?: unknown } => !!p && typeof p === "object")
+              .slice(0, 3)
+              .map((p) => ({
+                bucket: clampStr((p as { bucket?: unknown }).bucket, 32),
+                negativeCount: clampNum((p as { negativeCount?: unknown }).negativeCount),
+              }))
+          : [],
+        biggestGapBucket: clampStr(ws.focus.biggestGapBucket, 32) ?? null,
+        lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
+      } : undefined,
     };
   }
+
 
   return {
     ok: true,
