@@ -495,6 +495,13 @@ export function ConsultForm() {
     }
     const otherAppsText = customStrings.join(" · ");
 
+    const selectedSlugs: string[] = [];
+    for (const category of TOOL_CATEGORIES) {
+      const sel = toolsSelected[category.id];
+      if (!sel) continue;
+      for (const slug of sel.slugs) selectedSlugs.push(slug);
+    }
+
     const warm = buildWarmStartPayload({
       payload: {
         email,
@@ -510,6 +517,7 @@ export function ConsultForm() {
       occupation,
       appLabels,
       toolsByCategory,
+      selectedSlugs,
     });
 
     const { data, error } = await supabase.functions.invoke("submit-consult", {
