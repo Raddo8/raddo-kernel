@@ -580,7 +580,7 @@ export function ConsultForm() {
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Pick the words that describe your business right now.
+              Pick the words that describe you professionally or your business right now.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
               Select as many as you want. The good, the bad, and everything in between.
@@ -605,7 +605,7 @@ export function ConsultForm() {
               className="mt-3 font-display"
               style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
-              Pick the words for how your business should feel in 12 months.
+              Pick the words for how you professionally or your business should feel in 12 months.
             </h2>
             <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
               Select as many as fit.
