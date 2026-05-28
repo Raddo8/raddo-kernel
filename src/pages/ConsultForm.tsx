@@ -167,15 +167,106 @@ function Chip({
   );
 }
 
-function CategoryCard({
-  category,
-  selectedIds,
+// Tools v2 selection model · per-category.
+type ToolCategorySelection = { slugs: string[]; custom: string[] };
+type ToolsSelectedState = Record<string, ToolCategorySelection>;
+
+const MAX_CUSTOM_PER_CATEGORY = 5;
+
+function ToolChip({
+  tool,
+  selected,
   onToggle,
 }: {
-  category: AppCategory;
-  selectedIds: Set<string>;
-  onToggle: (id: string) => void;
+  tool: Tool;
+  selected: boolean;
+  onToggle: () => void;
 }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm transition-colors duration-150"
+      style={{
+        border: "1px solid",
+        borderColor: selected ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))",
+        backgroundColor: selected ? "hsl(var(--raddo-ink-deep))" : "white",
+        color: selected ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-charcoal))",
+      }}
+    >
+      <ToolLogo name={tool.name} slug={tool.slug} domain={tool.domain} size={16} />
+      <span>{tool.name}</span>
+    </button>
+  );
+}
+
+function CustomChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+  return (
+    <span
+      className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm"
+      style={{
+        border: "1px solid hsl(var(--raddo-paper-edge))",
+        backgroundColor: "hsl(var(--raddo-paper))",
+        color: "hsl(var(--raddo-charcoal))",
+      }}
+    >
+      <span>{label}</span>
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label}`}
+        className="rounded-full leading-none"
+        style={{
+          width: 16,
+          height: 16,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "hsl(var(--raddo-ash))",
+          fontSize: 14,
+        }}
+      >
+        ×
+      </button>
+    </span>
+  );
+}
+
+function ToolCategoryCard({
+  category,
+  selection,
+  onToggleSlug,
+  onAddCustom,
+  onRemoveCustom,
+}: {
+  category: ToolCategory;
+  selection: ToolCategorySelection;
+  onToggleSlug: (slug: string) => void;
+  onAddCustom: (value: string) => void;
+  onRemoveCustom: (index: number) => void;
+}) {
+  const [otherOpen, setOtherOpen] = useState(false);
+  const [otherDraft, setOtherDraft] = useState("");
+
+  const existingNames = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of category.tools) set.add(t.name.trim().toLowerCase());
+    for (const c of selection.custom) set.add(c.trim().toLowerCase());
+    return set;
+  }, [category.tools, selection.custom]);
+
+  const handleAdd = () => {
+    const trimmed = otherDraft.trim();
+    if (!trimmed) return;
+    if (existingNames.has(trimmed.toLowerCase())) {
+      setOtherDraft("");
+      return;
+    }
+    if (selection.custom.length >= MAX_CUSTOM_PER_CATEGORY) return;
+    onAddCustom(trimmed);
+    setOtherDraft("");
+  };
+
   return (
     <div
       style={{
@@ -189,14 +280,98 @@ function CategoryCard({
         {category.label}
       </h3>
       <div className="mt-3 flex flex-wrap gap-2">
-        {category.options.map((option) => (
-          <Chip
-            key={option.id}
-            label={option.label}
-            selected={selectedIds.has(option.id)}
-            onToggle={() => onToggle(option.id)}
+        {category.tools.map((tool) => (
+          <ToolChip
+            key={`${category.id}-${tool.slug}`}
+            tool={tool}
+            selected={selection.slugs.includes(tool.slug)}
+            onToggle={() => onToggleSlug(tool.slug)}
           />
         ))}
+        {selection.custom.map((label, index) => (
+          <CustomChip
+            key={`${category.id}-custom-${index}`}
+            label={label}
+            onRemove={() => onRemoveCustom(index)}
+          />
+        ))}
+      </div>
+      <div className="mt-3">
+        {otherOpen ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={otherDraft}
+              onChange={(e) => setOtherDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAdd();
+                }
+              }}
+              placeholder="Tool name…"
+              className="text-sm outline-none"
+              style={{
+                border: "1px solid hsl(var(--raddo-paper-edge))",
+                backgroundColor: "white",
+                color: "hsl(var(--raddo-charcoal))",
+                borderRadius: 8,
+                padding: "8px 10px",
+                minWidth: 180,
+              }}
+              disabled={selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+            />
+            <button
+              type="button"
+              onClick={handleAdd}
+              disabled={!otherDraft.trim() || selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+              className="font-mono text-xs"
+              style={{
+                border: "1px solid hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--raddo-ink-deep))",
+                color: "hsl(var(--raddo-paper))",
+                borderRadius: 8,
+                padding: "8px 12px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                opacity:
+                  !otherDraft.trim() || selection.custom.length >= MAX_CUSTOM_PER_CATEGORY ? 0.5 : 1,
+              }}
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOtherOpen(false);
+                setOtherDraft("");
+              }}
+              className="text-xs"
+              style={{ color: "hsl(var(--raddo-ash))" }}
+            >
+              cancel
+            </button>
+            {selection.custom.length >= MAX_CUSTOM_PER_CATEGORY ? (
+              <span className="text-xs" style={{ color: "hsl(var(--raddo-ash))" }}>
+                Max {MAX_CUSTOM_PER_CATEGORY} reached
+              </span>
+            ) : null}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOtherOpen(true)}
+            className="text-xs font-mono"
+            style={{
+              color: "hsl(var(--raddo-ink))",
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+            }}
+            disabled={selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
+          >
+            + Other
+          </button>
+        )}
       </div>
     </div>
   );
