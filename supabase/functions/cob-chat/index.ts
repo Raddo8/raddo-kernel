@@ -230,7 +230,14 @@ function formatWarmStartForPrompt(w: WarmStart): string {
     w.roleLensSuggested ? `Suggested role lens · ${w.roleLensSuggested}` : "",
     `Current state · ${cs.negativeCount ?? 0} negative / ${cs.positiveCount ?? 0} positive · top friction themes: ${topFriction || "none"}`,
     `Desired state · ${ds.aspirationCount ?? 0} aspirations · top desired themes: ${topDesired || "none"}`,
-    `Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`,
+    ...(Array.isArray(tools.byCategory) && tools.byCategory.length
+      ? [
+          `Tools in hand · ${tools.count ?? 0} apps · by category:`,
+          ...tools.byCategory
+            .filter((g) => g && typeof g.label === "string" && Array.isArray(g.items) && g.items.length)
+            .map((g) => `  · ${g.label}: ${(g.items as string[]).slice(0, 20).join(", ")}`),
+        ]
+      : [`Tools in hand · ${tools.count ?? 0} apps${labels.length ? ` · ${labels.join(", ")}` : ""}${tools.otherText ? ` · other: ${String(tools.otherText).slice(0, 200)}` : ""}`]),
     `DISC tally · D=${scores.D ?? 0} I=${scores.I ?? 0} S=${scores.S ?? 0} C=${scores.C ?? 0} · primary ${disc.primary || "?"}${disc.isHybrid ? `/${disc.secondary || "?"}` : ""}`,
     `Emotion read · ${emotion.sentiment || "neutral"}${emotion.cluster && emotion.cluster !== "neutral" ? ` · ${emotion.cluster}` : ""}`,
     "",
