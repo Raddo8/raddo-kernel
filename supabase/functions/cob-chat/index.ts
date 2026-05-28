@@ -135,7 +135,7 @@ type WarmStart = {
   roleLensSuggested?: string;
   currentState?: { positiveCount?: number; negativeCount?: number; topThemes?: string[] };
   desiredState?: { aspirationCount?: number; topThemes?: string[] };
-  tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
+  tools?: { count?: number; selectedLabels?: string[]; otherText?: string; byCategory?: Array<{ label?: string; items?: string[] }> };
   disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
   emotion?: { sentiment?: string; cluster?: string };
   focus?: {
