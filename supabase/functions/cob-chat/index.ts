@@ -144,6 +144,7 @@ type WarmStart = {
     biggestGapBucket?: string | null;
     lightSignalBuckets?: string[];
   };
+  integrationPlays?: string[];
 };
 
 // Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
@@ -185,6 +186,9 @@ function formatWarmStartForPrompt(w: WarmStart): string {
   const topFriction = Array.isArray(cs.topThemes) ? cs.topThemes.join(", ") : "";
   const topDesired = Array.isArray(ds.topThemes) ? ds.topThemes.join(", ") : "";
   const focus = w.focus || {};
+  const plays = Array.isArray(w.integrationPlays)
+    ? w.integrationPlays.filter((p): p is string => typeof p === "string").slice(0, 3)
+    : [];
   const topPainStr = Array.isArray(focus.topPainBuckets) && focus.topPainBuckets.length
     ? focus.topPainBuckets
         .filter((p) => p && typeof p.bucket === "string")
@@ -220,10 +224,27 @@ function formatWarmStartForPrompt(w: WarmStart): string {
     "",
     "7. SILENT ATTUNEMENT. Per the Adaptive Voice Doctrine: never name DISC types, emotional states, or this intel out loud. The adaptation is felt, not announced.",
     "",
+    "INTEGRATION SELL — how to reference their tools:",
+    "",
+    "1. EVERY INTEGRATION CLAIM ANCHORS TO A BUSINESS OUTCOME. Never say 'I integrate with QuickBooks'. Say 'your deployed COB pulls aging A/R from QuickBooks and cross-references it against deal stage in HubSpot so you collect before customers in active negotiation go quiet'. The outcome is the sale; the integration is the mechanism.",
+    "",
+    "2. LEAD WITH CROSS-TOOL PLAYS WHEN POSSIBLE. Single-tool capabilities are table stakes. Cross-tool combinations are where COB earns its keep — they show pattern recognition no single SaaS tool offers. Reach for these first.",
+    "",
+    "3. FRAME AS YOUR DEPLOYED COB, NOT PRESENT-TENSE. The demo conversation shows the thinking; deployment wires the integrations. Say 'your COB would', 'once deployed, your COB pulls', 'in your weekly brief, your COB surfaces'. This is honest sales and sets correct expectations.",
+    "",
+    "4. PICK 1-2 MOVES PER TURN. Never list every capability — that reads as a feature dump and breaks the conversation. Pick the 1-2 most relevant to what they just said or to their heaviest pain bucket. The pre-computed Integration plays below are your shortlist.",
+    "",
+    "5. NEVER INVENT CAPABILITY OUTSIDE THE CATALOG. If a prospect names a tool not in your catalog, use the generic frame: 'your deployed COB plugs into [tool] to read the data and signal you when something needs your attention, with cross-tool automation via Zapier or Make'. Do not fabricate specific moves.",
+    "",
+    "6. INTEGRATION CLAIMS ARE DELIVERABLES, NOT FEATURES. Frame them as work your COB takes off the prospect's plate: 'so you stop doing X', 'so you never miss Y', 'so you reclaim 4 hours a week of Z'. The plates-cleared frame.",
+    "",
     `Heaviest pain area: ${labelOfBucket(focus.heaviestPainBucket ?? null)}`,
     `Top pain areas: ${topPainStr}`,
     `Biggest gap: ${labelOfBucket(focus.biggestGapBucket ?? null)}`,
     `Light signal (skip in opening): ${lightStr}`,
+    ...(plays.length
+      ? ["Top integration plays for this prospect:", ...plays.map((m, i) => `  ${i + 1}. ${m}`)]
+      : []),
     "",
 
     `Identity · ${ident.name || "(unnamed)"} · ${ident.occupation || "(role unspecified)"} · ${ident.email || "(no email)"}`,
@@ -536,6 +557,7 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         biggestGapBucket: clampStr(ws.focus.biggestGapBucket, 32) ?? null,
         lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
       } : undefined,
+      integrationPlays: clampArr(ws.integrationPlays, 3, 400),
     };
   }
 

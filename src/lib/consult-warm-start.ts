@@ -17,6 +17,7 @@ import {
   type Category,
   type ThemeId,
 } from "./consult-data";
+import { INTEGRATION_CAPABILITIES, type ToolCapability } from "./integration-capabilities";
 
 import { ALL_ROLES } from "@/components/hero/cob-featured";
 import {
@@ -114,6 +115,97 @@ export function computeFocusSignal(
   return { heaviestPainBucket, topPainBuckets, biggestGapBucket, lightSignalBuckets };
 }
 
+// ─── INTEGRATION PLAYS · Layer 2 of Integration Sell ──────────────────────────
+// Keyword map per category bucket · used to score moves against pain context.
+// Lowercased substring match against the move text.
+const BUCKET_KEYWORDS: Record<Category, string[]> = {
+  money: ["money", "cash", "finance", "revenue", "mrr", "arr", "p&l", "a/r", "ar ", "invoice", "payment", "payroll", "cost", "spend", "budget", "burn", "runway", "cac", "ltv", "churn", "billing", "expense"],
+  market_position: ["market", "brand", "competitor", "positioning", "differentiation", "messaging", "category"],
+  operations: ["operation", "workflow", "process", "delivery", "throughput", "ops ", "fulfillment", "execution"],
+  systems: ["system", "integration", "automation", "infrastructure", "tool", "stack", "access", "data source", "audit", "permission"],
+  customers: ["customer", "client", "ticket", "csat", "support", "account", "churn", "renewal", "onboarding"],
+  people: ["people", "team", "employee", "headcount", "talent", "hiring", "hr ", "payroll", "comp", "contractor"],
+  culture: ["culture", "engagement", "morale", "values", "review"],
+  risk: ["risk", "compliance", "audit", "security", "legal", "liability", "deprovision"],
+  you: ["focus", "attention", "calendar", "meeting", "inbox", "brief", "priority", "1:1", "agenda"],
+};
+
+function matchesAnyKeyword(move: string, bucket: Category | null): boolean {
+  if (!bucket) return false;
+  const m = move.toLowerCase();
+  return BUCKET_KEYWORDS[bucket].some((k) => m.includes(k));
+}
+
+// Score moves drawn from the catalog entries for the prospect's selected tool
+// slugs. Higher = more relevant. Returns top 3 move strings. Stub entries
+// contribute their generic moves; rich entries dominate when scoring ties.
+export function computeIntegrationPlays(
+  selectedSlugs: string[],
+  focus: FocusSignal,
+): string[] {
+  const uniqueSlugs = Array.from(new Set(selectedSlugs));
+  const hits: Array<{ slug: string; cap: ToolCapability }> = [];
+  for (const slug of uniqueSlugs) {
+    const cap = INTEGRATION_CAPABILITIES[slug];
+    if (cap) hits.push({ slug, cap });
+  }
+  if (hits.length === 0) return [];
+
+  // Build lowercased name set of all SELECTED catalog entries for bridge detection.
+  const selectedNamesLower = hits.map((h) => h.cap.name.toLowerCase());
+
+  type Scored = { move: string; score: number; order: number };
+  const scored: Scored[] = [];
+  let order = 0;
+  const topPainBucketsSet = new Set<Category>(
+    focus.topPainBuckets.map((p) => p.bucket),
+  );
+
+  for (const { cap } of hits) {
+    for (const move of cap.moves) {
+      let score = 0;
+      const lower = move.toLowerCase();
+      // +2 heaviest pain keyword
+      if (matchesAnyKeyword(move, focus.heaviestPainBucket)) score += 2;
+      // +1 starts with "Bridge"
+      const isBridge = lower.startsWith("bridge ");
+      if (isBridge) score += 1;
+      // +1 bridge tool is also in selection (parse "Bridge X plus Y")
+      if (isBridge) {
+        // Both X and Y must be selected. Cheap check: count selected names that
+        // appear in the move text · need 2+ matches (the bridging tool itself
+        // plus at least one partner).
+        const matches = selectedNamesLower.filter((n) => lower.includes(n)).length;
+        if (matches >= 2) score += 1;
+      }
+      // +1 mentions a topPainBuckets category
+      for (const bucket of topPainBucketsSet) {
+        if (bucket === focus.heaviestPainBucket) continue;
+        if (matchesAnyKeyword(move, bucket)) {
+          score += 1;
+          break;
+        }
+      }
+      scored.push({ move, score, order: order++ });
+    }
+  }
+
+  scored.sort((a, b) => (b.score - a.score) || (a.order - b.order));
+  const top = scored.filter((s) => s.score > 0).slice(0, 3).map((s) => s.move);
+  if (top.length >= 3) return top;
+
+  // Fallback · first 3 moves in catalog order from the prospect's tools.
+  const fallback: string[] = [];
+  for (const { cap } of hits) {
+    for (const move of cap.moves) {
+      if (fallback.length >= 3) break;
+      if (!fallback.includes(move)) fallback.push(move);
+    }
+    if (fallback.length >= 3) break;
+  }
+  return fallback;
+}
+
 export type WarmStartPayload = {
   identity: {
     name?: string;
@@ -143,6 +235,7 @@ export type WarmStartPayload = {
     secondary: string;
     isHybrid: boolean;
   };
+  integrationPlays: string[];
   emotion: {
     sentiment: EmotionSentiment;
     cluster: EmotionCluster;
@@ -220,6 +313,7 @@ export function buildWarmStartPayload(opts: {
   occupation?: string;
   appLabels: string[];
   toolsByCategory?: Array<{ label: string; items: string[] }>;
+  selectedSlugs?: string[];
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
@@ -279,6 +373,7 @@ export function buildWarmStartPayload(opts: {
     },
     emotion,
     focus,
+    integrationPlays: computeIntegrationPlays(opts.selectedSlugs ?? [], focus),
   };
 }
 
@@ -334,6 +429,36 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
     "7. SILENT ATTUNEMENT. Per the Adaptive Voice Doctrine: never name DISC types, emotional states, or this intel out loud. The adaptation is felt, not announced.",
   );
   lines.push("");
+
+  // INTEGRATION SELL · doctrine for referencing the prospect's actual stack.
+  // Positioned AFTER positioning rules, BEFORE the data dump.
+  lines.push("INTEGRATION SELL — how to reference their tools:");
+  lines.push("");
+  lines.push(
+    "1. EVERY INTEGRATION CLAIM ANCHORS TO A BUSINESS OUTCOME. Never say 'I integrate with QuickBooks'. Say 'your deployed COB pulls aging A/R from QuickBooks and cross-references it against deal stage in HubSpot so you collect before customers in active negotiation go quiet'. The outcome is the sale; the integration is the mechanism.",
+  );
+  lines.push("");
+  lines.push(
+    "2. LEAD WITH CROSS-TOOL PLAYS WHEN POSSIBLE. Single-tool capabilities are table stakes. Cross-tool combinations are where COB earns its keep — they show pattern recognition no single SaaS tool offers. Reach for these first.",
+  );
+  lines.push("");
+  lines.push(
+    "3. FRAME AS YOUR DEPLOYED COB, NOT PRESENT-TENSE. The demo conversation shows the thinking; deployment wires the integrations. Say 'your COB would', 'once deployed, your COB pulls', 'in your weekly brief, your COB surfaces'. This is honest sales and sets correct expectations.",
+  );
+  lines.push("");
+  lines.push(
+    "4. PICK 1-2 MOVES PER TURN. Never list every capability — that reads as a feature dump and breaks the conversation. Pick the 1-2 most relevant to what they just said or to their heaviest pain bucket. The pre-computed Integration plays below are your shortlist.",
+  );
+  lines.push("");
+  lines.push(
+    "5. NEVER INVENT CAPABILITY OUTSIDE THE CATALOG. If a prospect names a tool not in your catalog, use the generic frame: 'your deployed COB plugs into [tool] to read the data and signal you when something needs your attention, with cross-tool automation via Zapier or Make'. Do not fabricate specific moves.",
+  );
+  lines.push("");
+  lines.push(
+    "6. INTEGRATION CLAIMS ARE DELIVERABLES, NOT FEATURES. Frame them as work your COB takes off the prospect's plate: 'so you stop doing X', 'so you never miss Y', 'so you reclaim 4 hours a week of Z'. The plates-cleared frame.",
+  );
+  lines.push("");
+
   const labelOf = (c: Category | null) => (c ? CATEGORY_LABELS[c] : "none");
   const topPainStr = w.focus.topPainBuckets.length
     ? w.focus.topPainBuckets.map((p) => `${CATEGORY_LABELS[p.bucket]} (${p.negativeCount})`).join(", ")
@@ -345,6 +470,10 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
   lines.push(`Top pain areas: ${topPainStr}`);
   lines.push(`Biggest gap: ${labelOf(w.focus.biggestGapBucket)}`);
   lines.push(`Light signal (skip in opening): ${lightStr}`);
+  if (w.integrationPlays && w.integrationPlays.length) {
+    lines.push("Top integration plays for this prospect:");
+    w.integrationPlays.forEach((m, i) => lines.push(`  ${i + 1}. ${m}`));
+  }
   lines.push("");
 
   lines.push(
