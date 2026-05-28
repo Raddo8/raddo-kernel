@@ -241,90 +241,251 @@ export const ASPIRATION_WORDS: AspirationWord[] = (Object.keys(ASPIRATION_BY_CAT
   );
 
 
-export const APP_CATEGORIES: AppCategory[] = [
+// ─────────────────────────────────────────────────────────────────────────────
+// TOOLS INVENTORY v2 · 14 categories · 140 chips · slug + domain for logos.
+// Replaces v1 wholesale. APP_CATEGORIES is derived for legacy callers
+// (consult-analysis.appOptionIndex etc.) — id = `${categoryId}-${slug}`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Tool = { name: string; slug: string; domain: string };
+export type ToolCategory = { id: string; label: string; tools: Tool[] };
+
+export const TOOL_CATEGORIES: ToolCategory[] = [
   {
     id: "communication",
     label: "Communication",
-    options: ["Slack", "Microsoft Teams", "Gmail", "Outlook", "Zoom"].map((label) => ({
-      id: `communication-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    tools: [
+      { name: "Slack", slug: "slack", domain: "slack.com" },
+      { name: "Microsoft Teams", slug: "microsoftteams", domain: "teams.microsoft.com" },
+      { name: "Zoom", slug: "zoom", domain: "zoom.us" },
+      { name: "Google Meet", slug: "googlemeet", domain: "meet.google.com" },
+      { name: "Gmail", slug: "gmail", domain: "gmail.com" },
+      { name: "Outlook", slug: "microsoftoutlook", domain: "outlook.com" },
+      { name: "Discord", slug: "discord", domain: "discord.com" },
+      { name: "WhatsApp Business", slug: "whatsapp", domain: "business.whatsapp.com" },
+      { name: "RingCentral", slug: "ringcentral", domain: "ringcentral.com" },
+      { name: "Dialpad", slug: "dialpad", domain: "dialpad.com" },
+    ],
   },
   {
-    id: "calendar",
-    label: "Calendar and meetings",
-    options: ["Google Calendar", "Outlook Calendar", "Calendly", "Granola", "Notion Calendar"].map(
-      (label) => ({
-        id: `calendar-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-        label,
-      }),
-    ),
+    id: "meetings",
+    label: "Meetings & scheduling",
+    tools: [
+      { name: "Google Calendar", slug: "googlecalendar", domain: "calendar.google.com" },
+      { name: "Outlook Calendar", slug: "microsoftoutlook", domain: "outlook.live.com" },
+      { name: "Apple Calendar", slug: "apple", domain: "apple.com" },
+      { name: "Notion Calendar", slug: "notion", domain: "notion.so" },
+      { name: "Calendly", slug: "calendly", domain: "calendly.com" },
+      { name: "Cal.com", slug: "caldotcom", domain: "cal.com" },
+      { name: "Acuity Scheduling", slug: "acuityscheduling", domain: "acuityscheduling.com" },
+      { name: "Chili Piper", slug: "chilipiper", domain: "chilipiper.com" },
+      { name: "SavvyCal", slug: "savvycal", domain: "savvycal.com" },
+      { name: "Motion", slug: "motion", domain: "usemotion.com" },
+    ],
   },
   {
-    id: "documents",
-    label: "Documents and knowledge",
-    options: ["Google Docs", "Notion", "Coda", "Dropbox", "SharePoint"].map((label) => ({
-      id: `documents-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    id: "docs",
+    label: "Documents & knowledge",
+    tools: [
+      { name: "Google Docs", slug: "googledocs", domain: "docs.google.com" },
+      { name: "Microsoft 365", slug: "microsoft", domain: "microsoft365.com" },
+      { name: "Notion", slug: "notion", domain: "notion.so" },
+      { name: "OneDrive", slug: "microsoftonedrive", domain: "onedrive.com" },
+      { name: "SharePoint", slug: "microsoftsharepoint", domain: "sharepoint.com" },
+      { name: "Dropbox", slug: "dropbox", domain: "dropbox.com" },
+      { name: "Box", slug: "box", domain: "box.com" },
+      { name: "Confluence", slug: "confluence", domain: "atlassian.com" },
+      { name: "Coda", slug: "coda", domain: "coda.io" },
+      { name: "Obsidian", slug: "obsidian", domain: "obsidian.md" },
+    ],
   },
   {
     id: "project",
-    label: "Project and task management",
-    options: ["Asana", "ClickUp", "Linear", "Monday", "Trello"].map((label) => ({
-      id: `project-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "Project & task management",
+    tools: [
+      { name: "Asana", slug: "asana", domain: "asana.com" },
+      { name: "ClickUp", slug: "clickup", domain: "clickup.com" },
+      { name: "Linear", slug: "linear", domain: "linear.app" },
+      { name: "Monday", slug: "mondaydotcom", domain: "monday.com" },
+      { name: "Trello", slug: "trello", domain: "trello.com" },
+      { name: "Jira", slug: "jira", domain: "atlassian.com" },
+      { name: "Basecamp", slug: "basecamp", domain: "basecamp.com" },
+      { name: "Smartsheet", slug: "smartsheet", domain: "smartsheet.com" },
+      { name: "Wrike", slug: "wrike", domain: "wrike.com" },
+      { name: "Shortcut", slug: "shortcut", domain: "shortcut.com" },
+    ],
   },
   {
     id: "crm",
-    label: "CRM and pipeline",
-    options: ["HubSpot", "Salesforce", "Pipedrive", "Attio", "Close"].map((label) => ({
-      id: `crm-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "CRM & sales",
+    tools: [
+      { name: "HubSpot", slug: "hubspot", domain: "hubspot.com" },
+      { name: "Salesforce", slug: "salesforce", domain: "salesforce.com" },
+      { name: "Pipedrive", slug: "pipedrive", domain: "pipedrive.com" },
+      { name: "Attio", slug: "attio", domain: "attio.com" },
+      { name: "Close", slug: "close", domain: "close.com" },
+      { name: "Zoho CRM", slug: "zoho", domain: "zoho.com" },
+      { name: "Go High Level", slug: "gohighlevel", domain: "gohighlevel.com" },
+      { name: "Folk", slug: "folk", domain: "folk.app" },
+      { name: "Apollo", slug: "apollo", domain: "apollo.io" },
+      { name: "Outreach", slug: "outreach", domain: "outreach.io" },
+    ],
   },
   {
     id: "finance",
-    label: "Finance",
-    options: ["QuickBooks", "Xero", "Stripe", "Ramp", "Bill.com"].map((label) => ({
-      id: `finance-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "Finance & accounting",
+    tools: [
+      { name: "QuickBooks", slug: "quickbooks", domain: "quickbooks.intuit.com" },
+      { name: "Xero", slug: "xero", domain: "xero.com" },
+      { name: "Stripe", slug: "stripe", domain: "stripe.com" },
+      { name: "Ramp", slug: "ramp", domain: "ramp.com" },
+      { name: "Brex", slug: "brex", domain: "brex.com" },
+      { name: "Mercury", slug: "mercury", domain: "mercury.com" },
+      { name: "Bill.com", slug: "billdotcom", domain: "bill.com" },
+      { name: "NetSuite", slug: "netsuite", domain: "netsuite.com" },
+      { name: "FreshBooks", slug: "freshbooks", domain: "freshbooks.com" },
+      { name: "Expensify", slug: "expensify", domain: "expensify.com" },
+    ],
   },
   {
     id: "support",
-    label: "Support and service",
-    options: ["Zendesk", "Intercom", "Help Scout", "Front", "Gorgias"].map((label) => ({
-      id: `support-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "Support & customer service",
+    tools: [
+      { name: "Zendesk", slug: "zendesk", domain: "zendesk.com" },
+      { name: "Intercom", slug: "intercom", domain: "intercom.com" },
+      { name: "Help Scout", slug: "helpscout", domain: "helpscout.com" },
+      { name: "Front", slug: "front", domain: "front.com" },
+      { name: "Gorgias", slug: "gorgias", domain: "gorgias.com" },
+      { name: "Freshdesk", slug: "freshdesk", domain: "freshdesk.com" },
+      { name: "Salesforce Service Cloud", slug: "salesforce", domain: "salesforce.com" },
+      { name: "Kustomer", slug: "kustomer", domain: "kustomer.com" },
+      { name: "Drift", slug: "drift", domain: "drift.com" },
+      { name: "Crisp", slug: "crisp", domain: "crisp.chat" },
+    ],
   },
   {
     id: "marketing",
-    label: "Marketing",
-    options: ["Mailchimp", "ConvertKit", "Klaviyo", "Webflow", "Figma"].map((label) => ({
-      id: `marketing-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "Marketing & advertising",
+    tools: [
+      { name: "Mailchimp", slug: "mailchimp", domain: "mailchimp.com" },
+      { name: "Kit (ConvertKit)", slug: "convertkit", domain: "kit.com" },
+      { name: "Klaviyo", slug: "klaviyo", domain: "klaviyo.com" },
+      { name: "ActiveCampaign", slug: "activecampaign", domain: "activecampaign.com" },
+      { name: "Substack", slug: "substack", domain: "substack.com" },
+      { name: "Beehiiv", slug: "beehiiv", domain: "beehiiv.com" },
+      { name: "Google Ads", slug: "googleads", domain: "ads.google.com" },
+      { name: "Meta Ads", slug: "meta", domain: "business.facebook.com" },
+      { name: "Ahrefs", slug: "ahrefs", domain: "ahrefs.com" },
+      { name: "SEMrush", slug: "semrush", domain: "semrush.com" },
+    ],
   },
   {
     id: "hr",
-    label: "HR and people ops",
-    options: ["Gusto", "Rippling", "BambooHR", "Lattice", "Deel"].map((label) => ({
-      id: `hr-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "HR & people ops",
+    tools: [
+      { name: "Gusto", slug: "gusto", domain: "gusto.com" },
+      { name: "Rippling", slug: "rippling", domain: "rippling.com" },
+      { name: "BambooHR", slug: "bamboohr", domain: "bamboohr.com" },
+      { name: "Lattice", slug: "lattice", domain: "lattice.com" },
+      { name: "Deel", slug: "deel", domain: "deel.com" },
+      { name: "ADP", slug: "adp", domain: "adp.com" },
+      { name: "Paychex", slug: "paychex", domain: "paychex.com" },
+      { name: "Greenhouse", slug: "greenhouse", domain: "greenhouse.io" },
+      { name: "Lever", slug: "lever", domain: "lever.co" },
+      { name: "15Five", slug: "15five", domain: "15five.com" },
+    ],
   },
   {
     id: "analytics",
-    label: "Analytics and reporting",
-    options: ["Looker Studio", "Metabase", "Power BI", "Tableau", "Airtable"].map((label) => ({
-      id: `analytics-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      label,
-    })),
+    label: "Analytics & reporting",
+    tools: [
+      { name: "Looker Studio", slug: "looker", domain: "lookerstudio.google.com" },
+      { name: "Metabase", slug: "metabase", domain: "metabase.com" },
+      { name: "Power BI", slug: "powerbi", domain: "powerbi.microsoft.com" },
+      { name: "Tableau", slug: "tableau", domain: "tableau.com" },
+      { name: "Airtable", slug: "airtable", domain: "airtable.com" },
+      { name: "Google Analytics", slug: "googleanalytics", domain: "analytics.google.com" },
+      { name: "Mixpanel", slug: "mixpanel", domain: "mixpanel.com" },
+      { name: "Amplitude", slug: "amplitude", domain: "amplitude.com" },
+      { name: "Hotjar", slug: "hotjar", domain: "hotjar.com" },
+      { name: "Segment", slug: "segment", domain: "segment.com" },
+    ],
+  },
+  {
+    id: "ai",
+    label: "AI tools",
+    tools: [
+      { name: "ChatGPT", slug: "openai", domain: "chatgpt.com" },
+      { name: "Claude", slug: "anthropic", domain: "claude.ai" },
+      { name: "Gemini", slug: "googlegemini", domain: "gemini.google.com" },
+      { name: "Microsoft Copilot", slug: "microsoft", domain: "copilot.microsoft.com" },
+      { name: "Perplexity", slug: "perplexity", domain: "perplexity.ai" },
+      { name: "Notion AI", slug: "notion", domain: "notion.so" },
+      { name: "Cursor", slug: "cursor", domain: "cursor.com" },
+      { name: "Midjourney", slug: "midjourney", domain: "midjourney.com" },
+      { name: "ElevenLabs", slug: "elevenlabs", domain: "elevenlabs.io" },
+      { name: "GitHub Copilot", slug: "github", domain: "github.com" },
+    ],
+  },
+  {
+    id: "automation",
+    label: "Automation & integration",
+    tools: [
+      { name: "Zapier", slug: "zapier", domain: "zapier.com" },
+      { name: "Make (Integromat)", slug: "make", domain: "make.com" },
+      { name: "n8n", slug: "n8n", domain: "n8n.io" },
+      { name: "Workato", slug: "workato", domain: "workato.com" },
+      { name: "Pipedream", slug: "pipedream", domain: "pipedream.com" },
+      { name: "Tray.io", slug: "tray", domain: "tray.io" },
+      { name: "IFTTT", slug: "ifttt", domain: "ifttt.com" },
+      { name: "Power Automate", slug: "microsoft", domain: "powerautomate.microsoft.com" },
+      { name: "Bardeen", slug: "bardeen", domain: "bardeen.ai" },
+      { name: "Airtable Automations", slug: "airtable", domain: "airtable.com" },
+    ],
+  },
+  {
+    id: "social",
+    label: "Social & content",
+    tools: [
+      { name: "LinkedIn", slug: "linkedin", domain: "linkedin.com" },
+      { name: "X (Twitter)", slug: "x", domain: "x.com" },
+      { name: "Instagram", slug: "instagram", domain: "instagram.com" },
+      { name: "Facebook", slug: "facebook", domain: "facebook.com" },
+      { name: "YouTube", slug: "youtube", domain: "youtube.com" },
+      { name: "TikTok", slug: "tiktok", domain: "tiktok.com" },
+      { name: "Buffer", slug: "buffer", domain: "buffer.com" },
+      { name: "Hootsuite", slug: "hootsuite", domain: "hootsuite.com" },
+      { name: "Canva", slug: "canva", domain: "canva.com" },
+      { name: "Sprout Social", slug: "sproutsocial", domain: "sproutsocial.com" },
+    ],
+  },
+  {
+    id: "meeting_ai",
+    label: "Meeting & call AI",
+    tools: [
+      { name: "Granola", slug: "granola", domain: "granola.ai" },
+      { name: "Otter.ai", slug: "otter", domain: "otter.ai" },
+      { name: "Fireflies.ai", slug: "fireflies", domain: "fireflies.ai" },
+      { name: "tl;dv", slug: "tldv", domain: "tldv.io" },
+      { name: "Read.ai", slug: "readai", domain: "read.ai" },
+      { name: "Fathom", slug: "fathom", domain: "fathom.video" },
+      { name: "Krisp", slug: "krisp", domain: "krisp.ai" },
+      { name: "Loom", slug: "loom", domain: "loom.com" },
+      { name: "Vidyard", slug: "vidyard", domain: "vidyard.com" },
+      { name: "Avoma", slug: "avoma", domain: "avoma.com" },
+    ],
   },
 ];
+
+// Derived legacy shape · keeps consult-analysis.appOptionIndex working.
+export const APP_CATEGORIES: AppCategory[] = TOOL_CATEGORIES.map((category) => ({
+  id: category.id,
+  label: category.label,
+  options: category.tools.map((tool) => ({
+    id: `${category.id}-${tool.slug}`,
+    label: tool.name,
+  })),
+}));
 
 export const DISC_ROWS: DiscRow[] = [
   {
