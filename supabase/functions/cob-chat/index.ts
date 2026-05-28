@@ -707,7 +707,7 @@ Deno.serve(async (req: Request) => {
       status: v.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
-  const { voice, messages, userTurns, cap, roleLabel, industryLabel, lead } = v.data;
+  const { voice, messages, userTurns, cap, roleLabel, industryLabel, lead, warmStart } = v.data;
 
   if (userTurns > cap) {
     const closing = voice === "michael"
