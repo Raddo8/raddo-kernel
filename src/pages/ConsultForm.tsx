@@ -400,13 +400,13 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                5 minutes to set up your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
+                5 minutes for a quick sync with your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
                 style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
               >
-                Four short sections · where you are today, where you want to be, the systems you already run, and how you make decisions. Skip anything that doesn't apply. Your COB is built from your answers.
+                Four short sections · where you are today, where you want to be, the systems you already run, and how you like to work. Skip anything that doesn't apply.
               </p>
             </div>
             <Link
