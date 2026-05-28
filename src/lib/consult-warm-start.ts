@@ -9,7 +9,15 @@
 // That guardrail is baked into the prompt block emitted by
 // formatWarmStartForPrompt() and re-stated here so future edits respect it.
 
-import { CURRENT_STATE_WORDS, type ThemeId } from "./consult-data";
+import {
+  ASPIRATION_WORDS,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  CURRENT_STATE_WORDS,
+  type Category,
+  type ThemeId,
+} from "./consult-data";
+
 import { ALL_ROLES } from "@/components/hero/cob-featured";
 import {
   analyzeConsult,
@@ -50,6 +58,61 @@ const CONFIDENT_POS_THEMES = new Set<ThemeId>([
 
 
 const wordIndex = new Map(CURRENT_STATE_WORDS.map((w) => [w.id, w]));
+const aspirationIndex = new Map(ASPIRATION_WORDS.map((w) => [w.id, w]));
+
+export type FocusSignal = {
+  heaviestPainBucket: Category | null;
+  topPainBuckets: Array<{ bucket: Category; negativeCount: number }>;
+  biggestGapBucket: Category | null;
+  lightSignalBuckets: Category[];
+};
+
+// Tally each of the 9 categories across selected current + desired chips,
+// then derive: heaviest pain (argmax neg), top 3 pain buckets (drop zeros),
+// biggest gap (neg>=3 AND desired>=2, argmax of sum), light-signal buckets
+// (neg+pos+desired <= 1 · stays in context but skipped in opening).
+export function computeFocusSignal(
+  currentStateWordIds: string[],
+  aspirationWordIds: string[],
+): FocusSignal {
+  const counts = new Map<Category, { neg: number; pos: number; desired: number }>();
+  for (const c of CATEGORY_ORDER) counts.set(c, { neg: 0, pos: 0, desired: 0 });
+
+  for (const id of currentStateWordIds) {
+    const w = wordIndex.get(id);
+    if (!w) continue;
+    const slot = counts.get(w.category)!;
+    if (w.sentiment === "negative") slot.neg += 1;
+    else slot.pos += 1;
+  }
+  for (const id of aspirationWordIds) {
+    const w = aspirationIndex.get(id);
+    if (!w) continue;
+    counts.get(w.category)!.desired += 1;
+  }
+
+  const buckets = CATEGORY_ORDER.map((bucket) => ({ bucket, ...counts.get(bucket)! }));
+
+  const heaviest = buckets.filter((b) => b.neg > 0).sort((a, b) => b.neg - a.neg)[0];
+  const heaviestPainBucket: Category | null = heaviest ? heaviest.bucket : null;
+
+  const topPainBuckets = buckets
+    .filter((b) => b.neg > 0)
+    .sort((a, b) => b.neg - a.neg)
+    .slice(0, 3)
+    .map((b) => ({ bucket: b.bucket, negativeCount: b.neg }));
+
+  const gapCandidate = buckets
+    .filter((b) => b.neg >= 3 && b.desired >= 2)
+    .sort((a, b) => b.neg + b.desired - (a.neg + a.desired))[0];
+  const biggestGapBucket: Category | null = gapCandidate ? gapCandidate.bucket : null;
+
+  const lightSignalBuckets = buckets
+    .filter((b) => b.neg + b.pos + b.desired <= 1)
+    .map((b) => b.bucket);
+
+  return { heaviestPainBucket, topPainBuckets, biggestGapBucket, lightSignalBuckets };
+}
 
 export type WarmStartPayload = {
   identity: {
@@ -83,6 +146,7 @@ export type WarmStartPayload = {
     sentiment: EmotionSentiment;
     cluster: EmotionCluster;
   };
+  focus: FocusSignal;
 };
 
 export function classifyEmotion(currentStateWordIds: string[]): {
@@ -157,6 +221,11 @@ export function buildWarmStartPayload(opts: {
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
+  const focus = computeFocusSignal(
+    opts.payload.currentStateWordIds,
+    opts.payload.aspirationWordIds,
+  );
+
 
   const topThemesCurrent = summary.themeGapAnalysis
     .filter((t) => t.currentNegative > 0)
@@ -206,6 +275,7 @@ export function buildWarmStartPayload(opts: {
       isHybrid: summary.isHybrid,
     },
     emotion,
+    focus,
   };
 }
 
@@ -228,6 +298,52 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
     "· Skip the 'walk me through it / tell me your situation' opener · they already told you in the consult.",
   );
   lines.push("");
+
+  // POSITIONING RULES · injected ABOVE the data dump · teaches WHAT to focus on.
+  // Complements the Adaptive Voice Doctrine (HOW to speak).
+  lines.push("POSITIONING RULES — how to use this intel:");
+  lines.push("");
+  lines.push(
+    "1. LEAD WITH THE HEAVIEST PAIN. Open on the area where they have the most negative selections (see \"Heaviest pain area\" below). That's where they feel it most. Reference the area naturally — never recite their chip selections.",
+  );
+  lines.push("");
+  lines.push(
+    "2. FOCUS ON 2-3 AREAS MAX. The top pain areas drive the conversation. Buckets in \"Light signal\" stay in your context but don't get airtime in the opening — only revisit them if directly relevant to a deliverable.",
+  );
+  lines.push("");
+  lines.push(
+    "3. CONNECT EVERY DELIVERABLE TO A DESIRED-STATE CHIP. They told you where they want to be in 12 months. Every recommendation, plan, or move you offer should bridge their current state to one of those chosen aspirations. Move them from where they are to where they said they want to go.",
+  );
+  lines.push("");
+  lines.push(
+    "4. THE BIGGEST GAP IS THE STRONGEST PULL. The bucket flagged \"Biggest gap\" has both heavy current pain AND clear desired state — that's where the motivational pull is highest. Lead toward closing that gap.",
+  );
+  lines.push("");
+  lines.push(
+    "5. SKIP DISCOVERY ON COVERED GROUND. The consult IS the diagnosis. Do not ask what's hard, what they want, or what tools they use — you already know. Move directly into recommendation, abundance, action.",
+  );
+  lines.push("");
+  lines.push(
+    "6. REFERENCE BY AREA, NEVER BY RECITATION. Speak in terms of \"on the money side\", \"operationally\", \"your team situation\", \"the cash pressure\" — never read back the actual chip labels they selected.",
+  );
+  lines.push("");
+  lines.push(
+    "7. SILENT ATTUNEMENT. Per the Adaptive Voice Doctrine: never name DISC types, emotional states, or this intel out loud. The adaptation is felt, not announced.",
+  );
+  lines.push("");
+  const labelOf = (c: Category | null) => (c ? CATEGORY_LABELS[c] : "none");
+  const topPainStr = w.focus.topPainBuckets.length
+    ? w.focus.topPainBuckets.map((p) => `${CATEGORY_LABELS[p.bucket]} (${p.negativeCount})`).join(", ")
+    : "none";
+  const lightStr = w.focus.lightSignalBuckets.length
+    ? w.focus.lightSignalBuckets.map((c) => CATEGORY_LABELS[c]).join(", ")
+    : "none";
+  lines.push(`Heaviest pain area: ${labelOf(w.focus.heaviestPainBucket)}`);
+  lines.push(`Top pain areas: ${topPainStr}`);
+  lines.push(`Biggest gap: ${labelOf(w.focus.biggestGapBucket)}`);
+  lines.push(`Light signal (skip in opening): ${lightStr}`);
+  lines.push("");
+
   lines.push(
     `Identity · ${w.identity.name || "(unnamed)"} · ${w.identity.occupation || "(role unspecified)"} · ${w.identity.email}`,
   );

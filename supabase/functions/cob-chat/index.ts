@@ -138,7 +138,27 @@ type WarmStart = {
   tools?: { count?: number; selectedLabels?: string[]; otherText?: string };
   disc?: { scores?: { D?: number; I?: number; S?: number; C?: number }; primary?: string; secondary?: string; isHybrid?: boolean };
   emotion?: { sentiment?: string; cluster?: string };
+  focus?: {
+    heaviestPainBucket?: string | null;
+    topPainBuckets?: Array<{ bucket?: string; negativeCount?: number }>;
+    biggestGapBucket?: string | null;
+    lightSignalBuckets?: string[];
+  };
 };
+
+// Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
+const CATEGORY_LABELS: Record<string, string> = {
+  money: "MONEY",
+  market_position: "MARKET POSITION",
+  operations: "OPERATIONS",
+  systems: "SYSTEMS",
+  customers: "CUSTOMERS",
+  people: "PEOPLE",
+  culture: "CULTURE",
+  risk: "RISK",
+  you: "YOU",
+};
+const labelOfBucket = (b?: string | null) => (b && CATEGORY_LABELS[b]) || (b ? b : "none");
 
 type PromptArgs = {
   voice: "cob" | "michael";
@@ -164,6 +184,16 @@ function formatWarmStartForPrompt(w: WarmStart): string {
   const labels = Array.isArray(tools.selectedLabels) ? tools.selectedLabels.slice(0, 12) : [];
   const topFriction = Array.isArray(cs.topThemes) ? cs.topThemes.join(", ") : "";
   const topDesired = Array.isArray(ds.topThemes) ? ds.topThemes.join(", ") : "";
+  const focus = w.focus || {};
+  const topPainStr = Array.isArray(focus.topPainBuckets) && focus.topPainBuckets.length
+    ? focus.topPainBuckets
+        .filter((p) => p && typeof p.bucket === "string")
+        .map((p) => `${labelOfBucket(p.bucket)} (${typeof p.negativeCount === "number" ? p.negativeCount : 0})`)
+        .join(", ")
+    : "none";
+  const lightStr = Array.isArray(focus.lightSignalBuckets) && focus.lightSignalBuckets.length
+    ? focus.lightSignalBuckets.map((b) => labelOfBucket(b)).join(", ")
+    : "none";
   return [
     "",
     "",
@@ -174,6 +204,28 @@ function formatWarmStartForPrompt(w: WarmStart): string {
     "· USE this to modulate voice (pace, register, bluntness vs warmth) and to SKIP discovery you already have.",
     "· Skip the 'walk me through it / tell me your situation' opener · they already told you in the consult.",
     "",
+    "POSITIONING RULES — how to use this intel:",
+    "",
+    "1. LEAD WITH THE HEAVIEST PAIN. Open on the area where they have the most negative selections (see \"Heaviest pain area\" below). That's where they feel it most. Reference the area naturally — never recite their chip selections.",
+    "",
+    "2. FOCUS ON 2-3 AREAS MAX. The top pain areas drive the conversation. Buckets in \"Light signal\" stay in your context but don't get airtime in the opening — only revisit them if directly relevant to a deliverable.",
+    "",
+    "3. CONNECT EVERY DELIVERABLE TO A DESIRED-STATE CHIP. They told you where they want to be in 12 months. Every recommendation, plan, or move you offer should bridge their current state to one of those chosen aspirations. Move them from where they are to where they said they want to go.",
+    "",
+    "4. THE BIGGEST GAP IS THE STRONGEST PULL. The bucket flagged \"Biggest gap\" has both heavy current pain AND clear desired state — that's where the motivational pull is highest. Lead toward closing that gap.",
+    "",
+    "5. SKIP DISCOVERY ON COVERED GROUND. The consult IS the diagnosis. Do not ask what's hard, what they want, or what tools they use — you already know. Move directly into recommendation, abundance, action.",
+    "",
+    "6. REFERENCE BY AREA, NEVER BY RECITATION. Speak in terms of \"on the money side\", \"operationally\", \"your team situation\", \"the cash pressure\" — never read back the actual chip labels they selected.",
+    "",
+    "7. SILENT ATTUNEMENT. Per the Adaptive Voice Doctrine: never name DISC types, emotional states, or this intel out loud. The adaptation is felt, not announced.",
+    "",
+    `Heaviest pain area: ${labelOfBucket(focus.heaviestPainBucket ?? null)}`,
+    `Top pain areas: ${topPainStr}`,
+    `Biggest gap: ${labelOfBucket(focus.biggestGapBucket ?? null)}`,
+    `Light signal (skip in opening): ${lightStr}`,
+    "",
+
     `Identity · ${ident.name || "(unnamed)"} · ${ident.occupation || "(role unspecified)"} · ${ident.email || "(no email)"}`,
     w.roleLensSuggested ? `Suggested role lens · ${w.roleLensSuggested}` : "",
     `Current state · ${cs.negativeCount ?? 0} negative / ${cs.positiveCount ?? 0} positive · top friction themes: ${topFriction || "none"}`,
@@ -453,8 +505,23 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         sentiment: clampStr(ws.emotion.sentiment, 16),
         cluster: clampStr(ws.emotion.cluster, 24),
       } : undefined,
+      focus: ws.focus && typeof ws.focus === "object" ? {
+        heaviestPainBucket: clampStr(ws.focus.heaviestPainBucket, 32) ?? null,
+        topPainBuckets: Array.isArray(ws.focus.topPainBuckets)
+          ? ws.focus.topPainBuckets
+              .filter((p: unknown): p is { bucket?: unknown; negativeCount?: unknown } => !!p && typeof p === "object")
+              .slice(0, 3)
+              .map((p) => ({
+                bucket: clampStr((p as { bucket?: unknown }).bucket, 32),
+                negativeCount: clampNum((p as { negativeCount?: unknown }).negativeCount),
+              }))
+          : [],
+        biggestGapBucket: clampStr(ws.focus.biggestGapBucket, 32) ?? null,
+        lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
+      } : undefined,
     };
   }
+
 
   return {
     ok: true,
