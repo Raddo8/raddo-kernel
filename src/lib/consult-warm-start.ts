@@ -298,6 +298,52 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
     "· Skip the 'walk me through it / tell me your situation' opener · they already told you in the consult.",
   );
   lines.push("");
+
+  // POSITIONING RULES · injected ABOVE the data dump · teaches WHAT to focus on.
+  // Complements the Adaptive Voice Doctrine (HOW to speak).
+  lines.push("POSITIONING RULES — how to use this intel:");
+  lines.push("");
+  lines.push(
+    "1. LEAD WITH THE HEAVIEST PAIN. Open on the area where they have the most negative selections (see \"Heaviest pain area\" below). That's where they feel it most. Reference the area naturally — never recite their chip selections.",
+  );
+  lines.push("");
+  lines.push(
+    "2. FOCUS ON 2-3 AREAS MAX. The top pain areas drive the conversation. Buckets in \"Light signal\" stay in your context but don't get airtime in the opening — only revisit them if directly relevant to a deliverable.",
+  );
+  lines.push("");
+  lines.push(
+    "3. CONNECT EVERY DELIVERABLE TO A DESIRED-STATE CHIP. They told you where they want to be in 12 months. Every recommendation, plan, or move you offer should bridge their current state to one of those chosen aspirations. Move them from where they are to where they said they want to go.",
+  );
+  lines.push("");
+  lines.push(
+    "4. THE BIGGEST GAP IS THE STRONGEST PULL. The bucket flagged \"Biggest gap\" has both heavy current pain AND clear desired state — that's where the motivational pull is highest. Lead toward closing that gap.",
+  );
+  lines.push("");
+  lines.push(
+    "5. SKIP DISCOVERY ON COVERED GROUND. The consult IS the diagnosis. Do not ask what's hard, what they want, or what tools they use — you already know. Move directly into recommendation, abundance, action.",
+  );
+  lines.push("");
+  lines.push(
+    "6. REFERENCE BY AREA, NEVER BY RECITATION. Speak in terms of \"on the money side\", \"operationally\", \"your team situation\", \"the cash pressure\" — never read back the actual chip labels they selected.",
+  );
+  lines.push("");
+  lines.push(
+    "7. SILENT ATTUNEMENT. Per the Adaptive Voice Doctrine: never name DISC types, emotional states, or this intel out loud. The adaptation is felt, not announced.",
+  );
+  lines.push("");
+  const labelOf = (c: Category | null) => (c ? CATEGORY_LABELS[c] : "none");
+  const topPainStr = w.focus.topPainBuckets.length
+    ? w.focus.topPainBuckets.map((p) => `${CATEGORY_LABELS[p.bucket]} (${p.negativeCount})`).join(", ")
+    : "none";
+  const lightStr = w.focus.lightSignalBuckets.length
+    ? w.focus.lightSignalBuckets.map((c) => CATEGORY_LABELS[c]).join(", ")
+    : "none";
+  lines.push(`Heaviest pain area: ${labelOf(w.focus.heaviestPainBucket)}`);
+  lines.push(`Top pain areas: ${topPainStr}`);
+  lines.push(`Biggest gap: ${labelOf(w.focus.biggestGapBucket)}`);
+  lines.push(`Light signal (skip in opening): ${lightStr}`);
+  lines.push("");
+
   lines.push(
     `Identity · ${w.identity.name || "(unnamed)"} · ${w.identity.occupation || "(role unspecified)"} · ${w.identity.email}`,
   );
