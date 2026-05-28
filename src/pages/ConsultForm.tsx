@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SeoHead } from "@/components/SeoHead";
@@ -14,6 +14,18 @@ import {
   type DiscRow,
 } from "@/lib/consult-data";
 import type { DiscResponse } from "@/lib/consult-analysis";
+import { buildSelectedApps } from "@/lib/consult-analysis";
+import {
+  buildWarmStartPayload,
+  type WarmStartPayload,
+} from "@/lib/consult-warm-start";
+import { ConfirmMeetDialog } from "@/components/consult/ConfirmMeetDialog";
+import { MeetYourCobLaunch } from "@/components/consult/MeetYourCobLaunch";
+import DossierIntake, {
+  GATE_HANDOFF_KEY,
+  type GateHandoff,
+} from "@/components/hero/DossierIntake";
+import type { LeadInfo } from "@/components/hero/use-cob-chat";
 
 type ToastState =
   | { kind: "idle"; message: string }
@@ -210,6 +222,26 @@ export function ConsultForm() {
   const [discResponses, setDiscResponses] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState>({ kind: "idle", message: "" });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [launched, setLaunched] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [primed, setPrimed] = useState<{ info: LeadInfo; warm: WarmStartPayload } | null>(null);
+
+  // Pre-fill Identity from the hero gate handoff.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(GATE_HANDOFF_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<GateHandoff>;
+      if (parsed?.name && !name) setName(parsed.name);
+      if (parsed?.email && !email) setEmail(parsed.email);
+      if (parsed?.title && !occupation) setOccupation(parsed.title);
+    } catch {
+      /* ignore parse failures */
+    }
+    // run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggleSelection(list: string[], id: string, setter: (next: string[]) => void) {
     setter(list.includes(id) ? list.filter((item) => item !== id) : [...list, id]);
@@ -225,12 +257,13 @@ export function ConsultForm() {
     });
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const confirmed = window.confirm(
-      "Submit your consult? Review your answers first · once sent, this goes to the RADDO team for review."
-    );
-    if (!confirmed) return;
+    if (submitting || launched) return;
+    setConfirmOpen(true);
+  }
+
+  async function handleConfirmedSubmit() {
     setSubmitting(true);
     setToast({ kind: "idle", message: "" });
 
@@ -238,6 +271,25 @@ export function ConsultForm() {
       rowId: row.id,
       selections: discResponses[row.id] ?? [],
     }));
+
+    // Build the warm-start payload client-side so the server can re-role
+    // the pipeline email and the chat can pick it up on launch.
+    const appLabels = buildSelectedApps(appSelections, otherAppsText);
+    const warm = buildWarmStartPayload({
+      payload: {
+        email,
+        name,
+        currentStateWordIds: currentStateSelections,
+        aspirationWordIds: aspirationSelections,
+        appSelections,
+        otherAppsText,
+        discResponses: normalizedDiscResponses,
+        discAllowMultiSelect: true,
+      },
+      phone,
+      occupation,
+      appLabels,
+    });
 
     const { data, error } = await supabase.functions.invoke("submit-consult", {
       body: {
@@ -251,11 +303,14 @@ export function ConsultForm() {
         otherAppsText,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
+        mode: "launch_to_chat",
+        warmStart: warm,
       },
     });
 
     if (error || (data && (data as { error?: string }).error)) {
       setSubmitting(false);
+      setConfirmOpen(false);
       setToast({
         kind: "error",
         message:
@@ -269,7 +324,38 @@ export function ConsultForm() {
     if (typeof window !== "undefined") {
       window.plausible?.("consult_submission");
     }
-    navigate("/consult/thank-you");
+
+    setSubmitting(false);
+    setConfirmOpen(false);
+    setLaunched(true);
+    setPrimed({
+      info: {
+        name,
+        email,
+        company: "",
+        title: occupation,
+        challenge: "",
+      },
+      warm,
+    });
+  }
+
+  const firstName = useMemo(() => name.trim().split(/\s+/)[0] || undefined, [name]);
+
+  // Once the user clicks "Meet your COB", swap the page to the chat surface.
+  if (chatOpen && primed) {
+    return (
+      <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+        <SeoHead
+          path="/consult"
+          title="Your COB · RADDO"
+          description="Your COB is open and primed by your consult."
+        />
+        <div className="mx-auto max-w-7xl px-6 py-10 md:px-10">
+          <DossierIntake primedLead={primed} />
+        </div>
+      </main>
+    );
   }
 
   return (
@@ -279,6 +365,15 @@ export function ConsultForm() {
         title="Begin your consult · RADDO"
         description="A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide."
       />
+      <ConfirmMeetDialog
+        open={confirmOpen}
+        submitting={submitting}
+        onConfirm={() => void handleConfirmedSubmit()}
+        onCancel={() => {
+          if (!submitting) setConfirmOpen(false);
+        }}
+      />
+
       {/* Hairline paper grain · same texture as Hero */}
       <div
         aria-hidden
@@ -305,13 +400,13 @@ export function ConsultForm() {
                   fontWeight: 800,
                 }}
               >
-                5 minutes to set up your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
+                5 minutes for a quick sync with your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
                 style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
               >
-                Four short sections · where you are today, where you want to be, the systems you already run, and how you make decisions. Skip anything that doesn't apply. Your COB is built from your answers.
+                Four short sections · where you are today, where you want to be, the systems you already run, and how you like to work. Skip anything that doesn't apply.
               </p>
             </div>
             <Link
@@ -330,6 +425,14 @@ export function ConsultForm() {
         </Panel>
       </header>
 
+      {launched ? (
+        <MeetYourCobLaunch
+          firstName={firstName}
+          onLaunch={() => setChatOpen(true)}
+        />
+      ) : null}
+
+
       <form
         onSubmit={handleSubmit}
         className="mx-auto grid max-w-7xl gap-8 px-6 py-10 md:px-10 lg:grid-cols-[300px_minmax(0,1fr)]"
@@ -342,7 +445,7 @@ export function ConsultForm() {
               className="mt-5"
               style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
-              Answer what's useful, skip the rest. Submit when you're done · we'll review and reply within 2 business days.
+              Answer what's useful, skip the rest. Submit when you're ready. COB (pre-install) is waiting.
             </p>
 
             {toast.kind === "error" ? (
@@ -364,7 +467,7 @@ export function ConsultForm() {
 
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || launched}
               className="mt-6 w-full font-mono transition-colors"
               style={{
                 backgroundColor: "hsl(var(--raddo-brass))",
@@ -375,12 +478,12 @@ export function ConsultForm() {
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 fontWeight: 600,
-                opacity: submitting ? 0.6 : 1,
-                cursor: submitting ? "not-allowed" : "pointer",
+                opacity: submitting || launched ? 0.6 : 1,
+                cursor: submitting || launched ? "not-allowed" : "pointer",
                 boxShadow: "0 4px 12px -6px hsl(var(--raddo-brass-deep) / 0.4)",
               }}
             >
-              {submitting ? "Submitting…" : "Submit consult"}
+              {launched ? "Submitted" : submitting ? "Submitting…" : "Submit consult"}
             </button>
           </Panel>
         </aside>

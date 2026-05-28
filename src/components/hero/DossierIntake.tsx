@@ -280,7 +280,7 @@ function GateForm({
               minWidth: "180px",
             }}
           >
-            {submitting ? "Opening…" : "Open the sample COB"}
+            {submitting ? "Routing…" : "Brief consult with COB"}
           </button>
         </div>
       </div>
@@ -775,8 +775,15 @@ function DeploymentCtaCard({
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
-export default function DossierIntake() {
-  const [sealed, setSealed] = useState(true);
+type DossierIntakeProps = {
+  // When set, render chat-only with this consult-derived warm start.
+  // When omitted, render gate-only and hand off to /consult on submit.
+  primedLead?: { info: LeadInfo; warm: WarmStartPayload };
+};
+
+export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
+  // Primed mode opens straight into chat · gate-only mode stays sealed.
+  const [sealed, setSealed] = useState(!primedLead);
   const [draft, setDraft] = useState("");
   const [now, setNow] = useState<Date>(() => new Date());
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -794,6 +801,7 @@ export default function DossierIntake() {
     setIndustryLabel,
     send,
     primeIfEmpty,
+    primeWithLead,
     lead,
     submitLead,
     submittingLead,
@@ -804,6 +812,14 @@ export default function DossierIntake() {
   } = useCobChat();
 
   const navigate = useNavigate();
+
+  // PRIMED MODE · prime once on mount with consult-derived lead + warm start.
+  useEffect(() => {
+    if (primedLead) {
+      primeWithLead(primedLead.info, primedLead.warm);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Hard-close CTA gating · Conviction Funnel phase detection from the hook.
   const showDeploymentCta = !sealed && deploymentFormShouldOpen;
@@ -843,18 +859,16 @@ export default function DossierIntake() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [transcript, pending]);
 
-  const handleGateSubmit = async (lead: LeadInfo) => {
-    const res = await submitLead(lead);
-    if (res.ok) {
-      setSealed(false);
-      primeIfEmpty(lead);
-      // Auto-send the visitor's stated challenge as the first user message · triggers Opus first-turn.
-      requestAnimationFrame(() => {
-        void send(lead.challenge);
-        taRef.current?.focus();
-      });
+  // GATE-ONLY MODE · store identity and hand off to /consult. Never opens chat.
+  const handleGateSubmit = async (gate: LeadInfo) => {
+    try {
+      const payload: GateHandoff = { ...gate, ts: Date.now() };
+      sessionStorage.setItem(GATE_HANDOFF_KEY, JSON.stringify(payload));
+    } catch {
+      /* storage blocked · proceed anyway */
     }
-    return res;
+    navigate("/consult");
+    return { ok: true as const };
   };
 
   const submit = () => {

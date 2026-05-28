@@ -313,11 +313,19 @@ Deno.serve(async (request) => {
 
   const submissionId = insertResult.data?.id ?? null;
 
+  const mode = typeof (payload as any).mode === "string" ? (payload as any).mode : "default";
+  const warmStart = (payload as any).warmStart && typeof (payload as any).warmStart === "object"
+    ? (payload as any).warmStart
+    : null;
+  const isLaunchToChat = mode === "launch_to_chat";
+
   // ──── EMAIL A · visitor confirmation ──────────────────────────────────
-  let visitorEmailStatus = "skipped";
+  // Skipped in launch_to_chat mode · the chat surface IS the confirmation,
+  // and the deployment_inquiry stage handles the eventual booking email.
+  let visitorEmailStatus = isLaunchToChat ? "skipped_launch_to_chat" : "skipped";
   let visitorMessageId: string | null = null;
 
-  if (EMAIL_REGEX.test(payload.email)) {
+  if (!isLaunchToChat && EMAIL_REGEX.test(payload.email)) {
     const visitorRes = await sendViaSendEmail({
       fromAddress: "cob@chiefofbusiness.ai",
       fromDisplayName: "Your COB",
@@ -331,7 +339,7 @@ Deno.serve(async (request) => {
     } else {
       visitorEmailStatus = `send_failed:${visitorRes.error ?? "unknown"}`;
     }
-  } else {
+  } else if (!isLaunchToChat) {
     visitorEmailStatus = "visitor_email_invalid";
   }
 
