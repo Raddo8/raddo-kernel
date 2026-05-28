@@ -17,6 +17,7 @@ import {
   type Category,
   type ThemeId,
 } from "./consult-data";
+import { INTEGRATION_CAPABILITIES, type ToolCapability } from "./integration-capabilities";
 
 import { ALL_ROLES } from "@/components/hero/cob-featured";
 import {
@@ -143,6 +144,7 @@ export type WarmStartPayload = {
     secondary: string;
     isHybrid: boolean;
   };
+  integrationPlays: string[];
   emotion: {
     sentiment: EmotionSentiment;
     cluster: EmotionCluster;
