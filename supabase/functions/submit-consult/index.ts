@@ -219,6 +219,8 @@ function buildPipelineHtml(opts: {
         Apps tagged: ${payload.appSelections.length}${payload.otherAppsText ? `<br/>Other apps: ${esc(payload.otherAppsText)}` : ""}
       </div>
 
+      ${computedReadBlock}
+
       <div style="font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;color:#0C447C;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Delivery</div>
       <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:12px;color:#2C2C2A;line-height:1.6;">
         <tr><td style="padding:2px 12px 2px 0;color:#5F5E5A;width:160px;">Visitor email status</td><td>${esc(visitorEmailStatus)}</td></tr>
