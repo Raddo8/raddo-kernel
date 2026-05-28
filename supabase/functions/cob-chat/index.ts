@@ -144,6 +144,7 @@ type WarmStart = {
     biggestGapBucket?: string | null;
     lightSignalBuckets?: string[];
   };
+  integrationPlays?: string[];
 };
 
 // Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
@@ -185,6 +186,9 @@ function formatWarmStartForPrompt(w: WarmStart): string {
   const topFriction = Array.isArray(cs.topThemes) ? cs.topThemes.join(", ") : "";
   const topDesired = Array.isArray(ds.topThemes) ? ds.topThemes.join(", ") : "";
   const focus = w.focus || {};
+  const plays = Array.isArray(w.integrationPlays)
+    ? w.integrationPlays.filter((p): p is string => typeof p === "string").slice(0, 3)
+    : [];
   const topPainStr = Array.isArray(focus.topPainBuckets) && focus.topPainBuckets.length
     ? focus.topPainBuckets
         .filter((p) => p && typeof p.bucket === "string")
