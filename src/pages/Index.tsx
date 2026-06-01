@@ -67,7 +67,7 @@ export default function Index() {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
-          <h1 className="font-mono font-bold text-2xl text-primary mb-2">RADDO</h1>
+          <h1 className="font-mono font-bold text-2xl text-primary mb-2">COB</h1>
           <p className="text-sm text-muted-foreground">Setting up your workspace...</p>
         </div>
       </div>

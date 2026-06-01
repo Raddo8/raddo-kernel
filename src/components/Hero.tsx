@@ -890,8 +890,8 @@ export function Hero() {
     <main className="relative w-full bg-raddo-paper text-raddo-charcoal selection:bg-raddo-brass/30">
       <SeoHead
         path="/"
-        title="RADDO · Your Chief of Business"
-        description="RADDO is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
+        title="COB · Your Chief of Business"
+        description="COB is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
       />
       {/* Top dark-blue bar · scrolls with the page */}
       <div
@@ -1229,7 +1229,7 @@ export function Hero() {
           {reduce ? (
             <img
               src="/brand/video/hero-poster.jpg"
-              alt="The Six-Source Mandala · RADDO's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief Of Business."
+              alt="The Six-Source Mandala · COB's canonical brand visualization showing email, meetings, documents, business chat, calendar and financial context held in continuous synthesis as one Chief Of Business."
               className="h-full w-full object-cover"
             />
           ) : (

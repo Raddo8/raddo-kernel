@@ -13,7 +13,7 @@ const NotFound = () => {
     <div className="flex min-h-screen items-center justify-center bg-muted">
       <SeoHead
         path={location.pathname}
-        title="Not found · RADDO"
+        title="Not found · COB"
         description="This page could not be located."
         robots="noindex,follow"
       />

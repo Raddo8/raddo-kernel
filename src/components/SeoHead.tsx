@@ -1,6 +1,6 @@
 import { Helmet } from "react-helmet-async";
 
-const SITE_ORIGIN = "https://raddo.ai";
+const SITE_ORIGIN = "https://chiefofbusiness.ai";
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 
 type SeoHeadProps = {

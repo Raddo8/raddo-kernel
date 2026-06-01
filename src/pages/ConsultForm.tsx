@@ -584,7 +584,7 @@ export function ConsultForm() {
       <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
         <SeoHead
           path="/consult"
-          title="Your COB · RADDO"
+          title="Your COB · chiefofbusiness.ai"
           description="Your COB is open and primed by your consult."
         />
         <div className="mx-auto max-w-7xl px-6 py-10 md:px-10">
@@ -598,7 +598,7 @@ export function ConsultForm() {
     <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
       <SeoHead
         path="/consult"
-        title="Begin your consult · RADDO"
+        title="Begin your consult · COB"
         description="A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide."
       />
       <ConfirmMeetDialog

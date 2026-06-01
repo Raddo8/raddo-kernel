@@ -41,7 +41,7 @@ export default function Auth() {
     <div className="flex min-h-screen items-center justify-center bg-background dark">
       <div className="w-full max-w-sm space-y-6 px-4">
         <div className="text-center">
-          <h1 className="font-mono font-bold text-3xl tracking-tight text-primary">RADDO</h1>
+          <h1 className="font-mono font-bold text-3xl tracking-tight text-primary">COB</h1>
           <p className="text-muted-foreground text-sm mt-2">Agentic CRM Kernel</p>
         </div>
 
