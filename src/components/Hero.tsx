@@ -1034,7 +1034,7 @@ export function Hero() {
             Not just in your corner.<br />
             Building your corner.
           </h2>
-          <DossierIntake />
+          <BriefingComposition />
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
@@ -1156,7 +1156,7 @@ export function Hero() {
           className="mt-40 md:mt-52 mx-auto"
           style={{ maxWidth: "1180px" }}
         >
-          <BriefingComposition />
+          <DossierIntake />
         </motion.section>
 
         {/* Asymmetric brass hairline · 3000ms */}
