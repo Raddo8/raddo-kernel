@@ -6,6 +6,7 @@ import tradeShow from "@/assets/dossier/trade-show.png";
 import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
+import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 
 /**
  * /dossier — standalone print-ready document.
@@ -68,11 +69,30 @@ const carry: Array<{ label: string; body: string }> = [
   { label: "Memory", body: "one sourced record of decisions and the why behind them" },
 ];
 
-const whatItDoes = [
-  "Briefs you each morning on what actually deserves your attention, drawn from your business, not a generic feed.",
-  "Thinks with you on the hard calls: the strongest case for and against, the assumption you have not named, and what would change the answer.",
-  "Catches what is off-pattern before it costs you, because it remembers every decision you have made and how each one landed.",
-  "Holds the institutional memory that used to walk out the door: every decision, every reason, every result, retained.",
+const VAULT_LEGEND: { n: string; label: string }[] = [
+  { n: "01", label: "Knowledge / memory base" },
+  { n: "02", label: "Email" },
+  { n: "03", label: "Calendar" },
+  { n: "04", label: "Data / document storage" },
+  { n: "05", label: "Accounting platform" },
+  { n: "06", label: "Payroll & HR system" },
+  { n: "07", label: "CRM" },
+  { n: "08", label: "Team communication" },
+  { n: "09", label: "Industry · specific operation systems" },
+  { n: "10", label: "Management tools" },
+];
+
+const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
+  { title: "Strategy & decisions", items: ["Quarterly reviews", "Annual planning", "Decision stress · tests", "Option analysis", "Board packs"] },
+  { title: "Finance", items: ["Cash forecasting", "Bank reconciliation", "AR collections", "Cost ratios", "Covenant compliance"] },
+  { title: "Operations", items: ["Store KPIs", "Maintenance tracking", "Delivery monitoring", "SOP enforcement", "Contract audits"] },
+  { title: "Revenue & sales", items: ["Pipeline tracking", "Sales outreach", "Conversion analysis", "Launch coordination", "Loss analysis"] },
+  { title: "People & HR", items: ["Org charts", "Hiring tracking", "Retention monitoring", "Onboarding plans", "Comp benchmarking"] },
+  { title: "Legal & compliance", items: ["Contract tracking", "Licensing calendar", "Entity audits", "Policy review", "Regulatory watch"] },
+  { title: "Customer & growth", items: ["Customer health", "Customer comms", "Upsell signals", "Win · loss analysis", "Advisory boards"] },
+  { title: "Vendors & spend", items: ["Vendor tracking", "RFP drafting", "Vendor consolidation", "SaaS audits", "Insurance tracking"] },
+  { title: "Meetings & time", items: ["Meeting prep", "Meeting notes", "Commitment tracking", "Meeting scheduling", "Follow · throughs"] },
+  { title: "Memory & coordination", items: ["Decision recall", "Conflict detection", "Pattern recognition", "Institutional search", "Exec onboarding"] },
 ];
 
 const principles = [
