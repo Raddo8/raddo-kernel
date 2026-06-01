@@ -360,9 +360,12 @@ function buildSystemPrompt(args: PromptArgs): string {
   // (which lives inside the cached baseline) and AFTER leadBlock, BEFORE
   // firstTurnBlock. Guardrail baked in: never recite, never name DISC/emotion.
   const warmStartBlock = args.warmStart ? formatWarmStartForPrompt(args.warmStart) : "";
+  const researchBlock = args.warmStart ? formatResearchAndOpeningForPrompt(args.warmStart) : "";
 
+  // First-turn opening pattern · research-discipline shaped · 2-4 sentences,
+  // first name → ONE concrete observation (tiered fallback) → pivot to challenge → ONE sharp question.
   const firstTurnBlock = args.firstTurn
-    ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
+    ? `\n\n# FIRST TURN · OPENING PATTERN (binding · supersedes any earlier first-turn instruction)\nThis is the visitor's first substantive turn. The opening is 2-4 sentences. Structure:\n1. Address them by first name.\n2. ONE concrete observation, picked from the highest-signal tier available:\n   · Tier 1: paraphrase researchBrief.anchor (never quote it raw, never name the source).\n   · Tier 2: name what you read in their challenge paragraph and the second-order risk inside it.\n   · Tier 3: lead from the heaviest pain area, spoken as the area ('on the money side', 'operationally').\n3. Pivot to their challenge in one short sentence (if they gave one) · show you weighed it.\n4. ONE sharp question that would meaningfully change your next recommendation. Never stack questions.\n\nNo greeting filler. No "thanks for sharing." No "I'd love to learn more." No "walk me through it." No mention of the consult, the brief, the form, or any research mechanic. Drive.`
     : "";
 
 
