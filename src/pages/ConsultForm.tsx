@@ -519,6 +519,7 @@ export function ConsultForm() {
       appLabels,
       toolsByCategory,
       selectedSlugs,
+      challenge: challenge.trim() || undefined,
     });
 
     const { data, error } = await supabase.functions.invoke("submit-consult", {
@@ -527,6 +528,7 @@ export function ConsultForm() {
         name,
         phone,
         occupation,
+        challenge: challenge.trim() || undefined,
         currentStateWordIds: currentStateSelections,
         aspirationWordIds: aspirationSelections,
         appSelections,
