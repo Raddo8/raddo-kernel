@@ -218,7 +218,7 @@ export default function Dossier() {
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Every serious operator hits the same wall.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             The business is talking to you constantly, in your inbox, your numbers, your meetings,
             your people, and no single mind can hold all of it at once. The context that makes your
@@ -235,23 +235,121 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 3 · WHAT IT DOES */}
+      {/* PAGE 3 · WHAT IS COB · THE TEN-SOURCE VAULT */}
       <Page>
-        <Overline n="03" label="what it does" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
-          Four things, every day.
+        <Overline n="03" label="what is COB · the vault" />
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+          What is COB.
         </h2>
-        <ul className="space-y-8 max-w-3xl">
-          {whatItDoes.map((line, i) => (
-            <li key={i} className="flex gap-5">
-              <span className="mt-2.5 h-2.5 w-2.5 flex-none rounded-full bg-raddo-brass ring-4 ring-raddo-brass/15" />
-              <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
-                {line}
-              </p>
-            </li>
-          ))}
-        </ul>
-        <BrassHairline className="mt-16" />
+
+        <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-12">
+          <p>
+            COB is a system of{" "}
+            <strong className="text-raddo-ink-deep font-bold">
+              intelligence, strategy, and competence
+            </strong>{" "}
+            built around one person, or one business. It reads what you read, sits in your
+            meetings, and holds the full context of your operation: finance, operations, people,
+            legal, every functional domain. It learns how you think, how you write, what you weigh,
+            what you cut. From that foundation, it produces the briefings, drafts, projects,
+            reports, presentations, and counsel that let you show up as the sharpest version of
+            yourself in every room you walk into.
+          </p>
+          <p>
+            Most executives carry their operation in their head, board prep that displaces sleep,
+            numbers they cannot quite recall at the meeting, context that walks out the door when a
+            senior leader leaves, decisions made three quarters ago that nobody can find. Your COB
+            holds it instead. Risks surfaced before they hit you. The difficult email drafted in
+            your cadence. The numbers behind every line waiting the moment you ask. What you
+            decided three years ago, the moment the question returns. You walk in{" "}
+            <strong className="text-raddo-ink-deep font-bold">light</strong>.
+          </p>
+          <p>
+            Two things separate COB from any tool you have used before.{" "}
+            <strong className="text-raddo-ink-deep font-bold">It is portable.</strong> Not locked
+            to one app, one platform, one provider. It carries everything you teach it across the
+            systems you already use.{" "}
+            <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong> It does not
+            reset when you change roles, restructure your team, or move on to the next thing. The
+            longer you use it, the more of you it carries.
+          </p>
+        </div>
+
+        <BrassHairline className="mb-10" />
+
+        {/* Vault exhibit */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-4">
+              exhibit · 002 · the ten · source vault
+            </p>
+            <div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
+              <img
+                src={vaultExhibit}
+                alt="The COB vault · ten source pedestals connected by brass tracery to a central briefing plaque"
+                className="block w-full h-auto"
+              />
+            </div>
+            <p className="font-sans text-sm lg:text-base leading-relaxed text-raddo-charcoal mt-5">
+              Once we get access: we build it. Wire it. Calibrate it. Install it. All in two weeks.
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px w-7 bg-raddo-brass" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-raddo-ash">
+                Exhibit key
+              </span>
+            </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+              {VAULT_LEGEND.map((row) => (
+                <li
+                  key={row.n}
+                  className="flex items-baseline gap-3 py-2 border-t border-raddo-paper-edge"
+                >
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-raddo-brass-deep min-w-[24px]">
+                    {row.n}
+                  </span>
+                  <span className="font-sans text-sm font-medium text-raddo-ink-deep">
+                    {row.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <BrassHairline className="my-10" />
+
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-3">
+            What he takes on
+          </p>
+          <p className="font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-8">
+            Once connected, your COB quietly absorbs the work that fills your week. A partial view
+            of what he picks up:
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
+            {VAULT_CAPABILITIES.map((group) => (
+              <li key={group.title}>
+                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-raddo-brass-deep mb-2">
+                  {group.title}
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {group.items.map((item) => (
+                    <li
+                      key={item}
+                      className="font-sans text-sm leading-snug text-raddo-ink-deep"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Page>
 
       {/* PAGE 4 · ENGINEERED DIFFERENTLY */}
@@ -260,7 +358,7 @@ export default function Dossier() {
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-4">
           Eight folders. One operator.
         </h2>
-        <p className="font-sans text-lg text-raddo-ash max-w-2xl mb-12">
+        <p className="font-sans text-lg text-raddo-ash mb-12">
           The dossier system underneath every COB. Each folder is a design commitment, not a
           feature.
         </p>
@@ -283,26 +381,7 @@ export default function Dossier() {
         </div>
       </Page>
 
-      {/* PAGE 5 · WHAT YOUR COB CARRIES */}
-      <Page>
-        <Overline n="05" label="what your COB carries" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-4">
-          One coordinated layer.
-        </h2>
-        <p className="font-sans text-lg text-raddo-ash max-w-2xl mb-12">
-          Not ten tools. One operator holding ten domains.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5">
-          {carry.map((c) => (
-            <div key={c.label} className="flex gap-4 border-b border-raddo-paper-edge pb-4">
-              <span className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-raddo-brass" />
-              <p className="font-sans text-base leading-relaxed text-raddo-charcoal">
-                <span className="font-semibold text-raddo-ink-deep">{c.label}:</span> {c.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Page>
+
 
       {/* PAGE 6 · IN YOUR WORLD */}
       <Page>
