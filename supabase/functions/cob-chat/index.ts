@@ -440,7 +440,7 @@ function buildSystemPrompt(args: PromptArgs): string {
     promptCache.set(key, baseline);
   }
 
-  return baseline + leadBlock + warmStartBlock + firstTurnBlock;
+  return baseline + leadBlock + warmStartBlock + researchBlock + firstTurnBlock;
 }
 
 // ── Web tool (Firecrawl) · COB-only · Anthropic tool schema ─────────────────
