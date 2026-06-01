@@ -31,6 +31,7 @@ import NextStep from "@/pages/NextStep";
 import NotFound from "@/pages/NotFound";
 import RespondPage from "@/pages/RespondPage";
 import StyleGuide from "@/pages/StyleGuide";
+import Dossier from "@/pages/Dossier";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/consult/thank-you" element={<ConsultThankYou />} />
             <Route path="/next-step" element={<NextStep />} />
             <Route path="/style-guide" element={<StyleGuide />} />
+            <Route path="/dossier" element={<Dossier />} />
             <Route path="/respond/:token" element={<RespondPage />} />
           <Route path="/app" element={
             <WorkspaceProvider>
