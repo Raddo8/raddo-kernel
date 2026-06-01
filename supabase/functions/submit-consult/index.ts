@@ -15,11 +15,27 @@ type DiscResponse = {
 
 type ToolsSelected = Record<string, { slugs?: string[]; custom?: string[] }>;
 
+type ResearchBriefPublic = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: "free_mail" | "no_domain" | "all_calls_failed" | "timeout" | "synthesis_failed" | null;
+};
+
+type ResearchBriefInternal = ResearchBriefPublic & {
+  sources?: string[]; // server-side only, never returned to client
+  rawSnippetsLength?: number;
+  elapsedMs?: number;
+};
+
 type ConsultSubmissionPayload = {
   email: string;
   name: string;
   phone?: string;
   occupation?: string;
+  challenge?: string;
   currentStateWordIds: string[];
   aspirationWordIds: string[];
   appSelections: string[];
