@@ -130,6 +130,15 @@ type Lead = {
   challenge?: string;
 };
 
+type ResearchBrief = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: string | null;
+};
+
 type WarmStart = {
   identity?: { name?: string; email?: string; phone?: string; occupation?: string };
   roleLensSuggested?: string;
@@ -145,6 +154,8 @@ type WarmStart = {
     lightSignalBuckets?: string[];
   };
   integrationPlays?: string[];
+  challenge?: string;
+  researchBrief?: ResearchBrief | null;
 };
 
 // Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
