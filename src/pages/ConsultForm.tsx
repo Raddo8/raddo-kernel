@@ -562,15 +562,17 @@ export function ConsultForm() {
     setSubmitting(false);
     setConfirmOpen(false);
     setLaunched(true);
+    const researchBrief = (data as { researchBrief?: WarmStartPayload["researchBrief"] } | null)?.researchBrief;
+    const warmWithBrief: WarmStartPayload = researchBrief ? { ...warm, researchBrief } : warm;
     setPrimed({
       info: {
         name,
         email,
-        company: "",
+        company: researchBrief?.company ?? "",
         title: occupation,
-        challenge: "",
+        challenge: challenge.trim(),
       },
-      warm,
+      warm: warmWithBrief,
     });
   }
 
