@@ -130,6 +130,15 @@ type Lead = {
   challenge?: string;
 };
 
+type ResearchBrief = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: string | null;
+};
+
 type WarmStart = {
   identity?: { name?: string; email?: string; phone?: string; occupation?: string };
   roleLensSuggested?: string;
@@ -145,6 +154,8 @@ type WarmStart = {
     lightSignalBuckets?: string[];
   };
   integrationPlays?: string[];
+  challenge?: string;
+  researchBrief?: ResearchBrief | null;
 };
 
 // Bucket key → human label · mirrors CATEGORY_LABELS in src/lib/consult-data.ts.
@@ -275,6 +286,64 @@ function formatWarmStartForPrompt(w: WarmStart): string {
   ].filter(Boolean).join("\n");
 }
 
+function formatResearchAndOpeningForPrompt(w: WarmStart): string {
+  const brief = w.researchBrief;
+  const challenge = (w.challenge || "").trim();
+  const lines: string[] = [];
+  lines.push("");
+  lines.push("");
+  lines.push("# WHAT YOU LEARNED BEFORE THE DOOR OPENED (research brief · BINDING USE · NEVER recite)");
+  lines.push("Guardrail (binding):");
+  lines.push("· NEVER name a source, URL, 'I scraped', 'I searched', 'according to', 'their website says', or any research mechanic.");
+  lines.push("· NEVER ask permission to know what's already in this brief.");
+  lines.push("· If a fact below is wrong, the visitor will correct you · drop it and move on without ceremony.");
+  lines.push("· The brief gives you ONE concrete observation, not a recital. Pick the sharpest fact, weave it into your read.");
+  lines.push("");
+
+  if (brief && (brief.anchor || brief.company || brief.recentEvent)) {
+    if (brief.company) lines.push(`Company · ${brief.company}`);
+    if (brief.sector) lines.push(`Sector · ${brief.sector}`);
+    if (brief.sizeSignal) lines.push(`Size signal · ${brief.sizeSignal}`);
+    if (brief.recentEvent) lines.push(`Recent event · ${brief.recentEvent}`);
+    if (brief.anchor) lines.push(`Synthesized anchor (use this as your opening read · paraphrase, do not quote): ${brief.anchor}`);
+  } else {
+    lines.push(`Research status · skipped or empty${brief?.skippedReason ? ` (${brief.skippedReason})` : ""}. Open from the visitor's own words (challenge) or the heaviest pain area · NEVER fabricate a fact about their company.`);
+  }
+  lines.push("");
+
+  lines.push("OPENING FALLBACK LADDER (binding · pick the highest tier that has signal):");
+  lines.push("· Tier 1 · researchBrief.anchor exists → lead with the anchor, pivot to their words, ask one sharp question.");
+  lines.push("· Tier 2 · no brief but challenge exists → lead with the challenge in your read, name the second-order risk inside it.");
+  lines.push("· Tier 3 · no brief and no challenge → lead from the heaviest pain area above. Speak in terms of the area ('on the money side', 'operationally'), never recite their chip labels.");
+  lines.push("");
+
+  if (challenge) {
+    lines.push(`Visitor's own words (the challenge paragraph · weave, don't quote in full): ${challenge.slice(0, 800)}`);
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+const RESEARCH_DISCIPLINE = `
+You did a fast read before this conversation opened. You may take ONE more single-shot live look mid-conversation when the visitor names something concrete you can validate in one move (a competitor, a specific deal, a public filing, a named regulation, a public event). Use the research_web tool for that single check.
+
+HARD RULES:
+· Be informed, curious, never show the work. The visitor never hears "I searched", "I scraped", "according to their website", "I found online", "let me look that up", "based on my research", "public sources indicate", "I pulled up". Never name a URL. Never name a source.
+· When you do fire the live spot-check mid-conversation, signal it like a fractional CFO would · one short line: "give me a second on that" or "let me check that before I answer" · then call the tool, then come back with the synthesized read. Never narrate the lookup itself.
+· Single-shot only. Do not chain searches. Do not crawl. Do not enumerate sources. One look, one synthesized fact, fold it into the recommendation.
+· NEVER research private individuals by name. Companies and people in their public professional capacity only. If the visitor's name is unknown, do not look them up.
+· NEVER store, summarize back, or quote raw research data. Synthesize through your voice.
+· If the visitor asks "are you researching me right now?" or any variant: answer honestly in plain prose · "Before we opened I took a quick read on [their company name or 'your company']. The kind of read a fractional CFO does before a first call · the basics, recent news, anything that would be embarrassing not to know. I'm not pulling anything private and I'm not storing it. If something I bring up is wrong, just tell me and I'll drop it." Then return to the work. No apology, no defensiveness.
+· Banned phrases (never use, in either voice): "powered by", "AI", "AI assistant", "language model", "I searched", "I scraped", "according to", "based on public data", "let me look that up", "give me a moment while I research", "online sources say", "I cannot disclose how".
+
+TITLE SLANT (silent · modulates emphasis, never named):
+· CFO / Finance lead → cash, margin, working capital, covenants, scenario math.
+· COO / Ops lead → throughput, handoffs, capacity, cycle time, exception load.
+· CEO / Founder → strategy, capital, board, narrative, second-order bets.
+· Other → default to the heaviest-pain area.
+`;
+
+
 const promptCache = new Map<string, string>();
 const PROMPT_CACHE_MAX = 32;
 
@@ -291,9 +360,12 @@ function buildSystemPrompt(args: PromptArgs): string {
   // (which lives inside the cached baseline) and AFTER leadBlock, BEFORE
   // firstTurnBlock. Guardrail baked in: never recite, never name DISC/emotion.
   const warmStartBlock = args.warmStart ? formatWarmStartForPrompt(args.warmStart) : "";
+  const researchBlock = args.warmStart ? formatResearchAndOpeningForPrompt(args.warmStart) : "";
 
+  // First-turn opening pattern · research-discipline shaped · 2-4 sentences,
+  // first name → ONE concrete observation (tiered fallback) → pivot to challenge → ONE sharp question.
   const firstTurnBlock = args.firstTurn
-    ? `\n\n# FIRST TURN · DEEP READ\nThis is the visitor's first substantive turn. Open with a read on their stated challenge that proves you heard them · name the second-order risk, name the constraint that bites first, then make a specific recommendation with a confidence score. Address them by first name. No greeting filler, no "thanks for sharing." Drive.`
+    ? `\n\n# FIRST TURN · OPENING PATTERN (binding · supersedes any earlier first-turn instruction)\nThis is the visitor's first substantive turn. The opening is 2-4 sentences. Structure:\n1. Address them by first name.\n2. ONE concrete observation, picked from the highest-signal tier available:\n   · Tier 1: paraphrase researchBrief.anchor (never quote it raw, never name the source).\n   · Tier 2: name what you read in their challenge paragraph and the second-order risk inside it.\n   · Tier 3: lead from the heaviest pain area, spoken as the area ('on the money side', 'operationally').\n3. Pivot to their challenge in one short sentence (if they gave one) · show you weighed it.\n4. ONE sharp question that would meaningfully change your next recommendation. Never stack questions.\n\nNo greeting filler. No "thanks for sharing." No "I'd love to learn more." No "walk me through it." No mention of the consult, the brief, the form, or any research mechanic. Drive.`
     : "";
 
 
@@ -312,6 +384,9 @@ function buildSystemPrompt(args: PromptArgs): string {
 
     // LAYER 3 · Conversation Architecture
     parts.push("\n\n# CONVICTION FUNNEL DOCTRINE v2.0 · ABUNDANCE MODEL (binding · governs arc, abundance, deployment bridges, and the hard close)\n" + DOC_CONVICTION_FUNNEL);
+
+    // LAYER 3b · Research Discipline (binding · how COB uses pre-call brief + single-shot live spot-check)
+    parts.push("\n\n# RESEARCH DISCIPLINE (binding · governs how COB uses the pre-call brief and the single mid-conversation live look)\n" + RESEARCH_DISCIPLINE);
 
     // LAYER 4 · Situational
     parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
@@ -365,14 +440,14 @@ function buildSystemPrompt(args: PromptArgs): string {
     promptCache.set(key, baseline);
   }
 
-  return baseline + leadBlock + warmStartBlock + firstTurnBlock;
+  return baseline + leadBlock + warmStartBlock + researchBlock + firstTurnBlock;
 }
 
 // ── Web tool (Firecrawl) · COB-only · Anthropic tool schema ─────────────────
 const RESEARCH_WEB_TOOL = {
   name: "research_web",
   description:
-    "Fetch current public web information. Use only when: (a) the visitor supplies a URL, (b) the visitor asks you to research their own company, (c) a named entity (company / regulation / market event) requires current data, or (d) the visitor explicitly asks you to look something up. Skip for opinion, doctrine, framework, definitional, or hypothetical questions. Hard server cap: 3 calls per session.",
+    "SINGLE-SHOT live spot-check. Use ONLY when the visitor has just named a specific, concrete, verifiable public thing you can confirm in one move: a named competitor or product, a public filing or press release, a named regulation, a specific deal/round/acquisition, a public market event, or a URL the visitor pasted. Before calling, you must have already signaled the look to the visitor in your last sentence ('give me a second on that' / 'let me check that before I answer'). DO NOT call for: opinions, doctrine, frameworks, definitions, hypotheticals, vague questions, or anything you can answer from training. DO NOT chain searches · this is one look, one synthesized fact, then back to the recommendation. NEVER look up private individuals by name. Hard server cap: 3 calls per session, but the discipline is one per session unless the visitor explicitly asks for a second.",
   input_schema: {
     type: "object",
     properties: {
@@ -558,6 +633,15 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
       } : undefined,
       integrationPlays: clampArr(ws.integrationPlays, 3, 400),
+      challenge: clampStr(ws.challenge, 2000),
+      researchBrief: ws.researchBrief && typeof ws.researchBrief === "object" ? {
+        company: clampStr(ws.researchBrief.company, 160),
+        sector: clampStr(ws.researchBrief.sector, 120),
+        sizeSignal: clampStr(ws.researchBrief.sizeSignal, 120),
+        recentEvent: clampStr(ws.researchBrief.recentEvent, 400),
+        anchor: clampStr(ws.researchBrief.anchor, 1200),
+        skippedReason: clampStr(ws.researchBrief.skippedReason, 40) ?? null,
+      } : null,
     };
   }
 
