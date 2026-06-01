@@ -395,6 +395,8 @@ export function buildWarmStartPayload(opts: {
     emotion,
     focus,
     integrationPlays: computeIntegrationPlays(opts.selectedSlugs ?? [], focus),
+    challenge: opts.challenge?.trim() || undefined,
+    researchBrief: opts.researchBrief ?? null,
   };
 }
 
