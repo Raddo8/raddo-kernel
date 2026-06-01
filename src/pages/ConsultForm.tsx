@@ -804,6 +804,27 @@ export function ConsultForm() {
                 />
               </label>
             </div>
+            <label className="mt-6 block space-y-2">
+              <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                What's the one thing on your desk right now you'd hand off if you could? <span style={{ color: "hsl(var(--raddo-ash))" }}>(optional)</span>
+              </span>
+              <textarea
+                value={challenge}
+                onChange={(event) => setChallenge(event.target.value)}
+                rows={3}
+                maxLength={600}
+                className="w-full text-sm outline-none transition-colors"
+                style={{
+                  border: "1px solid hsl(var(--raddo-paper-edge))",
+                  backgroundColor: "white",
+                  color: "hsl(var(--raddo-charcoal))",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  resize: "vertical",
+                }}
+                placeholder="One sentence is fine. Your COB uses this as the opening lead."
+              />
+            </label>
           </Panel>
 
           <Panel className="p-6 md:p-8">
