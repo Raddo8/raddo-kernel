@@ -695,5 +695,7 @@ Deno.serve(async (request) => {
     visitorMessageId,
     pipelineEmailStatus: "sent",
     pipelineMessageId: pipelineRes.messageId ?? null,
+    researchBrief: researchBriefPublic,
+    researchLookupFired: lookupFired,
   });
 });
