@@ -125,7 +125,7 @@ export default function Dossier() {
         <title>Chief of Business · Dossier</title>
         <meta
           name="description"
-          content="The Chief of Business dossier. One operator who never forgets, never leaves, and gets sharper every day you run alongside them."
+          content="The Chief of Business dossier. An executive-level thinking AI operator who never forgets, never leaves, and gets sharper every day you run alongside them."
         />
         <link rel="icon" href={logo3d} />
         <meta name="robots" content="noindex,follow" />
@@ -185,8 +185,8 @@ export default function Dossier() {
             Your Chief of Business.
           </h1>
           <p className="mt-8 max-w-3xl font-sans text-xl lg:text-2xl leading-relaxed text-raddo-charcoal">
-            One operator who never forgets, never leaves, and gets sharper every day you run
-            alongside them.
+            An executive-level thinking AI operator who never forgets, never leaves, and gets
+            sharper every day you run alongside them.
           </p>
           <BrassHairline className="mt-16" />
         </div>
