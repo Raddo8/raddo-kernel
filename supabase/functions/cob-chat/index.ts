@@ -385,6 +385,9 @@ function buildSystemPrompt(args: PromptArgs): string {
     // LAYER 3 · Conversation Architecture
     parts.push("\n\n# CONVICTION FUNNEL DOCTRINE v2.0 · ABUNDANCE MODEL (binding · governs arc, abundance, deployment bridges, and the hard close)\n" + DOC_CONVICTION_FUNNEL);
 
+    // LAYER 3b · Research Discipline (binding · how COB uses pre-call brief + single-shot live spot-check)
+    parts.push("\n\n# RESEARCH DISCIPLINE (binding · governs how COB uses the pre-call brief and the single mid-conversation live look)\n" + RESEARCH_DISCIPLINE);
+
     // LAYER 4 · Situational
     parts.push("\n\n# OBJECTION HANDLING (digest)\n" + DIGEST_OBJECTIONS);
     parts.push("\n\n# DIFFERENTIATION DOCTRINE (digest)\n" + DIGEST_DOCTRINE);
