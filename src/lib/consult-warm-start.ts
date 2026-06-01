@@ -333,6 +333,8 @@ export function buildWarmStartPayload(opts: {
   appLabels: string[];
   toolsByCategory?: Array<{ label: string; items: string[] }>;
   selectedSlugs?: string[];
+  challenge?: string;
+  researchBrief?: ResearchBrief | null;
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
