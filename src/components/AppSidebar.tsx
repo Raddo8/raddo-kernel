@@ -53,7 +53,7 @@ export default function AppSidebar() {
       <div className="flex items-center gap-2 px-4 h-14 border-b border-sidebar-border">
         {!collapsed && (
           <span className="font-mono font-bold text-sidebar-primary text-lg tracking-tight">
-            RADDO
+            COB
           </span>
         )}
         <button

@@ -152,7 +152,7 @@ export function buildConsultEmailText(payload: ConsultSubmissionPayload, summary
   const topThemes = summary.themeGapAnalysis.slice(0, 3);
 
   return [
-    "RADDO consult submission",
+    "COB consult submission",
     "",
     `Email: ${payload.email}`,
     `Name: ${payload.name?.trim() || "Not provided"}`,

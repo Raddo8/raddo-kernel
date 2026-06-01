@@ -6,7 +6,7 @@ import { SeoHead } from "@/components/SeoHead";
 const BRAND_EASE: [number, number, number, number] = [0.22, 1, 0.36, 1];
 
 const BOOKING_URL =
-  (import.meta.env.VITE_CAL_BOOKING_URL as string | undefined) ?? "https://cal.com/raddo";
+  (import.meta.env.VITE_CAL_BOOKING_URL as string | undefined) ?? "https://cal.com/chiefofbusiness";
 
 export default function NextStep() {
   const reducedMotion = useMemo(
@@ -22,7 +22,7 @@ export default function NextStep() {
       style={{ backgroundColor: "hsl(var(--raddo-paper))" }}
     >
       <SeoHead
-        title="You're on the list · RADDO"
+        title="You're on the list · COB"
         description="Your COB conversation is in. Someone from the deployment team will reach out within one business day."
         path="/next-step"
       />
@@ -71,7 +71,7 @@ export default function NextStep() {
           <p>
             Transcript on its way · should arrive in the next 5 minutes from{" "}
             <span style={{ color: "hsl(var(--raddo-ink-deep))", fontWeight: 600 }}>
-              cob@raddo.ai
+              cob@chiefofbusiness.ai
             </span>
             .
           </p>

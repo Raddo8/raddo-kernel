@@ -110,7 +110,7 @@ function buildProspectHtml(opts: {
       <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 14px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Conversation</div>
       ${renderTranscriptHtml(messages)}
       <p style="font-size:15px;line-height:1.55;margin:28px 0 4px;">—COB</p>
-      <p style="font-size:13px;color:#5F5E5A;margin:0 0 24px;">RADDO</p>
+      <p style="font-size:13px;color:#5F5E5A;margin:0 0 24px;">chiefofbusiness.ai</p>
       <p style="font-size:13px;line-height:1.55;color:#5F5E5A;margin:0 0 8px;">
         P.S. If anything in the transcript misrepresents your situation or you want a different angle pressure-tested, just reply. The follow-up call is the natural place for that.
       </p>
@@ -144,7 +144,7 @@ function buildPipelineHtml(opts: {
       <hr style="border:none;border-top:1px solid #E5E3DE;margin:24px 0;" />
       <div style="font-size:11px;color:#5F5E5A;line-height:1.6;">
         Conversation ID: ${esc(conversationId)}<br/>
-        Source: raddo.ai sandbox<br/>
+        Source: chiefofbusiness.ai sandbox<br/>
         Page URL: ${esc(pageUrl || "—")}
       </div>
     </div>
@@ -274,7 +274,7 @@ Deno.serve(async (req: Request) => {
     if (!RESEND_API_KEY) {
       console.warn("[submit-chat-lead] RESEND_API_KEY missing · skipping deployment emails");
     } else {
-      const FROM = Deno.env.get("RADDO_FROM_EMAIL") || "SAMPLE COB <onboarding@resend.dev>";
+      const FROM = Deno.env.get("RADDO_FROM_EMAIL") || "Your COB <cob@chiefofbusiness.ai>";
       const PIPELINE_TO = Deno.env.get("RADDO_PIPELINE_EMAIL") || "cob.brahan@gmail.com";
       const REPLY_TO = Deno.env.get("RADDO_REPLY_TO") || undefined;
 
@@ -297,7 +297,7 @@ Deno.serve(async (req: Request) => {
       const prospectText =
         `${recipientName} —\n\nYour conversation with COB is below. Someone from the deployment team will read through it and reach out within one business day.\n\n` +
         renderTranscriptText(messages) +
-        `\n—COB\nRADDO\n\nP.S. If anything in the transcript misrepresents your situation or you want a different angle pressure-tested, just reply.\n\nConversation ID · ${conversationId}\n`;
+        `\n—COB\nchiefofbusiness.ai\n\nP.S. If anything in the transcript misrepresents your situation or you want a different angle pressure-tested, just reply.\n\nConversation ID · ${conversationId}\n`;
 
       const pipelineHtml = buildPipelineHtml({
         timestamp: nowIso,

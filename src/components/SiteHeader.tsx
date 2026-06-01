@@ -127,11 +127,11 @@ export function SiteHeader() {
             <Link
               to="/"
               className="flex shrink-0 items-center gap-1.5 sm:gap-2"
-              aria-label="RADDO · Home"
+              aria-label="COB · Home"
             >
               <img
                 src={raddoLogo}
-                alt="RADDO"
+                alt="COB"
                 className="h-[1.15rem] w-auto sm:h-[1.55rem]"
                 style={{ objectFit: "contain" }}
               />

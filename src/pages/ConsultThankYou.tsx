@@ -6,7 +6,7 @@ export default function ConsultThankYou() {
     <main className="flex min-h-screen items-center bg-raddo-paper px-6 py-12">
       <SeoHead
         path="/consult/thank-you"
-        title="Consult received · RADDO"
+        title="Consult received · COB"
         description="Your consult is in. Expect a response within 2 business days."
         robots="noindex,follow"
       />
@@ -23,7 +23,7 @@ export default function ConsultThankYou() {
             to="/"
             className="inline-flex items-center gap-2 rounded-full bg-raddo-ink px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-raddo-ink-deep"
           >
-            Back to raddo.ai
+            Back to chiefofbusiness.ai
             <span aria-hidden="true">→</span>
           </Link>
         </div>

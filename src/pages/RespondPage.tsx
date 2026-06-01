@@ -56,7 +56,7 @@ export default function RespondPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <SeoHead
         path="/respond"
-        title="Respond · RADDO"
+        title="Respond · COB"
         description="Secure single-use response surface."
         robots="noindex,nofollow"
       />
