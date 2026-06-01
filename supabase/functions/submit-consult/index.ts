@@ -15,11 +15,27 @@ type DiscResponse = {
 
 type ToolsSelected = Record<string, { slugs?: string[]; custom?: string[] }>;
 
+type ResearchBriefPublic = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: "free_mail" | "no_domain" | "all_calls_failed" | "timeout" | "synthesis_failed" | null;
+};
+
+type ResearchBriefInternal = ResearchBriefPublic & {
+  sources?: string[]; // server-side only, never returned to client
+  rawSnippetsLength?: number;
+  elapsedMs?: number;
+};
+
 type ConsultSubmissionPayload = {
   email: string;
   name: string;
   phone?: string;
   occupation?: string;
+  challenge?: string;
   currentStateWordIds: string[];
   aspirationWordIds: string[];
   appSelections: string[];
@@ -100,6 +116,230 @@ function analyzeDisc(payload: ConsultSubmissionPayload) {
     ],
   };
 }
+
+// ──────────────────────────────────────────────────────────────────────────
+// INTAKE RESEARCH · 3 parallel Firecrawl calls + LLM synthesis, hard 6s budget.
+// Fail-open: any failure or timeout returns a brief with skippedReason set.
+// Never blocks the consult submission or visitor experience.
+// ──────────────────────────────────────────────────────────────────────────
+const FREE_MAIL_DOMAINS = new Set([
+  "gmail.com", "yahoo.com", "outlook.com", "hotmail.com", "icloud.com",
+  "proton.me", "protonmail.com", "aol.com", "live.com", "msn.com",
+  "fastmail.com", "pm.me", "mac.com", "me.com", "duck.com",
+  "yandex.com", "gmx.com", "zoho.com", "tutanota.com", "mail.com",
+]);
+
+const INTAKE_RESEARCH_BUDGET_MS = 6000;
+const FIRECRAWL_PER_CALL_TIMEOUT_MS = 3500;
+
+function parseEmailDomain(email: string): string | null {
+  const at = email.lastIndexOf("@");
+  if (at < 0) return null;
+  const domain = email.slice(at + 1).trim().toLowerCase();
+  if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(domain)) return null;
+  return domain;
+}
+
+async function firecrawlScrapeBounded(url: string, signal: AbortSignal): Promise<string> {
+  const key = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!key) return "";
+  try {
+    const r = await fetch("https://api.firecrawl.dev/v2/scrape", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ url, formats: ["summary", "markdown"], onlyMainContent: true }),
+      signal,
+    });
+    if (!r.ok) return "";
+    const j = await r.json().catch(() => ({} as any));
+    const md = j?.data?.markdown || j?.markdown || "";
+    const sum = j?.data?.summary || j?.summary || "";
+    const meta = j?.data?.metadata || j?.metadata || {};
+    return [
+      meta?.title && `TITLE: ${meta.title}`,
+      sum && `SUMMARY: ${sum}`,
+      md && `EXCERPT: ${String(md).slice(0, 3000)}`,
+    ].filter(Boolean).join("\n");
+  } catch {
+    return "";
+  }
+}
+
+async function firecrawlSearchBounded(q: string, signal: AbortSignal): Promise<string> {
+  const key = Deno.env.get("FIRECRAWL_API_KEY");
+  if (!key) return "";
+  try {
+    const r = await fetch("https://api.firecrawl.dev/v2/search", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query: q, limit: 3 }),
+      signal,
+    });
+    if (!r.ok) return "";
+    const j = await r.json().catch(() => ({} as any));
+    const results = j?.data || j?.web?.results || j?.results || [];
+    if (!Array.isArray(results) || !results.length) return "";
+    return results.slice(0, 3).map((it: any, i: number) => {
+      const t = it.title || it.url || `Result ${i + 1}`;
+      const desc = it.description || "";
+      return `RESULT ${i + 1}: ${t} (${it.url || ""}) · ${desc}`;
+    }).join("\n");
+  } catch {
+    return "";
+  }
+}
+
+async function synthesizeBrief(opts: {
+  name: string;
+  domain: string;
+  snippets: string;
+  signal: AbortSignal;
+}): Promise<ResearchBriefInternal | null> {
+  const key = Deno.env.get("LOVABLE_API_KEY");
+  if (!key || !opts.snippets.trim()) return null;
+  const system = `You are an executive-prep researcher. Given raw web snippets about a company and its operator, extract ONE sharp, current anchor a fractional CFO/COO/CEO would use to start a conversation. Be concrete; never invent.
+
+Return STRICT JSON ONLY (no markdown, no prose) with this exact shape:
+{"company": string, "sector": string, "sizeSignal": string, "recentEvent": string, "anchor": string}
+
+Rules:
+· company · the company's name as it appears publicly (not the domain).
+· sector · one short noun phrase (e.g. "Series B fintech", "PE-backed manufacturer", "boutique law firm").
+· sizeSignal · employee band, revenue stage, or growth signal if visible. Empty string if unknown.
+· recentEvent · ONE specific recent material event in the last ~6 months (funding, acquisition, launch, exec change, regulatory, layoffs, press). Empty string if none visible.
+· anchor · ONE sentence a senior advisor would say at the open. Concrete, weave together sector + recent event. NO advice, NO question, NO greeting. Max 30 words.
+
+If snippets are too thin to extract anything real, return {"company": "", "sector": "", "sizeSignal": "", "recentEvent": "", "anchor": ""}.`;
+
+  try {
+    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": key,
+        "X-Lovable-AIG-SDK": "submit-consult-intake-research",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: `Operator: ${opts.name}\nDomain: ${opts.domain}\n\nSnippets:\n${opts.snippets.slice(0, 12000)}` },
+        ],
+        response_format: { type: "json_object" },
+      }),
+      signal: opts.signal,
+    });
+    if (!r.ok) {
+      console.error("[intake-research] synthesis failed", r.status);
+      return null;
+    }
+    const j = await r.json().catch(() => null) as any;
+    const text = j?.choices?.[0]?.message?.content;
+    if (!text) return null;
+    const parsed = JSON.parse(text) as Partial<ResearchBriefInternal>;
+    if (!parsed.anchor || !parsed.anchor.trim()) return null;
+    return {
+      company: String(parsed.company || "").slice(0, 160) || undefined,
+      sector: String(parsed.sector || "").slice(0, 120) || undefined,
+      sizeSignal: String(parsed.sizeSignal || "").slice(0, 120) || undefined,
+      recentEvent: String(parsed.recentEvent || "").slice(0, 280) || undefined,
+      anchor: String(parsed.anchor).slice(0, 400),
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function runIntakeResearch(opts: {
+  email: string;
+  name: string;
+}): Promise<ResearchBriefInternal> {
+  const started = Date.now();
+  const domain = parseEmailDomain(opts.email);
+  if (!domain) {
+    return { skippedReason: "no_domain", elapsedMs: Date.now() - started };
+  }
+  if (FREE_MAIL_DOMAINS.has(domain)) {
+    return { skippedReason: "free_mail", elapsedMs: Date.now() - started };
+  }
+
+  // Wrap everything in a single overall budget. If any step blows past it,
+  // the brief is null and the consult opens clean.
+  const overall = new AbortController();
+  const overallTimer = setTimeout(() => overall.abort(), INTAKE_RESEARCH_BUDGET_MS);
+  const year = new Date().getUTCFullYear();
+
+  try {
+    const perCall = (parent: AbortSignal) => {
+      const c = new AbortController();
+      const onAbort = () => c.abort();
+      parent.addEventListener("abort", onAbort, { once: true });
+      const t = setTimeout(() => c.abort(), FIRECRAWL_PER_CALL_TIMEOUT_MS);
+      return { signal: c.signal, cleanup: () => { clearTimeout(t); parent.removeEventListener("abort", onAbort); } };
+    };
+
+    const homepage = perCall(overall.signal);
+    const news = perCall(overall.signal);
+    const operator = perCall(overall.signal);
+
+    const [homeRes, newsRes, opRes] = await Promise.allSettled([
+      firecrawlScrapeBounded(`https://${domain}`, homepage.signal),
+      firecrawlSearchBounded(`${domain} news ${year}`, news.signal),
+      firecrawlSearchBounded(`${opts.name} ${domain}`, operator.signal),
+    ]);
+    homepage.cleanup(); news.cleanup(); operator.cleanup();
+
+    const parts: string[] = [];
+    const sources: string[] = [];
+    if (homeRes.status === "fulfilled" && homeRes.value) {
+      parts.push("# HOMEPAGE\n" + homeRes.value);
+      sources.push(`https://${domain}`);
+    }
+    if (newsRes.status === "fulfilled" && newsRes.value) {
+      parts.push("# RECENT NEWS\n" + newsRes.value);
+      sources.push(`search:${domain} news ${year}`);
+    }
+    if (opRes.status === "fulfilled" && opRes.value) {
+      parts.push("# OPERATOR\n" + opRes.value);
+      sources.push(`search:${opts.name} ${domain}`);
+    }
+
+    if (!parts.length) {
+      return { skippedReason: "all_calls_failed", elapsedMs: Date.now() - started };
+    }
+    if (overall.signal.aborted) {
+      return { skippedReason: "timeout", elapsedMs: Date.now() - started, sources, rawSnippetsLength: parts.join("\n\n").length };
+    }
+
+    const snippets = parts.join("\n\n");
+    const brief = await synthesizeBrief({
+      name: opts.name,
+      domain,
+      snippets,
+      signal: overall.signal,
+    });
+    if (!brief) {
+      return {
+        skippedReason: overall.signal.aborted ? "timeout" : "synthesis_failed",
+        elapsedMs: Date.now() - started,
+        sources,
+        rawSnippetsLength: snippets.length,
+      };
+    }
+    return { ...brief, sources, rawSnippetsLength: snippets.length, elapsedMs: Date.now() - started };
+  } catch (e) {
+    console.error("[intake-research] unexpected failure", (e as Error)?.message);
+    return { skippedReason: "all_calls_failed", elapsedMs: Date.now() - started };
+  } finally {
+    clearTimeout(overallTimer);
+  }
+}
+
+function stripBriefForClient(b: ResearchBriefInternal | null | undefined): ResearchBriefPublic | null {
+  if (!b) return null;
+  // Drop sources, rawSnippetsLength, elapsedMs · client/model only see facts.
+  const { sources: _s, rawSnippetsLength: _r, elapsedMs: _e, ...publicBrief } = b;
+  return publicBrief;
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -313,6 +553,20 @@ Deno.serve(async (request) => {
   const disc = analyzeDisc(payload);
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  const mode = typeof (payload as any).mode === "string" ? (payload as any).mode : "default";
+  const isLaunchToChat = mode === "launch_to_chat";
+
+  // ──── INTAKE RESEARCH · runs in parallel with the DB insert ──────────────
+  // Only fires for launch_to_chat mode (the chat-open flow). Hard 6s budget
+  // inside runIntakeResearch; the consult opens clean if it doesn't return.
+  const researchPromise: Promise<ResearchBriefInternal | null> = isLaunchToChat
+    ? runIntakeResearch({ email: payload.email, name: payload.name.trim() })
+        .catch((e) => {
+          console.error("[submit-consult] research threw", e);
+          return { skippedReason: "all_calls_failed" } as ResearchBriefInternal;
+        })
+    : Promise.resolve(null);
+
   const insertResult = await supabase
     .from("consult_submissions")
     .insert({
@@ -320,6 +574,7 @@ Deno.serve(async (request) => {
       name: payload.name.trim(),
       phone: payload.phone?.trim() || null,
       occupation: payload.occupation?.trim() || null,
+      challenge: payload.challenge?.trim() || null,
       current_state_words: payload.currentStateWordIds,
       aspiration_state_words: payload.aspirationWordIds,
       theme_gap_analysis: themeGapAnalysis,
@@ -342,11 +597,36 @@ Deno.serve(async (request) => {
 
   const submissionId = insertResult.data?.id ?? null;
 
-  const mode = typeof (payload as any).mode === "string" ? (payload as any).mode : "default";
+  // Await research now · runs in parallel with insert above, so worst case
+  // we've burned the 6s of the research budget total (not budget + insert).
+  const researchBriefInternal = await researchPromise;
+  const researchBriefPublic = stripBriefForClient(researchBriefInternal);
+  const lookupFired = !!researchBriefInternal && researchBriefInternal.skippedReason !== "free_mail" && researchBriefInternal.skippedReason !== "no_domain";
+  const briefPresent = !!(researchBriefInternal?.anchor && researchBriefInternal.anchor.trim());
+
+  // Instrumentation · fire-and-forget UPDATE. The whole reason we said yes to
+  // the live-lookup was conversion analysis · these flags are how we measure.
+  if (submissionId && isLaunchToChat) {
+    void supabase
+      .from("consult_submissions")
+      .update({
+        research_lookup_fired: lookupFired,
+        research_brief_present: briefPresent,
+        research_brief: researchBriefInternal as unknown as Record<string, unknown> | null,
+      })
+      .eq("id", submissionId)
+      .then(({ error }) => {
+        if (error) console.error("[submit-consult] instrumentation update failed", error.message);
+        else console.log("[submit-consult] instrumentation · lookup=", lookupFired, "brief=", briefPresent, "elapsed=", researchBriefInternal?.elapsedMs, "ms");
+      });
+  }
+
+  // Merge the (sanitized) brief into warmStart so the pipeline email + the
+  // downstream chat both see it. Client receives the same sanitized shape.
   const warmStart = (payload as any).warmStart && typeof (payload as any).warmStart === "object"
-    ? (payload as any).warmStart
+    ? { ...(payload as any).warmStart, researchBrief: researchBriefPublic, challenge: payload.challenge?.trim() || undefined }
     : null;
-  const isLaunchToChat = mode === "launch_to_chat";
+
 
   // ──── EMAIL A · visitor confirmation ──────────────────────────────────
   // Skipped in launch_to_chat mode · the chat surface IS the confirmation,
@@ -415,5 +695,7 @@ Deno.serve(async (request) => {
     visitorMessageId,
     pipelineEmailStatus: "sent",
     pipelineMessageId: pipelineRes.messageId ?? null,
+    researchBrief: researchBriefPublic,
+    researchLookupFired: lookupFired,
   });
 });

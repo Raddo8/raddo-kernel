@@ -206,6 +206,17 @@ export function computeIntegrationPlays(
   return fallback;
 }
 
+// Brief shape exposed to the client / model. Source URLs are NOT included
+// here · they live server-side in research_brief.sources for analysis only.
+export type ResearchBrief = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: "free_mail" | "no_domain" | "all_calls_failed" | "timeout" | "synthesis_failed" | null;
+};
+
 export type WarmStartPayload = {
   identity: {
     name?: string;
@@ -241,6 +252,14 @@ export type WarmStartPayload = {
     cluster: EmotionCluster;
   };
   focus: FocusSignal;
+  // The visitor's optional one-paragraph answer to "what's the one thing on
+  // your desk right now you'd hand off if you could?" Falls back through
+  // brief → challenge → heaviest-pain bucket per the opening pattern.
+  challenge?: string;
+  // Filled in by submit-consult after a 6s-budgeted intake research pass.
+  // Absent (or skippedReason set) is fine · opening degrades to challenge
+  // then to heaviest-pain bucket.
+  researchBrief?: ResearchBrief | null;
 };
 
 export function classifyEmotion(currentStateWordIds: string[]): {
@@ -314,6 +333,8 @@ export function buildWarmStartPayload(opts: {
   appLabels: string[];
   toolsByCategory?: Array<{ label: string; items: string[] }>;
   selectedSlugs?: string[];
+  challenge?: string;
+  researchBrief?: ResearchBrief | null;
 }): WarmStartPayload {
   const summary = analyzeConsult(opts.payload);
   const emotion = classifyEmotion(opts.payload.currentStateWordIds);
@@ -374,6 +395,8 @@ export function buildWarmStartPayload(opts: {
     emotion,
     focus,
     integrationPlays: computeIntegrationPlays(opts.selectedSlugs ?? [], focus),
+    challenge: opts.challenge?.trim() || undefined,
+    researchBrief: opts.researchBrief ?? null,
   };
 }
 
@@ -514,6 +537,36 @@ export function formatWarmStartForPrompt(w: WarmStartPayload): string {
   lines.push("· Emotion discouragement · name one credible near-term win before the bigger arc.");
   lines.push("· Emotion steady · build on momentum, raise the bar.");
   lines.push("· Emotion confident · stress-test, don't flatter.");
+  lines.push("");
+
+  // WHAT YOU LEARNED BEFORE THE DOOR OPENED · only present when the intake
+  // research pass came back with usable facts. Sources stay server-side.
+  const brief = w.researchBrief;
+  if (brief && brief.anchor) {
+    lines.push("# WHAT YOU LEARNED BEFORE THE DOOR OPENED (internal · never recite, never reference research, scraping, search, AI, or tools)");
+    lines.push(`· Company: ${brief.company || "(name not resolved)"}`);
+    if (brief.sector) lines.push(`· Sector: ${brief.sector}`);
+    if (brief.sizeSignal) lines.push(`· Size signal: ${brief.sizeSignal}`);
+    if (brief.recentEvent) lines.push(`· Recent material event: ${brief.recentEvent}`);
+    lines.push(`· Anchor (use ONCE in the opener, woven naturally · phrases like 'looking at your site', 'from the recent press', 'based on what's public' — never 'I researched you'): ${brief.anchor}`);
+    lines.push("");
+  } else if (brief && brief.skippedReason) {
+    lines.push(`# PRE-DOOR LOOKUP · skipped (${brief.skippedReason}) · open clean, never mention any attempt to look them up`);
+    lines.push("");
+  }
+
+  // OPENING FALLBACK LADDER · three tiers, explicit. Use the highest tier
+  // that has substance · the rest stay silent.
+  lines.push("OPENING FALLBACK LADDER (first turn only · pick the highest tier that has substance):");
+  lines.push("· Tier 1 · researchBrief.anchor exists → lead with the anchor, pivot to their words, ask one sharp question.");
+  lines.push("· Tier 2 · no brief but challenge exists → lead with the challenge in your read, name the second-order risk inside it.");
+  lines.push("· Tier 3 · no brief and no challenge → lead from the heaviest pain area above. Speak in terms of the area ('on the money side', 'operationally'), never recite their chip labels.");
+  lines.push("In ALL tiers: first name, no greeting, no 'thanks for sharing', no summary of what they wrote, 2–4 sentences max, one sharp question that demands specificity.");
+  if (w.challenge) {
+    lines.push("");
+    lines.push(`Visitor's own words (the challenge paragraph · weave, don't quote in full): ${w.challenge.slice(0, 800)}`);
+  }
+  lines.push("");
   lines.push(
     "First turn · address by first name, prove you read the consult by referencing the dominant friction theme without quoting words back, recommend, name the next move. No 'walk me through it.'",
   );

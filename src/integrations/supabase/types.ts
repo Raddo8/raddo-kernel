@@ -359,6 +359,7 @@ export type Database = {
         Row: {
           app_inventory: Json
           aspiration_state_words: Json
+          challenge: string | null
           created_at: string
           current_state_words: Json
           disc_responses: Json
@@ -372,12 +373,16 @@ export type Database = {
           persona_name_candidates: string[]
           phone: string | null
           primary_style: string
+          research_brief: Json | null
+          research_brief_present: boolean
+          research_lookup_fired: boolean
           secondary_style: string
           theme_gap_analysis: Json
         }
         Insert: {
           app_inventory: Json
           aspiration_state_words: Json
+          challenge?: string | null
           created_at?: string
           current_state_words: Json
           disc_responses: Json
@@ -391,12 +396,16 @@ export type Database = {
           persona_name_candidates?: string[]
           phone?: string | null
           primary_style: string
+          research_brief?: Json | null
+          research_brief_present?: boolean
+          research_lookup_fired?: boolean
           secondary_style: string
           theme_gap_analysis: Json
         }
         Update: {
           app_inventory?: Json
           aspiration_state_words?: Json
+          challenge?: string | null
           created_at?: string
           current_state_words?: Json
           disc_responses?: Json
@@ -410,6 +419,9 @@ export type Database = {
           persona_name_candidates?: string[]
           phone?: string | null
           primary_style?: string
+          research_brief?: Json | null
+          research_brief_present?: boolean
+          research_lookup_fired?: boolean
           secondary_style?: string
           theme_gap_analysis?: Json
         }
