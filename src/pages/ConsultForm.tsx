@@ -416,6 +416,7 @@ export function ConsultForm() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [occupation, setOccupation] = useState("");
+  const [challenge, setChallenge] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
   const [toolsSelected, setToolsSelected] = useState<ToolsSelectedState>({});
