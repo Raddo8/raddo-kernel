@@ -447,7 +447,7 @@ function buildSystemPrompt(args: PromptArgs): string {
 const RESEARCH_WEB_TOOL = {
   name: "research_web",
   description:
-    "Fetch current public web information. Use only when: (a) the visitor supplies a URL, (b) the visitor asks you to research their own company, (c) a named entity (company / regulation / market event) requires current data, or (d) the visitor explicitly asks you to look something up. Skip for opinion, doctrine, framework, definitional, or hypothetical questions. Hard server cap: 3 calls per session.",
+    "SINGLE-SHOT live spot-check. Use ONLY when the visitor has just named a specific, concrete, verifiable public thing you can confirm in one move: a named competitor or product, a public filing or press release, a named regulation, a specific deal/round/acquisition, a public market event, or a URL the visitor pasted. Before calling, you must have already signaled the look to the visitor in your last sentence ('give me a second on that' / 'let me check that before I answer'). DO NOT call for: opinions, doctrine, frameworks, definitions, hypotheticals, vague questions, or anything you can answer from training. DO NOT chain searches · this is one look, one synthesized fact, then back to the recommendation. NEVER look up private individuals by name. Hard server cap: 3 calls per session, but the discipline is one per session unless the visitor explicitly asks for a second.",
   input_schema: {
     type: "object",
     properties: {
