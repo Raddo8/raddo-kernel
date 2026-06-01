@@ -553,6 +553,20 @@ Deno.serve(async (request) => {
   const disc = analyzeDisc(payload);
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
+  const mode = typeof (payload as any).mode === "string" ? (payload as any).mode : "default";
+  const isLaunchToChat = mode === "launch_to_chat";
+
+  // ──── INTAKE RESEARCH · runs in parallel with the DB insert ──────────────
+  // Only fires for launch_to_chat mode (the chat-open flow). Hard 6s budget
+  // inside runIntakeResearch; the consult opens clean if it doesn't return.
+  const researchPromise: Promise<ResearchBriefInternal | null> = isLaunchToChat
+    ? runIntakeResearch({ email: payload.email, name: payload.name.trim() })
+        .catch((e) => {
+          console.error("[submit-consult] research threw", e);
+          return { skippedReason: "all_calls_failed" } as ResearchBriefInternal;
+        })
+    : Promise.resolve(null);
+
   const insertResult = await supabase
     .from("consult_submissions")
     .insert({
@@ -560,6 +574,7 @@ Deno.serve(async (request) => {
       name: payload.name.trim(),
       phone: payload.phone?.trim() || null,
       occupation: payload.occupation?.trim() || null,
+      challenge: payload.challenge?.trim() || null,
       current_state_words: payload.currentStateWordIds,
       aspiration_state_words: payload.aspirationWordIds,
       theme_gap_analysis: themeGapAnalysis,
@@ -582,11 +597,36 @@ Deno.serve(async (request) => {
 
   const submissionId = insertResult.data?.id ?? null;
 
-  const mode = typeof (payload as any).mode === "string" ? (payload as any).mode : "default";
+  // Await research now · runs in parallel with insert above, so worst case
+  // we've burned the 6s of the research budget total (not budget + insert).
+  const researchBriefInternal = await researchPromise;
+  const researchBriefPublic = stripBriefForClient(researchBriefInternal);
+  const lookupFired = !!researchBriefInternal && researchBriefInternal.skippedReason !== "free_mail" && researchBriefInternal.skippedReason !== "no_domain";
+  const briefPresent = !!(researchBriefInternal?.anchor && researchBriefInternal.anchor.trim());
+
+  // Instrumentation · fire-and-forget UPDATE. The whole reason we said yes to
+  // the live-lookup was conversion analysis · these flags are how we measure.
+  if (submissionId && isLaunchToChat) {
+    void supabase
+      .from("consult_submissions")
+      .update({
+        research_lookup_fired: lookupFired,
+        research_brief_present: briefPresent,
+        research_brief: researchBriefInternal as unknown as Record<string, unknown> | null,
+      })
+      .eq("id", submissionId)
+      .then(({ error }) => {
+        if (error) console.error("[submit-consult] instrumentation update failed", error.message);
+        else console.log("[submit-consult] instrumentation · lookup=", lookupFired, "brief=", briefPresent, "elapsed=", researchBriefInternal?.elapsedMs, "ms");
+      });
+  }
+
+  // Merge the (sanitized) brief into warmStart so the pipeline email + the
+  // downstream chat both see it. Client receives the same sanitized shape.
   const warmStart = (payload as any).warmStart && typeof (payload as any).warmStart === "object"
-    ? (payload as any).warmStart
+    ? { ...(payload as any).warmStart, researchBrief: researchBriefPublic, challenge: payload.challenge?.trim() || undefined }
     : null;
-  const isLaunchToChat = mode === "launch_to_chat";
+
 
   // ──── EMAIL A · visitor confirmation ──────────────────────────────────
   // Skipped in launch_to_chat mode · the chat surface IS the confirmation,
