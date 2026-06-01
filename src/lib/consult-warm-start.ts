@@ -206,6 +206,17 @@ export function computeIntegrationPlays(
   return fallback;
 }
 
+// Brief shape exposed to the client / model. Source URLs are NOT included
+// here · they live server-side in research_brief.sources for analysis only.
+export type ResearchBrief = {
+  company?: string;
+  sector?: string;
+  sizeSignal?: string;
+  recentEvent?: string;
+  anchor?: string;
+  skippedReason?: "free_mail" | "no_domain" | "all_calls_failed" | "timeout" | "synthesis_failed" | null;
+};
+
 export type WarmStartPayload = {
   identity: {
     name?: string;
@@ -241,6 +252,14 @@ export type WarmStartPayload = {
     cluster: EmotionCluster;
   };
   focus: FocusSignal;
+  // The visitor's optional one-paragraph answer to "what's the one thing on
+  // your desk right now you'd hand off if you could?" Falls back through
+  // brief → challenge → heaviest-pain bucket per the opening pattern.
+  challenge?: string;
+  // Filled in by submit-consult after a 6s-budgeted intake research pass.
+  // Absent (or skippedReason set) is fine · opening degrades to challenge
+  // then to heaviest-pain bucket.
+  researchBrief?: ResearchBrief | null;
 };
 
 export function classifyEmotion(currentStateWordIds: string[]): {
