@@ -569,6 +569,15 @@ function validateInput(body: any): { ok: true; data: any } | { ok: false; error:
         lightSignalBuckets: clampArr(ws.focus.lightSignalBuckets, 9, 32),
       } : undefined,
       integrationPlays: clampArr(ws.integrationPlays, 3, 400),
+      challenge: clampStr(ws.challenge, 2000),
+      researchBrief: ws.researchBrief && typeof ws.researchBrief === "object" ? {
+        company: clampStr(ws.researchBrief.company, 160),
+        sector: clampStr(ws.researchBrief.sector, 120),
+        sizeSignal: clampStr(ws.researchBrief.sizeSignal, 120),
+        recentEvent: clampStr(ws.researchBrief.recentEvent, 400),
+        anchor: clampStr(ws.researchBrief.anchor, 1200),
+        skippedReason: clampStr(ws.researchBrief.skippedReason, 40) ?? null,
+      } : null,
     };
   }
 
