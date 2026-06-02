@@ -383,10 +383,10 @@ export default function Dossier() {
 
 
 
-      {/* PAGE 6 · IN YOUR WORLD */}
+      {/* PAGE 5 · IN YOUR WORLD */}
       <Page>
-        <Overline n="06" label="in your world" />
-        <p className="font-display text-2xl lg:text-3xl leading-snug text-raddo-ink-deep max-w-3xl mb-12">
+        <Overline n="05" label="in your world" />
+        <p className="font-display text-2xl lg:text-3xl leading-snug text-raddo-ink-deep mb-12">
           Built to sit inside how you already operate, in any industry.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -411,13 +411,13 @@ export default function Dossier() {
         </div>
       </Page>
 
-      {/* PAGE 7 · BUILT FOR TRUST */}
+      {/* PAGE 6 · BUILT FOR TRUST */}
       <Page>
-        <Overline n="07" label="built for trust" />
+        <Overline n="06" label="built for trust" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Transparent. Sourced. Reversible.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             Every output is transparent, sourced, and reversible, and a person always keeps the
             final call. COB advises, prepares, and surfaces; it never acts on its own authority.
@@ -427,13 +427,13 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 8 · WHY UNLIKE */}
+      {/* PAGE 7 · WHY UNLIKE */}
       <Page>
-        <Overline n="08" label="why it is unlike anything you have used" />
+        <Overline n="07" label="why it is unlike anything you have used" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Yours. Permanent. Direct.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             It runs off your business: your current numbers, your real people, your live decisions,
             never public approximations.
@@ -447,9 +447,9 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 9 · PRINCIPLES */}
+      {/* PAGE 8 · PRINCIPLES */}
       <Page>
-        <Overline n="09" label="the principles" />
+        <Overline n="08" label="the principles" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
           Five principles.
         </h2>
@@ -468,11 +468,12 @@ export default function Dossier() {
             </div>
           ))}
         </div>
-        <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           Installed to fit exactly how you operate, from a quiet private setup to a fully integrated
           seat inside the tools you already run on.
         </p>
       </Page>
+
 
       {/* PAGE 10 · CLOSE */}
       <Page className="text-center">
