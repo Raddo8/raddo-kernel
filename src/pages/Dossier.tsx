@@ -183,7 +183,7 @@ export default function Dossier() {
       <section className="dossier-page relative w-full bg-raddo-paper">
         <div className="w-full">
           <img
-            src={tradeShow}
+            src={tradeShow.url}
             alt="Chief of Business diorama · the showcase"
             className="block w-full h-auto object-contain"
           />
