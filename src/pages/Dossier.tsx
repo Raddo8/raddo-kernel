@@ -472,8 +472,9 @@ export default function Dossier() {
       </Page>
 
 
-      {/* PAGE 10 · CLOSE */}
+      {/* PAGE 9 · CLOSE */}
       <Page className="text-center">
+        <Overline n="09" label="close" />
         <div className="flex flex-col items-center">
           <figure className="w-full max-w-3xl mb-12 border border-raddo-brass/40 bg-white p-2 shadow-sm">
             <img
