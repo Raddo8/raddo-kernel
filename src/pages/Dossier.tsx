@@ -56,18 +56,6 @@ const dossiers = [
   },
 ];
 
-const carry: Array<{ label: string; body: string }> = [
-  { label: "Strategy", body: "priorities in view, drift flagged early" },
-  { label: "Finance", body: "a steady read on what is owed, owed to you, and coming" },
-  { label: "Operations", body: "the workflows and status that usually live in one head" },
-  { label: "Revenue", body: "pipeline, relationships, and the next move on each" },
-  { label: "People", body: "onboarding, commitments, and how things are done here" },
-  { label: "Legal and risk", body: "contracts, obligations, and what needs a second look" },
-  { label: "Members and customers", body: "who needs what, by when, and what was promised" },
-  { label: "Vendors", body: "agreements, renewals, and where the leverage sits" },
-  { label: "Meetings", body: "prepared going in, captured coming out, tracked to done" },
-  { label: "Memory", body: "one sourced record of decisions and the why behind them" },
-];
 
 const VAULT_LEGEND: { n: string; label: string }[] = [
   { n: "01", label: "Knowledge / memory base" },
