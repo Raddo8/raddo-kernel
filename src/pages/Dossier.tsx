@@ -7,6 +7,9 @@ import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
+import firePatio from "@/assets/dossier/fire-patio.png.asset.json";
+import hospitalityTable from "@/assets/dossier/hospitality-table.png.asset.json";
+import chessBoard from "@/assets/dossier/chess.png.asset.json";
 
 /**
  * /dossier — standalone print-ready document.
@@ -226,9 +229,17 @@ export default function Dossier() {
       {/* PAGE 3 · WHAT IS COB · THE TEN-SOURCE VAULT */}
       <Page>
         <Overline n="03" label="what is COB · the vault" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-8">
           What is COB.
         </h2>
+
+        <figure className="mb-10 border border-raddo-paper-edge bg-white p-2 shadow-sm">
+          <img
+            src={chessBoard.url}
+            alt="Strategic chess board with brass and navy pieces · COB as executive intelligence"
+            className="block w-full h-auto object-cover"
+          />
+        </figure>
 
         <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-12">
           <p>
@@ -379,8 +390,8 @@ export default function Dossier() {
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { src: officeCob, alt: "COB inside the boardroom" },
             { src: oilAndGas, alt: "COB inside energy operations" },
+            { src: hospitalityTable.url, alt: "COB inside hospitality operations · marble bar with the COB blueprint" },
             { src: cornerCubicle, alt: "COB at the operator's own desk" },
           ].map((img, i) => (
             <figure
@@ -466,11 +477,13 @@ export default function Dossier() {
       {/* PAGE 10 · CLOSE */}
       <Page className="text-center">
         <div className="flex flex-col items-center">
-          <img
-            src={logo3d}
-            alt="Chief of Business mark"
-            className="h-32 w-32 object-contain mb-12"
-          />
+          <figure className="w-full max-w-3xl mb-12 border border-raddo-brass/40 bg-white p-2 shadow-sm">
+            <img
+              src={firePatio.url}
+              alt="COB veranda at night · brass fire pit on the marble terrace"
+              className="block w-full h-auto object-cover"
+            />
+          </figure>
           <h2 className="font-display text-4xl lg:text-6xl font-bold leading-tight text-raddo-ink-deep mb-12 max-w-3xl">
             Not just in your corner. Building your corner.
           </h2>
