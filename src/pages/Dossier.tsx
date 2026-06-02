@@ -229,9 +229,17 @@ export default function Dossier() {
       {/* PAGE 3 · WHAT IS COB · THE TEN-SOURCE VAULT */}
       <Page>
         <Overline n="03" label="what is COB · the vault" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-8">
           What is COB.
         </h2>
+
+        <figure className="mb-10 border border-raddo-paper-edge bg-white p-2 shadow-sm">
+          <img
+            src={chessBoard.url}
+            alt="Strategic chess board with brass and navy pieces · COB as executive intelligence"
+            className="block w-full h-auto object-cover"
+          />
+        </figure>
 
         <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-12">
           <p>
