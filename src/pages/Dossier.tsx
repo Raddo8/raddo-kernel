@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import logo3d from "@/assets/dossier/logo-3d.png";
-import tradeShow from "@/assets/dossier/trade-show.png";
+import tradeShow from "@/assets/dossier/trade-show.png.asset.json";
 import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
