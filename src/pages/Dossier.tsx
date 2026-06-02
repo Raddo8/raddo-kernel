@@ -278,7 +278,7 @@ export default function Dossier() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-4">
-              exhibit · 002 · the ten · source vault
+              exhibit · 01 · the ten source vault
             </p>
             <div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
               <img
