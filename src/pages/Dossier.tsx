@@ -477,11 +477,13 @@ export default function Dossier() {
       {/* PAGE 10 · CLOSE */}
       <Page className="text-center">
         <div className="flex flex-col items-center">
-          <img
-            src={logo3d}
-            alt="Chief of Business mark"
-            className="h-32 w-32 object-contain mb-12"
-          />
+          <figure className="w-full max-w-3xl mb-12 border border-raddo-brass/40 bg-white p-2 shadow-sm">
+            <img
+              src={firePatio.url}
+              alt="COB veranda at night · brass fire pit on the marble terrace"
+              className="block w-full h-auto object-cover"
+            />
+          </figure>
           <h2 className="font-display text-4xl lg:text-6xl font-bold leading-tight text-raddo-ink-deep mb-12 max-w-3xl">
             Not just in your corner. Building your corner.
           </h2>
