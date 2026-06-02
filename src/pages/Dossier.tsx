@@ -7,6 +7,9 @@ import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
 import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
+import firePatio from "@/assets/dossier/fire-patio.png.asset.json";
+import hospitalityTable from "@/assets/dossier/hospitality-table.png.asset.json";
+import chessBoard from "@/assets/dossier/chess.png.asset.json";
 
 /**
  * /dossier — standalone print-ready document.
