@@ -189,9 +189,7 @@ export default function Dossier() {
           />
         </div>
         <div className="mx-auto max-w-5xl px-6 sm:px-12 lg:px-24 py-16 lg:py-24">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-6">
-            chief of business
-          </p>
+          <Overline n="01" label="chief of business" />
           <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-raddo-ink-deep">
             Your Chief of Business.
           </h1>
