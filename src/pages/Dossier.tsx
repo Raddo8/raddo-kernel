@@ -441,12 +441,12 @@ export default function Dossier() {
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
           Five principles.
         </h2>
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6 mb-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-6 gap-y-8 md:items-center md:justify-between mb-16">
           {principles.map((p, i) => (
-            <div key={p} className="flex items-center gap-4">
+            <div key={p} className="flex items-center justify-center gap-4">
               <div className="flex flex-col items-center text-center">
                 <span className="h-3 w-3 rounded-full bg-raddo-brass ring-4 ring-raddo-brass/15" />
-                <p className="mt-3 font-display text-lg font-bold text-raddo-ink-deep max-w-[10ch] leading-tight">
+                <p className="mt-3 font-display text-base md:text-lg font-bold text-raddo-ink-deep max-w-[12ch] leading-tight">
                   {p}
                 </p>
               </div>
