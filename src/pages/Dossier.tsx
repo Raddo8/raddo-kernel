@@ -390,8 +390,8 @@ export default function Dossier() {
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[
-            { src: officeCob, alt: "COB inside the boardroom" },
             { src: oilAndGas, alt: "COB inside energy operations" },
+            { src: hospitalityTable.url, alt: "COB inside hospitality operations · marble bar with the COB blueprint" },
             { src: cornerCubicle, alt: "COB at the operator's own desk" },
           ].map((img, i) => (
             <figure
