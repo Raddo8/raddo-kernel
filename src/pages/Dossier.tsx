@@ -189,9 +189,7 @@ export default function Dossier() {
           />
         </div>
         <div className="mx-auto max-w-5xl px-6 sm:px-12 lg:px-24 py-16 lg:py-24">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-6">
-            chief of business
-          </p>
+          <Overline n="01" label="chief of business" />
           <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-raddo-ink-deep">
             Your Chief of Business.
           </h1>
@@ -280,7 +278,7 @@ export default function Dossier() {
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-4">
-              exhibit · 002 · the ten · source vault
+              exhibit · 01 · the ten source vault
             </p>
             <div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
               <img
@@ -474,8 +472,9 @@ export default function Dossier() {
       </Page>
 
 
-      {/* PAGE 10 · CLOSE */}
+      {/* PAGE 9 · CLOSE */}
       <Page className="text-center">
+        <Overline n="09" label="close" />
         <div className="flex flex-col items-center">
           <figure className="w-full max-w-3xl mb-12 border border-raddo-brass/40 bg-white p-2 shadow-sm">
             <img
