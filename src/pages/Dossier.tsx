@@ -2,7 +2,7 @@ import { Helmet } from "react-helmet-async";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import logo3d from "@/assets/dossier/logo-3d.png";
-import tradeShow from "@/assets/dossier/trade-show.png";
+import tradeShow from "@/assets/dossier/trade-show.png.asset.json";
 import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
@@ -183,7 +183,7 @@ export default function Dossier() {
       <section className="dossier-page relative w-full bg-raddo-paper">
         <div className="w-full">
           <img
-            src={tradeShow}
+            src={tradeShow.url}
             alt="Chief of Business diorama · the showcase"
             className="block w-full h-auto object-contain"
           />
