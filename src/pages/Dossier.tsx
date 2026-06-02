@@ -6,6 +6,7 @@ import tradeShow from "@/assets/dossier/trade-show.png";
 import officeCob from "@/assets/dossier/office-cob.png";
 import oilAndGas from "@/assets/dossier/oil-and-gas.png";
 import cornerCubicle from "@/assets/dossier/corner-cubicle.png";
+import vaultExhibit from "@/assets/raddo-vault-exhibit.png";
 
 /**
  * /dossier — standalone print-ready document.
@@ -55,24 +56,31 @@ const dossiers = [
   },
 ];
 
-const carry: Array<{ label: string; body: string }> = [
-  { label: "Strategy", body: "priorities in view, drift flagged early" },
-  { label: "Finance", body: "a steady read on what is owed, owed to you, and coming" },
-  { label: "Operations", body: "the workflows and status that usually live in one head" },
-  { label: "Revenue", body: "pipeline, relationships, and the next move on each" },
-  { label: "People", body: "onboarding, commitments, and how things are done here" },
-  { label: "Legal and risk", body: "contracts, obligations, and what needs a second look" },
-  { label: "Members and customers", body: "who needs what, by when, and what was promised" },
-  { label: "Vendors", body: "agreements, renewals, and where the leverage sits" },
-  { label: "Meetings", body: "prepared going in, captured coming out, tracked to done" },
-  { label: "Memory", body: "one sourced record of decisions and the why behind them" },
+
+const VAULT_LEGEND: { n: string; label: string }[] = [
+  { n: "01", label: "Knowledge / memory base" },
+  { n: "02", label: "Email" },
+  { n: "03", label: "Calendar" },
+  { n: "04", label: "Data / document storage" },
+  { n: "05", label: "Accounting platform" },
+  { n: "06", label: "Payroll & HR system" },
+  { n: "07", label: "CRM" },
+  { n: "08", label: "Team communication" },
+  { n: "09", label: "Industry · specific operation systems" },
+  { n: "10", label: "Management tools" },
 ];
 
-const whatItDoes = [
-  "Briefs you each morning on what actually deserves your attention, drawn from your business, not a generic feed.",
-  "Thinks with you on the hard calls: the strongest case for and against, the assumption you have not named, and what would change the answer.",
-  "Catches what is off-pattern before it costs you, because it remembers every decision you have made and how each one landed.",
-  "Holds the institutional memory that used to walk out the door: every decision, every reason, every result, retained.",
+const VAULT_CAPABILITIES: { title: string; items: string[] }[] = [
+  { title: "Strategy & decisions", items: ["Quarterly reviews", "Annual planning", "Decision stress · tests", "Option analysis", "Board packs"] },
+  { title: "Finance", items: ["Cash forecasting", "Bank reconciliation", "AR collections", "Cost ratios", "Covenant compliance"] },
+  { title: "Operations", items: ["Store KPIs", "Maintenance tracking", "Delivery monitoring", "SOP enforcement", "Contract audits"] },
+  { title: "Revenue & sales", items: ["Pipeline tracking", "Sales outreach", "Conversion analysis", "Launch coordination", "Loss analysis"] },
+  { title: "People & HR", items: ["Org charts", "Hiring tracking", "Retention monitoring", "Onboarding plans", "Comp benchmarking"] },
+  { title: "Legal & compliance", items: ["Contract tracking", "Licensing calendar", "Entity audits", "Policy review", "Regulatory watch"] },
+  { title: "Customer & growth", items: ["Customer health", "Customer comms", "Upsell signals", "Win · loss analysis", "Advisory boards"] },
+  { title: "Vendors & spend", items: ["Vendor tracking", "RFP drafting", "Vendor consolidation", "SaaS audits", "Insurance tracking"] },
+  { title: "Meetings & time", items: ["Meeting prep", "Meeting notes", "Commitment tracking", "Meeting scheduling", "Follow · throughs"] },
+  { title: "Memory & coordination", items: ["Decision recall", "Conflict detection", "Pattern recognition", "Institutional search", "Exec onboarding"] },
 ];
 
 const principles = [
@@ -198,7 +206,7 @@ export default function Dossier() {
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Every serious operator hits the same wall.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             The business is talking to you constantly, in your inbox, your numbers, your meetings,
             your people, and no single mind can hold all of it at once. The context that makes your
@@ -215,23 +223,121 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 3 · WHAT IT DOES */}
+      {/* PAGE 3 · WHAT IS COB · THE TEN-SOURCE VAULT */}
       <Page>
-        <Overline n="03" label="what it does" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
-          Four things, every day.
+        <Overline n="03" label="what is COB · the vault" />
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+          What is COB.
         </h2>
-        <ul className="space-y-8 max-w-3xl">
-          {whatItDoes.map((line, i) => (
-            <li key={i} className="flex gap-5">
-              <span className="mt-2.5 h-2.5 w-2.5 flex-none rounded-full bg-raddo-brass ring-4 ring-raddo-brass/15" />
-              <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
-                {line}
-              </p>
-            </li>
-          ))}
-        </ul>
-        <BrassHairline className="mt-16" />
+
+        <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-12">
+          <p>
+            COB is a system of{" "}
+            <strong className="text-raddo-ink-deep font-bold">
+              intelligence, strategy, and competence
+            </strong>{" "}
+            built around one person, or one business. It reads what you read, sits in your
+            meetings, and holds the full context of your operation: finance, operations, people,
+            legal, every functional domain. It learns how you think, how you write, what you weigh,
+            what you cut. From that foundation, it produces the briefings, drafts, projects,
+            reports, presentations, and counsel that let you show up as the sharpest version of
+            yourself in every room you walk into.
+          </p>
+          <p>
+            Most executives carry their operation in their head, board prep that displaces sleep,
+            numbers they cannot quite recall at the meeting, context that walks out the door when a
+            senior leader leaves, decisions made three quarters ago that nobody can find. Your COB
+            holds it instead. Risks surfaced before they hit you. The difficult email drafted in
+            your cadence. The numbers behind every line waiting the moment you ask. What you
+            decided three years ago, the moment the question returns. You walk in{" "}
+            <strong className="text-raddo-ink-deep font-bold">light</strong>.
+          </p>
+          <p>
+            Two things separate COB from any tool you have used before.{" "}
+            <strong className="text-raddo-ink-deep font-bold">It is portable.</strong> Not locked
+            to one app, one platform, one provider. It carries everything you teach it across the
+            systems you already use.{" "}
+            <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong> It does not
+            reset when you change roles, restructure your team, or move on to the next thing. The
+            longer you use it, the more of you it carries.
+          </p>
+        </div>
+
+        <BrassHairline className="mb-10" />
+
+        {/* Vault exhibit */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-4">
+              exhibit · 002 · the ten · source vault
+            </p>
+            <div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
+              <img
+                src={vaultExhibit}
+                alt="The COB vault · ten source pedestals connected by brass tracery to a central briefing plaque"
+                className="block w-full h-auto"
+              />
+            </div>
+            <p className="font-sans text-sm lg:text-base leading-relaxed text-raddo-charcoal mt-5">
+              Once we get access: we build it. Wire it. Calibrate it. Install it. All in two weeks.
+            </p>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <span className="h-px w-7 bg-raddo-brass" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-raddo-ash">
+                Exhibit key
+              </span>
+            </div>
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+              {VAULT_LEGEND.map((row) => (
+                <li
+                  key={row.n}
+                  className="flex items-baseline gap-3 py-2 border-t border-raddo-paper-edge"
+                >
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-raddo-brass-deep min-w-[24px]">
+                    {row.n}
+                  </span>
+                  <span className="font-sans text-sm font-medium text-raddo-ink-deep">
+                    {row.label}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <BrassHairline className="my-10" />
+
+        <div>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-3">
+            What he takes on
+          </p>
+          <p className="font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-8">
+            Once connected, your COB quietly absorbs the work that fills your week. A partial view
+            of what he picks up:
+          </p>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
+            {VAULT_CAPABILITIES.map((group) => (
+              <li key={group.title}>
+                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-raddo-brass-deep mb-2">
+                  {group.title}
+                </div>
+                <ul className="flex flex-col gap-1.5">
+                  {group.items.map((item) => (
+                    <li
+                      key={item}
+                      className="font-sans text-sm leading-snug text-raddo-ink-deep"
+                    >
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </div>
       </Page>
 
       {/* PAGE 4 · ENGINEERED DIFFERENTLY */}
@@ -240,7 +346,7 @@ export default function Dossier() {
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-4">
           Eight folders. One operator.
         </h2>
-        <p className="font-sans text-lg text-raddo-ash max-w-2xl mb-12">
+        <p className="font-sans text-lg text-raddo-ash mb-12">
           The dossier system underneath every COB. Each folder is a design commitment, not a
           feature.
         </p>
@@ -263,31 +369,12 @@ export default function Dossier() {
         </div>
       </Page>
 
-      {/* PAGE 5 · WHAT YOUR COB CARRIES */}
-      <Page>
-        <Overline n="05" label="what your COB carries" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-4">
-          One coordinated layer.
-        </h2>
-        <p className="font-sans text-lg text-raddo-ash max-w-2xl mb-12">
-          Not ten tools. One operator holding ten domains.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-5">
-          {carry.map((c) => (
-            <div key={c.label} className="flex gap-4 border-b border-raddo-paper-edge pb-4">
-              <span className="mt-2 h-1.5 w-1.5 flex-none rounded-full bg-raddo-brass" />
-              <p className="font-sans text-base leading-relaxed text-raddo-charcoal">
-                <span className="font-semibold text-raddo-ink-deep">{c.label}:</span> {c.body}
-              </p>
-            </div>
-          ))}
-        </div>
-      </Page>
 
-      {/* PAGE 6 · IN YOUR WORLD */}
+
+      {/* PAGE 5 · IN YOUR WORLD */}
       <Page>
-        <Overline n="06" label="in your world" />
-        <p className="font-display text-2xl lg:text-3xl leading-snug text-raddo-ink-deep max-w-3xl mb-12">
+        <Overline n="05" label="in your world" />
+        <p className="font-display text-2xl lg:text-3xl leading-snug text-raddo-ink-deep mb-12">
           Built to sit inside how you already operate, in any industry.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -312,13 +399,13 @@ export default function Dossier() {
         </div>
       </Page>
 
-      {/* PAGE 7 · BUILT FOR TRUST */}
+      {/* PAGE 6 · BUILT FOR TRUST */}
       <Page>
-        <Overline n="07" label="built for trust" />
+        <Overline n="06" label="built for trust" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Transparent. Sourced. Reversible.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             Every output is transparent, sourced, and reversible, and a person always keeps the
             final call. COB advises, prepares, and surfaces; it never acts on its own authority.
@@ -328,13 +415,13 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 8 · WHY UNLIKE */}
+      {/* PAGE 7 · WHY UNLIKE */}
       <Page>
-        <Overline n="08" label="why it is unlike anything you have used" />
+        <Overline n="07" label="why it is unlike anything you have used" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
           Yours. Permanent. Direct.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           <p>
             It runs off your business: your current numbers, your real people, your live decisions,
             never public approximations.
@@ -348,9 +435,9 @@ export default function Dossier() {
         <BrassHairline className="mt-16" />
       </Page>
 
-      {/* PAGE 9 · PRINCIPLES */}
+      {/* PAGE 8 · PRINCIPLES */}
       <Page>
-        <Overline n="09" label="the principles" />
+        <Overline n="08" label="the principles" />
         <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
           Five principles.
         </h2>
@@ -369,11 +456,12 @@ export default function Dossier() {
             </div>
           ))}
         </div>
-        <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-3xl">
+        <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
           Installed to fit exactly how you operate, from a quiet private setup to a fully integrated
           seat inside the tools you already run on.
         </p>
       </Page>
+
 
       {/* PAGE 10 · CLOSE */}
       <Page className="text-center">
