@@ -23,9 +23,16 @@
 //   · curl / MCP Inspector against initialize / tools/list / tools/call.
 //   · Claude.ai / Cowork connector registration is Slice-2 (needs OAuth).
 
-import { corsHeaders } from "../cob-chat/cors.ts";
-import { checkRateLimitDb } from "../_shared/rate-limit.ts";
+import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, content-type, mcp-session-id, x-client-info, apikey",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
 
 // ── Boot-time doctrine load ────────────────────────────────────────────────
 async function loadDoc(name: string): Promise<string> {
