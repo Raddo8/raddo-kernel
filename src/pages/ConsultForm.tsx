@@ -525,6 +525,10 @@ export function ConsultForm() {
       challenge: challenge.trim() || undefined,
     });
 
+    const bucketNotesArray = CATEGORY_ORDER
+      .map((c) => ({ category: c, label: CATEGORY_LABELS[c], note: bucketNotes[c].trim() }))
+      .filter((row) => row.note.length > 0);
+
     const { data, error } = await supabase.functions.invoke("submit-consult", {
       body: {
         email,
@@ -538,6 +542,7 @@ export function ConsultForm() {
         otherAppsText,
         toolsSelected,
         toolsByCategory,
+        bucketNotes: bucketNotesArray,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
         mode: "launch_to_chat",
