@@ -419,6 +419,9 @@ export function ConsultForm() {
   const [challenge, setChallenge] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
+  const [bucketNotes, setBucketNotes] = useState<Record<Category, string>>(
+    () => Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ""])) as Record<Category, string>,
+  );
   const [toolsSelected, setToolsSelected] = useState<ToolsSelectedState>({});
   const [discResponses, setDiscResponses] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
