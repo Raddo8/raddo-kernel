@@ -42,6 +42,7 @@ type ConsultSubmissionPayload = {
   otherAppsText?: string;
   toolsSelected?: ToolsSelected;
   toolsByCategory?: Array<{ label: string; items: string[] }>;
+  bucketNotes?: Array<{ category: string; label: string; note: string }>;
   discResponses: DiscResponse[];
   discAllowMultiSelect: boolean;
 };
