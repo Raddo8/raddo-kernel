@@ -494,7 +494,7 @@ export default function Dossier() {
             asChild
             className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper px-8 py-6 text-base"
           >
-            <a href="/consult">Request your COB</a>
+            <a href="/debrief">Request more information about COB</a>
           </Button>
           <BrassHairline className="mt-20 w-full max-w-md" />
           <p className="dossier-no-print mt-6 font-mono text-xs uppercase tracking-[0.22em] text-raddo-ash">
