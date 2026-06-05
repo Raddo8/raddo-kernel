@@ -12,6 +12,7 @@ export type DebriefReviewSummary = {
   aspirationCount: number;
   toolsCount: number;
   decisionRowsAnswered: number;
+  bucketNotesCount?: number;
 };
 
 export function ConfirmDebriefDialog({
