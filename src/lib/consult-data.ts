@@ -24,13 +24,15 @@ export type ThemeId =
 export type Category =
   | "money"
   | "market_position"
+  | "strategy"
   | "operations"
   | "systems"
-  | "people"
-  | "you"
   | "customers"
+  | "people"
   | "culture"
-  | "risk";
+  | "risk"
+  | "ai"
+  | "you";
 
 export type DiscStyle = "D" | "I" | "S" | "C";
 
@@ -72,29 +74,33 @@ export type DiscRow = {
   options: DiscOption[];
 };
 
-// Bucket display order (Step 5): MONEY · MARKET POSITION · OPERATIONS ·
-// SYSTEMS · CUSTOMERS · PEOPLE · CULTURE · RISK · YOU
+// Bucket display order: MONEY · MARKET POSITION · STRATEGY · OPERATIONS ·
+// SYSTEMS · CUSTOMERS · PEOPLE · CULTURE · RISK · AI · YOU
 export const CATEGORY_ORDER: Category[] = [
   "money",
   "market_position",
+  "strategy",
   "operations",
   "systems",
   "customers",
   "people",
   "culture",
   "risk",
+  "ai",
   "you",
 ];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   money: "MONEY",
   market_position: "MARKET POSITION",
+  strategy: "STRATEGY · DIRECTION",
   operations: "OPERATIONS",
   systems: "SYSTEMS",
   customers: "CUSTOMERS",
   people: "PEOPLE",
   culture: "CULTURE",
   risk: "RISK",
+  ai: "AI",
   you: "YOU",
 };
 
