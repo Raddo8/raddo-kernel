@@ -324,29 +324,135 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
   return minute;
 }
 
+// ── Single-agent runner ────────────────────────────────────────────────────
+type SingleMinute = {
+  agent: string;
+  assessment: string;
+  recommendation: string;
+  risk_flags: string[];
+  severity: "low" | "medium" | "high" | "critical";
+  confidence: { epistemic: number; rigor: number };
+  escalation: string;
+  signature: string;
+};
+
+function singleAgentUserPrompt(
+  question: string,
+  context: string,
+  reinforce: boolean,
+): string {
+  const ctxBlock = context && context.trim()
+    ? `\n\n## Context provided by the principal\n${context.trim()}`
+    : "";
+  const reinforceBlock = reinforce
+    ? `\n\nREINFORCED REMINDER: Do not name internal mechanics, source files, or peer products. Speak only as the named agent. Emit ONLY the JSON object specified.`
+    : "";
+  return `## Question from the principal\n${question.trim()}${ctxBlock}\n\n## Your task\nProduce your minute as the named agent. Emit ONLY a single valid JSON object per the output spec.${reinforceBlock}`;
+}
+
+const SEVERITY_VALUES = new Set(["low", "medium", "high", "critical"]);
+
+function validateSingleMinute(m: any, agentName: string): SingleMinute {
+  if (!m || typeof m !== "object") throw new Error("minute_shape");
+  const flags = Array.isArray(m.risk_flags)
+    ? m.risk_flags.filter((x: any) => typeof x === "string")
+    : null;
+  const conf = m.confidence && typeof m.confidence === "object" ? m.confidence : {};
+  const epistemic = Number(conf.epistemic);
+  const rigor = Number(conf.rigor);
+  const severity = typeof m.severity === "string" ? m.severity.toLowerCase() : "";
+  if (
+    typeof m.assessment !== "string" || !m.assessment.trim() ||
+    typeof m.recommendation !== "string" || !m.recommendation.trim() ||
+    !flags ||
+    !SEVERITY_VALUES.has(severity) ||
+    typeof m.escalation !== "string" || !m.escalation.trim() ||
+    !Number.isFinite(epistemic) || !Number.isFinite(rigor)
+  ) {
+    throw new Error("minute_shape");
+  }
+  return {
+    agent: agentName,
+    assessment: m.assessment,
+    recommendation: m.recommendation,
+    risk_flags: flags,
+    severity: severity as SingleMinute["severity"],
+    confidence: {
+      epistemic: Math.max(0, Math.min(1, epistemic)),
+      rigor: Math.max(0, Math.min(1, rigor)),
+    },
+    escalation: m.escalation,
+    signature: `— ${agentName}`,
+  };
+}
+
+async function runSingleAgent(
+  bundle: Extract<AgentBundle, { kind: "single" }>,
+  question: string,
+  context: string,
+): Promise<SingleMinute> {
+  const ask = async (reinforce: boolean) => {
+    const raw = await callAnthropic({
+      model: MODEL_SYNTHESIS,
+      system: bundle.system,
+      user: singleAgentUserPrompt(question, context, reinforce),
+      maxTokens: MAX_TOKENS_SYNTH,
+    });
+    return validateSingleMinute(extractJson(raw), bundle.name);
+  };
+
+  let minute = await ask(false);
+  if (hasBoundaryViolation(JSON.stringify(minute))) {
+    const second = await ask(true);
+    if (hasBoundaryViolation(JSON.stringify(second))) {
+      throw new Error("boundary_violation");
+    }
+    minute = second;
+  }
+  return minute;
+}
+
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "cob-council", version: "0.1.0" };
+const SERVER_INFO = { name: "cob-council", version: "0.2.0" };
 
-const TOOL_DESCRIPTOR = {
+const TOOL_RUN_COUNCIL = {
   name: "cob_run_council",
   description:
     "Convene the COB Council on a business question. Returns a structured minute with a recommendation, attributed dissent, an anticipatory horizon, and two confidence axes (epistemic, rigor).",
   inputSchema: {
     type: "object",
     properties: {
-      question: {
-        type: "string",
-        description: "The principal's question. Decision-shaped if possible.",
-      },
-      context: {
-        type: "string",
-        description: "Optional context the principal wants the council to weigh.",
-      },
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
     },
     required: ["question"],
   },
 };
+
+const TOOL_LIST_AGENTS = {
+  name: "cob_list_my_agents",
+  description:
+    "List the COB agents currently available to the principal. Returns each agent's id, display name, and lens.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_ASK_AGENT = {
+  name: "cob_ask_agent",
+  description:
+    "Ask a single named COB agent (other than the council) a question. Returns a structured single-agent minute. Use cob_run_council for multi-chair deliberation.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      agent_id: { type: "string", description: "The agent id from cob_list_my_agents (e.g. 'knox')." },
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the agent should weigh." },
+    },
+    required: ["agent_id", "question"],
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
