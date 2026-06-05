@@ -25,13 +25,11 @@ import {
   buildWarmStartPayload,
   type WarmStartPayload,
 } from "@/lib/consult-warm-start";
-import { ConfirmMeetDialog } from "@/components/consult/ConfirmMeetDialog";
-import { MeetYourCobLaunch } from "@/components/consult/MeetYourCobLaunch";
-import DossierIntake, {
+import { ConfirmDebriefDialog } from "@/components/consult/ConfirmDebriefDialog";
+import {
   GATE_HANDOFF_KEY,
   type GateHandoff,
 } from "@/components/hero/DossierIntake";
-import type { LeadInfo } from "@/components/hero/use-cob-chat";
 
 type ToastState =
   | { kind: "idle"; message: string }
@@ -406,7 +404,7 @@ function OptionButton({
   );
 }
 
-export function ConsultForm() {
+export function DebriefForm() {
   const navigate = useNavigate();
   const [currentBuckets] = useState(() => groupAndShuffle(CURRENT_STATE_WORDS as CurrentWord[]));
   const [aspirationBuckets] = useState(() => groupAndShuffle(ASPIRATION_WORDS as AspirationWord[]));
@@ -424,9 +422,6 @@ export function ConsultForm() {
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<ToastState>({ kind: "idle", message: "" });
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [launched, setLaunched] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [primed, setPrimed] = useState<{ info: LeadInfo; warm: WarmStartPayload } | null>(null);
 
   // Pre-fill Identity from the hero gate handoff.
   useEffect(() => {
