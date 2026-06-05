@@ -34,28 +34,14 @@ const corsHeaders = {
 };
 
 
-// ── Boot-time doctrine load ────────────────────────────────────────────────
-async function loadDoc(name: string): Promise<string> {
-  return await Deno.readTextFile(new URL(`./council/${name}`, import.meta.url));
-}
-
-const [
-  LEO_MD,
-  SPOCK_MD,
-  ALFRED_MD,
-  IROH_MD,
-  LUCIUS_MD,
-  LEAD_SYNTH_MD,
-  APPROACH_PRINCIPLES_MD,
-] = await Promise.all([
-  loadDoc("leo.md"),
-  loadDoc("spock.md"),
-  loadDoc("alfred.md"),
-  loadDoc("iroh.md"),
-  loadDoc("lucius.md"),
-  loadDoc("lead-synthesis.md"),
-  loadDoc("approach-principles.md"),
-]);
+// ── Boot-time doctrine load (bundled · server-only) ───────────────────────
+import LEO_MD from "./council/leo.ts";
+import SPOCK_MD from "./council/spock.ts";
+import ALFRED_MD from "./council/alfred.ts";
+import IROH_MD from "./council/iroh.ts";
+import LUCIUS_MD from "./council/lucius.ts";
+import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
+import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
@@ -64,6 +50,7 @@ const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Iroh", system: IROH_MD },
   { name: "Lucius", system: LUCIUS_MD },
 ];
+
 
 // ── Anthropic ──────────────────────────────────────────────────────────────
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
