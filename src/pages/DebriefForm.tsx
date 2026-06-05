@@ -570,6 +570,7 @@ export function DebriefForm() {
           aspirationCount: aspirationSelections.length,
           toolsCount,
           decisionRowsAnswered,
+          bucketNotesCount: Object.values(bucketNotes).filter((v) => v.trim().length > 0).length,
         }}
         onConfirm={() => void handleConfirmedSubmit()}
         onCancel={() => {
