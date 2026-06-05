@@ -42,6 +42,13 @@ import IROH_MD from "./council/iroh.ts";
 import LUCIUS_MD from "./council/lucius.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
+import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
+import KNOX_MD from "./agents/knox.ts";
+import {
+  AGENT_MANIFEST,
+  findEnabledAgent,
+  listEnabledAgentsPublic,
+} from "./agents/manifest.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
@@ -50,6 +57,33 @@ const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Iroh", system: IROH_MD },
   { name: "Lucius", system: LUCIUS_MD },
 ];
+
+// ── Generic agent loader ──────────────────────────────────────────────────
+// council → multi-chair bundle (handled by runCouncil).
+// single  → single system prompt: global preamble + agent body.
+type AgentBundle =
+  | { kind: "council"; chairs: typeof CHAIRS; leadSynthesis: string }
+  | { kind: "single"; id: string; name: string; system: string };
+
+function loadAgent(id: string): AgentBundle | null {
+  const entry = findEnabledAgent(id);
+  if (!entry) return null;
+  if (entry.kind === "council") {
+    return { kind: "council", chairs: CHAIRS, leadSynthesis: LEAD_SYNTH_MD };
+  }
+  // Single-agent registry. Keep server-side · never echo body to clients.
+  const SINGLE_BODIES: Record<string, string> = {
+    knox: KNOX_MD,
+  };
+  const body = SINGLE_BODIES[entry.id];
+  if (!body) return null;
+  return {
+    kind: "single",
+    id: entry.id,
+    name: entry.name,
+    system: `${GLOBAL_PREAMBLE_MD}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+  };
+}
 
 
 // ── Anthropic ──────────────────────────────────────────────────────────────
