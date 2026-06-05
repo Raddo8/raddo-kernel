@@ -576,53 +576,84 @@ Deno.serve(async (req) => {
     }
 
     if (method === "tools/list") {
-      return rpcResult(id, { tools: [TOOL_DESCRIPTOR] });
+      return rpcResult(id, { tools: TOOLS });
     }
 
     if (method === "tools/call") {
       const params = body?.params ?? {};
       const name = params?.name;
       const args = params?.arguments ?? {};
-      if (name !== "cob_run_council") {
-        return rpcError(id, -32601, "unknown_tool");
-      }
-      const question = typeof args?.question === "string" ? args.question.trim() : "";
-      const context = typeof args?.context === "string" ? args.context : "";
-      if (!question) {
-        return rpcError(id, -32602, "invalid_params");
-      }
-      if (question.length > 4000 || context.length > 8000) {
-        return rpcError(id, -32602, "invalid_params");
-      }
 
-      try {
-        const minute = await runCouncil(question, context);
-        return rpcResult(id, {
-          content: [
-            { type: "text", text: JSON.stringify(minute) },
-          ],
-          structuredContent: minute,
-          isError: false,
-        });
-      } catch (e) {
-        const msg = (e instanceof Error ? e.message : "internal_error");
-        // Whitelist of safe error codes · everything else collapses to generic.
-        const safe = new Set([
-          "boundary_violation",
-          "minute_shape",
-          "minute_unparseable",
-          "upstream_failed",
-          "upstream_unavailable",
-          "upstream_empty",
-        ]);
-        const code = safe.has(msg) ? msg : "internal_error";
-        // Boundary violation gets its own RPC code per spec.
+      const safeErrors = new Set([
+        "boundary_violation",
+        "minute_shape",
+        "minute_unparseable",
+        "upstream_failed",
+        "upstream_unavailable",
+        "upstream_empty",
+      ]);
+      const toRpc = (e: unknown) => {
+        const msg = e instanceof Error ? e.message : "internal_error";
+        const code = safeErrors.has(msg) ? msg : "internal_error";
         if (code === "boundary_violation") {
           return rpcError(id, -32000, "boundary_violation");
         }
         return rpcError(id, -32003, code);
+      };
+
+      if (name === "cob_list_my_agents") {
+        return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
+
+      if (name === "cob_run_council") {
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        try {
+          const minute = await runCouncil(question, context);
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(minute) }],
+            structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      if (name === "cob_ask_agent") {
+        const agentId = typeof args?.agent_id === "string" ? args.agent_id.trim().toLowerCase() : "";
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!agentId || !question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        if (agentId === "council") {
+          return rpcError(id, -32005, "use_council_tool");
+        }
+        const bundle = loadAgent(agentId);
+        if (!bundle || bundle.kind !== "single") {
+          return rpcError(id, -32004, "agent_not_available");
+        }
+        try {
+          const minute = await runSingleAgent(bundle, question, context);
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(minute) }],
+            structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      return rpcError(id, -32601, "unknown_tool");
     }
+
 
     return rpcError(id, -32601, "method_not_found");
   } catch (_e) {
