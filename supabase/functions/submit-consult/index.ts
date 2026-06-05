@@ -469,6 +469,17 @@ function buildPipelineHtml(opts: {
           </table>` : (payload.otherAppsText ? `<br/>Other apps: ${esc(payload.otherAppsText)}` : "")}
       </div>
 
+      ${Array.isArray(payload.bucketNotes) && payload.bucketNotes.length ? `
+        <div style="font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:700;color:#0C447C;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">In their words &middot; per area</div>
+        <table cellpadding="0" cellspacing="0" border="0" style="font-family:Inter,Arial,sans-serif;font-size:13px;color:#2C2C2A;line-height:1.6;margin:0 0 24px;width:100%;">
+          ${payload.bucketNotes.map((b) => `
+            <tr>
+              <td style="padding:4px 12px 4px 0;color:#5F5E5A;vertical-align:top;white-space:nowrap;width:160px;">${esc(b.label)}</td>
+              <td style="padding:4px 0;white-space:pre-wrap;">${esc(b.note)}</td>
+            </tr>
+          `).join("")}
+        </table>` : ""}
+
       ${computedReadBlock}
 
       <div style="font-family:'Fraunces',Georgia,serif;font-size:14px;font-weight:700;color:#0C447C;margin:0 0 10px;border-bottom:1px solid #E5E3DE;padding-bottom:6px;">Delivery</div>
