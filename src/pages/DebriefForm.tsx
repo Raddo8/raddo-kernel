@@ -590,7 +590,7 @@ export function DebriefForm() {
         <Panel className="px-6 py-10 md:px-10 md:py-14">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
-              <Overline>CONSULT · 001 · CLASSIFIED · FOR PRINCIPAL</Overline>
+              <Overline>DEBRIEF · 001 · INFORMATION REQUEST</Overline>
               <h1
                 className="mt-4 font-display"
                 style={{
@@ -600,13 +600,13 @@ export function DebriefForm() {
                   fontWeight: 800,
                 }}
               >
-                5 minutes for a quick sync with your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
+                5 minutes to request more information about your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
               </h1>
               <p
                 className="mt-5 max-w-2xl"
                 style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
               >
-                Four short sections · where you are today, where you want to be, the systems you already run, and how you like to work. Skip anything that doesn't apply.
+                Tell us where you are today, where you want to be, the systems you already run, and how you like to work. We use it to prepare a tailored follow-up · no chat, no demo wall. Skip anything that doesn't apply.
               </p>
             </div>
             <Link
@@ -625,12 +625,7 @@ export function DebriefForm() {
         </Panel>
       </header>
 
-      {launched ? (
-        <MeetYourCobLaunch
-          firstName={firstName}
-          onLaunch={() => setChatOpen(true)}
-        />
-      ) : null}
+
 
 
       <form
@@ -645,7 +640,7 @@ export function DebriefForm() {
               className="mt-5"
               style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
-              Answer what's useful, skip the rest. Submit when you're ready. COB (pre-install) is waiting.
+              Answer what's useful, skip the rest. Submit when you're ready · we will follow up directly with information tailored to what you shared.
             </p>
 
             {toast.kind === "error" ? (
@@ -667,7 +662,7 @@ export function DebriefForm() {
 
             <button
               type="submit"
-              disabled={submitting || launched}
+              disabled={submitting}
               className="mt-6 w-full font-mono transition-colors"
               style={{
                 backgroundColor: "hsl(var(--raddo-brass))",
@@ -678,12 +673,12 @@ export function DebriefForm() {
                 letterSpacing: "0.18em",
                 textTransform: "uppercase",
                 fontWeight: 600,
-                opacity: submitting || launched ? 0.6 : 1,
-                cursor: submitting || launched ? "not-allowed" : "pointer",
+                opacity: submitting ? 0.6 : 1,
+                cursor: submitting ? "not-allowed" : "pointer",
                 boxShadow: "0 4px 12px -6px hsl(var(--raddo-brass-deep) / 0.4)",
               }}
             >
-              {launched ? "Submitted" : submitting ? "Submitting…" : "Submit consult"}
+              {submitting ? "Submitting…" : "Request information"}
             </button>
           </Panel>
         </aside>
