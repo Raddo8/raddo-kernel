@@ -21,10 +21,6 @@ import { ToolLogo } from "@/components/consult/ToolLogo";
 
 import type { DiscResponse } from "@/lib/consult-analysis";
 
-import {
-  buildWarmStartPayload,
-  type WarmStartPayload,
-} from "@/lib/consult-warm-start";
 import { ConfirmDebriefDialog } from "@/components/consult/ConfirmDebriefDialog";
 import {
   GATE_HANDOFF_KEY,
