@@ -42,6 +42,13 @@ import IROH_MD from "./council/iroh.ts";
 import LUCIUS_MD from "./council/lucius.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
+import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
+import KNOX_MD from "./agents/knox.ts";
+import {
+  AGENT_MANIFEST,
+  findEnabledAgent,
+  listEnabledAgentsPublic,
+} from "./agents/manifest.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
@@ -50,6 +57,33 @@ const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Iroh", system: IROH_MD },
   { name: "Lucius", system: LUCIUS_MD },
 ];
+
+// ── Generic agent loader ──────────────────────────────────────────────────
+// council → multi-chair bundle (handled by runCouncil).
+// single  → single system prompt: global preamble + agent body.
+type AgentBundle =
+  | { kind: "council"; chairs: typeof CHAIRS; leadSynthesis: string }
+  | { kind: "single"; id: string; name: string; system: string };
+
+function loadAgent(id: string): AgentBundle | null {
+  const entry = findEnabledAgent(id);
+  if (!entry) return null;
+  if (entry.kind === "council") {
+    return { kind: "council", chairs: CHAIRS, leadSynthesis: LEAD_SYNTH_MD };
+  }
+  // Single-agent registry. Keep server-side · never echo body to clients.
+  const SINGLE_BODIES: Record<string, string> = {
+    knox: KNOX_MD,
+  };
+  const body = SINGLE_BODIES[entry.id];
+  if (!body) return null;
+  return {
+    kind: "single",
+    id: entry.id,
+    name: entry.name,
+    system: `${GLOBAL_PREAMBLE_MD}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+  };
+}
 
 
 // ── Anthropic ──────────────────────────────────────────────────────────────
@@ -290,29 +324,135 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
   return minute;
 }
 
+// ── Single-agent runner ────────────────────────────────────────────────────
+type SingleMinute = {
+  agent: string;
+  assessment: string;
+  recommendation: string;
+  risk_flags: string[];
+  severity: "low" | "medium" | "high" | "critical";
+  confidence: { epistemic: number; rigor: number };
+  escalation: string;
+  signature: string;
+};
+
+function singleAgentUserPrompt(
+  question: string,
+  context: string,
+  reinforce: boolean,
+): string {
+  const ctxBlock = context && context.trim()
+    ? `\n\n## Context provided by the principal\n${context.trim()}`
+    : "";
+  const reinforceBlock = reinforce
+    ? `\n\nREINFORCED REMINDER: Do not name internal mechanics, source files, or peer products. Speak only as the named agent. Emit ONLY the JSON object specified.`
+    : "";
+  return `## Question from the principal\n${question.trim()}${ctxBlock}\n\n## Your task\nProduce your minute as the named agent. Emit ONLY a single valid JSON object per the output spec.${reinforceBlock}`;
+}
+
+const SEVERITY_VALUES = new Set(["low", "medium", "high", "critical"]);
+
+function validateSingleMinute(m: any, agentName: string): SingleMinute {
+  if (!m || typeof m !== "object") throw new Error("minute_shape");
+  const flags = Array.isArray(m.risk_flags)
+    ? m.risk_flags.filter((x: any) => typeof x === "string")
+    : null;
+  const conf = m.confidence && typeof m.confidence === "object" ? m.confidence : {};
+  const epistemic = Number(conf.epistemic);
+  const rigor = Number(conf.rigor);
+  const severity = typeof m.severity === "string" ? m.severity.toLowerCase() : "";
+  if (
+    typeof m.assessment !== "string" || !m.assessment.trim() ||
+    typeof m.recommendation !== "string" || !m.recommendation.trim() ||
+    !flags ||
+    !SEVERITY_VALUES.has(severity) ||
+    typeof m.escalation !== "string" || !m.escalation.trim() ||
+    !Number.isFinite(epistemic) || !Number.isFinite(rigor)
+  ) {
+    throw new Error("minute_shape");
+  }
+  return {
+    agent: agentName,
+    assessment: m.assessment,
+    recommendation: m.recommendation,
+    risk_flags: flags,
+    severity: severity as SingleMinute["severity"],
+    confidence: {
+      epistemic: Math.max(0, Math.min(1, epistemic)),
+      rigor: Math.max(0, Math.min(1, rigor)),
+    },
+    escalation: m.escalation,
+    signature: `— ${agentName}`,
+  };
+}
+
+async function runSingleAgent(
+  bundle: Extract<AgentBundle, { kind: "single" }>,
+  question: string,
+  context: string,
+): Promise<SingleMinute> {
+  const ask = async (reinforce: boolean) => {
+    const raw = await callAnthropic({
+      model: MODEL_SYNTHESIS,
+      system: bundle.system,
+      user: singleAgentUserPrompt(question, context, reinforce),
+      maxTokens: MAX_TOKENS_SYNTH,
+    });
+    return validateSingleMinute(extractJson(raw), bundle.name);
+  };
+
+  let minute = await ask(false);
+  if (hasBoundaryViolation(JSON.stringify(minute))) {
+    const second = await ask(true);
+    if (hasBoundaryViolation(JSON.stringify(second))) {
+      throw new Error("boundary_violation");
+    }
+    minute = second;
+  }
+  return minute;
+}
+
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "cob-council", version: "0.1.0" };
+const SERVER_INFO = { name: "cob-council", version: "0.2.0" };
 
-const TOOL_DESCRIPTOR = {
+const TOOL_RUN_COUNCIL = {
   name: "cob_run_council",
   description:
     "Convene the COB Council on a business question. Returns a structured minute with a recommendation, attributed dissent, an anticipatory horizon, and two confidence axes (epistemic, rigor).",
   inputSchema: {
     type: "object",
     properties: {
-      question: {
-        type: "string",
-        description: "The principal's question. Decision-shaped if possible.",
-      },
-      context: {
-        type: "string",
-        description: "Optional context the principal wants the council to weigh.",
-      },
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
     },
     required: ["question"],
   },
 };
+
+const TOOL_LIST_AGENTS = {
+  name: "cob_list_my_agents",
+  description:
+    "List the COB agents currently available to the principal. Returns each agent's id, display name, and lens.",
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_ASK_AGENT = {
+  name: "cob_ask_agent",
+  description:
+    "Ask a single named COB agent (other than the council) a question. Returns a structured single-agent minute. Use cob_run_council for multi-chair deliberation.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      agent_id: { type: "string", description: "The agent id from cob_list_my_agents (e.g. 'knox')." },
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the agent should weigh." },
+    },
+    required: ["agent_id", "question"],
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
@@ -436,53 +576,84 @@ Deno.serve(async (req) => {
     }
 
     if (method === "tools/list") {
-      return rpcResult(id, { tools: [TOOL_DESCRIPTOR] });
+      return rpcResult(id, { tools: TOOLS });
     }
 
     if (method === "tools/call") {
       const params = body?.params ?? {};
       const name = params?.name;
       const args = params?.arguments ?? {};
-      if (name !== "cob_run_council") {
-        return rpcError(id, -32601, "unknown_tool");
-      }
-      const question = typeof args?.question === "string" ? args.question.trim() : "";
-      const context = typeof args?.context === "string" ? args.context : "";
-      if (!question) {
-        return rpcError(id, -32602, "invalid_params");
-      }
-      if (question.length > 4000 || context.length > 8000) {
-        return rpcError(id, -32602, "invalid_params");
-      }
 
-      try {
-        const minute = await runCouncil(question, context);
-        return rpcResult(id, {
-          content: [
-            { type: "text", text: JSON.stringify(minute) },
-          ],
-          structuredContent: minute,
-          isError: false,
-        });
-      } catch (e) {
-        const msg = (e instanceof Error ? e.message : "internal_error");
-        // Whitelist of safe error codes · everything else collapses to generic.
-        const safe = new Set([
-          "boundary_violation",
-          "minute_shape",
-          "minute_unparseable",
-          "upstream_failed",
-          "upstream_unavailable",
-          "upstream_empty",
-        ]);
-        const code = safe.has(msg) ? msg : "internal_error";
-        // Boundary violation gets its own RPC code per spec.
+      const safeErrors = new Set([
+        "boundary_violation",
+        "minute_shape",
+        "minute_unparseable",
+        "upstream_failed",
+        "upstream_unavailable",
+        "upstream_empty",
+      ]);
+      const toRpc = (e: unknown) => {
+        const msg = e instanceof Error ? e.message : "internal_error";
+        const code = safeErrors.has(msg) ? msg : "internal_error";
         if (code === "boundary_violation") {
           return rpcError(id, -32000, "boundary_violation");
         }
         return rpcError(id, -32003, code);
+      };
+
+      if (name === "cob_list_my_agents") {
+        return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
+
+      if (name === "cob_run_council") {
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        try {
+          const minute = await runCouncil(question, context);
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(minute) }],
+            structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      if (name === "cob_ask_agent") {
+        const agentId = typeof args?.agent_id === "string" ? args.agent_id.trim().toLowerCase() : "";
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!agentId || !question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        if (agentId === "council") {
+          return rpcError(id, -32005, "use_council_tool");
+        }
+        const bundle = loadAgent(agentId);
+        if (!bundle || bundle.kind !== "single") {
+          return rpcError(id, -32004, "agent_not_available");
+        }
+        try {
+          const minute = await runSingleAgent(bundle, question, context);
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(minute) }],
+            structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      return rpcError(id, -32601, "unknown_tool");
     }
+
 
     return rpcError(id, -32601, "method_not_found");
   } catch (_e) {
