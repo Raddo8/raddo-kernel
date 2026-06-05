@@ -12,6 +12,7 @@ export type DebriefReviewSummary = {
   aspirationCount: number;
   toolsCount: number;
   decisionRowsAnswered: number;
+  bucketNotesCount?: number;
 };
 
 export function ConfirmDebriefDialog({
@@ -37,6 +38,7 @@ export function ConfirmDebriefDialog({
     { label: "Aspiration words", value: String(summary.aspirationCount) },
     { label: "Tools selected", value: String(summary.toolsCount) },
     { label: "Decision rows answered", value: String(summary.decisionRowsAnswered) },
+    { label: "Buckets with notes", value: `${summary.bucketNotesCount ?? 0} of 11` },
   ];
 
   return (

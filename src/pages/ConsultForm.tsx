@@ -419,6 +419,9 @@ export function ConsultForm() {
   const [challenge, setChallenge] = useState("");
   const [currentStateSelections, setCurrentStateSelections] = useState<string[]>([]);
   const [aspirationSelections, setAspirationSelections] = useState<string[]>([]);
+  const [bucketNotes, setBucketNotes] = useState<Record<Category, string>>(
+    () => Object.fromEntries(CATEGORY_ORDER.map((c) => [c, ""])) as Record<Category, string>,
+  );
   const [toolsSelected, setToolsSelected] = useState<ToolsSelectedState>({});
   const [discResponses, setDiscResponses] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -522,6 +525,10 @@ export function ConsultForm() {
       challenge: challenge.trim() || undefined,
     });
 
+    const bucketNotesArray = CATEGORY_ORDER
+      .map((c) => ({ category: c, label: CATEGORY_LABELS[c], note: bucketNotes[c].trim() }))
+      .filter((row) => row.note.length > 0);
+
     const { data, error } = await supabase.functions.invoke("submit-consult", {
       body: {
         email,
@@ -535,6 +542,7 @@ export function ConsultForm() {
         otherAppsText,
         toolsSelected,
         toolsByCategory,
+        bucketNotes: bucketNotesArray,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
         mode: "launch_to_chat",
@@ -862,6 +870,42 @@ export function ConsultForm() {
                         }
                       />
                     ))}
+                  </div>
+                  <div className="mt-3">
+                    <label className="block">
+                      <span
+                        className="font-mono"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: "0.16em",
+                          textTransform: "uppercase",
+                          color: "hsl(var(--raddo-ash))",
+                        }}
+                      >
+                        In your words · {bucket.label}
+                      </span>
+                      <textarea
+                        value={bucketNotes[bucket.category] ?? ""}
+                        onChange={(event) =>
+                          setBucketNotes((curr) => ({
+                            ...curr,
+                            [bucket.category]: event.target.value,
+                          }))
+                        }
+                        rows={2}
+                        maxLength={400}
+                        className="mt-1 w-full text-sm outline-none transition-colors"
+                        style={{
+                          border: "1px solid hsl(var(--raddo-paper-edge))",
+                          backgroundColor: "white",
+                          color: "hsl(var(--raddo-charcoal))",
+                          borderRadius: 8,
+                          padding: "10px 12px",
+                          resize: "vertical",
+                        }}
+                        placeholder="Anything in this area you want us to know…"
+                      />
+                    </label>
                   </div>
                 </div>
               ))}

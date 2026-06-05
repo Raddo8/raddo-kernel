@@ -121,12 +121,14 @@ export function computeFocusSignal(
 const BUCKET_KEYWORDS: Record<Category, string[]> = {
   money: ["money", "cash", "finance", "revenue", "mrr", "arr", "p&l", "a/r", "ar ", "invoice", "payment", "payroll", "cost", "spend", "budget", "burn", "runway", "cac", "ltv", "churn", "billing", "expense"],
   market_position: ["market", "brand", "competitor", "positioning", "differentiation", "messaging", "category"],
+  strategy: ["strategy", "direction", "plan", "roadmap", "north star", "priorities", "bets", "vision"],
   operations: ["operation", "workflow", "process", "delivery", "throughput", "ops ", "fulfillment", "execution"],
   systems: ["system", "integration", "automation", "infrastructure", "tool", "stack", "access", "data source", "audit", "permission"],
   customers: ["customer", "client", "ticket", "csat", "support", "account", "churn", "renewal", "onboarding"],
   people: ["people", "team", "employee", "headcount", "talent", "hiring", "hr ", "payroll", "comp", "contractor"],
   culture: ["culture", "engagement", "morale", "values", "review"],
   risk: ["risk", "compliance", "audit", "security", "legal", "liability", "deprovision"],
+  ai: ["ai", "llm", "model", "automation", "copilot", "agent"],
   you: ["focus", "attention", "calendar", "meeting", "inbox", "brief", "priority", "1:1", "agenda"],
 };
 
