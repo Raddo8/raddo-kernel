@@ -455,9 +455,22 @@ export function DebriefForm() {
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || launched) return;
+    if (submitting) return;
     setConfirmOpen(true);
   }
+
+  const decisionRowsAnswered = useMemo(
+    () => Object.values(discResponses).filter((s) => s.length > 0).length,
+    [discResponses],
+  );
+
+  const toolsCount = useMemo(() => {
+    let n = 0;
+    for (const sel of Object.values(toolsSelected)) {
+      n += sel.slugs.length + sel.custom.length;
+    }
+    return n;
+  }, [toolsSelected]);
 
   async function handleConfirmedSubmit() {
     setSubmitting(true);
@@ -491,32 +504,6 @@ export function DebriefForm() {
     }
     const otherAppsText = customStrings.join(" · ");
 
-    const selectedSlugs: string[] = [];
-    for (const category of TOOL_CATEGORIES) {
-      const sel = toolsSelected[category.id];
-      if (!sel) continue;
-      for (const slug of sel.slugs) selectedSlugs.push(slug);
-    }
-
-    const warm = buildWarmStartPayload({
-      payload: {
-        email,
-        name,
-        currentStateWordIds: currentStateSelections,
-        aspirationWordIds: aspirationSelections,
-        appSelections,
-        otherAppsText,
-        discResponses: normalizedDiscResponses,
-        discAllowMultiSelect: true,
-      },
-      phone,
-      occupation,
-      appLabels,
-      toolsByCategory,
-      selectedSlugs,
-      challenge: challenge.trim() || undefined,
-    });
-
     const { data, error } = await supabase.functions.invoke("submit-consult", {
       body: {
         email,
@@ -532,8 +519,8 @@ export function DebriefForm() {
         toolsByCategory,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
-        mode: "launch_to_chat",
-        warmStart: warm,
+        mode: "request_info",
+        source: "debrief",
       },
     });
 
@@ -551,59 +538,41 @@ export function DebriefForm() {
     }
 
     if (typeof window !== "undefined") {
-      window.plausible?.("consult_submission");
+      window.plausible?.("debrief_submission");
     }
 
     setSubmitting(false);
     setConfirmOpen(false);
-    setLaunched(true);
-    const researchBrief = (data as { researchBrief?: WarmStartPayload["researchBrief"] } | null)?.researchBrief;
-    const warmWithBrief: WarmStartPayload = researchBrief ? { ...warm, researchBrief } : warm;
-    setPrimed({
-      info: {
-        name,
-        email,
-        company: researchBrief?.company ?? "",
-        title: occupation,
-        challenge: challenge.trim(),
-      },
-      warm: warmWithBrief,
-    });
-  }
-
-  const firstName = useMemo(() => name.trim().split(/\s+/)[0] || undefined, [name]);
-
-  // Once the user clicks "Meet your COB", swap the page to the chat surface.
-  if (chatOpen && primed) {
-    return (
-      <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
-        <SeoHead
-          path="/consult"
-          title="Your COB · chiefofbusiness.ai"
-          description="Your COB is open and primed by your consult."
-        />
-        <div className="mx-auto max-w-7xl px-6 py-10 md:px-10">
-          <DossierIntake primedLead={primed} />
-        </div>
-      </main>
-    );
+    navigate("/debrief/thank-you");
   }
 
   return (
     <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
       <SeoHead
-        path="/consult"
-        title="Begin your consult · COB"
-        description="A 5-minute consult to surface where your COB will start. Words for your current state, your aspiration, the systems you run, and how you decide."
+        path="/debrief"
+        title="Request more information · COB"
+        description="A short debrief so we can prepare a tailored follow-up · where you are today, where you want to be, the systems you run, and how you decide."
       />
-      <ConfirmMeetDialog
+      <ConfirmDebriefDialog
         open={confirmOpen}
         submitting={submitting}
+        summary={{
+          name,
+          email,
+          phone,
+          occupation,
+          challenge: challenge.trim(),
+          currentStateCount: currentStateSelections.length,
+          aspirationCount: aspirationSelections.length,
+          toolsCount,
+          decisionRowsAnswered,
+        }}
         onConfirm={() => void handleConfirmedSubmit()}
         onCancel={() => {
           if (!submitting) setConfirmOpen(false);
         }}
       />
+
 
       {/* Hairline paper grain · same texture as Hero */}
       <div
