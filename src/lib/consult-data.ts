@@ -133,93 +133,92 @@ const slug = (s: string) =>
 type CurrentSpec = { theme: ThemeId; sentiment: "positive" | "negative"; labels: string[] };
 type AspirationSpec = { theme: ThemeId; labels: string[] };
 
-// Each bucket holds equal counts of positive and negative current-state chips.
+// Each bucket holds 8 positive + 8 negative current-state chips, and 8 aspirations.
 const CURRENT_BY_CATEGORY: Record<Category, CurrentSpec[]> = {
   money: [
-    { theme: "cash", sentiment: "negative", labels: ["bleeding cash", "feast-or-famine", "undercharging", "margin-thin"] },
-    { theme: "cash", sentiment: "positive", labels: ["profitable", "healthy margins", "cash on hand"] },
-    { theme: "sales", sentiment: "positive", labels: ["steady demand"] },
+    { theme: "cash", sentiment: "negative", labels: ["bleeding cash", "feast-or-famine", "undercharging", "margin-thin", "AR piling up", "runway tight", "surprise expenses", "payroll stress"] },
+    { theme: "cash", sentiment: "positive", labels: ["profitable", "healthy margins", "cash on hand", "paying myself well", "pricing power", "AR collected fast", "debt-free", "steady demand"] },
   ],
   market_position: [
-    { theme: "marketing", sentiment: "negative", labels: ["invisible in the market", "undifferentiated", "wasted ad spend"] },
-    { theme: "marketing", sentiment: "positive", labels: ["known brand", "differentiated voice", "competitive moat"] },
+    { theme: "marketing", sentiment: "negative", labels: ["invisible in the market", "undifferentiated", "wasted ad spend", "weak brand", "no inbound", "losing to competitors", "copy-cat positioning", "price-shopped"] },
+    { theme: "marketing", sentiment: "positive", labels: ["known brand", "differentiated voice", "competitive moat", "inbound leads", "category leader", "premium-priced", "sought-after", "word-of-mouth growth"] },
   ],
   strategy: [
-    { theme: "strategy", sentiment: "negative", labels: ["no game plan", "stuck at a ceiling", "drifting", "reactive direction"] },
-    { theme: "strategy", sentiment: "positive", labels: ["clear positioning", "focused bets", "decisive direction", "plays to win"] },
+    { theme: "strategy", sentiment: "negative", labels: ["no game plan", "stuck at a ceiling", "drifting", "reactive direction", "chasing shiny objects", "conflicting priorities", "planning in my head", "decision paralysis"] },
+    { theme: "strategy", sentiment: "positive", labels: ["clear positioning", "focused bets", "decisive direction", "plays to win", "written plan", "aligned priorities", "north-star clear", "confident next move"] },
   ],
   operations: [
-    { theme: "delivery", sentiment: "negative", labels: ["dropping balls", "inconsistent", "rework", "deadlines slip", "no playbooks"] },
-    { theme: "delivery", sentiment: "positive", labels: ["reliable", "repeatable", "on time", "clean handoffs", "dependable output"] },
+    { theme: "delivery", sentiment: "negative", labels: ["dropping balls", "inconsistent", "rework", "deadlines slip", "no playbooks", "bottlenecks", "quality lapses", "heroics required"] },
+    { theme: "delivery", sentiment: "positive", labels: ["reliable", "repeatable", "on time", "clean handoffs", "dependable output", "documented playbooks", "smooth flow", "quality compounds"] },
   ],
   systems: [
-    { theme: "systems", sentiment: "negative", labels: ["duct-taped", "everything's manual", "scattered tools", "in my head"] },
-    { theme: "systems", sentiment: "positive", labels: ["documented", "stack works", "one source", "quietly scales"] },
+    { theme: "systems", sentiment: "negative", labels: ["duct-taped", "everything's manual", "scattered tools", "in my head", "data silos", "no dashboards", "broken integrations", "license sprawl"] },
+    { theme: "systems", sentiment: "positive", labels: ["documented", "stack works", "one source", "quietly scales", "dashboards live", "integrations clean", "automated routines", "lean stack"] },
   ],
   customers: [
-    { theme: "customers", sentiment: "negative", labels: ["losing customers", "high churn", "complaints piling up", "no referrals", "low NPS"] },
-    { theme: "customers", sentiment: "positive", labels: ["loyal customers", "repeat buyers", "strong retention", "word of mouth", "fan base"] },
+    { theme: "customers", sentiment: "negative", labels: ["losing customers", "high churn", "complaints piling up", "no referrals", "low NPS", "slow renewals", "support tickets stacking", "ghosted by accounts"] },
+    { theme: "customers", sentiment: "positive", labels: ["loyal customers", "repeat buyers", "strong retention", "word of mouth", "fan base", "fast renewals", "high NPS", "expanding accounts"] },
   ],
   people: [
-    { theme: "people", sentiment: "negative", labels: ["short-staffed", "doing it all myself", "can't delegate", "key-person risk", "wrong seats"] },
-    { theme: "people", sentiment: "positive", labels: ["strong team", "right seats", "deep bench", "leaders step up", "owns outcomes"] },
+    { theme: "people", sentiment: "negative", labels: ["short-staffed", "doing it all myself", "can't delegate", "key-person risk", "wrong seats", "hiring stalled", "turnover spike", "managers struggling"] },
+    { theme: "people", sentiment: "positive", labels: ["strong team", "right seats", "deep bench", "leaders step up", "owns outcomes", "hiring on plan", "low turnover", "managers coach well"] },
   ],
   culture: [
-    { theme: "culture", sentiment: "negative", labels: ["low trust", "gossip", "fear of speaking up", "burnout culture", "going through the motions"] },
-    { theme: "culture", sentiment: "positive", labels: ["candid culture", "team energy", "high trust", "everyone engaged", "magnet for talent"] },
+    { theme: "culture", sentiment: "negative", labels: ["low trust", "gossip", "fear of speaking up", "burnout culture", "going through the motions", "unclear values", "conflict avoided", "blame culture"] },
+    { theme: "culture", sentiment: "positive", labels: ["candid culture", "team energy", "high trust", "everyone engaged", "magnet for talent", "lived values", "healthy conflict", "ownership mindset"] },
   ],
   risk: [
-    { theme: "risk", sentiment: "negative", labels: ["legal exposure", "no contracts", "cyber-vulnerable", "no succession plan", "uninsured"] },
-    { theme: "risk", sentiment: "positive", labels: ["protected", "well-papered", "succession-ready", "cyber-secure", "audit-ready"] },
+    { theme: "risk", sentiment: "negative", labels: ["legal exposure", "no contracts", "cyber-vulnerable", "no succession plan", "uninsured", "compliance gaps", "single-vendor risk", "no backups"] },
+    { theme: "risk", sentiment: "positive", labels: ["protected", "well-papered", "succession-ready", "cyber-secure", "audit-ready", "compliance current", "vendor-diverse", "backups tested"] },
   ],
   ai: [
-    { theme: "ai", sentiment: "negative", labels: ["behind on AI", "AI tools collecting dust", "no AI strategy"] },
-    { theme: "ai", sentiment: "positive", labels: ["AI as edge now", "AI-augmented now", "AI moving the needle"] },
+    { theme: "ai", sentiment: "negative", labels: ["behind on AI", "AI tools collecting dust", "no AI strategy", "AI pilots stalled", "team afraid of AI", "AI rules unclear", "AI shadow use", "AI ROI unclear"] },
+    { theme: "ai", sentiment: "positive", labels: ["AI as edge now", "AI-augmented now", "AI moving the needle", "AI in daily workflow", "team fluent in AI", "AI policy clear", "AI vetted + governed", "AI saving real hours"] },
   ],
   you: [
-    { theme: "self", sentiment: "negative", labels: ["burned out", "running on fumes", "in over my head"] },
-    { theme: "capacity", sentiment: "negative", labels: ["maxed out", "firefighting"] },
-    { theme: "self", sentiment: "positive", labels: ["sharp", "clear-headed now"] },
+    { theme: "self", sentiment: "negative", labels: ["burned out", "running on fumes", "in over my head", "stressed at home", "can't sleep"] },
+    { theme: "capacity", sentiment: "negative", labels: ["maxed out", "firefighting", "no time to think"] },
+    { theme: "self", sentiment: "positive", labels: ["sharp", "clear-headed now", "present at home", "sleeping well", "energy back"] },
     { theme: "clarity", sentiment: "positive", labels: ["decisive", "in command now", "breathing room now"] },
   ],
 };
 
 const ASPIRATION_BY_CATEGORY: Record<Category, AspirationSpec[]> = {
   money: [
-    { theme: "cash", labels: ["predictable revenue", "margin-safe", "paying myself well", "cash cushion"] },
+    { theme: "cash", labels: ["predictable revenue", "margin-safe", "paying myself well aspiration", "cash cushion", "debt-free future"] },
     { theme: "sales", labels: ["full pipeline", "in demand", "pulling ahead"] },
   ],
   market_position: [
-    { theme: "marketing", labels: ["known for something", "differentiated", "market-leading"] },
+    { theme: "marketing", labels: ["known for something", "differentiated", "market-leading", "premium-priced future", "inbound machine", "category-defining", "sought-after future", "brand people trust"] },
   ],
   strategy: [
-    { theme: "strategy", labels: ["ahead of the market", "clear plan", "winning bets", "north star"] },
+    { theme: "strategy", labels: ["ahead of the market", "clear plan", "winning bets", "north star", "written strategy", "aligned execution", "focused roadmap", "decisive moves"] },
   ],
   operations: [
-    { theme: "delivery", labels: ["on time every time", "clockwork", "consistent quality", "scales clean", "repeatable wins", "nothing slips"] },
+    { theme: "delivery", labels: ["on time every time", "clockwork", "consistent quality", "scales clean", "repeatable wins", "nothing slips", "smooth handoffs", "no heroics"] },
   ],
   systems: [
-    { theme: "systems", labels: ["connected", "automated", "one source of truth", "self-running", "built to scale"] },
+    { theme: "systems", labels: ["connected", "automated", "one source of truth", "self-running", "built to scale", "lean clean stack"] },
     { theme: "visibility", labels: ["full visibility", "real-time numbers"] },
   ],
   customers: [
-    { theme: "customers", labels: ["sticky customers", "raving fans", "high retention", "customers for life", "referrals flowing", "high LTV", "easy renewals"] },
+    { theme: "customers", labels: ["sticky customers", "raving fans", "high retention", "customers for life", "referrals flowing", "high LTV", "easy renewals", "expansion revenue"] },
   ],
   people: [
-    { theme: "people", labels: ["A-team", "runs without me", "trusted leaders", "deep bench grown"] },
+    { theme: "people", labels: ["A-team", "runs without me", "trusted leaders", "deep bench grown", "hiring ahead"] },
     { theme: "leadership", labels: ["accountable team", "decisions pushed down", "I lead not manage"] },
   ],
   culture: [
-    { theme: "culture", labels: ["high-trust culture", "energy you can feel", "everyone's engaged", "magnet for talent", "candid + kind", "world-class place to work", "culture people stay for"] },
+    { theme: "culture", labels: ["high-trust culture", "energy you can feel", "everyone's engaged", "magnet for talent", "candid + kind", "world-class place to work", "culture people stay for", "values lived daily"] },
   ],
   risk: [
-    { theme: "risk", labels: ["bulletproof", "regulatory-clear", "succession-ready ahead", "cyber-secure ahead", "insured", "audit-ready ahead", "sleep-at-night"] },
+    { theme: "risk", labels: ["bulletproof", "regulatory-clear", "succession-ready ahead", "cyber-secure ahead", "insured", "audit-ready ahead", "sleep-at-night", "vendor-diverse ahead"] },
   ],
   ai: [
-    { theme: "ai", labels: ["AI as edge", "AI-augmented", "AI compounding"] },
+    { theme: "ai", labels: ["AI as edge", "AI-augmented", "AI compounding", "AI in every workflow", "team AI-fluent", "AI governed well", "AI ROI clear", "AI moat built"] },
   ],
   you: [
-    { theme: "self", labels: ["in command", "clear-headed", "doing my best work"] },
+    { theme: "self", labels: ["in command", "clear-headed", "doing my best work", "present and sharp"] },
     { theme: "capacity", labels: ["breathing room", "real time off"] },
     { theme: "clarity", labels: ["data-backed", "confident calls"] },
   ],
