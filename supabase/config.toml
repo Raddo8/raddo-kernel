@@ -44,3 +44,7 @@ verify_jwt = false
 
 [functions.send-email]
 verify_jwt = false
+
+[functions.mcp-council]
+verify_jwt = false
+
