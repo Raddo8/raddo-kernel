@@ -402,15 +402,14 @@ Deno.serve(async (req) => {
 
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim()
-      ?? req.headers.get("cf-connecting-ip")
-      ?? "unknown";
+    const ip = getClientIp(req.headers);
     try {
       const rl = await checkRateLimitDb(
         supabaseAdmin,
-        `mcp-council:${ip}`,
-        60_000,
+        "mcp-council",
+        ip,
         30,
+        60_000,
       );
       if (!rl.allowed) {
         return rpcError(null, -32002, "rate_limited", 429);
@@ -420,6 +419,7 @@ Deno.serve(async (req) => {
       console.error("rate_limit_error");
     }
   }
+
 
   let body: any;
   try {
