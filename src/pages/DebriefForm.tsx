@@ -503,6 +503,10 @@ export function DebriefForm() {
     }
     const otherAppsText = customStrings.join(" · ");
 
+    const bucketNotesArray = CATEGORY_ORDER
+      .map((c) => ({ category: c, label: CATEGORY_LABELS[c], note: bucketNotes[c].trim() }))
+      .filter((row) => row.note.length > 0);
+
     const { data, error } = await supabase.functions.invoke("submit-consult", {
       body: {
         email,
@@ -516,6 +520,7 @@ export function DebriefForm() {
         otherAppsText,
         toolsSelected,
         toolsByCategory,
+        bucketNotes: bucketNotesArray,
         discResponses: normalizedDiscResponses,
         discAllowMultiSelect: true,
         mode: "request_info",
