@@ -113,7 +113,7 @@ async function callAnthropic(opts: {
   system: string;
   user: string;
   maxTokens: number;
-}): Promise<string> {
+}): Promise<{ text: string; usage: ReturnType<typeof readUsage>; model: string }> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("upstream_unavailable");
   const r = await fetch(ANTHROPIC_URL, {
@@ -121,17 +121,22 @@ async function callAnthropic(opts: {
     headers: {
       "x-api-key": key,
       "anthropic-version": ANTHROPIC_VERSION,
+      "anthropic-beta": "prompt-caching-2024-07-31",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens,
-      system: opts.system,
+      // Structured system with cache_control on the static prefix.
+      system: [{
+        type: "text",
+        text: opts.system,
+        cache_control: { type: "ephemeral" },
+      }],
       messages: [{ role: "user", content: opts.user }],
     }),
   });
   if (!r.ok) {
-    // Generic upstream failure · no body leakage to client
     throw new Error("upstream_failed");
   }
   const json = await r.json();
@@ -142,7 +147,7 @@ async function callAnthropic(opts: {
     .join("\n")
     .trim();
   if (!text) throw new Error("upstream_empty");
-  return text;
+  return { text, usage: readUsage(json?.usage), model: opts.model };
 }
 
 // ── Boundary scrub (narrow · only true internal mechanics) ─────────────────
