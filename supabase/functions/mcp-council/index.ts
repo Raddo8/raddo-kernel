@@ -418,15 +418,17 @@ async function runSingleAgent(
   bundle: Extract<AgentBundle, { kind: "single" }>,
   question: string,
   context: string,
-): Promise<SingleMinute> {
+): Promise<{ minute: SingleMinute; passes: Pass[] }> {
+  const passes: Pass[] = [];
   const ask = async (reinforce: boolean) => {
-    const raw = await callAnthropic({
+    const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: bundle.system,
       user: singleAgentUserPrompt(question, context, reinforce),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    return validateSingleMinute(extractJson(raw), bundle.name);
+    passes.push({ model: res.model, usage: res.usage });
+    return validateSingleMinute(extractJson(res.text), bundle.name);
   };
 
   let minute = await ask(false);
@@ -437,7 +439,7 @@ async function runSingleAgent(
     }
     minute = second;
   }
-  return minute;
+  return { minute, passes };
 }
 
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
