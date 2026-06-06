@@ -25,6 +25,8 @@
 
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
+import { writeMinuteToNotion } from "./notion.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,7 +113,7 @@ async function callAnthropic(opts: {
   system: string;
   user: string;
   maxTokens: number;
-}): Promise<string> {
+}): Promise<{ text: string; usage: ReturnType<typeof readUsage>; model: string }> {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("upstream_unavailable");
   const r = await fetch(ANTHROPIC_URL, {
@@ -119,17 +121,22 @@ async function callAnthropic(opts: {
     headers: {
       "x-api-key": key,
       "anthropic-version": ANTHROPIC_VERSION,
+      "anthropic-beta": "prompt-caching-2024-07-31",
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
       model: opts.model,
       max_tokens: opts.maxTokens,
-      system: opts.system,
+      // Structured system with cache_control on the static prefix.
+      system: [{
+        type: "text",
+        text: opts.system,
+        cache_control: { type: "ephemeral" },
+      }],
       messages: [{ role: "user", content: opts.user }],
     }),
   });
   if (!r.ok) {
-    // Generic upstream failure · no body leakage to client
     throw new Error("upstream_failed");
   }
   const json = await r.json();
@@ -140,7 +147,7 @@ async function callAnthropic(opts: {
     .join("\n")
     .trim();
   if (!text) throw new Error("upstream_empty");
-  return text;
+  return { text, usage: readUsage(json?.usage), model: opts.model };
 }
 
 // ── Boundary scrub (narrow · only true internal mechanics) ─────────────────
@@ -279,33 +286,41 @@ function validateMinute(m: any, freshness: string): MinuteShape {
   };
 }
 
-async function runCouncil(question: string, context: string): Promise<MinuteShape> {
+async function runCouncil(
+  question: string,
+  context: string,
+): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
+  const passes: Pass[] = [];
 
   // Stage 1 · five chairs in parallel.
   const userMsg = chairUserPrompt(question, context);
-  const stage1Results = await Promise.all(
+  const stage1Raw = await Promise.all(
     CHAIRS.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: c.system,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((text) => ({ name: c.name, text })),
+      }).then((res) => ({ name: c.name, res })),
     ),
   );
+  for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
+  const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
   // Stage 2 · Leo runs the anticipatory horizon pass.
-  const horizon = await callAnthropic({
+  const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: LEO_MD,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
+  passes.push({ model: horizonRes.model, usage: horizonRes.usage });
+  const horizon = horizonRes.text;
 
   // Stage 3 · Opus lead synthesis · JSON minute.
   const synthesize = async (reinforce: boolean) => {
-    const raw = await callAnthropic({
+    const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: LEAD_SYNTH_MD,
       user: synthesisUserPrompt({
@@ -317,7 +332,8 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    return validateMinute(extractJson(raw), freshness);
+    passes.push({ model: res.model, usage: res.usage });
+    return validateMinute(extractJson(res.text), freshness);
   };
 
   let minute = await synthesize(false);
@@ -333,7 +349,7 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
     minute = second;
   }
 
-  return minute;
+  return { minute, passes };
 }
 
 // ── Single-agent runner ────────────────────────────────────────────────────
@@ -402,15 +418,17 @@ async function runSingleAgent(
   bundle: Extract<AgentBundle, { kind: "single" }>,
   question: string,
   context: string,
-): Promise<SingleMinute> {
+): Promise<{ minute: SingleMinute; passes: Pass[] }> {
+  const passes: Pass[] = [];
   const ask = async (reinforce: boolean) => {
-    const raw = await callAnthropic({
+    const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: bundle.system,
       user: singleAgentUserPrompt(question, context, reinforce),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    return validateSingleMinute(extractJson(raw), bundle.name);
+    passes.push({ model: res.model, usage: res.usage });
+    return validateSingleMinute(extractJson(res.text), bundle.name);
   };
 
   let minute = await ask(false);
@@ -421,7 +439,7 @@ async function runSingleAgent(
     }
     minute = second;
   }
-  return minute;
+  return { minute, passes };
 }
 
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
@@ -464,7 +482,21 @@ const TOOL_ASK_AGENT = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_LIST_AGENTS];
+const TOOL_COUNCIL_TO_NOTION = {
+  name: "cob_council_to_notion",
+  description:
+    "Convene the COB Council on a business question, then write the resulting minute to the SPINNEY boardroom Notion database. Returns the minute and the Notion page URL.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
+    },
+    required: ["question"],
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_COUNCIL_TO_NOTION, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
@@ -603,6 +635,8 @@ Deno.serve(async (req) => {
         "upstream_failed",
         "upstream_unavailable",
         "upstream_empty",
+        "notion_write_failed",
+        "notion_not_configured",
       ]);
       const toRpc = (e: unknown) => {
         const msg = e instanceof Error ? e.message : "internal_error";
@@ -625,7 +659,10 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const minute = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
             structuredContent: minute,
@@ -652,10 +689,53 @@ Deno.serve(async (req) => {
           return rpcError(id, -32004, "agent_not_available");
         }
         try {
-          const minute = await runSingleAgent(bundle, question, context);
+          const { minute, passes } = await runSingleAgent(bundle, question, context);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_ask_agent", agent_id: agentId, passes,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
             structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      if (name === "cob_council_to_notion") {
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        try {
+          const { minute, passes } = await runCouncil(question, context);
+
+          // Boundary scrub on the full text destined for Notion before any write.
+          const notionPayloadText = [
+            question,
+            minute.recommendation,
+            minute.dissent,
+            minute.anticipatory_horizon.join(" · "),
+            minute.participating_chairs.join(" · "),
+          ].join("\n");
+          if (hasBoundaryViolation(notionPayloadText)) {
+            await recordMcpUsage(supabaseAdmin, {
+              tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+            });
+            throw new Error("boundary_violation");
+          }
+
+          const { url: notion_url } = await writeMinuteToNotion(minute, question);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+          });
+          const out = { minute, notion_url };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
             isError: false,
           });
         } catch (e) {
