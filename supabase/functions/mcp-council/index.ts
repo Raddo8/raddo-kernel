@@ -27,6 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { writeMinuteToNotion } from "./notion.ts";
+import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -556,11 +557,33 @@ Deno.serve(async (req) => {
     return rpcError(null, -32600, "method_not_allowed", 405);
   }
 
-  // Bearer gate · before parsing body.
+  // Dual-mode auth gate · before parsing body.
+  //   1. Legacy static SPINNEY bearer (kept for curl regression + Phase-2 transition)
+  //   2. Supabase OAuth 2.1 JWT (client-registerable connector path)
   const expected = Deno.env.get("COUNCIL_TENANT_TOKEN_SPINNEY") ?? "";
+  const allowTestContext = Deno.env.get("COUNCIL_ALLOW_TEST_CONTEXT") === "1";
   const authz = req.headers.get("Authorization") ?? "";
   const m = authz.match(/^Bearer\s+(.+)$/i);
-  if (!expected || !m || !safeEqual(m[1].trim(), expected)) {
+
+  let identity: ResolvedIdentity | null = null;
+  let authMode: "static" | "oauth" | null = null;
+
+  if (m) {
+    const token = m[1].trim();
+    if (expected && safeEqual(token, expected)) {
+      authMode = "static";
+      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null };
+    } else {
+      try {
+        identity = await verifySupabaseJwt(token);
+        authMode = "oauth";
+      } catch (_e) {
+        identity = null;
+      }
+    }
+  }
+
+  if (!identity || !authMode) {
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
@@ -572,12 +595,12 @@ Deno.serve(async (req) => {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "WWW-Authenticate": 'Bearer realm="cob-council"',
+          ...unauthorizedHeaders("invalid_token"),
         },
       },
     );
   }
-  // const tenant = "SPINNEY"; // reserved for Slice-2 multi-tenant routing
+  const tenant = identity.tenant;
 
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
@@ -659,12 +682,15 @@ Deno.serve(async (req) => {
         return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
 
-      // Hidden test seam · undocumented `_client_context` field flows into the
-      // v2 preamble's CLIENT_CONTEXT slot. Not in tool inputSchema. Proves the
-      // Tier-1 grounding seam end-to-end without exposing it to customers.
-      const clientContext = typeof args?._client_context === "string"
-        ? args._client_context.slice(0, 8000)
-        : "";
+      // Tier-1 grounding seam · `_client_context` (test field).
+      // Phase 2B hardening: ignored entirely on OAuth path (prompt-injection
+      // surface). Static-bearer path accepts it only when the env opt-in is
+      // set, so curl validation of the seam still works during transition.
+      const clientContext =
+        (authMode === "static" && allowTestContext &&
+          typeof args?._client_context === "string")
+          ? args._client_context.slice(0, 8000)
+          : "";
 
       if (name === "cob_run_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
@@ -676,7 +702,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runCouncil(question, context, clientContext);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
+            tenant, tool: "cob_run_council", agent_id: null, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -706,7 +732,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runSingleAgent(bundle, question, context);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_ask_agent", agent_id: agentId, passes,
+            tenant, tool: "cob_ask_agent", agent_id: agentId, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -739,14 +765,14 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
-              tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+              tenant, tool: "cob_council_to_notion", agent_id: null, passes,
             });
             throw new Error("boundary_violation");
           }
 
           const { url: notion_url } = await writeMinuteToNotion(minute, question);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+            tenant, tool: "cob_council_to_notion", agent_id: null, passes,
           });
           const out = { minute, notion_url };
           return rpcResult(id, {

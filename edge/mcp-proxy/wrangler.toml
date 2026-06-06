@@ -1,0 +1,17 @@
+name = "cob-mcp-proxy"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+
+# Route binding — set after the zone (chiefofbusiness.ai) is added to the
+# Cloudflare account. Until then, the worker is reachable at its
+# *.workers.dev hostname and the CNAME below points at that.
+routes = [
+  { pattern = "mcp.chiefofbusiness.ai/*", zone_name = "chiefofbusiness.ai" }
+]
+
+[vars]
+# Upstream Supabase Edge Function host. Phase 2B targets the Lovable Cloud
+# project; Phase 4 eject swaps this to the Jake-owned project ref.
+UPSTREAM_URL = "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council"
+AS_DISCOVERY_URL = "https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1"
+RESOURCE_ID = "https://mcp.chiefofbusiness.ai/"
