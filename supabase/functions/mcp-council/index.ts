@@ -702,7 +702,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runCouncil(question, context, clientContext);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
+            tenant, tool: "cob_run_council", agent_id: null, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -732,7 +732,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runSingleAgent(bundle, question, context);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_ask_agent", agent_id: agentId, passes,
+            tenant, tool: "cob_ask_agent", agent_id: agentId, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -765,14 +765,14 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
-              tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+              tenant, tool: "cob_council_to_notion", agent_id: null, passes,
             });
             throw new Error("boundary_violation");
           }
 
           const { url: notion_url } = await writeMinuteToNotion(minute, question);
           await recordMcpUsage(supabaseAdmin, {
-            tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+            tenant, tool: "cob_council_to_notion", agent_id: null, passes,
           });
           const out = { minute, notion_url };
           return rpcResult(id, {
