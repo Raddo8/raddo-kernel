@@ -286,33 +286,41 @@ function validateMinute(m: any, freshness: string): MinuteShape {
   };
 }
 
-async function runCouncil(question: string, context: string): Promise<MinuteShape> {
+async function runCouncil(
+  question: string,
+  context: string,
+): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
+  const passes: Pass[] = [];
 
   // Stage 1 · five chairs in parallel.
   const userMsg = chairUserPrompt(question, context);
-  const stage1Results = await Promise.all(
+  const stage1Raw = await Promise.all(
     CHAIRS.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: c.system,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((text) => ({ name: c.name, text })),
+      }).then((res) => ({ name: c.name, res })),
     ),
   );
+  for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
+  const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
   // Stage 2 · Leo runs the anticipatory horizon pass.
-  const horizon = await callAnthropic({
+  const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: LEO_MD,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
+  passes.push({ model: horizonRes.model, usage: horizonRes.usage });
+  const horizon = horizonRes.text;
 
   // Stage 3 · Opus lead synthesis · JSON minute.
   const synthesize = async (reinforce: boolean) => {
-    const raw = await callAnthropic({
+    const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: LEAD_SYNTH_MD,
       user: synthesisUserPrompt({
@@ -324,7 +332,8 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    return validateMinute(extractJson(raw), freshness);
+    passes.push({ model: res.model, usage: res.usage });
+    return validateMinute(extractJson(res.text), freshness);
   };
 
   let minute = await synthesize(false);
@@ -340,7 +349,7 @@ async function runCouncil(question: string, context: string): Promise<MinuteShap
     minute = second;
   }
 
-  return minute;
+  return { minute, passes };
 }
 
 // ── Single-agent runner ────────────────────────────────────────────────────
