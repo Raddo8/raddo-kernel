@@ -45,6 +45,8 @@ import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
+import LEO_AGENT_MD from "./agents/leo.ts";
+
 import {
   AGENT_MANIFEST,
   findEnabledAgent,
@@ -76,7 +78,9 @@ function loadAgent(id: string): AgentBundle | null {
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
     lucius: LUCIUS_AGENT_MD,
+    leo: LEO_AGENT_MD,
   };
+
   const body = SINGLE_BODIES[entry.id];
   if (!body) return null;
   return {
