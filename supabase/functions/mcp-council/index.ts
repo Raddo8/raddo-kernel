@@ -557,11 +557,33 @@ Deno.serve(async (req) => {
     return rpcError(null, -32600, "method_not_allowed", 405);
   }
 
-  // Bearer gate · before parsing body.
+  // Dual-mode auth gate · before parsing body.
+  //   1. Legacy static SPINNEY bearer (kept for curl regression + Phase-2 transition)
+  //   2. Supabase OAuth 2.1 JWT (client-registerable connector path)
   const expected = Deno.env.get("COUNCIL_TENANT_TOKEN_SPINNEY") ?? "";
+  const allowTestContext = Deno.env.get("COUNCIL_ALLOW_TEST_CONTEXT") === "1";
   const authz = req.headers.get("Authorization") ?? "";
   const m = authz.match(/^Bearer\s+(.+)$/i);
-  if (!expected || !m || !safeEqual(m[1].trim(), expected)) {
+
+  let identity: ResolvedIdentity | null = null;
+  let authMode: "static" | "oauth" | null = null;
+
+  if (m) {
+    const token = m[1].trim();
+    if (expected && safeEqual(token, expected)) {
+      authMode = "static";
+      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null };
+    } else {
+      try {
+        identity = await verifySupabaseJwt(token);
+        authMode = "oauth";
+      } catch (_e) {
+        identity = null;
+      }
+    }
+  }
+
+  if (!identity || !authMode) {
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
@@ -573,12 +595,12 @@ Deno.serve(async (req) => {
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",
-          "WWW-Authenticate": 'Bearer realm="cob-council"',
+          ...unauthorizedHeaders("invalid_token"),
         },
       },
     );
   }
-  // const tenant = "SPINNEY"; // reserved for Slice-2 multi-tenant routing
+  const tenant = identity.tenant;
 
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
