@@ -295,9 +295,11 @@ function validateMinute(m: any, freshness: string): MinuteShape {
 async function runCouncil(
   question: string,
   context: string,
+  clientContext: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
+  const preamble = renderPreamble(clientContext);
 
   // Stage 1 · five chairs in parallel.
   const userMsg = chairUserPrompt(question, context);
@@ -305,7 +307,7 @@ async function runCouncil(
     CHAIRS.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
-        system: c.system,
+        system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
       }).then((res) => ({ name: c.name, res })),
@@ -317,7 +319,7 @@ async function runCouncil(
   // Stage 2 · Leo runs the anticipatory horizon pass.
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
-    system: LEO_MD,
+    system: `${preamble}\n\n${LEO_MD}`,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
@@ -328,7 +330,7 @@ async function runCouncil(
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
-      system: LEAD_SYNTH_MD,
+      system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
       user: synthesisUserPrompt({
         question, context,
         contributions: stage1Results,
