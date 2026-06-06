@@ -81,6 +81,7 @@ const App = () => (
             <Route path="/style-guide" element={<StyleGuide />} />
             <Route path="/dossier" element={<Dossier />} />
             <Route path="/respond/:token" element={<RespondPage />} />
+            <Route path="/oauth/consent" element={<OAuthConsent />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
