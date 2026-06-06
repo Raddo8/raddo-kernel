@@ -27,6 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { writeMinuteToNotion } from "./notion.ts";
+import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
