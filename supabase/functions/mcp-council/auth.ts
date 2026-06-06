@@ -2,15 +2,18 @@
 //
 // Phase 2B · OAuth 2.1 JWT validator for the COB Council MCP server.
 //
-// Verifies access tokens issued by the Supabase OAuth Authorization Server
-// (https://<ref>.supabase.co/auth/v1) against its JWKS. Returns a small
-// resolved-identity object the MCP handler uses to scope tenant + usage.
+// The Authorization Server runs on a SEPARATE, Jake-owned Supabase project
+// (ref: rnjqpwmzmbnnaonppfkm) — Lovable Cloud does not expose the OAuth 2.1
+// Server toggle, so the AS surface is hosted there. This validator verifies
+// access tokens against that issuer's JWKS, independent of the local
+// SUPABASE_URL (which still belongs to the resource-server project).
 //
+// Override via env vars OAUTH_ISSUER / OAUTH_JWKS_URL when the AS moves.
 // Server-only. No deps beyond Deno's built-in crypto.subtle.
 
-const SUPABASE_URL = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/+$/, "");
-const ISSUER = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1` : "";
-const JWKS_URL = SUPABASE_URL ? `${SUPABASE_URL}/auth/v1/.well-known/jwks.json` : "";
+const DEFAULT_AS_URL = "https://rnjqpwmzmbnnaonppfkm.supabase.co";
+const ISSUER = (Deno.env.get("OAUTH_ISSUER") ?? `${DEFAULT_AS_URL}/auth/v1`).replace(/\/+$/, "");
+const JWKS_URL = Deno.env.get("OAUTH_JWKS_URL") ?? `${DEFAULT_AS_URL}/auth/v1/.well-known/jwks.json`;
 
 // The protected-resource id exposed by the Cloudflare worker at
 // mcp.chiefofbusiness.ai. Clients receive it via RFC 9728 metadata and
