@@ -635,6 +635,8 @@ Deno.serve(async (req) => {
         "upstream_failed",
         "upstream_unavailable",
         "upstream_empty",
+        "notion_write_failed",
+        "notion_not_configured",
       ]);
       const toRpc = (e: unknown) => {
         const msg = e instanceof Error ? e.message : "internal_error";
@@ -657,7 +659,10 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const minute = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
             structuredContent: minute,
@@ -684,10 +689,53 @@ Deno.serve(async (req) => {
           return rpcError(id, -32004, "agent_not_available");
         }
         try {
-          const minute = await runSingleAgent(bundle, question, context);
+          const { minute, passes } = await runSingleAgent(bundle, question, context);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_ask_agent", agent_id: agentId, passes,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
             structuredContent: minute,
+            isError: false,
+          });
+        } catch (e) {
+          return toRpc(e);
+        }
+      }
+
+      if (name === "cob_council_to_notion") {
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        if (!question) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        try {
+          const { minute, passes } = await runCouncil(question, context);
+
+          // Boundary scrub on the full text destined for Notion before any write.
+          const notionPayloadText = [
+            question,
+            minute.recommendation,
+            minute.dissent,
+            minute.anticipatory_horizon.join(" · "),
+            minute.participating_chairs.join(" · "),
+          ].join("\n");
+          if (hasBoundaryViolation(notionPayloadText)) {
+            await recordMcpUsage(supabaseAdmin, {
+              tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+            });
+            throw new Error("boundary_violation");
+          }
+
+          const { url: notion_url } = await writeMinuteToNotion(minute, question);
+          await recordMcpUsage(supabaseAdmin, {
+            tenant: "SPINNEY", tool: "cob_council_to_notion", agent_id: null, passes,
+          });
+          const out = { minute, notion_url };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
             isError: false,
           });
         } catch (e) {
