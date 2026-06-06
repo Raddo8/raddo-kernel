@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import raddoLogo from "@/assets/raddo-logo-3d.png";
+import raddoLogo from "@/assets/cob-logo.png.asset.json";
 
 // Customer-facing navigation only.
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -130,7 +130,7 @@ export function SiteHeader() {
               aria-label="COB · Home"
             >
               <img
-                src={raddoLogo}
+                src={raddoLogo.url}
                 alt="COB"
                 className="h-[1.15rem] w-auto sm:h-[1.55rem]"
                 style={{ objectFit: "contain" }}
