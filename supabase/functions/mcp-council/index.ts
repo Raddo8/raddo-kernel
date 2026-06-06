@@ -73,7 +73,13 @@ type AgentBundle =
   | { kind: "council"; chairs: typeof CHAIRS; leadSynthesis: string }
   | { kind: "single"; id: string; name: string; system: string };
 
-function loadAgent(id: string): AgentBundle | null {
+// Render the v2 preamble with the CLIENT_CONTEXT slot populated (empty by default).
+// This is the Tier-1 grounding seam — Phase 2/3 fills it without rewriting agents.
+function renderPreamble(clientContext: string = ""): string {
+  return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
+}
+
+function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
   const entry = findEnabledAgent(id);
   if (!entry) return null;
   if (entry.kind === "council") {
@@ -95,7 +101,7 @@ function loadAgent(id: string): AgentBundle | null {
     kind: "single",
     id: entry.id,
     name: entry.name,
-    system: `${GLOBAL_PREAMBLE_MD}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+    system: `${renderPreamble(clientContext)}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
 }
 
@@ -289,9 +295,11 @@ function validateMinute(m: any, freshness: string): MinuteShape {
 async function runCouncil(
   question: string,
   context: string,
+  clientContext: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
+  const preamble = renderPreamble(clientContext);
 
   // Stage 1 · five chairs in parallel.
   const userMsg = chairUserPrompt(question, context);
@@ -299,7 +307,7 @@ async function runCouncil(
     CHAIRS.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
-        system: c.system,
+        system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
       }).then((res) => ({ name: c.name, res })),
@@ -311,7 +319,7 @@ async function runCouncil(
   // Stage 2 · Leo runs the anticipatory horizon pass.
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
-    system: LEO_MD,
+    system: `${preamble}\n\n${LEO_MD}`,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
@@ -322,7 +330,7 @@ async function runCouncil(
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
-      system: LEAD_SYNTH_MD,
+      system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
       user: synthesisUserPrompt({
         question, context,
         contributions: stage1Results,
@@ -651,6 +659,13 @@ Deno.serve(async (req) => {
         return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
 
+      // Hidden test seam · undocumented `_client_context` field flows into the
+      // v2 preamble's CLIENT_CONTEXT slot. Not in tool inputSchema. Proves the
+      // Tier-1 grounding seam end-to-end without exposing it to customers.
+      const clientContext = typeof args?._client_context === "string"
+        ? args._client_context.slice(0, 8000)
+        : "";
+
       if (name === "cob_run_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
@@ -659,7 +674,7 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context, clientContext);
           await recordMcpUsage(supabaseAdmin, {
             tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
           });
@@ -684,7 +699,7 @@ Deno.serve(async (req) => {
         if (agentId === "council") {
           return rpcError(id, -32005, "use_council_tool");
         }
-        const bundle = loadAgent(agentId);
+        const bundle = loadAgent(agentId, clientContext);
         if (!bundle || bundle.kind !== "single") {
           return rpcError(id, -32004, "agent_not_available");
         }
@@ -711,7 +726,8 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context, clientContext);
+
 
           // Boundary scrub on the full text destined for Notion before any write.
           const notionPayloadText = [
