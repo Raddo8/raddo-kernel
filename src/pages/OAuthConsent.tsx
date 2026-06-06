@@ -137,6 +137,7 @@ export default function OAuthConsent() {
       <SeoHead
         title="Authorize access · RADDO"
         description="Review the application requesting access to your COB and approve or deny."
+        path="/oauth/consent"
       />
       <main className="min-h-screen bg-raddo-paper text-raddo-charcoal flex items-start justify-center px-6 py-16">
         <div className="w-full max-w-lg">
