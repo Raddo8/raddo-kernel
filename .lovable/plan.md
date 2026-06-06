@@ -1,85 +1,69 @@
-# Phase 2A · Notion write-back + cost instrumentation
+# BUILD DISPATCH — Global Preamble v2 + CLIENT_CONTEXT seam
 
-Scope: extend `supabase/functions/mcp-council/index.ts` only. Reuse all existing machinery: bearer auth, rate limit, narrow boundary scrub (`hasBoundaryViolation`), `loadAgent`, `runCouncil`, `runSingleAgent`, `validateSingleMinute`, `extractJson`. No change to chair logic or seeds.
+Scope: `supabase/functions/mcp-council/` only. No profile/seed/schema/scrub/auth/cost/Notion changes.
 
-## Part 1 · Notion write-back
+## 1 · Replace `_global-preamble.ts` with GLOBAL_PREAMBLE_v2 (verbatim)
 
-New module `supabase/functions/mcp-council/notion.ts` (server-only):
-- `writeMinuteToNotion(minute, question)` → POST `https://api.notion.com/v1/pages` with `Notion-Version: 2022-06-28`, bearer `SPINNEY_NOTION_TOKEN`, parent `database_id = SPINNEY_BOARDROOM_DB`.
-- Page title `[YYMMDD] <truncated question, 60 chars>`.
-- Properties (corrected per COB):
-  - **`Title`** (title) — NOT `Name`.
-  - `Date` (date = freshness).
-  - `Recommendation` (rich_text).
-  - `Dissent (Spock)` (rich_text).
-  - `Anticipatory Horizon` (rich_text, joined `· `-separated).
-  - `Participating Chairs` (multi_select).
-  - `Confidence Epistemic` (number).
-  - `Confidence Rigor` (number).
-  - `Council Status` (select = `"Proposed"`).
-  - **`Source Tool`** (rich_text = `"cob_council_to_notion"`) — NOT select.
-- Body children blocks: H2 "Recommendation" → paragraph; H2 "Anticipatory Horizon" → bulleted list; H2 "Dissent" → paragraph; H2 "Confidence" → paragraph (`epistemic · rigor`); H2 "Participating Chairs" → paragraph.
-- Returns `{ url, id }`. On non-2xx: parse Notion error; if it's a `validation_error` mentioning a missing property, retry once with title-only + body (so a bare DB still works). Otherwise throw `notion_write_failed`.
+Overwrite `supabase/functions/mcp-council/agents/_global-preamble.ts` with the v2 text from the dispatch, used verbatim. Includes:
 
-New MCP tool `cob_council_to_notion`:
-- Input: `{ question, context? }` (same validation as `cob_run_council`).
-- Flow: `runCouncil` → serialize the full Notion payload text → run `hasBoundaryViolation` on it. On hit → throw `boundary_violation` (no retry, no write). Otherwise → `writeMinuteToNotion` → return `{ content:[{type:"text", text: JSON.stringify({minute, notion_url})}], structuredContent:{minute, notion_url}, isError:false }`.
-- Listed in `TOOLS` alongside the existing three.
+- Identity & boundary (propose · don't certify · stay in seat)
+- ABC (Absolute · Brutal · Challenging)
+- Anti-fabrication HARD + claim taxonomy (Documented Fact · Strong Inference · Working Hypothesis · Open Question)
+- Two-axis confidence with calibration discipline (thin data / refusal = LOW ε; no rigor inflation)
+- Gap-closure (name missing input + closing action before answering when ε/ρ would be < ~0.90)
+- Underspecified-question discipline · always-weigh-null-option · audience/stakes calibration · present-day-fact grounding
+- Council-mode + Spock dissent discipline (falsification-only)
+- `<<CLIENT_CONTEXT>>` marker — Tier-1 grounding seam, empty today
 
-Binding boundary: only the minute's output fields + the user question are ever sent to Notion. Never seeds, preamble, model names, principle text.
+Preserve exact wording (incl. `<<CLIENT_CONTEXT>>` marker and the explanatory note around it) so v2 is the single source of truth.
 
-## Part 2 · Cost instrumentation
+## 2 · Wire the CLIENT_CONTEXT injection seam in prompt assembly
 
-Modify `callAnthropic` to return `{ text, usage, model }`. Pull `usage` from `json.usage` (input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens; default 0). Update `runCouncil` and `runSingleAgent` to collect `passes: Array<{model, usage}>` across every Anthropic call.
+Goal: a no-op today, populated later by Phase 2/3 without touching any agent file.
 
-Rate map (per million tokens, USD):
+**`index.ts` changes (assembly only · no logic changes elsewhere):**
+
+a. Add a helper:
+```ts
+function renderPreamble(clientContext: string = ""): string {
+  return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
+}
 ```
-claude-opus-4-5:   in=5,  out=25, cache_read=0.5
-claude-sonnet-4-5: in=3,  out=15, cache_read=0.3
+
+b. Add an optional `clientContext` parameter to:
+   - `runCouncil(question, context, clientContext = "")`
+   - `runSingleAgent(bundle, question, context, clientContext = "")`
+   - `loadAgent(id, clientContext = "")` → builds the single-agent `system` using `renderPreamble(clientContext)` instead of raw `GLOBAL_PREAMBLE_MD`
+
+c. In `runCouncil`, prepend the rendered preamble to each chair system at call time:
+```ts
+system: `${renderPreamble(clientContext)}\n\n${c.system}`
 ```
-Cost = `(input + cache_creation) * in/1e6 + cache_read * cache_read_rate/1e6 + output * out/1e6`.
+Same prepend for the Stage-2 horizon pass (`LEO_MD`) and Stage-3 lead-synthesis (`LEAD_SYNTH_MD`). This is the change that brings council chairs under the v2 floor (today they don't import the preamble).
 
-Aggregated row: `{ total_cost_usd, model_breakdown: { [model]: { calls, input, output, cache_read, cache_creation, cost_usd } } }`.
+d. MCP tool handlers (`cob_run_council`, `cob_ask_agent`, `cob_council_to_notion`) pass `""` for `clientContext` — the seam exists but is unwired, exactly as specified. No tool input-schema change.
 
-### Usage persistence — new table `public.mcp_usage_events`
+e. Add a hidden test seam: read `clientContext` from an undocumented optional input field `_client_context` (string) on `cob_run_council` and `cob_ask_agent` ONLY when present, so the acceptance gate "passing a test context string flows into the prompt" can be proven via curl without exposing it as a customer-facing parameter. Not added to the tool inputSchema description; field is silently accepted by the handler.
 
-Confirmed by COB: clean separate table, service-role only. Schema:
-```
-id uuid pk default gen_random_uuid()
-tenant text not null              -- 'SPINNEY'
-tool text not null                -- 'cob_run_council' | 'cob_ask_agent' | 'cob_council_to_notion'
-agent_id text                     -- null for council/notion, else 'knox'|'lucius'|...
-model_breakdown jsonb not null
-total_cost_usd numeric(12,6) not null
-created_at timestamptz not null default now()
-```
-RLS enabled, no policies (service-role only). GRANT ALL to `service_role`.
+## 3 · No profile rewrites
 
-One row per MCP tool call. `cob_council_to_notion` writes a single row tagged with that tool name — the inner council passes are folded into its `model_breakdown`. Failures to write usage are logged (`console.error("usage_write_failed", ...)`) but never block the tool response.
-
-### Prompt caching
-
-Send `system` as the structured array form with `cache_control: { type: "ephemeral" }` on the static prefix (chair system / lead-synthesis / single-agent prefix). Add `anthropic-beta: prompt-caching-2024-07-31` header. `cache_read_input_tokens` will populate on repeats; cost math benefits automatically.
+`agents/{knox,lucius,leo,alfred,iroh}.ts` and `council/{leo,spock,lucius,alfred,iroh,lead-synthesis,approach-principles}.ts` are NOT modified. v2 is the enforceable floor beneath them.
 
 ## Files
 
-- MIGRATION — create `public.mcp_usage_events` + RLS + grants. (already done)
-- NEW    `supabase/functions/mcp-council/notion.ts` — Notion client + page renderer.
-- NEW    `supabase/functions/mcp-council/usage.ts` — rate map, cost math, `recordMcpUsage()` helper.
-- MODIFY `supabase/functions/mcp-council/index.ts` — new tool, modified `callAnthropic`, usage aggregation/write, caching headers.
+- MODIFY `supabase/functions/mcp-council/agents/_global-preamble.ts` — replace with v2 verbatim
+- MODIFY `supabase/functions/mcp-council/index.ts` — `renderPreamble` helper · `clientContext` param threaded through `loadAgent` / `runCouncil` / `runSingleAgent` · prepend rendered preamble to council chair + horizon + lead-synthesis systems · accept `_client_context` test field in handlers
 
-## Secrets
+## Deploy & validation (post-build)
 
-`SPINNEY_NOTION_TOKEN` and `SPINNEY_BOARDROOM_DB` — already provided.
+Deploy `mcp-council`. Then:
 
-## Validation (post-deploy curl)
-
-- `cob_council_to_notion` returns `{minute, notion_url}`; Notion page renders styled minute.
-- Boundary probe → `-32000 boundary_violation`, no Notion page created.
-- `select * from mcp_usage_events order by created_at desc limit 5` shows rows with token counts and `total_cost_usd > 0`.
-- Regression: `cob_run_council`, `cob_ask_agent` (knox/lucius/leo/alfred/iroh), `cob_list_my_agents` unchanged.
-- Bearer omitted → 401; flood >30/min → `-32002`.
+1. `cob_run_council` on the pricing question → two-axis ε/ρ, ε LOW without real numbers, minute names missing load-bearing inputs (gap-closure) and weighs null option.
+2. `cob_ask_agent` (lucius) with a made-up-sounding figure → labels inference vs fact, no invented numbers.
+3. Boundary probe → refusal scores LOW ε/ρ.
+4. Seam proof: `cob_run_council` with `_client_context: "TEST_SEAM_TOKEN_XYZ"` — confirm via edge logs that the rendered preamble contains it (no agent rewrite needed).
+5. Regression: 5 single agents + council + Notion write-back + `mcp_usage_events` rows unchanged in shape.
 
 ## Out of scope
 
-OAuth, `mcp.chiefofbusiness.ai` proxy, per-tenant Notion mapping, real customer data, wiring `billing-usage` to `mcp_usage_events`.
+Populating CLIENT_CONTEXT with real data (Phase 2/3) · per-profile prose trimming · OAuth/2B · tool inputSchema changes.
