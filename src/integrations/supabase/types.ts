@@ -601,6 +601,36 @@ export type Database = {
           },
         ]
       }
+      mcp_usage_events: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          id: string
+          model_breakdown: Json
+          tenant: string
+          tool: string
+          total_cost_usd: number
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          id?: string
+          model_breakdown?: Json
+          tenant: string
+          tool: string
+          total_cost_usd?: number
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          id?: string
+          model_breakdown?: Json
+          tenant?: string
+          tool?: string
+          total_cost_usd?: number
+        }
+        Relationships: []
+      }
       message_events: {
         Row: {
           action_id: string | null
