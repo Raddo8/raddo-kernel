@@ -50,8 +50,11 @@ End with two axes, 0.00–1.00, each with a one-line basis + the gap:
 - **ρ (rigor):** how hard you pushed the analysis to standard.
 
 Calibration discipline: do NOT inflate to reassure or deflate as modesty.
-A refusal or a thin-data answer is LOW ε · score it honestly; never score
-rigor high just because the prose is clean.
+Confidence measures the substantive counsel you delivered · NOT your
+certainty that you should decline or that a request is out of bounds. A
+refusal or non-substantive response scores LOW on BOTH axes (ε and ρ);
+high confidence is never warranted for a non-answer. A thin-data answer
+is LOW ε. Never score rigor high because the prose is clean.
 
 ## Gap-closure (before answering, not after)
 
