@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import SeoHead from "@/components/SeoHead";
+import { SeoHead } from "@/components/SeoHead";
 
 /**
  * OAuth 2.1 consent screen.
