@@ -2,11 +2,19 @@
 
 Lovable shipped the code. Three operator actions are required before the
 client-registerable connector handshake can succeed. None of these can be
-done by Lovable.
+done by Lovable — most importantly, **Lovable Cloud does not expose the
+OAuth 2.1 Server toggle**, so the Authorization Server is hosted on a
+SEPARATE, Jake-owned Supabase project. The Lovable Cloud project
+(`vacpgxxgdfhgvkduljgs`) is the resource server only.
 
-## 1 · Enable Supabase OAuth 2.1 Server
+| Role              | Supabase project ref     | Surface                                                          |
+| ----------------- | ------------------------ | ---------------------------------------------------------------- |
+| Authorization Srv | `rnjqpwmzmbnnaonppfkm`   | `/auth/v1/*` · DCR · JWKS · consent screen · tenant user records |
+| Resource server   | `vacpgxxgdfhgvkduljgs`   | `mcp-council` Edge Function (verifies tokens against AS JWKS)    |
 
-In the Supabase project dashboard (project ref `vacpgxxgdfhgvkduljgs`):
+## 1 · Enable OAuth 2.1 Server on the AS project
+
+In the Supabase dashboard for project ref `rnjqpwmzmbnnaonppfkm`:
 
 1. **Authentication → OAuth Server** → toggle **Enable** ON.
 2. Toggle **Dynamic Client Registration** ON.
@@ -17,16 +25,16 @@ In the Supabase project dashboard (project ref `vacpgxxgdfhgvkduljgs`):
 Verify:
 
 ```bash
-curl -s https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1 | jq
+curl -s https://rnjqpwmzmbnnaonppfkm.supabase.co/.well-known/oauth-authorization-server/auth/v1 | jq
 ```
 
 Should return the discovery doc with `authorization_endpoint`,
 `token_endpoint`, `registration_endpoint`, `jwks_uri`, and
 `code_challenge_methods_supported: ["S256"]`.
 
-## 2 · Seed the SPINNEY operator user
+## 2 · Seed the SPINNEY operator user (on the AS project)
 
-In Supabase SQL editor:
+In the SQL editor of the AS project (`rnjqpwmzmbnnaonppfkm`):
 
 ```sql
 -- Create the SPINNEY operator (one-time; replace email/password)
