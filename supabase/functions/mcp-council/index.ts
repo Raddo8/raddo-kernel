@@ -682,12 +682,15 @@ Deno.serve(async (req) => {
         return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
 
-      // Hidden test seam · undocumented `_client_context` field flows into the
-      // v2 preamble's CLIENT_CONTEXT slot. Not in tool inputSchema. Proves the
-      // Tier-1 grounding seam end-to-end without exposing it to customers.
-      const clientContext = typeof args?._client_context === "string"
-        ? args._client_context.slice(0, 8000)
-        : "";
+      // Tier-1 grounding seam · `_client_context` (test field).
+      // Phase 2B hardening: ignored entirely on OAuth path (prompt-injection
+      // surface). Static-bearer path accepts it only when the env opt-in is
+      // set, so curl validation of the seam still works during transition.
+      const clientContext =
+        (authMode === "static" && allowTestContext &&
+          typeof args?._client_context === "string")
+          ? args._client_context.slice(0, 8000)
+          : "";
 
       if (name === "cob_run_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
