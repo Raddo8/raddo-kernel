@@ -130,7 +130,7 @@ export function SiteHeader() {
               aria-label="COB · Home"
             >
               <img
-                src={raddoLogo}
+                src={raddoLogo.url}
                 alt="COB"
                 className="h-[1.15rem] w-auto sm:h-[1.55rem]"
                 style={{ objectFit: "contain" }}
