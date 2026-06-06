@@ -51,6 +51,14 @@ WHERE id = '<user-id>';
 The `app_metadata.tenant` claim is what `mcp-council` reads to scope
 deliberation. Without it the token is rejected with `invalid_token`.
 
+### Optional · override the AS issuer on the resource server
+
+`mcp-council` defaults `OAUTH_ISSUER` to
+`https://rnjqpwmzmbnnaonppfkm.supabase.co/auth/v1` and `OAUTH_JWKS_URL` to
+the matching `/auth/v1/.well-known/jwks.json`. If the AS project ref ever
+changes, set both as Edge Function secrets on the resource project
+(`vacpgxxgdfhgvkduljgs`) — no code change needed.
+
 ## 3 · Cloudflare Worker + DNS
 
 ```bash
