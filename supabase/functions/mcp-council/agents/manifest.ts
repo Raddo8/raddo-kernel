@@ -46,6 +46,23 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       enabled: true,
       kind: "single",
     },
+    {
+      id: "alfred",
+      name: "Alfred",
+      lens: "Continuity, trust & reputation counsel",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
+    },
+    {
+      id: "iroh",
+      name: "Iroh",
+      lens: "People & principal elevation counsel",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
+    },
+
 
   ],
 };

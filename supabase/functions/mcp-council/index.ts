@@ -46,6 +46,9 @@ import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
+import ALFRED_AGENT_MD from "./agents/alfred.ts";
+import IROH_AGENT_MD from "./agents/iroh.ts";
+
 
 import {
   AGENT_MANIFEST,
@@ -79,7 +82,10 @@ function loadAgent(id: string): AgentBundle | null {
     knox: KNOX_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
+    alfred: ALFRED_AGENT_MD,
+    iroh: IROH_AGENT_MD,
   };
+
 
   const body = SINGLE_BODIES[entry.id];
   if (!body) return null;
