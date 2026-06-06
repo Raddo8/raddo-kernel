@@ -73,7 +73,13 @@ type AgentBundle =
   | { kind: "council"; chairs: typeof CHAIRS; leadSynthesis: string }
   | { kind: "single"; id: string; name: string; system: string };
 
-function loadAgent(id: string): AgentBundle | null {
+// Render the v2 preamble with the CLIENT_CONTEXT slot populated (empty by default).
+// This is the Tier-1 grounding seam — Phase 2/3 fills it without rewriting agents.
+function renderPreamble(clientContext: string = ""): string {
+  return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
+}
+
+function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
   const entry = findEnabledAgent(id);
   if (!entry) return null;
   if (entry.kind === "council") {
@@ -95,7 +101,7 @@ function loadAgent(id: string): AgentBundle | null {
     kind: "single",
     id: entry.id,
     name: entry.name,
-    system: `${GLOBAL_PREAMBLE_MD}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+    system: `${renderPreamble(clientContext)}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
 }
 
