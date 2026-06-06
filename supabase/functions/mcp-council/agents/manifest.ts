@@ -38,6 +38,15 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       enabled: true,
       kind: "single",
     },
+    {
+      id: "leo",
+      name: "Leo",
+      lens: "Operations, sequencing & execution",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
+    },
+
   ],
 };
 
