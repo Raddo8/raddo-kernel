@@ -133,7 +133,7 @@ export function SiteHeader() {
                 src={raddoLogo.url}
                 alt="COB"
                 className="h-[1.5rem] w-auto sm:h-[2rem]"
-                style={{ objectFit: "contain" }}
+                style={{ objectFit: "contain", transform: "translateY(-4px)" }}
               />
               <span
                 className="font-display font-black text-[13px] sm:text-[16px]"
