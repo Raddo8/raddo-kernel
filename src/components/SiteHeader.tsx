@@ -132,7 +132,7 @@ export function SiteHeader() {
               <img
                 src={raddoLogo.url}
                 alt="COB"
-                className="h-[1.275rem] w-auto sm:h-[1.7rem]"
+                className="h-[1.5rem] w-auto sm:h-[2rem]"
                 style={{ objectFit: "contain" }}
               />
               <span
