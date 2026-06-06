@@ -482,7 +482,21 @@ const TOOL_ASK_AGENT = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_LIST_AGENTS];
+const TOOL_COUNCIL_TO_NOTION = {
+  name: "cob_council_to_notion",
+  description:
+    "Convene the COB Council on a business question, then write the resulting minute to the SPINNEY boardroom Notion database. Returns the minute and the Notion page URL.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
+      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
+    },
+    required: ["question"],
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_COUNCIL_TO_NOTION, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
