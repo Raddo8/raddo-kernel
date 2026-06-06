@@ -73,7 +73,7 @@ curl -i https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource
 # 200 + JSON pointing at the Supabase AS
 
 curl -i https://mcp.chiefofbusiness.ai/.well-known/oauth-authorization-server
-# 302 → https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1
+# 302 → https://rnjqpwmzmbnnaonppfkm.supabase.co/.well-known/oauth-authorization-server/auth/v1
 ```
 
 ## 4 · Register the connector
