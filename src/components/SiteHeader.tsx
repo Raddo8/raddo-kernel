@@ -123,7 +123,7 @@ export function SiteHeader() {
           </div>
 
           {/* Primary row */}
-          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-3.5">
+          <div className="flex items-center justify-between gap-3 px-4 py-1.5 sm:px-6 sm:py-2">
             <Link
               to="/"
               className="flex shrink-0 items-center gap-1.5 sm:gap-2"
@@ -132,7 +132,7 @@ export function SiteHeader() {
               <img
                 src={raddoLogo.url}
                 alt="COB"
-                className="h-[1.15rem] w-auto sm:h-[1.55rem]"
+                className="h-[1.5rem] w-auto sm:h-[2rem]"
                 style={{ objectFit: "contain" }}
               />
               <span
