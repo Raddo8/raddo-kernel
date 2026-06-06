@@ -659,6 +659,13 @@ Deno.serve(async (req) => {
         return rpcResult(id, { agents: listEnabledAgentsPublic() });
       }
 
+      // Hidden test seam · undocumented `_client_context` field flows into the
+      // v2 preamble's CLIENT_CONTEXT slot. Not in tool inputSchema. Proves the
+      // Tier-1 grounding seam end-to-end without exposing it to customers.
+      const clientContext = typeof args?._client_context === "string"
+        ? args._client_context.slice(0, 8000)
+        : "";
+
       if (name === "cob_run_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
@@ -667,7 +674,7 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context, clientContext);
           await recordMcpUsage(supabaseAdmin, {
             tenant: "SPINNEY", tool: "cob_run_council", agent_id: null, passes,
           });
@@ -692,7 +699,7 @@ Deno.serve(async (req) => {
         if (agentId === "council") {
           return rpcError(id, -32005, "use_council_tool");
         }
-        const bundle = loadAgent(agentId);
+        const bundle = loadAgent(agentId, clientContext);
         if (!bundle || bundle.kind !== "single") {
           return rpcError(id, -32004, "agent_not_available");
         }
@@ -719,7 +726,8 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context);
+          const { minute, passes } = await runCouncil(question, context, clientContext);
+
 
           // Boundary scrub on the full text destined for Notion before any write.
           const notionPayloadText = [
