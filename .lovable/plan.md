@@ -1,69 +1,109 @@
-# BUILD DISPATCH — Global Preamble v2 + CLIENT_CONTEXT seam
 
-Scope: `supabase/functions/mcp-council/` only. No profile/seed/schema/scrub/auth/cost/Notion changes.
+# Phase 2B · OAuth AS + client-registerable MCP connector
 
-## 1 · Replace `_global-preamble.ts` with GLOBAL_PREAMBLE_v2 (verbatim)
+## STEP 0 verdict (research, not a step to build)
 
-Overwrite `supabase/functions/mcp-council/agents/_global-preamble.ts` with the v2 text from the dispatch, used verbatim. Includes:
+**Path: Supabase-native OAuth 2.1 AS.** Public beta went live 2025-11-26 with explicit MCP authentication support: PKCE, `/.well-known/oauth-authorization-server`, Dynamic Client Registration (DCR), JWKS, refresh-token rotation. Discovery doc is hosted at `https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1`. This is the path Anthropic/Claude custom connectors expect. Stytch fallback is **not** needed.
 
-- Identity & boundary (propose · don't certify · stay in seat)
-- ABC (Absolute · Brutal · Challenging)
-- Anti-fabrication HARD + claim taxonomy (Documented Fact · Strong Inference · Working Hypothesis · Open Question)
-- Two-axis confidence with calibration discipline (thin data / refusal = LOW ε; no rigor inflation)
-- Gap-closure (name missing input + closing action before answering when ε/ρ would be < ~0.90)
-- Underspecified-question discipline · always-weigh-null-option · audience/stakes calibration · present-day-fact grounding
-- Council-mode + Spock dissent discipline (falsification-only)
-- `<<CLIENT_CONTEXT>>` marker — Tier-1 grounding seam, empty today
+Source: Supabase docs · `Auth → OAuth 2.1 Server → MCP Authentication` and `OAuth 2.1 Server Capabilities` changelog (Nov 26, 2025: "Public beta is live now").
 
-Preserve exact wording (incl. `<<CLIENT_CONTEXT>>` marker and the explanatory note around it) so v2 is the single source of truth.
+Reported up front per the dispatch's STEP 0 gate.
 
-## 2 · Wire the CLIENT_CONTEXT injection seam in prompt assembly
+## What Lovable builds vs. what needs operator action
 
-Goal: a no-op today, populated later by Phase 2/3 without touching any agent file.
+**Lovable (this build):**
+- Edge-function changes in `mcp-council` (JWT validation, tenant resolution, security cleanup)
+- Cloudflare Worker source + wrangler config checked into the repo at `edge/mcp-proxy/`
+- `/.well-known/oauth-protected-resource` JSON (served by the Worker; points clients at the Supabase AS)
+- Docs + DNS instructions in `docs/PHASE_2B_DEPLOY.md`
 
-**`index.ts` changes (assembly only · no logic changes elsewhere):**
+**Operator (out of Lovable's reach, called out explicitly):**
+- Toggle **Authentication → OAuth Server** ON in the Supabase project, enable **Dynamic Client Registration**, set consent screen copy
+- Deploy the Worker (`wrangler deploy`) and bind the route to `mcp.chiefofbusiness.ai/*`
+- Add the `CNAME mcp → <worker>.workers.dev` record (proxy off) at the DNS registrar
+- Register the connector in a test Claude/Cowork account and run the handshake
 
-a. Add a helper:
-```ts
-function renderPreamble(clientContext: string = ""): string {
-  return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
-}
+Lovable cannot toggle the OAuth server, cannot create Cloudflare Workers, and cannot edit DNS. The build will be inert until the operator completes those three.
+
+## STEP 1 · Authorization Server (operator toggle; we document)
+
+Nothing to author in our codebase — the AS is `https://vacpgxxgdfhgvkduljgs.supabase.co/auth/v1` once the toggle is on. We write the operator runbook only (see `docs/PHASE_2B_DEPLOY.md` below) so the Cowork/Claude side knows where to discover.
+
+Tenant identity: each end-user authenticates as themselves (a Supabase Auth user). Tenant assignment is derived server-side from `app_metadata.tenant` on that user; we add a `profiles.tenant` mirror later if needed. For 2B's SPINNEY proof, the single seeded operator user has `app_metadata.tenant = "SPINNEY"`.
+
+## STEP 2 · `mcp.chiefofbusiness.ai` Cloudflare Worker proxy
+
+New folder `edge/mcp-proxy/`:
+
+- `wrangler.toml` — name `cob-mcp-proxy`, route `mcp.chiefofbusiness.ai/*`, compatibility date 2026-06-01.
+- `src/index.ts` — minimal Worker:
+  - `GET /.well-known/oauth-authorization-server` → 302 to `https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1` (Anthropic clients follow redirects per RFC 8414).
+  - `GET /.well-known/oauth-protected-resource` → static JSON `{ resource: "https://mcp.chiefofbusiness.ai/", authorization_servers: ["https://vacpgxxgdfhgvkduljgs.supabase.co/auth/v1"], bearer_methods_supported: ["header"], scopes_supported: ["mcp:council"] }` per RFC 9728.
+  - Any other path (incl. `POST /`) → reverse-proxy to `https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council`, forwarding method/headers/body unchanged, stripping `cf-*` headers, and on 401 adding `WWW-Authenticate: Bearer resource_metadata="https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource"` so MCP clients can self-discover the AS.
+
+DNS: `CNAME mcp cob-mcp-proxy.<account>.workers.dev` (proxy OFF — Worker route handles TLS via Cloudflare for SaaS or the workers.dev cert). Documented in the runbook; not auto-applied.
+
+## STEP 3 · `mcp-council` accepts OAuth JWTs (token validator)
+
+In `supabase/functions/mcp-council/index.ts`, replace the single bearer gate with a dual-mode validator:
+
+```text
+1. Read Authorization: Bearer <token>
+2. If token === COUNCIL_TENANT_TOKEN_SPINNEY → tenant = "SPINNEY" (legacy curl path, kept for regression)
+3. Else verify as Supabase JWT:
+   - fetch + cache JWKS from https://<ref>.supabase.co/auth/v1/.well-known/jwks.json (60-min TTL)
+   - verify RS256/ES256 signature, exp, iat, iss=https://<ref>.supabase.co/auth/v1
+   - require aud contains "https://mcp.chiefofbusiness.ai/" (the protected-resource id) OR scope contains "mcp:council"
+   - tenant := app_metadata.tenant (string); reject if missing → 401 invalid_token
+4. On any failure → 401 with WWW-Authenticate: Bearer error="invalid_token", resource_metadata="https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource"
 ```
 
-b. Add an optional `clientContext` parameter to:
-   - `runCouncil(question, context, clientContext = "")`
-   - `runSingleAgent(bundle, question, context, clientContext = "")`
-   - `loadAgent(id, clientContext = "")` → builds the single-agent `system` using `renderPreamble(clientContext)` instead of raw `GLOBAL_PREAMBLE_MD`
+New file `supabase/functions/mcp-council/auth.ts` holds JWKS fetch/cache + `verifySupabaseJwt(token)` returning `{ tenant, sub, scope }`. Uses Deno's built-in `crypto.subtle` (no new deps).
 
-c. In `runCouncil`, prepend the rendered preamble to each chair system at call time:
-```ts
-system: `${renderPreamble(clientContext)}\n\n${c.system}`
-```
-Same prepend for the Stage-2 horizon pass (`LEO_MD`) and Stage-3 lead-synthesis (`LEAD_SYNTH_MD`). This is the change that brings council chairs under the v2 floor (today they don't import the preamble).
+Tenant is then threaded into `runCouncil` / `runSingleAgent` / `recordMcpUsage` in place of the hard-coded `"SPINNEY"` literal. SPINNEY remains the only seeded tenant; other tenant values are accepted but route to the same OFFICE until 3+.
 
-d. MCP tool handlers (`cob_run_council`, `cob_ask_agent`, `cob_council_to_notion`) pass `""` for `clientContext` — the seam exists but is unwired, exactly as specified. No tool input-schema change.
+## STEP 4 · Security cleanup (`_client_context` hardening)
 
-e. Add a hidden test seam: read `clientContext` from an undocumented optional input field `_client_context` (string) on `cob_run_council` and `cob_ask_agent` ONLY when present, so the acceptance gate "passing a test context string flows into the prompt" can be proven via curl without exposing it as a customer-facing parameter. Not added to the tool inputSchema description; field is silently accepted by the handler.
+Two-line discipline change in the `tools/call` handler:
 
-## 3 · No profile rewrites
+- When the request is OAuth-authenticated, **ignore** any incoming `_client_context` field entirely (`clientContext = ""`). The Standing Context Refresh, when wired in Phase 2/3, will populate the slot server-side from the verified tenant only.
+- When the request is on the legacy static-bearer SPINNEY path, **still** accept `_client_context` (gated by a new env `COUNCIL_ALLOW_TEST_CONTEXT=1`, default off in prod) so curl validation of the Tier-1 seam keeps working during the transition. Without the env, the field is dropped on both paths.
 
-`agents/{knox,lucius,leo,alfred,iroh}.ts` and `council/{leo,spock,lucius,alfred,iroh,lead-synthesis,approach-principles}.ts` are NOT modified. v2 is the enforceable floor beneath them.
+This removes the OAuth-side prompt-injection surface without losing the curl seam.
+
+## STEP 5 · Register + prove (operator runs, we document)
+
+`docs/PHASE_2B_DEPLOY.md` walks the operator through:
+1. Supabase: enable OAuth Server, enable DCR, consent copy.
+2. Create one Supabase Auth user; set `app_metadata.tenant = "SPINNEY"` via SQL.
+3. Deploy Worker (`cd edge/mcp-proxy && wrangler deploy`).
+4. Add the CNAME; verify `curl https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource` returns the JSON.
+5. In Claude.ai → Custom Connectors → Add → URL `https://mcp.chiefofbusiness.ai/`. Confirm discovery → consent → PKCE → token → `cob_run_council` returns a minute.
+6. Regression `curl` with `Authorization: Bearer $COUNCIL_TENANT_TOKEN_SPINNEY` still works.
+7. Negative: random bearer → 401 with `invalid_token` and `WWW-Authenticate` pointing at the resource-metadata URL.
+
+## Acceptance gates (mirrored from dispatch)
+
+- STEP 0 verdict reported above (Supabase-native).
+- `/.well-known/*` reachable at `mcp.chiefofbusiness.ai` — verified after operator DNS+Worker.
+- Full OAuth handshake completes through Claude custom connector — verified by operator.
+- Unauthorized / bad-token → 401 `invalid_token`, no body leakage — covered by validator.
+- `_client_context` ignored on OAuth path; gated behind env on legacy path.
+- Static-bearer SPINNEY curl + Notion write-back unchanged — same code path, just an additional branch above it.
 
 ## Files
 
-- MODIFY `supabase/functions/mcp-council/agents/_global-preamble.ts` — replace with v2 verbatim
-- MODIFY `supabase/functions/mcp-council/index.ts` — `renderPreamble` helper · `clientContext` param threaded through `loadAgent` / `runCouncil` / `runSingleAgent` · prepend rendered preamble to council chair + horizon + lead-synthesis systems · accept `_client_context` test field in handlers
+- ADD `supabase/functions/mcp-council/auth.ts` (JWKS + JWT verifier)
+- MODIFY `supabase/functions/mcp-council/index.ts` (dual-mode auth, tenant threading, `_client_context` gating, 401 `WWW-Authenticate` with resource-metadata pointer)
+- ADD `edge/mcp-proxy/wrangler.toml`
+- ADD `edge/mcp-proxy/src/index.ts`
+- ADD `edge/mcp-proxy/README.md`
+- ADD `docs/PHASE_2B_DEPLOY.md` (operator runbook · STEPs 1, 2, 5)
 
-## Deploy & validation (post-build)
+## Out of scope (per dispatch)
 
-Deploy `mcp-council`. Then:
+Per-tenant entitlements + Stripe (Phase 3) · real customer data + Jake-owned Supabase eject (Phase 4) · multi-client OFFICE provisioning · Standing Context Refresh wiring of `<<CLIENT_CONTEXT>>`.
 
-1. `cob_run_council` on the pricing question → two-axis ε/ρ, ε LOW without real numbers, minute names missing load-bearing inputs (gap-closure) and weighs null option.
-2. `cob_ask_agent` (lucius) with a made-up-sounding figure → labels inference vs fact, no invented numbers.
-3. Boundary probe → refusal scores LOW ε/ρ.
-4. Seam proof: `cob_run_council` with `_client_context: "TEST_SEAM_TOKEN_XYZ"` — confirm via edge logs that the rendered preamble contains it (no agent rewrite needed).
-5. Regression: 5 single agents + council + Notion write-back + `mcp_usage_events` rows unchanged in shape.
+## Operator hand-off note
 
-## Out of scope
-
-Populating CLIENT_CONTEXT with real data (Phase 2/3) · per-profile prose trimming · OAuth/2B · tool inputSchema changes.
+After the build lands, Lovable will post the runbook path and the exact strings needed (Supabase project ref, AS discovery URL, Worker route). The handshake itself requires the three operator actions above before any connector test can pass.
