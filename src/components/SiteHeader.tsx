@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import raddoLogo from "@/assets/cob-logo-dark.png.asset.json";
+import raddoLogo from "@/assets/cob-logo.png.asset.json";
 
 // Customer-facing navigation only.
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -132,7 +132,7 @@ export function SiteHeader() {
               <img
                 src={raddoLogo.url}
                 alt="COB"
-                className="h-[1.38rem] w-auto sm:h-[1.86rem]"
+                className="h-[1.15rem] w-auto sm:h-[1.55rem]"
                 style={{ objectFit: "contain" }}
               />
               <span
