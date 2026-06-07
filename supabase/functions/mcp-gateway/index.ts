@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
       resource: GATEWAY_URL,
       authorization_servers: [AS_ISSUER],
       bearer_methods_supported: ["header"],
-      scopes_supported: ["mcp:council"],
+      scopes_supported: ["openid", "email", "profile"],
       resource_documentation: "https://chiefofbusiness.ai",
     };
     return new Response(JSON.stringify(body, null, 2), {
