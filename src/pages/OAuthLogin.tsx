@@ -19,6 +19,7 @@ import { Eye, EyeOff } from "lucide-react";
 export default function OAuthLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
