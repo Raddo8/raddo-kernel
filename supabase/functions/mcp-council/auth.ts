@@ -133,16 +133,12 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
     throw new Error("invalid_token");
   }
 
-  // Audience OR scope must permit the council resource.
-  const aud = payload?.aud;
-  const audList: string[] = Array.isArray(aud) ? aud : (typeof aud === "string" ? [aud] : []);
+  // NOTE: audience/scope gating intentionally removed. The Supabase AS does
+  // not let us mint a custom `aud` or custom `mcp:council` scope without
+  // breaking the /authorize step. Trust the issuer + signature + tenant
+  // claim. Resource isolation is enforced server-side via app_metadata.tenant.
   const scopeStr = typeof payload?.scope === "string" ? payload.scope : "";
-  const scopes = new Set(scopeStr.split(/\s+/).filter(Boolean));
-  const audOk = audList.some((a) =>
-    RESOURCE_IDS.includes(a) || RESOURCE_IDS.includes(a.replace(/\/?$/, "/"))
-  );
-  const scopeOk = scopes.has(COUNCIL_SCOPE);
-  if (!audOk && !scopeOk) throw new Error("invalid_token");
+
 
   // Tenant resolution · server-side only, never from caller input.
   const appMeta = (payload?.app_metadata && typeof payload.app_metadata === "object")
