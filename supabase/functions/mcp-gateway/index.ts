@@ -75,14 +75,22 @@ Deno.serve(async (req) => {
   // rewrite these endpoints to the gateway host and do not strip /auth/v1;
   // Claude follows these values literally during authorize/token/DCR.
   if (path === "/.well-known/oauth-authorization-server") {
-    return new Response(JSON.stringify(AS_METADATA, null, 2), {
-      status: 200,
-      headers: {
-        ...CORS,
-        "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=300",
-      },
-    });
+    try {
+      const body = await getAsMetadata();
+      return new Response(body, {
+        status: 200,
+        headers: {
+          ...CORS,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "discovery_unavailable", detail: String(e) }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
   }
 
   // RFC 9728 · Protected-resource metadata.
