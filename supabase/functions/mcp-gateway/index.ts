@@ -26,39 +26,23 @@ const UPSTREAM_URL =
   "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council";
 const AS_BASE = "https://rnjqpwmzmbnnaonppfkm.supabase.co";
 const AS_ISSUER = `${AS_BASE}/auth/v1`;
-const AS_METADATA = {
-  issuer: AS_ISSUER,
-  authorization_endpoint: `${AS_ISSUER}/authorize`,
-  token_endpoint: `${AS_ISSUER}/token`,
-  jwks_uri: `${AS_ISSUER}/.well-known/jwks.json`,
-  userinfo_endpoint: `${AS_ISSUER}/userinfo`,
-  registration_endpoint: `${AS_ISSUER}/register`,
-  scopes_supported: ["openid", "profile", "email", "phone", "mcp:council"],
-  response_types_supported: ["code"],
-  response_modes_supported: ["query"],
-  grant_types_supported: ["authorization_code", "refresh_token"],
-  subject_types_supported: ["public"],
-  id_token_signing_alg_values_supported: ["RS256", "HS256", "ES256"],
-  token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
-  claims_supported: [
-    "sub",
-    "aud",
-    "iss",
-    "exp",
-    "iat",
-    "auth_time",
-    "nonce",
-    "email",
-    "email_verified",
-    "phone_number",
-    "phone_number_verified",
-    "name",
-    "picture",
-    "preferred_username",
-    "updated_at",
-  ],
-  code_challenge_methods_supported: ["S256", "plain"],
-};
+const AS_DISCOVERY_URL = `${AS_BASE}/auth/v1/.well-known/oauth-authorization-server`;
+
+// Cache the upstream discovery doc in-memory across requests.
+let _asMetadataCache: { body: string; fetchedAt: number } | null = null;
+const AS_METADATA_TTL_MS = 5 * 60 * 1000;
+
+async function getAsMetadata(): Promise<string> {
+  const now = Date.now();
+  if (_asMetadataCache && now - _asMetadataCache.fetchedAt < AS_METADATA_TTL_MS) {
+    return _asMetadataCache.body;
+  }
+  const r = await fetch(AS_DISCOVERY_URL, { headers: { accept: "application/json" } });
+  if (!r.ok) throw new Error(`upstream discovery ${r.status}`);
+  const body = await r.text();
+  _asMetadataCache = { body, fetchedAt: now };
+  return body;
+}
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -91,14 +75,22 @@ Deno.serve(async (req) => {
   // rewrite these endpoints to the gateway host and do not strip /auth/v1;
   // Claude follows these values literally during authorize/token/DCR.
   if (path === "/.well-known/oauth-authorization-server") {
-    return new Response(JSON.stringify(AS_METADATA, null, 2), {
-      status: 200,
-      headers: {
-        ...CORS,
-        "Content-Type": "application/json",
-        "Cache-Control": "public, max-age=300",
-      },
-    });
+    try {
+      const body = await getAsMetadata();
+      return new Response(body, {
+        status: 200,
+        headers: {
+          ...CORS,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "discovery_unavailable", detail: String(e) }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
   }
 
   // RFC 9728 · Protected-resource metadata.
