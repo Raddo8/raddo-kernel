@@ -55,9 +55,32 @@ Deno.serve(async (req) => {
 
   const path = getPath(req);
 
-  // RFC 8414 · AS discovery → redirect to the Supabase AS discovery doc.
+  // RFC 8414 · AS discovery. Serve INLINE as 200 JSON (not a 302) — many
+  // MCP clients, including Claude's custom connector, do not follow
+  // redirects on the well-known discovery URL. We fetch the upstream
+  // Supabase AS doc and re-emit it verbatim so issuer + endpoints stay
+  // authoritative (they point at rnjqpwmzmbnnaonppfkm directly, which is
+  // what auth.ts validates against).
   if (path === "/.well-known/oauth-authorization-server") {
-    return Response.redirect(AS_DISCOVERY_URL, 302);
+    try {
+      const upstream = await fetch(AS_DISCOVERY_URL, {
+        headers: { Accept: "application/json" },
+      });
+      const body = await upstream.text();
+      return new Response(body, {
+        status: upstream.status,
+        headers: {
+          ...CORS,
+          "Content-Type": "application/json",
+          "Cache-Control": "public, max-age=300",
+        },
+      });
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "as_discovery_unavailable", detail: String(e) }),
+        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } },
+      );
+    }
   }
 
   // RFC 9728 · Protected-resource metadata.
