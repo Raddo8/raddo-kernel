@@ -35,6 +35,7 @@ import RespondPage from "@/pages/RespondPage";
 import StyleGuide from "@/pages/StyleGuide";
 import Dossier from "@/pages/Dossier";
 import OAuthConsent from "@/pages/OAuthConsent";
+import OAuthLogin from "@/pages/OAuthLogin";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
@@ -82,6 +83,7 @@ const App = () => (
             <Route path="/dossier" element={<Dossier />} />
             <Route path="/respond/:token" element={<RespondPage />} />
             <Route path="/oauth/consent" element={<OAuthConsent />} />
+            <Route path="/login" element={<OAuthLogin />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
