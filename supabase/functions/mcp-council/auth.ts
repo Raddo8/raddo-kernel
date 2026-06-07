@@ -19,7 +19,15 @@ const JWKS_URL = Deno.env.get("OAUTH_JWKS_URL") ?? `${DEFAULT_AS_URL}/auth/v1/.w
 // mcp.chiefofbusiness.ai. Clients receive it via RFC 9728 metadata and
 // MUST request tokens whose `aud` includes it (or whose `scope` contains
 // the council scope).
-const RESOURCE_ID = "https://mcp.chiefofbusiness.ai/";
+// Accepted resource identifiers (RFC 8707). The production Cloudflare worker
+// uses mcp.chiefofbusiness.ai; the interim Supabase-only gateway uses the
+// mcp-gateway function URL on this same project. Either is acceptable so the
+// SPINNEY test can register the gateway directly without DNS.
+const RESOURCE_IDS = [
+  "https://mcp.chiefofbusiness.ai/",
+  "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway",
+  "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway/",
+];
 const COUNCIL_SCOPE = "mcp:council";
 
 // ── JWKS cache (60-min TTL) ────────────────────────────────────────────────
@@ -130,7 +138,9 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
   const audList: string[] = Array.isArray(aud) ? aud : (typeof aud === "string" ? [aud] : []);
   const scopeStr = typeof payload?.scope === "string" ? payload.scope : "";
   const scopes = new Set(scopeStr.split(/\s+/).filter(Boolean));
-  const audOk = audList.includes(RESOURCE_ID) || audList.includes(RESOURCE_ID.replace(/\/$/, ""));
+  const audOk = audList.some((a) =>
+    RESOURCE_IDS.includes(a) || RESOURCE_IDS.includes(a.replace(/\/?$/, "/"))
+  );
   const scopeOk = scopes.has(COUNCIL_SCOPE);
   if (!audOk && !scopeOk) throw new Error("invalid_token");
 
