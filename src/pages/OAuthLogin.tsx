@@ -21,7 +21,9 @@ export default function OAuthLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const params = new URLSearchParams(window.location.search);
   // Preserve the entire redirect target (may contain its own ? and &).
