@@ -1,0 +1,125 @@
+// supabase/functions/mcp-gateway/index.ts
+//
+// Interim Supabase-only MCP gateway · stands in for the production
+// Cloudflare Worker at mcp.chiefofbusiness.ai. Lets SPINNEY test the
+// Claude custom-connector handshake without DNS or Cloudflare.
+//
+// Responsibilities:
+//   1. Serve RFC 9728 protected-resource metadata at
+//      /.well-known/oauth-protected-resource (resource = this gateway's
+//      own URL; authorization_servers = Jake-owned Supabase AS).
+//   2. Redirect /.well-known/oauth-authorization-server (RFC 8414) to the
+//      Supabase AS discovery doc on rnjqpwmzmbnnaonppfkm.
+//   3. Reverse-proxy every other request to the mcp-council Edge Function
+//      on this same project, forwarding Authorization + body untouched.
+//   4. On upstream 401, inject WWW-Authenticate with resource_metadata=
+//      pointing at this gateway's own well-known, so MCP clients can
+//      self-discover the AS and run DCR + PKCE.
+//
+// verify_jwt is false (set in supabase/config.toml) — the function does
+// its own auth handling by proxying to mcp-council, which validates the
+// OAuth JWT against the AS JWKS.
+
+const GATEWAY_URL =
+  "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway";
+const UPSTREAM_URL =
+  "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council";
+const AS_BASE = "https://rnjqpwmzmbnnaonppfkm.supabase.co";
+const AS_ISSUER = `${AS_BASE}/auth/v1`;
+const AS_DISCOVERY_URL = `${AS_BASE}/.well-known/oauth-authorization-server/auth/v1`;
+
+const CORS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, content-type, mcp-session-id, x-client-info, apikey",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+};
+
+function getPath(req: Request): string {
+  // Strip the /functions/v1/mcp-gateway prefix when present so paths like
+  // /.well-known/oauth-protected-resource match cleanly regardless of how
+  // the function was invoked.
+  const url = new URL(req.url);
+  let p = url.pathname;
+  const fnPrefix = "/functions/v1/mcp-gateway";
+  if (p.startsWith(fnPrefix)) p = p.slice(fnPrefix.length) || "/";
+  if (p === "" || p === "/mcp-gateway") p = "/";
+  return p;
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: CORS });
+  }
+
+  const path = getPath(req);
+
+  // RFC 8414 · AS discovery → redirect to the Supabase AS discovery doc.
+  if (path === "/.well-known/oauth-authorization-server") {
+    return Response.redirect(AS_DISCOVERY_URL, 302);
+  }
+
+  // RFC 9728 · Protected-resource metadata.
+  if (path === "/.well-known/oauth-protected-resource") {
+    const body = {
+      resource: GATEWAY_URL,
+      authorization_servers: [AS_ISSUER],
+      bearer_methods_supported: ["header"],
+      scopes_supported: ["mcp:council"],
+      resource_documentation: "https://chiefofbusiness.ai",
+    };
+    return new Response(JSON.stringify(body, null, 2), {
+      status: 200,
+      headers: {
+        ...CORS,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
+
+  // Reverse-proxy everything else to mcp-council. Strip hop-by-hop headers;
+  // preserve Authorization + body unchanged.
+  const fwdHeaders = new Headers();
+  for (const [k, v] of req.headers) {
+    const lk = k.toLowerCase();
+    if (lk === "host" || lk === "x-forwarded-host" || lk.startsWith("cf-")) continue;
+    fwdHeaders.set(k, v);
+  }
+
+  let upstream: Response;
+  try {
+    upstream = await fetch(UPSTREAM_URL, {
+      method: req.method,
+      headers: fwdHeaders,
+      body: req.method === "GET" || req.method === "HEAD" ? undefined : req.body,
+      redirect: "manual",
+    });
+  } catch (e) {
+    return new Response(
+      JSON.stringify({ error: "upstream_unavailable", detail: String(e) }),
+      { status: 502, headers: { ...CORS, "Content-Type": "application/json" } },
+    );
+  }
+
+  const respHeaders = new Headers(upstream.headers);
+  for (const [k, v] of Object.entries(CORS)) respHeaders.set(k, v);
+
+  // Inject discovery hint on 401 if upstream didn't already point at this
+  // gateway's resource-metadata URL.
+  if (upstream.status === 401) {
+    const existing = respHeaders.get("WWW-Authenticate") ?? "";
+    if (!/resource_metadata=/i.test(existing)) {
+      respHeaders.set(
+        "WWW-Authenticate",
+        `Bearer realm="cob-council", error="invalid_token", resource_metadata="${GATEWAY_URL}/.well-known/oauth-protected-resource"`,
+      );
+    }
+  }
+
+  return new Response(upstream.body, {
+    status: upstream.status,
+    statusText: upstream.statusText,
+    headers: respHeaders,
+  });
+});
