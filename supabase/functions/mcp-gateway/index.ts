@@ -8,8 +8,8 @@
 //   1. Serve RFC 9728 protected-resource metadata at
 //      /.well-known/oauth-protected-resource (resource = this gateway's
 //      own URL; authorization_servers = Jake-owned Supabase AS).
-//   2. Redirect /.well-known/oauth-authorization-server (RFC 8414) to the
-//      Supabase AS discovery doc on rnjqpwmzmbnnaonppfkm.
+//   2. Serve /.well-known/oauth-authorization-server (RFC 8414) inline with
+//      canonical endpoint URLs on the real AS rnjqpwmzmbnnaonppfkm.
 //   3. Reverse-proxy every other request to the mcp-council Edge Function
 //      on this same project, forwarding Authorization + body untouched.
 //   4. On upstream 401, inject WWW-Authenticate with resource_metadata=
@@ -26,7 +26,39 @@ const UPSTREAM_URL =
   "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council";
 const AS_BASE = "https://rnjqpwmzmbnnaonppfkm.supabase.co";
 const AS_ISSUER = `${AS_BASE}/auth/v1`;
-const AS_DISCOVERY_URL = `${AS_BASE}/.well-known/oauth-authorization-server/auth/v1`;
+const AS_METADATA = {
+  issuer: AS_ISSUER,
+  authorization_endpoint: `${AS_ISSUER}/authorize`,
+  token_endpoint: `${AS_ISSUER}/token`,
+  jwks_uri: `${AS_ISSUER}/.well-known/jwks.json`,
+  userinfo_endpoint: `${AS_ISSUER}/userinfo`,
+  registration_endpoint: `${AS_ISSUER}/register`,
+  scopes_supported: ["openid", "profile", "email", "phone", "mcp:council"],
+  response_types_supported: ["code"],
+  response_modes_supported: ["query"],
+  grant_types_supported: ["authorization_code", "refresh_token"],
+  subject_types_supported: ["public"],
+  id_token_signing_alg_values_supported: ["RS256", "HS256", "ES256"],
+  token_endpoint_auth_methods_supported: ["client_secret_basic", "client_secret_post", "none"],
+  claims_supported: [
+    "sub",
+    "aud",
+    "iss",
+    "exp",
+    "iat",
+    "auth_time",
+    "nonce",
+    "email",
+    "email_verified",
+    "phone_number",
+    "phone_number_verified",
+    "name",
+    "picture",
+    "preferred_username",
+    "updated_at",
+  ],
+  code_challenge_methods_supported: ["S256", "plain"],
+};
 
 const CORS: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -55,32 +87,18 @@ Deno.serve(async (req) => {
 
   const path = getPath(req);
 
-  // RFC 8414 · AS discovery. Serve INLINE as 200 JSON (not a 302) — many
-  // MCP clients, including Claude's custom connector, do not follow
-  // redirects on the well-known discovery URL. We fetch the upstream
-  // Supabase AS doc and re-emit it verbatim so issuer + endpoints stay
-  // authoritative (they point at rnjqpwmzmbnnaonppfkm directly, which is
-  // what auth.ts validates against).
+  // RFC 8414 · AS discovery. Serve INLINE as 200 JSON (not a 302). Do not
+  // rewrite these endpoints to the gateway host and do not strip /auth/v1;
+  // Claude follows these values literally during authorize/token/DCR.
   if (path === "/.well-known/oauth-authorization-server") {
-    try {
-      const upstream = await fetch(AS_DISCOVERY_URL, {
-        headers: { Accept: "application/json" },
-      });
-      const body = await upstream.text();
-      return new Response(body, {
-        status: upstream.status,
-        headers: {
-          ...CORS,
-          "Content-Type": "application/json",
-          "Cache-Control": "public, max-age=300",
-        },
-      });
-    } catch (e) {
-      return new Response(
-        JSON.stringify({ error: "as_discovery_unavailable", detail: String(e) }),
-        { status: 502, headers: { ...CORS, "Content-Type": "application/json" } },
-      );
-    }
+    return new Response(JSON.stringify(AS_METADATA, null, 2), {
+      status: 200,
+      headers: {
+        ...CORS,
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
   }
 
   // RFC 9728 · Protected-resource metadata.
