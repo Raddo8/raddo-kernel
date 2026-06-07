@@ -1,57 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { SeoHead } from "@/components/SeoHead";
 
 /**
- * OAuth 2.1 consent screen.
+ * OAuth 2.1 consent screen — wired to the Supabase OAuth Server.
  *
- * The Supabase OAuth Server on project `rnjqpwmzmbnnaonppfkm` delegates the
- * consent UI to this route. It redirects the user-agent here with query
- * params identifying the client, the requested scopes, and a short-lived
- * `consent_token` we hand back to the AS along with the user's decision.
- *
- * Approve / Deny POST `{ consent_token, approved }` to the AS consent
- * endpoint; the AS responds with `{ redirect_to }` pointing back to its
- * `/authorize` flow with the appropriate result encoded.
+ * Flow:
+ *   1. Read `authorization_id` from URL.
+ *   2. Require an authenticated user — if missing, bounce to /login with a
+ *      `redirect` param so the user returns here after sign-in.
+ *   3. Call `supabase.auth.oauth.getAuthorizationDetails(authorization_id)`.
+ *      If the AS reports no pending authorization (already consented), follow
+ *      its `redirect_url` immediately.
+ *   4. Render client name + scopes.
+ *   5. Approve / Deny call the matching AS endpoints and follow the returned
+ *      `redirect_url` back to the client (e.g. claude.ai).
  *
  * Brand: light-dominant paper surface, Fraunces headline, Inter body,
  * brass CTA. No motion beyond standard button states.
  */
 
-const AS_BASE =
-  (import.meta.env.VITE_OAUTH_AS_URL as string | undefined)?.replace(/\/$/, "") ||
-  "https://rnjqpwmzmbnnaonppfkm.supabase.co";
-
-const CONSENT_ENDPOINT = `${AS_BASE}/auth/v1/oauth/consent`;
-
 type Decision = "approve" | "deny";
 
-interface ConsentParams {
-  consentToken: string | null;
-  clientId: string | null;
-  clientName: string | null;
-  redirectUri: string | null;
-  scopes: string[];
-}
-
-function readParams(search: string): ConsentParams {
-  const q = new URLSearchParams(search);
-  const scope = q.get("scope") || q.get("scopes") || "";
-  return {
-    consentToken:
-      q.get("consent_token") ||
-      q.get("consent_id") ||
-      q.get("request_id") ||
-      q.get("ticket"),
-    clientId: q.get("client_id"),
-    clientName:
-      q.get("client_name") ||
-      q.get("client") ||
-      q.get("app_name") ||
-      null,
-    redirectUri: q.get("redirect_uri"),
-    scopes: scope ? scope.split(/[\s,]+/).filter(Boolean) : [],
-  };
+interface AuthDetails {
+  authorization_id?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  client?: { name?: string | null; id?: string | null } | null;
+  scopes?: string[] | null;
+  scope?: string | null;
+  redirect_uri?: string | null;
+  redirect_url?: string | null;
 }
 
 function describeScope(scope: string): string {
@@ -67,70 +47,111 @@ function describeScope(scope: string): string {
   return map[scope] || scope;
 }
 
+function normalizeScopes(d: AuthDetails | null): string[] {
+  if (!d) return [];
+  if (Array.isArray(d.scopes)) return d.scopes.filter(Boolean);
+  if (typeof d.scope === "string") return d.scope.split(/[\s,]+/).filter(Boolean);
+  return [];
+}
+
+function clientLabel(d: AuthDetails | null): string {
+  return (
+    d?.client_name ||
+    d?.client?.name ||
+    d?.client_id ||
+    d?.client?.id ||
+    "An application"
+  );
+}
+
 export default function OAuthConsent() {
-  const params = useMemo(() => readParams(window.location.search), []);
+  const authorizationId = useMemo(
+    () => new URLSearchParams(window.location.search).get("authorization_id"),
+    [],
+  );
+  const [authDetails, setAuthDetails] = useState<AuthDetails | null>(null);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState<Decision | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Guard: if the AS didn't send a consent token there is nothing to do.
   useEffect(() => {
-    if (!params.consentToken) {
-      setError(
-        "This consent screen was opened without a valid authorization request. Return to the application that initiated sign-in and try again.",
-      );
-    }
-  }, [params.consentToken]);
+    let cancelled = false;
+    (async () => {
+      if (!authorizationId) {
+        setError(
+          "This consent screen was opened without a valid authorization request. Return to the application that initiated sign-in and try again.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Require an authenticated user before talking to the OAuth server.
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        const back = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
+        window.location.replace(`/login?redirect=${encodeURIComponent(back)}`);
+        return;
+      }
+
+      try {
+        // @ts-expect-error — supabase.auth.oauth is part of the OAuth Server preview.
+        const { data, error: detailsError } = await supabase.auth.oauth.getAuthorizationDetails(
+          authorizationId,
+        );
+        if (cancelled) return;
+        if (detailsError) throw detailsError;
+
+        const details = (data || {}) as AuthDetails;
+
+        // If the AS reports no pending authorization, the user already
+        // consented — follow the redirect_url straight back to the client.
+        if (!details.authorization_id && (details.redirect_url || details.redirect_uri)) {
+          window.location.assign((details.redirect_url || details.redirect_uri)!);
+          return;
+        }
+
+        setAuthDetails(details);
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(
+            err?.message ||
+              "Could not load the authorization request. It may have expired.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authorizationId]);
 
   async function decide(decision: Decision) {
-    if (!params.consentToken || submitting) return;
+    if (!authorizationId || submitting) return;
     setSubmitting(decision);
     setError(null);
     try {
-      const res = await fetch(CONSENT_ENDPOINT, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          consent_token: params.consentToken,
-          approved: decision === "approve",
-        }),
-      });
-
-      // Prefer JSON `{ redirect_to }`, fall back to Location header, then to
-      // the AS's standard authorize endpoint as a last resort.
-      let redirectTo: string | null = null;
-      const ctype = res.headers.get("content-type") || "";
-      if (ctype.includes("application/json")) {
-        const json = await res.json().catch(() => null);
-        redirectTo =
-          json?.redirect_to ||
-          json?.redirect_uri ||
-          json?.location ||
-          null;
-        if (!res.ok && !redirectTo) {
-          throw new Error(
-            json?.error_description || json?.message || `Consent failed (${res.status})`,
-          );
-        }
-      } else if (res.redirected) {
-        redirectTo = res.url;
-      } else if (!res.ok) {
-        throw new Error(`Consent failed (${res.status})`);
-      }
-
-      if (redirectTo) {
-        window.location.assign(redirectTo);
-        return;
-      }
-      // Hard fallback: bounce back to AS authorize, which will reissue.
-      window.location.assign(`${AS_BASE}/auth/v1/authorize`);
+      const fn =
+        decision === "approve"
+          ? // @ts-expect-error — OAuth Server preview API.
+            supabase.auth.oauth.approveAuthorization
+          : // @ts-expect-error — OAuth Server preview API.
+            supabase.auth.oauth.denyAuthorization;
+      const { data, error: decisionError } = await fn(authorizationId);
+      if (decisionError) throw decisionError;
+      const redirectTo = (data as any)?.redirect_url || (data as any)?.redirect_uri;
+      if (!redirectTo) throw new Error("Authorization server did not return a redirect.");
+      window.location.assign(redirectTo);
     } catch (err: any) {
       setSubmitting(null);
       setError(err?.message || "Could not record your decision. Try again.");
     }
   }
 
-  const clientLabel = params.clientName || params.clientId || "An application";
+  const scopes = normalizeScopes(authDetails);
+  const label = clientLabel(authDetails);
+  const redirectPreview = authDetails?.redirect_uri || authDetails?.redirect_url || null;
 
   return (
     <>
@@ -159,68 +180,80 @@ export default function OAuthConsent() {
           >
             Authorize access to your COB
           </h1>
-          <p
-            className="mt-4 text-base text-raddo-charcoal/85"
-            style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.55 }}
-          >
-            <span className="font-medium text-raddo-ink">{clientLabel}</span>{" "}
-            is requesting permission to connect to your COB workspace.
-          </p>
 
-          <section
-            className="mt-8 border border-raddo-paper-edge bg-white/70 p-6"
-            style={{ borderRadius: 8 }}
-          >
-            <h2
-              className="text-sm uppercase tracking-[0.18em] text-raddo-ash"
+          {loading ? (
+            <p
+              className="mt-6 text-sm text-raddo-ash"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              It will be able to
-            </h2>
-            {params.scopes.length === 0 ? (
+              Loading authorization request…
+            </p>
+          ) : (
+            <>
               <p
-                className="mt-3 text-sm text-raddo-charcoal/75"
-                style={{ fontFamily: "Inter, sans-serif" }}
+                className="mt-4 text-base text-raddo-charcoal/85"
+                style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.55 }}
               >
-                Confirm your identity. No additional access is requested.
+                <span className="font-medium text-raddo-ink">{label}</span> is
+                requesting permission to connect to your COB workspace.
               </p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {params.scopes.map((s) => (
-                  <li
-                    key={s}
-                    className="flex items-start gap-3 text-[15px] text-raddo-charcoal"
-                    style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}
-                  >
-                    <span
-                      aria-hidden
-                      className="mt-[10px] inline-block h-[6px] w-[6px] bg-raddo-brass"
-                      style={{ borderRadius: 4 }}
-                    />
-                    <span>
-                      <span className="block">{describeScope(s)}</span>
-                      <span className="block text-xs text-raddo-ash mt-0.5 font-mono">
-                        {s}
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
 
-            {params.redirectUri && (
-              <p
-                className="mt-5 pt-4 border-t border-raddo-paper-edge text-xs text-raddo-ash break-all"
-                style={{ fontFamily: "Inter, sans-serif" }}
+              <section
+                className="mt-8 border border-raddo-paper-edge bg-white/70 p-6"
+                style={{ borderRadius: 8 }}
               >
-                After approval, you will return to{" "}
-                <span className="font-mono text-raddo-charcoal">
-                  {safeOrigin(params.redirectUri)}
-                </span>
-                .
-              </p>
-            )}
-          </section>
+                <h2
+                  className="text-sm uppercase tracking-[0.18em] text-raddo-ash"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  It will be able to
+                </h2>
+                {scopes.length === 0 ? (
+                  <p
+                    className="mt-3 text-sm text-raddo-charcoal/75"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    Confirm your identity. No additional access is requested.
+                  </p>
+                ) : (
+                  <ul className="mt-3 space-y-2">
+                    {scopes.map((s) => (
+                      <li
+                        key={s}
+                        className="flex items-start gap-3 text-[15px] text-raddo-charcoal"
+                        style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}
+                      >
+                        <span
+                          aria-hidden
+                          className="mt-[10px] inline-block h-[6px] w-[6px] bg-raddo-brass"
+                          style={{ borderRadius: 4 }}
+                        />
+                        <span>
+                          <span className="block">{describeScope(s)}</span>
+                          <span className="block text-xs text-raddo-ash mt-0.5 font-mono">
+                            {s}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {redirectPreview && (
+                  <p
+                    className="mt-5 pt-4 border-t border-raddo-paper-edge text-xs text-raddo-ash break-all"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    After approval, you will return to{" "}
+                    <span className="font-mono text-raddo-charcoal">
+                      {safeOrigin(redirectPreview)}
+                    </span>
+                    .
+                  </p>
+                )}
+              </section>
+            </>
+          )}
 
           {error && (
             <p
@@ -232,25 +265,27 @@ export default function OAuthConsent() {
             </p>
           )}
 
-          <div className="mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
-            <Button
-              variant="outline"
-              disabled={!!submitting || !params.consentToken}
-              onClick={() => decide("deny")}
-              className="border-raddo-paper-edge text-raddo-charcoal hover:bg-raddo-paper-edge/40"
-              style={{ borderRadius: 8, fontFamily: "Inter, sans-serif" }}
-            >
-              {submitting === "deny" ? "Declining…" : "Deny"}
-            </Button>
-            <Button
-              disabled={!!submitting || !params.consentToken}
-              onClick={() => decide("approve")}
-              className="bg-raddo-brass text-raddo-night hover:bg-raddo-brass-deep hover:text-raddo-paper"
-              style={{ borderRadius: 8, fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-            >
-              {submitting === "approve" ? "Approving…" : "Approve access"}
-            </Button>
-          </div>
+          {!loading && authDetails && (
+            <div className="mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+              <Button
+                variant="outline"
+                disabled={!!submitting}
+                onClick={() => decide("deny")}
+                className="border-raddo-paper-edge text-raddo-charcoal hover:bg-raddo-paper-edge/40"
+                style={{ borderRadius: 8, fontFamily: "Inter, sans-serif" }}
+              >
+                {submitting === "deny" ? "Declining…" : "Deny"}
+              </Button>
+              <Button
+                disabled={!!submitting}
+                onClick={() => decide("approve")}
+                className="bg-raddo-brass text-raddo-night hover:bg-raddo-brass-deep hover:text-raddo-paper"
+                style={{ borderRadius: 8, fontFamily: "Inter, sans-serif", fontWeight: 600 }}
+              >
+                {submitting === "approve" ? "Approving…" : "Approve access"}
+              </Button>
+            </div>
+          )}
 
           <p
             className="mt-10 text-xs text-raddo-ash"
