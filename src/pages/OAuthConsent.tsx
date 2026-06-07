@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { asSupabase as supabase } from "@/integrations/supabase/as-client";
 import { Button } from "@/components/ui/button";
 import { SeoHead } from "@/components/SeoHead";
 
