@@ -85,6 +85,7 @@ const App = () => (
             <Route path="/respond/:token" element={<RespondPage />} />
             <Route path="/oauth/consent" element={<OAuthConsent />} />
             <Route path="/login" element={<OAuthLogin />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
