@@ -85,9 +85,9 @@ export default function OAuthConsent() {
         return;
       }
 
-      // Require an authenticated user before talking to the OAuth server.
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
+      // Require an authenticated session before talking to the OAuth server.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         const back = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
         window.location.replace(`/login?redirect=${encodeURIComponent(back)}`);
         return;
