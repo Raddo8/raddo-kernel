@@ -36,14 +36,15 @@ const CORS: Record<string, string> = {
 };
 
 function getPath(req: Request): string {
-  // Strip the /functions/v1/mcp-gateway prefix when present so paths like
-  // /.well-known/oauth-protected-resource match cleanly regardless of how
-  // the function was invoked.
+  // Normalize path so /.well-known/* matches regardless of whether the
+  // runtime exposes the URL as /mcp-gateway/... or /functions/v1/mcp-gateway/...
   const url = new URL(req.url);
   let p = url.pathname;
-  const fnPrefix = "/functions/v1/mcp-gateway";
-  if (p.startsWith(fnPrefix)) p = p.slice(fnPrefix.length) || "/";
-  if (p === "" || p === "/mcp-gateway") p = "/";
+  for (const prefix of ["/functions/v1/mcp-gateway", "/mcp-gateway"]) {
+    if (p === prefix) return "/";
+    if (p.startsWith(prefix + "/")) { p = p.slice(prefix.length); break; }
+  }
+  if (!p) p = "/";
   return p;
 }
 
