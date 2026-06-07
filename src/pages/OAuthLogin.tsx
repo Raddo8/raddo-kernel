@@ -158,6 +158,18 @@ export default function OAuthLogin() {
               </div>
             </div>
 
+            <div className="flex justify-end -mt-1">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                disabled={resetting}
+                className="text-xs uppercase tracking-[0.16em] text-raddo-ash hover:text-raddo-ink disabled:opacity-60"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                {resetting ? "Sending…" : "Forgot password?"}
+              </button>
+            </div>
+
             {error && (
               <p
                 role="alert"
@@ -165,6 +177,16 @@ export default function OAuthLogin() {
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
                 {error}
+              </p>
+            )}
+
+            {notice && (
+              <p
+                role="status"
+                className="text-sm text-raddo-ink"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                {notice}
               </p>
             )}
 
