@@ -36,6 +36,7 @@ import StyleGuide from "@/pages/StyleGuide";
 import Dossier from "@/pages/Dossier";
 import OAuthConsent from "@/pages/OAuthConsent";
 import OAuthLogin from "@/pages/OAuthLogin";
+import ResetPassword from "@/pages/ResetPassword";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
