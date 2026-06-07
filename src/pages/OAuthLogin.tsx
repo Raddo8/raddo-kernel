@@ -34,6 +34,7 @@ export default function OAuthLogin() {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
+    setNotice(null);
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -44,6 +45,28 @@ export default function OAuthLogin() {
     } catch (err: any) {
       setSubmitting(false);
       setError(err?.message || "Sign-in failed. Check your credentials.");
+    }
+  }
+
+  async function onForgotPassword() {
+    setError(null);
+    setNotice(null);
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError("Enter your email above, then choose Forgot password.");
+      return;
+    }
+    setResetting(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw resetError;
+      setNotice("If that email exists, a reset link is on its way.");
+    } catch (err: any) {
+      setError(err?.message || "Could not send reset email.");
+    } finally {
+      setResetting(false);
     }
   }
 
