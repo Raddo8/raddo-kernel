@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SeoHead } from "@/components/SeoHead";
+import { Eye, EyeOff } from "lucide-react";
 
 /**
  * Dedicated sign-in surface for the OAuth 2.1 authorization flow.
