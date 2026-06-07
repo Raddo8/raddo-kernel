@@ -94,7 +94,7 @@ export default function OAuthConsent() {
       }
 
       try {
-        // @ts-expect-error — supabase.auth.oauth is part of the OAuth Server preview.
+        // @ts-ignore — supabase.auth.oauth is part of the OAuth Server preview.
         const { data, error: detailsError } = await supabase.auth.oauth.getAuthorizationDetails(
           authorizationId,
         );
@@ -134,9 +134,9 @@ export default function OAuthConsent() {
     try {
       const fn =
         decision === "approve"
-          ? // @ts-expect-error — OAuth Server preview API.
+          ? // @ts-ignore — OAuth Server preview API.
             supabase.auth.oauth.approveAuthorization
-          : // @ts-expect-error — OAuth Server preview API.
+          : // @ts-ignore — OAuth Server preview API.
             supabase.auth.oauth.denyAuthorization;
       const { data, error: decisionError } = await fn(authorizationId);
       if (decisionError) throw decisionError;
