@@ -21,7 +21,9 @@ export default function OAuthLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const params = new URLSearchParams(window.location.search);
   // Preserve the entire redirect target (may contain its own ? and &).
@@ -32,6 +34,7 @@ export default function OAuthLogin() {
     if (submitting) return;
     setSubmitting(true);
     setError(null);
+    setNotice(null);
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -42,6 +45,28 @@ export default function OAuthLogin() {
     } catch (err: any) {
       setSubmitting(false);
       setError(err?.message || "Sign-in failed. Check your credentials.");
+    }
+  }
+
+  async function onForgotPassword() {
+    setError(null);
+    setNotice(null);
+    const trimmed = email.trim();
+    if (!trimmed) {
+      setError("Enter your email above, then choose Forgot password.");
+      return;
+    }
+    setResetting(true);
+    try {
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmed, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (resetError) throw resetError;
+      setNotice("If that email exists, a reset link is on its way.");
+    } catch (err: any) {
+      setError(err?.message || "Could not send reset email.");
+    } finally {
+      setResetting(false);
     }
   }
 
@@ -133,6 +158,18 @@ export default function OAuthLogin() {
               </div>
             </div>
 
+            <div className="flex justify-end -mt-1">
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                disabled={resetting}
+                className="text-xs uppercase tracking-[0.16em] text-raddo-ash hover:text-raddo-ink disabled:opacity-60"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                {resetting ? "Sending…" : "Forgot password?"}
+              </button>
+            </div>
+
             {error && (
               <p
                 role="alert"
@@ -140,6 +177,16 @@ export default function OAuthLogin() {
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
                 {error}
+              </p>
+            )}
+
+            {notice && (
+              <p
+                role="status"
+                className="text-sm text-raddo-ink"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                {notice}
               </p>
             )}
 
