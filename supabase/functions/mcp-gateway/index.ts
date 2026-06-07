@@ -139,16 +139,17 @@ Deno.serve(async (req) => {
   const respHeaders = new Headers(upstream.headers);
   for (const [k, v] of Object.entries(CORS)) respHeaders.set(k, v);
 
-  // Inject discovery hint on 401 if upstream didn't already point at this
-  // gateway's resource-metadata URL.
+  // ALWAYS rewrite WWW-Authenticate on 401 to point at THIS gateway's
+  // reachable resource-metadata doc. Upstream mcp-council still emits the
+  // legacy mcp.chiefofbusiness.ai URL (NXDOMAIN) which breaks discovery.
   if (upstream.status === 401) {
     const existing = respHeaders.get("WWW-Authenticate") ?? "";
-    if (!/resource_metadata=/i.test(existing)) {
-      respHeaders.set(
-        "WWW-Authenticate",
-        `Bearer realm="cob-council", error="invalid_token", resource_metadata="${GATEWAY_URL}/.well-known/oauth-protected-resource"`,
-      );
-    }
+    const errMatch = existing.match(/error="([^"]+)"/i);
+    const error = errMatch ? errMatch[1] : "invalid_token";
+    respHeaders.set(
+      "WWW-Authenticate",
+      `Bearer realm="cob-council", error="${error}", resource_metadata="${GATEWAY_URL}/.well-known/oauth-protected-resource"`,
+    );
   }
 
   return new Response(upstream.body, {
