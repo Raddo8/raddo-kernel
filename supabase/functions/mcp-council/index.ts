@@ -697,8 +697,16 @@ Deno.serve(async (req) => {
         return rpcError(id, -32003, code);
       };
 
-      if (name === "cob_list_my_agents") {
-        return rpcResult(id, { agents: listEnabledAgentsPublic() });
+      if (name === "show_council") {
+        const roster = listEnabledAgentsPublic();
+        const lines = roster.map((a) => `- ${a.name} (${a.id}) · ${a.lens}`).join("\n");
+        const text = `Advisors currently seated on your Council:\n${lines}`;
+        const structured = { advisors: roster };
+        return rpcResult(id, {
+          content: [{ type: "text", text }],
+          structuredContent: structured,
+          isError: false,
+        });
       }
 
       // Tier-1 grounding seam · `_client_context` (test field).
@@ -711,7 +719,7 @@ Deno.serve(async (req) => {
           ? args._client_context.slice(0, 8000)
           : "";
 
-      if (name === "cob_run_council") {
+      if (name === "convene_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
         if (!question) return rpcError(id, -32602, "invalid_params");
@@ -721,7 +729,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runCouncil(question, context, clientContext);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "cob_run_council", agent_id: null, passes,
+            tenant, tool: "convene_council", agent_id: null, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -733,7 +741,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (name === "cob_ask_agent") {
+      if (name === "consult_advisor") {
         const agentId = typeof args?.agent_id === "string" ? args.agent_id.trim().toLowerCase() : "";
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
@@ -751,7 +759,7 @@ Deno.serve(async (req) => {
         try {
           const { minute, passes } = await runSingleAgent(bundle, question, context);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "cob_ask_agent", agent_id: agentId, passes,
+            tenant, tool: "consult_advisor", agent_id: agentId, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -763,7 +771,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (name === "cob_council_to_notion") {
+      if (name === "file_to_office") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
         if (!question) return rpcError(id, -32602, "invalid_params");
@@ -774,7 +782,7 @@ Deno.serve(async (req) => {
           const { minute, passes } = await runCouncil(question, context, clientContext);
 
 
-          // Boundary scrub on the full text destined for Notion before any write.
+          // Boundary scrub on the full text destined for the OFFICE before any write.
           const notionPayloadText = [
             question,
             minute.recommendation,
@@ -784,14 +792,14 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
-              tenant, tool: "cob_council_to_notion", agent_id: null, passes,
+              tenant, tool: "file_to_office", agent_id: null, passes,
             });
             throw new Error("boundary_violation");
           }
 
           const { url: notion_url } = await writeMinuteToNotion(minute, question);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "cob_council_to_notion", agent_id: null, passes,
+            tenant, tool: "file_to_office", agent_id: null, passes,
           });
           const out = { minute, notion_url };
           return rpcResult(id, {
