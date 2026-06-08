@@ -453,53 +453,72 @@ async function runSingleAgent(
 
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
 const PROTOCOL_VERSION = "2025-06-18";
-const SERVER_INFO = { name: "cob-council", version: "0.2.0" };
+const SERVER_INFO = {
+  name: "the-council",
+  title: "The Council",
+  version: "0.3.0",
+  icons: [
+    {
+      src: "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png",
+      mimeType: "image/png",
+      sizes: ["any"],
+    },
+  ],
+};
 
 const TOOL_RUN_COUNCIL = {
-  name: "cob_run_council",
+  name: "convene_council",
+  title: "Convene the Council",
   description:
-    "Convene the COB Council on a business question. Returns a structured minute with a recommendation, attributed dissent, an anticipatory horizon, and two confidence axes (epistemic, rigor).",
+    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor).",
+  annotations: { title: "Convene the Council" },
   inputSchema: {
     type: "object",
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
-      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
+      context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
     },
     required: ["question"],
   },
 };
 
 const TOOL_LIST_AGENTS = {
-  name: "cob_list_my_agents",
+  name: "show_council",
+  title: "Show Your Council",
   description:
-    "List the COB agents currently available to the principal. Returns each agent's id, display name, and lens.",
+    "Show the advisors currently seated on your Council. Returns each advisor's id, name, and lens.",
+  annotations: { title: "Show Your Council", readOnlyHint: true },
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
 };
 
 const TOOL_ASK_AGENT = {
-  name: "cob_ask_agent",
+  name: "consult_advisor",
+  title: "Consult an Advisor",
   description:
-    "Ask a single named COB agent (other than the council) a question. Returns a structured single-agent minute. Use cob_run_council for multi-chair deliberation.",
+    "Consult a single named advisor on the Council (one-on-one, not the full Council). Returns a structured advisor minute. Use convene_council for multi-advisor deliberation.",
+  annotations: { title: "Consult an Advisor" },
   inputSchema: {
     type: "object",
     properties: {
-      agent_id: { type: "string", description: "The agent id from cob_list_my_agents (e.g. 'knox')." },
+      agent_id: { type: "string", description: "The advisor id from show_council (e.g. 'knox')." },
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
-      context: { type: "string", description: "Optional context the agent should weigh." },
+      context: { type: "string", description: "Optional context the advisor should weigh." },
     },
     required: ["agent_id", "question"],
   },
 };
 
 const TOOL_COUNCIL_TO_NOTION = {
-  name: "cob_council_to_notion",
+  name: "file_to_office",
+  title: "File to the OFFICE",
   description:
-    "Convene the COB Council on a business question, then write the resulting minute to the SPINNEY boardroom Notion database. Returns the minute and the Notion page URL.",
+    "Convene the Council on a business question, then file the resulting minute to the OFFICE (the principal's boardroom record). Returns the minute and the filed page URL.",
+  annotations: { title: "File to the OFFICE" },
   inputSchema: {
     type: "object",
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
-      context: { type: "string", description: "Optional context the principal wants the council to weigh." },
+      context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
     },
     required: ["question"],
   },
