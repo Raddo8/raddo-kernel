@@ -1535,6 +1535,22 @@ Deno.serve(async (req) => {
             question, context, clientContext, tenant, routingHintIgnored,
           });
           const qhash = await hashQuestion(question);
+          // Deterministic gap-signal post-step · ensures structured
+          // missing_lanes / refer_to fire when triage detected a capability
+          // gap the persona may have buried in prose only.
+          const gap = applyGapSignal(
+            { missing_lanes: result.missing_lanes, refer_to: result.refer_to },
+            result.routing_trace.triage, tenant, qhash, result.mode, result.epsilon,
+          );
+          result.missing_lanes = gap.missing_lanes;
+          result.refer_to = gap.refer_to;
+          // Mirror into the minute structured fields when the shape carries them
+          // (single-advisor minutes); council/panel minutes don't expose them.
+          const minuteAny = result.minute as any;
+          if (minuteAny && typeof minuteAny === "object" && "missing_lanes" in minuteAny) {
+            minuteAny.missing_lanes = gap.missing_lanes;
+            minuteAny.refer_to = gap.refer_to;
+          }
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
@@ -1547,6 +1563,8 @@ Deno.serve(async (req) => {
                 one_way_door: result.routing_trace.triage.one_way_door,
                 stakes: result.routing_trace.triage.stakes,
                 mode: result.routing_trace.triage.recommended_mode,
+                detected_subdomain: result.routing_trace.triage.detected_subdomain,
+                gap_reason: result.routing_trace.triage.gap_reason,
               },
               gates_fired: result.routing_trace.gates_fired,
               selected_advisor: result.selected_advisor,
@@ -1558,6 +1576,11 @@ Deno.serve(async (req) => {
               iters: result.routing_trace.iters,
               hops: result.routing_trace.hops,
               routing_hint_ignored: routingHintIgnored || undefined,
+              missing_lanes: gap.missing_lanes,
+              refer_to: gap.refer_to,
+              capability_gap: gap.gap_logged
+                ? { subdomain: gap.gap_logged, source: "triage_deterministic" }
+                : null,
             },
           });
           return rpcResult(id, {
