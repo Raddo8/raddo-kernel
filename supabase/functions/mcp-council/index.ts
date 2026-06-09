@@ -926,7 +926,7 @@ async function runSummonBestAdvisor(args: {
           l === "trust" ? "alfred" :
           l === "people" ? "iroh" :
           l === "strategy" ? "leo" : null)
-        .filter((x): x is string => !!x)];
+        .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
         const { minute: pmin, passes: pp } = await runPanel(
           question, context, panelIds, clientContext, tenant);
