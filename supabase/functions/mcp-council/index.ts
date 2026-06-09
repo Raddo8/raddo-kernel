@@ -386,12 +386,29 @@ async function runCouncil(
   clientContext: string = "",
   tenant: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
+  const r = await runCouncilWithResynth(question, context, clientContext, tenant);
+  return { minute: r.minute, passes: r.passes };
+}
+
+// Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
+// runCouncilGated uses this so a below-floor re_reason re-runs only Stage 3
+// (single Opus call), not the full 7-call fan-out. Cuts worst-case
+// wall-clock for full-council mode roughly in half and keeps the response
+// inside the edge-function window.
+async function runCouncilWithResynth(
+  question: string,
+  context: string,
+  clientContext: string = "",
+  tenant: string = "",
+): Promise<{
+  minute: MinuteShape;
+  passes: Pass[];
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+}> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
 
-  // Seat the tenant's legal advisor as the 6th chair. Body is tenant-aware
-  // (placeholders rendered) and switched to chair-mode output.
   const seatId = getLegalSeat(tenant);
   const seatBody = renderTenantPlaceholders(
     seatId === "knox" ? KNOX_MD : LEXI_MD,
@@ -404,7 +421,6 @@ async function runCouncil(
   };
   const allChairs = [...CHAIRS, legalChair];
 
-  // Stage 1 · six chairs in parallel (five core + seated legal).
   const userMsg = chairUserPrompt(question, context);
   const stage1Raw = await Promise.all(
     allChairs.map((c) =>
@@ -419,7 +435,6 @@ async function runCouncil(
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
-  // Stage 2 · Leo runs the anticipatory horizon pass.
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
@@ -431,7 +446,6 @@ async function runCouncil(
 
   const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
 
-  // Stage 3 · Opus lead synthesis · JSON minute.
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
@@ -439,30 +453,34 @@ async function runCouncil(
       user: synthesisUserPrompt({
         question, context,
         contributions: stage1Results,
-        horizon,
-        freshness,
-        reinforce,
+        horizon, freshness, reinforce,
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    passes.push({ model: res.model, usage: res.usage });
-    return validateMinute(extractJson(res.text), freshness, participating);
+    const pass: Pass = { model: res.model, usage: res.usage };
+    const minute = validateMinute(extractJson(res.text), freshness, participating);
+    return { minute, pass };
   };
 
-  let minute = await synthesize(false);
+  const first = await synthesize(false);
+  passes.push(first.pass);
+  let minute = first.minute;
 
-  // Boundary scrub · detect → regenerate once → else error.
-  const minuteText = JSON.stringify(minute);
-  if (hasBoundaryViolation(minuteText)) {
+  if (hasBoundaryViolation(JSON.stringify(minute))) {
     const second = await synthesize(true);
-    const secondText = JSON.stringify(second);
-    if (hasBoundaryViolation(secondText)) {
+    passes.push(second.pass);
+    if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
     }
-    minute = second;
+    minute = second.minute;
   }
 
-  return { minute, passes };
+  const resynth = async () => {
+    const next = await synthesize(true);
+    return { minute: next.minute, pass: next.pass };
+  };
+
+  return { minute, passes, resynth };
 }
 
 // ── Single-agent runner ────────────────────────────────────────────────────
@@ -637,11 +655,27 @@ async function runPanel(
   clientContext: string = "",
   tenant: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
+  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant);
+  return { minute: r.minute, passes: r.passes };
+}
+
+// Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
+// runPanelGated uses this so a below-floor re_reason re-runs only Stage 3.
+async function runPanelWithResynth(
+  question: string,
+  context: string,
+  chairIds: string[],
+  clientContext: string = "",
+  tenant: string = "",
+): Promise<{
+  minute: MinuteShape;
+  passes: Pass[];
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+}> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
 
-  // Build chair list from supplied specialist ids (tenant-aware for legal).
   const seen = new Set<string>();
   const chairs = chairIds
     .map((id) => (id === "lexi" || id === "knox") ? getLegalSeat(tenant) : id)
@@ -651,7 +685,6 @@ async function runPanel(
 
   if (chairs.length < 2) throw new Error("panel_too_small");
 
-  // Stage 1 · parallel chair contributions.
   const userMsg = chairUserPrompt(question, context);
   const stage1Raw = await Promise.all(
     chairs.map((c) =>
@@ -666,7 +699,6 @@ async function runPanel(
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
-  // Stage 2 · Leo horizon scan.
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
@@ -678,7 +710,6 @@ async function runPanel(
 
   const participating = chairs.map((c) => c.name);
 
-  // Stage 3 · Opus lead synthesis.
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
@@ -690,19 +721,30 @@ async function runPanel(
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    passes.push({ model: res.model, usage: res.usage });
-    return validateMinute(extractJson(res.text), freshness, participating);
+    const pass: Pass = { model: res.model, usage: res.usage };
+    const minute = validateMinute(extractJson(res.text), freshness, participating);
+    return { minute, pass };
   };
 
-  let minute = await synthesize(false);
+  const first = await synthesize(false);
+  passes.push(first.pass);
+  let minute = first.minute;
+
   if (hasBoundaryViolation(JSON.stringify(minute))) {
     const second = await synthesize(true);
-    if (hasBoundaryViolation(JSON.stringify(second))) {
+    passes.push(second.pass);
+    if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
     }
-    minute = second;
+    minute = second.minute;
   }
-  return { minute, passes };
+
+  const resynth = async () => {
+    const next = await synthesize(true);
+    return { minute: next.minute, pass: next.pass };
+  };
+
+  return { minute, passes, resynth };
 }
 
 // ── Routing ledger helpers ─────────────────────────────────────────────────
@@ -745,40 +787,39 @@ async function runCouncilGated(
   clientContext: string,
   tenant: string,
 ): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const allPasses: Pass[] = [];
-  let iter = 0;
-  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
-    async (_state) => {
-      iter++;
-      const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
-      for (const p of passes) allPasses.push(p);
-      const eps = minute.confidence.epistemic;
-      const rho = minute.confidence.rigor;
-      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
-      const closing_action: ClosingAction = belowFloor
-        ? (iter >= 2 ? "needs_external_info" : "re_reason")
-        : "none";
-      const r: ProduceResult<MinuteShape> = {
-        output: minute, epsilon: eps, rho,
-        closing_action,
-        gap: belowFloor ? "council_confidence_below_floor" : undefined,
-      };
-      return r;
-    },
-    { state: { reason: "initial" }, apply: (s) => ({ reason: "re_reason" }) },
+  // Chairs + horizon run ONCE. If the first synthesis falls below the
+  // confidence floor, re_reason re-runs only Stage 3 (single Opus call)
+  // via the resynth closure. This keeps full-council wall-clock inside
+  // the edge-function response window.
+  const { minute: firstMinute, passes, resynth } = await runCouncilWithResynth(
+    question, context, clientContext, tenant,
   );
+  let minute = firstMinute;
+  let iters = 1;
+  const epsMin = ROUTING_CONFIG.floor.eps_min;
+  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  let belowFloor =
+    minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+
+  if (belowFloor) {
+    const { minute: next, pass } = await resynth();
+    passes.push(pass);
+    iters = 2;
+    minute = next;
+    belowFloor =
+      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+  }
+
   return {
-    minute: result.output,
-    passes: allPasses,
-    iters: result.iters,
-    capped: result.capped,
-    gap: result.gap,
+    minute,
+    passes,
+    iters,
+    capped: belowFloor,
+    gap: belowFloor ? "council_confidence_below_floor" : undefined,
   };
 }
 
 // ── Confidence-gated panel ────────────────────────────────────────────────
-// Same shape as runCouncilGated: re_reason once on below-floor, then cap
-// with a gap. Prevents panels from silently returning ε 0.30 capped:false.
 async function runPanelGated(
   question: string,
   context: string,
@@ -786,33 +827,31 @@ async function runPanelGated(
   clientContext: string,
   tenant: string,
 ): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const allPasses: Pass[] = [];
-  let iter = 0;
-  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
-    async (_state) => {
-      iter++;
-      const { minute, passes } = await runPanel(question, context, chairIds, clientContext, tenant);
-      for (const p of passes) allPasses.push(p);
-      const eps = minute.confidence.epistemic;
-      const rho = minute.confidence.rigor;
-      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
-      const closing_action: ClosingAction = belowFloor
-        ? (iter >= 2 ? "needs_external_info" : "re_reason")
-        : "none";
-      return {
-        output: minute, epsilon: eps, rho,
-        closing_action,
-        gap: belowFloor ? "panel_confidence_below_floor" : undefined,
-      };
-    },
-    { state: { reason: "initial" }, apply: (_s) => ({ reason: "re_reason" }) },
+  const { minute: firstMinute, passes, resynth } = await runPanelWithResynth(
+    question, context, chairIds, clientContext, tenant,
   );
+  let minute = firstMinute;
+  let iters = 1;
+  const epsMin = ROUTING_CONFIG.floor.eps_min;
+  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  let belowFloor =
+    minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+
+  if (belowFloor) {
+    const { minute: next, pass } = await resynth();
+    passes.push(pass);
+    iters = 2;
+    minute = next;
+    belowFloor =
+      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+  }
+
   return {
-    minute: result.output,
-    passes: allPasses,
-    iters: result.iters,
-    capped: result.capped,
-    gap: result.gap,
+    minute,
+    passes,
+    iters,
+    capped: belowFloor,
+    gap: belowFloor ? "panel_confidence_below_floor" : undefined,
   };
 }
 
