@@ -655,11 +655,27 @@ async function runPanel(
   clientContext: string = "",
   tenant: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
+  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant);
+  return { minute: r.minute, passes: r.passes };
+}
+
+// Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
+// runPanelGated uses this so a below-floor re_reason re-runs only Stage 3.
+async function runPanelWithResynth(
+  question: string,
+  context: string,
+  chairIds: string[],
+  clientContext: string = "",
+  tenant: string = "",
+): Promise<{
+  minute: MinuteShape;
+  passes: Pass[];
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+}> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
 
-  // Build chair list from supplied specialist ids (tenant-aware for legal).
   const seen = new Set<string>();
   const chairs = chairIds
     .map((id) => (id === "lexi" || id === "knox") ? getLegalSeat(tenant) : id)
@@ -669,7 +685,6 @@ async function runPanel(
 
   if (chairs.length < 2) throw new Error("panel_too_small");
 
-  // Stage 1 · parallel chair contributions.
   const userMsg = chairUserPrompt(question, context);
   const stage1Raw = await Promise.all(
     chairs.map((c) =>
@@ -684,7 +699,6 @@ async function runPanel(
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
-  // Stage 2 · Leo horizon scan.
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
@@ -696,7 +710,6 @@ async function runPanel(
 
   const participating = chairs.map((c) => c.name);
 
-  // Stage 3 · Opus lead synthesis.
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
@@ -708,19 +721,30 @@ async function runPanel(
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
-    passes.push({ model: res.model, usage: res.usage });
-    return validateMinute(extractJson(res.text), freshness, participating);
+    const pass: Pass = { model: res.model, usage: res.usage };
+    const minute = validateMinute(extractJson(res.text), freshness, participating);
+    return { minute, pass };
   };
 
-  let minute = await synthesize(false);
+  const first = await synthesize(false);
+  passes.push(first.pass);
+  let minute = first.minute;
+
   if (hasBoundaryViolation(JSON.stringify(minute))) {
     const second = await synthesize(true);
-    if (hasBoundaryViolation(JSON.stringify(second))) {
+    passes.push(second.pass);
+    if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
     }
-    minute = second;
+    minute = second.minute;
   }
-  return { minute, passes };
+
+  const resynth = async () => {
+    const next = await synthesize(true);
+    return { minute: next.minute, pass: next.pass };
+  };
+
+  return { minute, passes, resynth };
 }
 
 // ── Routing ledger helpers ─────────────────────────────────────────────────
