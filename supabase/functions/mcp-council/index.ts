@@ -969,23 +969,24 @@ async function runSummonBestAdvisor(args: {
           l === "strategy" ? "leo" : null)
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
-        const { minute: pmin, passes: pp } = await runPanel(
+        const pg = await runPanelGated(
           question, context, panelIds, clientContext, tenant);
-        for (const p of pp) allPasses.push(p);
+        for (const p of pg.passes) allPasses.push(p);
         return {
           result: {
             selected_advisor: "panel",
             mode: "panel",
-            minute: pmin,
+            minute: pg.minute,
             lane_fit: null,
             missing_lanes: minute.missing_lanes,
             refer_to: minute.refer_to,
-            epsilon: pmin.confidence.epistemic,
-            rho: pmin.confidence.rigor,
-            capped: false,
+            epsilon: pg.minute.confidence.epistemic,
+            rho: pg.minute.confidence.rigor,
+            capped: pg.capped,
+            gap: pg.gap,
             routing_trace: {
               triage: t, gates_fired,
-              iters: loop.iters, calls: allPasses.length, hops: 1,
+              iters: loop.iters + pg.iters, calls: allPasses.length, hops: 1,
               routing_hint_ignored: routingHintIgnored || undefined,
             },
           },
