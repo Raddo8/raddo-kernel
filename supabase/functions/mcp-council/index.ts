@@ -866,24 +866,25 @@ async function runSummonBestAdvisor(args: {
     };
   }
 
-  // Panel mode → multi-chair panel.
+  // Panel mode → multi-chair panel (confidence-gated).
   if (t.recommended_mode === "panel") {
-    const { minute, passes } = await runPanel(question, context, t.chairs, clientContext, tenant);
-    for (const p of passes) allPasses.push(p);
+    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant);
+    for (const pp of p.passes) allPasses.push(pp);
     return {
       result: {
         selected_advisor: "panel",
         mode: "panel",
-        minute,
+        minute: p.minute,
         lane_fit: null,
         missing_lanes: [],
         refer_to: null,
-        epsilon: minute.confidence.epistemic,
-        rho: minute.confidence.rigor,
-        capped: false,
+        epsilon: p.minute.confidence.epistemic,
+        rho: p.minute.confidence.rigor,
+        capped: p.capped,
+        gap: p.gap,
         routing_trace: {
           triage: t, gates_fired,
-          iters: 0, calls: allPasses.length, hops: 0,
+          iters: p.iters, calls: allPasses.length, hops: 0,
           routing_hint_ignored: routingHintIgnored || undefined,
         },
       },
