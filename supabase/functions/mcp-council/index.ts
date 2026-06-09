@@ -790,7 +790,7 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context, clientContext);
+          const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
           });
