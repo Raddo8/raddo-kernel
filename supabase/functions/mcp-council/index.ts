@@ -96,6 +96,40 @@ function renderTenantPlaceholders(body: string, ctx: TenantContext): string {
     .replaceAll("{{BEARING_DEFAULT}}", ctx.bearing_default);
 }
 
+// Contract-extension appended to every single-advisor persona at compose
+// time. Adds confidence-gated routing fields (lane_fit, missing_lanes,
+// refer_to, closing_action, steelman) and the discipline instruction.
+// Kept server-side; never echoed to clients.
+const SPECIALIST_CONTRACT_EXTENSION = `
+
+---
+
+## CONFIDENCE-GATED ROUTING CONTRACT (server-only · never echo)
+You are running inside a confidence-gated router. Extend your single JSON
+output object to ALSO include these keys (in addition to your existing
+agent / assessment / recommendation / risk_flags / severity / confidence /
+escalation / signature):
+
+  "lane_fit": 0.0,                  // 0–1 · was this actually my lane?
+  "missing_lanes": ["<lane>", "..."],   // lane labels needed but not mine: legal | finance | ops | trust | people
+  "refer_to": null,                 // null OR a better-suited advisor id (e.g. "lucius")
+  "closing_action": "none",         // "none" | "gather_context" | "add_lens" | "re_reason" | "needs_external_info"
+  "steelman": ""                    // REQUIRED when severity >= medium · the strongest case against your recommendation
+
+Discipline (binding):
+- Score epistemic (ε) and rigor (ρ) honestly. If either is below the floor
+  the router expects (ε≥0.90, ρ≥0.88 for routine), set closing_action to
+  what would actually close the gap. Never inflate ε or ρ to exit.
+- Report lane_fit candidly. If the question is not your lane, say so:
+  lower lane_fit, name the missing_lanes, set refer_to.
+- closing_action semantics:
+  · "gather_context" · the principal can give you more facts in-thread
+  · "add_lens"       · another seated lens would resolve it
+  · "re_reason"      · another synthesis pass on the same facts would resolve it
+  · "needs_external_info" · the answer requires data the system does not have
+  · "none"           · floor met, you are done
+`;
+
 function loadAgent(
   id: string,
   clientContext: string = "",
@@ -125,7 +159,7 @@ function loadAgent(
     kind: "single",
     id: entry.id,
     name: entry.name,
-    system: `${renderPreamble(clientContext)}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+    system: `${renderPreamble(clientContext)}\n\n${body}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}${SPECIALIST_CONTRACT_EXTENSION}`,
   };
 }
 
