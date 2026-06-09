@@ -1586,6 +1586,26 @@ Deno.serve(async (req) => {
                 : null,
             },
           });
+          // Explicitly shape routing_trace.triage on the wire so the two
+          // gap-signal fields are always visible to callers · diagnostic
+          // surface for the Capability Gap Ledger.
+          const tWire = result.routing_trace.triage;
+          (result as any).routing_trace = {
+            ...result.routing_trace,
+            triage: {
+              primary_lane: tWire.primary_lane,
+              lane_confidence: tWire.lane_confidence,
+              secondary_lanes: tWire.secondary_lanes,
+              one_way_door: tWire.one_way_door,
+              stakes: tWire.stakes,
+              recommended_mode: tWire.recommended_mode,
+              chairs: tWire.chairs,
+              gates_fired: tWire.gates_fired,
+              reasoning: tWire.reasoning,
+              detected_subdomain: tWire.detected_subdomain ?? null,
+              gap_reason: tWire.gap_reason ?? null,
+            },
+          };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(result) }],
             structuredContent: result,
