@@ -64,6 +64,22 @@ one_way_door AXIS · commit-decision vs. pure analysis:
   true. The cost of a missed OWD is far higher than an over-cautious panel.
 
 
+SUBDOMAIN DETECTION (capability-gap signal · deterministic ledger feed):
+If answering at expert depth requires a specialist sub-domain beyond the
+seated function head's generalist range, name it from the controlled list
+and set gap_reason="capability". If the question is squarely in the head's
+lane and only lacks the principal's own figures / documents / inputs, set
+detected_subdomain=null and gap_reason="data". A request for the principal's
+own numbers is NOT a capability gap. When unsure between capability and data,
+prefer "data" (conservative — avoids polluting the ledger with false gaps).
+If the question is clean in-scope with no gap, set both null.
+
+Controlled sub-domain vocabulary (use exactly one or null):
+"re-finance" · "quant-modeling" · "derivatives" · "tax" · "vc-captable" ·
+"securities" · "employment-law" · "privacy-intl" · "ip-patents" ·
+"antitrust" · "comp-design" · "supply-chain" · "engineering" · "security" ·
+"marketing" · "risk-esg" · "industry:<name>" (e.g. "industry:restaurants")
+
 Output ONLY a single valid JSON object — no prose, no code fences:
 
 {
@@ -72,6 +88,8 @@ Output ONLY a single valid JSON object — no prose, no code fences:
   "secondary_lanes": ["<lane>", "..."],
   "one_way_door": false,
   "stakes": "<low|medium|high|existential>",
+  "detected_subdomain": null,
+  "gap_reason": null,
   "reasoning": "<one tight sentence, no PII>"
 }
 
