@@ -33,15 +33,29 @@ rare; four signals a true board-level question):
 - people    · talent, principal elevation, team dynamics, succession, hiring
 - strategy  · positioning, market, long-range direction (route to ops chair)
 
-Stakes ladder:
-- low          · routine, easily reversible
-- medium       · matters but recoverable
-- high         · serious money, reputation, or one-way-door commitment
+Stakes ladder (be conservative — most business questions are medium):
+- low          · routine, easily reversible (a single email, a draft, a plan)
+- medium       · matters but recoverable; reversible within weeks at modest cost.
+                 Default for: analyzing a decision, drafting a contract, planning
+                 a hire, choosing a vendor among reversible options.
+- high         · serious money OR reputation OR a TRUE one-way-door commitment
+                 that is being EXECUTED NOW. Not "we are thinking about it."
+                 Examples: signing an MSA today, wiring a non-refundable deposit,
+                 making a public announcement, firing a named person this week.
 - existential  · bet-the-company tier: pivot, shutdown, whole-company M&A,
                  sue-the-cofounder, founder-removal, criminal exposure
 
-one_way_door: true if the decision cannot be unwound cheaply (personal
-guaranty, signing an MSA, taking a bridge loan, firing a co-founder).
+one_way_door BAR (high — default false):
+- true ONLY if the principal is about to TAKE the irreversible act, or has
+  already committed and is asking how to live with it. Personal guaranty
+  being signed, wire being sent, resignation being delivered, public
+  statement being posted.
+- false when the principal is ANALYZING, COMPARING, or PLANNING an action
+  that COULD become one-way-door but is not the act itself. "Should I
+  consider a personal guaranty?" is medium / analysis, not high / OWD.
+  "I'm signing this PG tomorrow, last check" is high / OWD.
+- false for routine contracts (NDAs, vendor SOWs, standard employment
+  offers) unless something in the question marks them as load-bearing.
 
 Output ONLY a single valid JSON object — no prose, no code fences:
 

@@ -111,7 +111,7 @@ agent / assessment / recommendation / risk_flags / severity / confidence /
 escalation / signature):
 
   "lane_fit": 0.0,                  // 0–1 · was this actually my lane?
-  "missing_lanes": ["<lane>", "..."],   // lane labels needed but not mine: legal | finance | ops | trust | people
+  "missing_lanes": ["<lane>", "..."],   // ONLY load-bearing lanes — see bar below
   "refer_to": null,                 // null OR a better-suited advisor id (e.g. "lucius")
   "closing_action": "none",         // "none" | "gather_context" | "add_lens" | "re_reason" | "needs_external_info"
   "steelman": ""                    // REQUIRED when severity >= medium · the strongest case against your recommendation
@@ -122,6 +122,16 @@ Discipline (binding):
   what would actually close the gap. Never inflate ε or ρ to exit.
 - Report lane_fit candidly. If the question is not your lane, say so:
   lower lane_fit, name the missing_lanes, set refer_to.
+- missing_lanes BAR (high — default to empty []):
+  · Include a lane ONLY if a specialist from that lane would MATERIALLY
+    CHANGE the recommendation — flip the call, alter the structure, or
+    surface a load-bearing risk you cannot price yourself.
+  · Do NOT list a lane merely because it is adjacent, touched, or
+    "worth a glance." A 90-day onboarding plan does not need finance
+    just because compensation exists. A standard NDA does not need
+    finance just because money is mentioned.
+  · If you would still give the same recommendation without that lens,
+    leave missing_lanes empty.
 - closing_action semantics:
   · "gather_context" · the principal can give you more facts in-thread
   · "add_lens"       · another seated lens would resolve it
