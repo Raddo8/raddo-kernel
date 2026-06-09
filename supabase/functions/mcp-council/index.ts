@@ -766,6 +766,46 @@ async function runCouncilGated(
   };
 }
 
+// ── Confidence-gated panel ────────────────────────────────────────────────
+// Same shape as runCouncilGated: re_reason once on below-floor, then cap
+// with a gap. Prevents panels from silently returning ε 0.30 capped:false.
+async function runPanelGated(
+  question: string,
+  context: string,
+  chairIds: string[],
+  clientContext: string,
+  tenant: string,
+): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
+  const allPasses: Pass[] = [];
+  let iter = 0;
+  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
+    async (_state) => {
+      iter++;
+      const { minute, passes } = await runPanel(question, context, chairIds, clientContext, tenant);
+      for (const p of passes) allPasses.push(p);
+      const eps = minute.confidence.epistemic;
+      const rho = minute.confidence.rigor;
+      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
+      const closing_action: ClosingAction = belowFloor
+        ? (iter >= 2 ? "needs_external_info" : "re_reason")
+        : "none";
+      return {
+        output: minute, epsilon: eps, rho,
+        closing_action,
+        gap: belowFloor ? "panel_confidence_below_floor" : undefined,
+      };
+    },
+    { state: { reason: "initial" }, apply: (_s) => ({ reason: "re_reason" }) },
+  );
+  return {
+    minute: result.output,
+    passes: allPasses,
+    iters: result.iters,
+    capped: result.capped,
+    gap: result.gap,
+  };
+}
+
 // ── summon_best_advisor orchestrator ──────────────────────────────────────
 type SummonResult = {
   selected_advisor: string;
