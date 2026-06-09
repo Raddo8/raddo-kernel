@@ -1026,20 +1026,19 @@ const TOOL_LIST_AGENTS = {
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
 };
 
-const TOOL_ASK_AGENT = {
-  name: "consult_advisor",
-  title: "Consult an Advisor",
+const TOOL_SUMMON_BEST_ADVISOR = {
+  name: "summon_best_advisor",
+  title: "Summon the Best Advisor",
   description:
-    "Consult a single named advisor on the Council (one-on-one, not the full Council). Returns a structured advisor minute. Use convene_council for multi-advisor deliberation.",
-  annotations: { title: "Consult an Advisor" },
+    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question.",
+  annotations: { title: "Summon the Best Advisor" },
   inputSchema: {
     type: "object",
     properties: {
-      agent_id: { type: "string", description: "The advisor id from show_council (e.g. 'knox')." },
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
-      context: { type: "string", description: "Optional context the advisor should weigh." },
+      context: { type: "string", description: "Optional context the advisor or panel should weigh." },
     },
-    required: ["agent_id", "question"],
+    required: ["question"],
   },
 };
 
@@ -1047,19 +1046,22 @@ const TOOL_COUNCIL_TO_NOTION = {
   name: "file_to_office",
   title: "File to the OFFICE",
   description:
-    "Convene the Council on a business question, then file the resulting minute to the OFFICE (the principal's boardroom record). Returns the minute and the filed page URL.",
+    "Triage the principal's question, deliberate (solo, panel, or full council as the routing dictates), and file the resulting minute to the OFFICE (the principal's boardroom record). Returns the minute and the filed page URL.",
   annotations: { title: "File to the OFFICE" },
   inputSchema: {
     type: "object",
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
-      context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
+      context: { type: "string", description: "Optional context to weigh." },
     },
     required: ["question"],
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_ASK_AGENT, TOOL_COUNCIL_TO_NOTION, TOOL_LIST_AGENTS];
+// `consult_advisor` is unadvertised but accepted for one release as an alias
+// of `summon_best_advisor`. Any `agent_id` arg is captured as a hint only —
+// the router still selects.
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
