@@ -760,7 +760,8 @@ Deno.serve(async (req) => {
       };
 
       if (name === "show_council") {
-        const roster = listEnabledAgentsPublic();
+        // Tenant comes from the verified identity (see invariant above).
+        const roster = listSeatedAgentsPublic(tenant);
         const lines = roster.map((a) => `- ${a.name} (${a.id}) · ${a.lens}`).join("\n");
         const text = `Advisors currently seated on your Council:\n${lines}`;
         const structured = { advisors: roster };
