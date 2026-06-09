@@ -380,6 +380,24 @@ Do NOT emit the "agent / assessment / recommendation / ..." object. Leo will
 synthesize the final minute.
 `;
 
+// Structured per-convene metrics. Bubbled up through the gated wrappers
+// and stamped into the routing ledger (metadata.convene_metrics) so the
+// routing/capability-gap analyses can attribute wall-clock and call counts
+// per stage and detect the fast-resynth path.
+type ConveneMetrics = {
+  mode: "council" | "panel";
+  chairs_count: number;
+  calls_total: number;
+  stage1_ms: number;     // parallel chair fan-out
+  horizon_ms: number;    // Leo Stage 2
+  synth1_ms: number;     // first Opus synthesis
+  synth2_ms: number;     // boundary-regen synthesis (0 if not triggered)
+  resynth_ms: number;    // fast resynth on below-floor (0 if not used)
+  fast_resynth_used: boolean;
+  boundary_regen: boolean;
+  total_ms?: number;     // filled by gated wrapper
+};
+
 async function runCouncil(
   question: string,
   context: string,
@@ -389,6 +407,7 @@ async function runCouncil(
   const r = await runCouncilWithResynth(question, context, clientContext, tenant);
   return { minute: r.minute, passes: r.passes };
 }
+
 
 // Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
 // runCouncilGated uses this so a below-floor re_reason re-runs only Stage 3
@@ -403,11 +422,24 @@ async function runCouncilWithResynth(
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
-  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+  metrics: ConveneMetrics;
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass; resynth_ms: number }>;
 }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
+  const metrics: ConveneMetrics = {
+    mode: "council",
+    chairs_count: 0,
+    calls_total: 0,
+    stage1_ms: 0,
+    horizon_ms: 0,
+    synth1_ms: 0,
+    synth2_ms: 0,
+    resynth_ms: 0,
+    fast_resynth_used: false,
+    boundary_regen: false,
+  };
 
   const seatId = getLegalSeat(tenant);
   const seatBody = renderTenantPlaceholders(
@@ -420,8 +452,10 @@ async function runCouncilWithResynth(
     system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
   const allChairs = [...CHAIRS, legalChair];
+  metrics.chairs_count = allChairs.length;
 
   const userMsg = chairUserPrompt(question, context);
+  const stage1T0 = Date.now();
   const stage1Raw = await Promise.all(
     allChairs.map((c) =>
       callAnthropic({
@@ -432,21 +466,25 @@ async function runCouncilWithResynth(
       }).then((res) => ({ name: c.name, res })),
     ),
   );
+  metrics.stage1_ms = Date.now() - stage1T0;
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
+  const horizonT0 = Date.now();
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
+  metrics.horizon_ms = Date.now() - horizonT0;
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
   const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
 
   const synthesize = async (reinforce: boolean) => {
+    const t0 = Date.now();
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
@@ -457,17 +495,21 @@ async function runCouncilWithResynth(
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
+    const elapsed = Date.now() - t0;
     const pass: Pass = { model: res.model, usage: res.usage };
     const minute = validateMinute(extractJson(res.text), freshness, participating);
-    return { minute, pass };
+    return { minute, pass, elapsed };
   };
 
   const first = await synthesize(false);
+  metrics.synth1_ms = first.elapsed;
   passes.push(first.pass);
   let minute = first.minute;
 
   if (hasBoundaryViolation(JSON.stringify(minute))) {
+    metrics.boundary_regen = true;
     const second = await synthesize(true);
+    metrics.synth2_ms = second.elapsed;
     passes.push(second.pass);
     if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
@@ -477,11 +519,15 @@ async function runCouncilWithResynth(
 
   const resynth = async () => {
     const next = await synthesize(true);
-    return { minute: next.minute, pass: next.pass };
+    metrics.resynth_ms = next.elapsed;
+    metrics.fast_resynth_used = true;
+    return { minute: next.minute, pass: next.pass, resynth_ms: next.elapsed };
   };
 
-  return { minute, passes, resynth };
+  metrics.calls_total = passes.length;
+  return { minute, passes, metrics, resynth };
 }
+
 
 // ── Single-agent runner ────────────────────────────────────────────────────
 type SingleMinute = {
@@ -670,11 +716,24 @@ async function runPanelWithResynth(
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
-  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+  metrics: ConveneMetrics;
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass; resynth_ms: number }>;
 }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
+  const metrics: ConveneMetrics = {
+    mode: "panel",
+    chairs_count: 0,
+    calls_total: 0,
+    stage1_ms: 0,
+    horizon_ms: 0,
+    synth1_ms: 0,
+    synth2_ms: 0,
+    resynth_ms: 0,
+    fast_resynth_used: false,
+    boundary_regen: false,
+  };
 
   const seen = new Set<string>();
   const chairs = chairIds
@@ -684,8 +743,10 @@ async function runPanelWithResynth(
     .filter((c): c is { name: string; system: string } => c !== null);
 
   if (chairs.length < 2) throw new Error("panel_too_small");
+  metrics.chairs_count = chairs.length;
 
   const userMsg = chairUserPrompt(question, context);
+  const stage1T0 = Date.now();
   const stage1Raw = await Promise.all(
     chairs.map((c) =>
       callAnthropic({
@@ -696,21 +757,25 @@ async function runPanelWithResynth(
       }).then((res) => ({ name: c.name, res })),
     ),
   );
+  metrics.stage1_ms = Date.now() - stage1T0;
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
+  const horizonT0 = Date.now();
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
+  metrics.horizon_ms = Date.now() - horizonT0;
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
   const participating = chairs.map((c) => c.name);
 
   const synthesize = async (reinforce: boolean) => {
+    const t0 = Date.now();
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
@@ -721,17 +786,21 @@ async function runPanelWithResynth(
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
+    const elapsed = Date.now() - t0;
     const pass: Pass = { model: res.model, usage: res.usage };
     const minute = validateMinute(extractJson(res.text), freshness, participating);
-    return { minute, pass };
+    return { minute, pass, elapsed };
   };
 
   const first = await synthesize(false);
+  metrics.synth1_ms = first.elapsed;
   passes.push(first.pass);
   let minute = first.minute;
 
   if (hasBoundaryViolation(JSON.stringify(minute))) {
+    metrics.boundary_regen = true;
     const second = await synthesize(true);
+    metrics.synth2_ms = second.elapsed;
     passes.push(second.pass);
     if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
@@ -741,11 +810,15 @@ async function runPanelWithResynth(
 
   const resynth = async () => {
     const next = await synthesize(true);
-    return { minute: next.minute, pass: next.pass };
+    metrics.resynth_ms = next.elapsed;
+    metrics.fast_resynth_used = true;
+    return { minute: next.minute, pass: next.pass, resynth_ms: next.elapsed };
   };
 
-  return { minute, passes, resynth };
+  metrics.calls_total = passes.length;
+  return { minute, passes, metrics, resynth };
 }
+
 
 // ── Routing ledger helpers ─────────────────────────────────────────────────
 async function hashQuestion(q: string): Promise<string> {
@@ -786,12 +859,12 @@ async function runCouncilGated(
   context: string,
   clientContext: string,
   tenant: string,
-): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  // Chairs + horizon run ONCE. If the first synthesis falls below the
-  // confidence floor, re_reason re-runs only Stage 3 (single Opus call)
-  // via the resynth closure. This keeps full-council wall-clock inside
-  // the edge-function response window.
-  const { minute: firstMinute, passes, resynth } = await runCouncilWithResynth(
+): Promise<{
+  minute: MinuteShape; passes: Pass[]; iters: number;
+  capped: boolean; gap?: string; metrics: ConveneMetrics;
+}> {
+  const t0 = Date.now();
+  const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
     question, context, clientContext, tenant,
   );
   let minute = firstMinute;
@@ -810,12 +883,13 @@ async function runCouncilGated(
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
 
+  metrics.calls_total = passes.length;
+  metrics.total_ms = Date.now() - t0;
   return {
-    minute,
-    passes,
-    iters,
+    minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "council_confidence_below_floor" : undefined,
+    metrics,
   };
 }
 
@@ -826,8 +900,12 @@ async function runPanelGated(
   chairIds: string[],
   clientContext: string,
   tenant: string,
-): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const { minute: firstMinute, passes, resynth } = await runPanelWithResynth(
+): Promise<{
+  minute: MinuteShape; passes: Pass[]; iters: number;
+  capped: boolean; gap?: string; metrics: ConveneMetrics;
+}> {
+  const t0 = Date.now();
+  const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
     question, context, chairIds, clientContext, tenant,
   );
   let minute = firstMinute;
@@ -846,12 +924,13 @@ async function runPanelGated(
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
 
+  metrics.calls_total = passes.length;
+  metrics.total_ms = Date.now() - t0;
   return {
-    minute,
-    passes,
-    iters,
+    minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "panel_confidence_below_floor" : undefined,
+    metrics,
   };
 }
 
@@ -1361,11 +1440,23 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes, iters, capped, gap } = await runCouncilGated(
+          const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
             question, context, clientContext, tenant);
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
+          // Structured metric log · machine-grep friendly. Routing /
+          // capability-gap ledgers consume this line.
+          console.log("convene_metrics", JSON.stringify({
+            tool: "convene_council",
+            tenant,
+            question_hash: qhash,
+            ...metrics,
+            iters,
+            capped,
+            epsilon: minute.confidence.epistemic,
+            rho: minute.confidence.rigor,
+          }));
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
@@ -1378,6 +1469,7 @@ Deno.serve(async (req) => {
               epsilon: minute.confidence.epistemic,
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
+              convene_metrics: metrics,
             },
           });
           return rpcResult(id, {
