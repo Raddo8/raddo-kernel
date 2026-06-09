@@ -815,14 +815,27 @@ Deno.serve(async (req) => {
         if (agentId === "council") {
           return rpcError(id, -32005, "use_council_tool");
         }
-        const bundle = loadAgent(agentId, clientContext);
+        // Legal-seat enforcement · one legal advisor per tenant. If the
+        // caller asked for the non-seated legal id, silently remap to the
+        // tenant's seated id. This is an operator-loop guarantee: LEXI's
+        // persona may recommend escalation to KNOX, but runtime stays on
+        // LEXI until the operator flips the entitlement in tenants.ts.
+        let resolvedId = agentId;
+        if (agentId === "lexi" || agentId === "knox") {
+          const seat = getLegalSeat(tenant);
+          if (agentId !== seat) {
+            console.log("legal_id_remap", { from: agentId, to: seat, tenant });
+            resolvedId = seat;
+          }
+        }
+        const bundle = loadAgent(resolvedId, clientContext, tenant);
         if (!bundle || bundle.kind !== "single") {
           return rpcError(id, -32004, "agent_not_available");
         }
         try {
           const { minute, passes } = await runSingleAgent(bundle, question, context);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "consult_advisor", agent_id: agentId, passes,
+            tenant, tool: "consult_advisor", agent_id: resolvedId, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
