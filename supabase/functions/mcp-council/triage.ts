@@ -64,6 +64,22 @@ one_way_door AXIS · commit-decision vs. pure analysis:
   true. The cost of a missed OWD is far higher than an over-cautious panel.
 
 
+SUBDOMAIN DETECTION (capability-gap signal · deterministic ledger feed):
+If answering at expert depth requires a specialist sub-domain beyond the
+seated function head's generalist range, name it from the controlled list
+and set gap_reason="capability". If the question is squarely in the head's
+lane and only lacks the principal's own figures / documents / inputs, set
+detected_subdomain=null and gap_reason="data". A request for the principal's
+own numbers is NOT a capability gap. When unsure between capability and data,
+prefer "data" (conservative — avoids polluting the ledger with false gaps).
+If the question is clean in-scope with no gap, set both null.
+
+Controlled sub-domain vocabulary (use exactly one or null):
+"re-finance" · "quant-modeling" · "derivatives" · "tax" · "vc-captable" ·
+"securities" · "employment-law" · "privacy-intl" · "ip-patents" ·
+"antitrust" · "comp-design" · "supply-chain" · "engineering" · "security" ·
+"marketing" · "risk-esg" · "industry:<name>" (e.g. "industry:restaurants")
+
 Output ONLY a single valid JSON object — no prose, no code fences:
 
 {
@@ -72,6 +88,8 @@ Output ONLY a single valid JSON object — no prose, no code fences:
   "secondary_lanes": ["<lane>", "..."],
   "one_way_door": false,
   "stakes": "<low|medium|high|existential>",
+  "detected_subdomain": null,
+  "gap_reason": null,
   "reasoning": "<one tight sentence, no PII>"
 }
 
@@ -79,17 +97,48 @@ lane_confidence is your honest 0–1 score that primary_lane is the right
 primary lane. Be candid. If two lanes tie, set primary to the heavier one
 and put the other in secondary_lanes with low confidence.`;
 
+export type GapReason = "capability" | "data" | null;
+
 export type TriageDecision = {
   primary_lane: Lane;
   lane_confidence: number;
   secondary_lanes: Lane[];
   one_way_door: boolean;
   stakes: Stakes;
+  detected_subdomain: string | null;
+  gap_reason: GapReason;
   recommended_mode: Mode;
   chairs: string[];           // specialist ids in order
   reasoning: string;
   gates_fired: string[];      // which mode-selection gate fired (A0/A1/A2/B/none)
 };
+
+// Controlled sub-domain vocabulary (matches the triage prompt).
+const SUBDOMAIN_PREFIX_OK = ["industry:"];
+const SUBDOMAIN_VOCAB = new Set<string>([
+  "re-finance", "quant-modeling", "derivatives", "tax", "vc-captable",
+  "securities", "employment-law", "privacy-intl", "ip-patents",
+  "antitrust", "comp-design", "supply-chain", "engineering", "security",
+  "marketing", "risk-esg",
+]);
+
+function normalizeSubdomain(x: any): string | null {
+  if (typeof x !== "string") return null;
+  const v = x.trim().toLowerCase();
+  if (!v || v === "null" || v === "none") return null;
+  if (SUBDOMAIN_VOCAB.has(v)) return v;
+  for (const pfx of SUBDOMAIN_PREFIX_OK) {
+    if (v.startsWith(pfx) && v.length > pfx.length) return v;
+  }
+  return null;
+}
+
+function normalizeGapReason(x: any): GapReason {
+  if (typeof x !== "string") return null;
+  const v = x.trim().toLowerCase();
+  if (v === "capability" || v === "data") return v;
+  return null;
+}
 
 // Lane → specialist id (tenant-aware for legal).
 function laneToId(lane: Lane, tenant: string): string {
@@ -185,6 +234,8 @@ export async function triage(
       secondary_lanes: [],
       one_way_door: false,
       stakes: "medium",
+      detected_subdomain: null,
+      gap_reason: null,
       reasoning: "triage_unparseable_default",
     }, tenant);
   }
@@ -202,11 +253,16 @@ export async function triage(
   const lane_confidence = Math.max(0, Math.min(1, Number(parsed.lane_confidence) || 0));
   const one_way_door = !!parsed.one_way_door;
   const stakes = normalizeStakes(parsed.stakes);
+  let detected_subdomain = normalizeSubdomain(parsed.detected_subdomain);
+  let gap_reason = normalizeGapReason(parsed.gap_reason);
+  // Coherence: capability requires a named subdomain; otherwise drop to null.
+  if (gap_reason === "capability" && !detected_subdomain) gap_reason = null;
+  if (gap_reason !== "capability") detected_subdomain = null;
   const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 240) : "";
 
   return applyGates({
     primary_lane: primary, lane_confidence, secondary_lanes,
-    one_way_door, stakes, reasoning,
+    one_way_door, stakes, detected_subdomain, gap_reason, reasoning,
   }, tenant);
 }
 
@@ -217,6 +273,8 @@ function applyGates(
     secondary_lanes: Lane[];
     one_way_door: boolean;
     stakes: Stakes;
+    detected_subdomain: string | null;
+    gap_reason: GapReason;
     reasoning: string;
   },
   tenant: string,

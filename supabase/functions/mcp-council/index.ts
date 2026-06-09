@@ -31,6 +31,7 @@ import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from ".
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
 import { ROUTING_CONFIG, stakesAtLeast } from "./routing-config.ts";
+import { rosterHasSeatedSpecialist, logCapabilityGap } from "./capability-gaps.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -956,6 +957,41 @@ type SummonResult = {
   };
 };
 
+
+
+// ── Deterministic capability-gap post-step ────────────────────────────────
+// Guarantees structured `missing_lanes` / `refer_to` whenever triage flagged
+// a capability gap with a named sub-domain that the seated roster doesn't
+// cover. Persona prose escalation (boundary clause · rider) is untouched —
+// this is the machine signal the Capability Gap Ledger consumes.
+//
+// MUST NOT fire when triage.gap_reason === "data" (in-scope, missing input).
+function applyGapSignal(
+  current: { missing_lanes: string[]; refer_to: string | null },
+  t: TriageDecision,
+  tenant: string,
+  question_hash: string,
+  mode: "solo" | "panel" | "council",
+  epsilon: number,
+): { missing_lanes: string[]; refer_to: string | null; gap_logged: string | null } {
+  if (t.gap_reason !== "capability" || !t.detected_subdomain) {
+    return { ...current, gap_logged: null };
+  }
+  const sub = t.detected_subdomain;
+  if (rosterHasSeatedSpecialist(sub, tenant)) {
+    return { ...current, gap_logged: null };
+  }
+  const missing = current.missing_lanes.includes(sub)
+    ? current.missing_lanes
+    : [...current.missing_lanes, sub];
+  const refer = current.refer_to ?? sub;
+  logCapabilityGap({
+    subdomain: sub, tenant, question_hash, mode, epsilon,
+  });
+  return { missing_lanes: missing, refer_to: refer, gap_logged: sub };
+}
+
+
 async function runSummonBestAdvisor(args: {
   question: string;
   context: string;
@@ -1502,6 +1538,22 @@ Deno.serve(async (req) => {
             question, context, clientContext, tenant, routingHintIgnored,
           });
           const qhash = await hashQuestion(question);
+          // Deterministic gap-signal post-step · ensures structured
+          // missing_lanes / refer_to fire when triage detected a capability
+          // gap the persona may have buried in prose only.
+          const gap = applyGapSignal(
+            { missing_lanes: result.missing_lanes, refer_to: result.refer_to },
+            result.routing_trace.triage, tenant, qhash, result.mode, result.epsilon,
+          );
+          result.missing_lanes = gap.missing_lanes;
+          result.refer_to = gap.refer_to;
+          // Mirror into the minute structured fields when the shape carries them
+          // (single-advisor minutes); council/panel minutes don't expose them.
+          const minuteAny = result.minute as any;
+          if (minuteAny && typeof minuteAny === "object" && "missing_lanes" in minuteAny) {
+            minuteAny.missing_lanes = gap.missing_lanes;
+            minuteAny.refer_to = gap.refer_to;
+          }
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
@@ -1514,6 +1566,8 @@ Deno.serve(async (req) => {
                 one_way_door: result.routing_trace.triage.one_way_door,
                 stakes: result.routing_trace.triage.stakes,
                 mode: result.routing_trace.triage.recommended_mode,
+                detected_subdomain: result.routing_trace.triage.detected_subdomain,
+                gap_reason: result.routing_trace.triage.gap_reason,
               },
               gates_fired: result.routing_trace.gates_fired,
               selected_advisor: result.selected_advisor,
@@ -1525,6 +1579,11 @@ Deno.serve(async (req) => {
               iters: result.routing_trace.iters,
               hops: result.routing_trace.hops,
               routing_hint_ignored: routingHintIgnored || undefined,
+              missing_lanes: gap.missing_lanes,
+              refer_to: gap.refer_to,
+              capability_gap: gap.gap_logged
+                ? { subdomain: gap.gap_logged, source: "triage_deterministic" }
+                : null,
             },
           });
           return rpcResult(id, {
