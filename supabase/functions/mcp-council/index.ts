@@ -47,6 +47,7 @@ import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
+import LEXI_MD from "./agents/lexi.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
@@ -56,8 +57,9 @@ import IROH_AGENT_MD from "./agents/iroh.ts";
 import {
   AGENT_MANIFEST,
   findEnabledAgent,
-  listEnabledAgentsPublic,
+  listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
+import { getLegalSeat, getTenantContext, type TenantContext } from "./tenants.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
@@ -80,7 +82,22 @@ function renderPreamble(clientContext: string = ""): string {
   return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
 }
 
-function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
+// Substitute {{CLIENT}}, {{PRINCIPAL}}, {{PRINCIPAL_VALUES}},
+// {{ACTIVE_MATTERS}}, {{BEARING_DEFAULT}} from verified tenant context.
+function renderTenantPlaceholders(body: string, ctx: TenantContext): string {
+  return body
+    .replaceAll("{{CLIENT}}", ctx.client)
+    .replaceAll("{{PRINCIPAL}}", ctx.principal)
+    .replaceAll("{{PRINCIPAL_VALUES}}", ctx.principal_values)
+    .replaceAll("{{ACTIVE_MATTERS}}", ctx.active_matters)
+    .replaceAll("{{BEARING_DEFAULT}}", ctx.bearing_default);
+}
+
+function loadAgent(
+  id: string,
+  clientContext: string = "",
+  tenant: string = "",
+): AgentBundle | null {
   const entry = findEnabledAgent(id);
   if (!entry) return null;
   if (entry.kind === "council") {
@@ -89,15 +106,18 @@ function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
   // Single-agent registry. Keep server-side · never echo body to clients.
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
+    lexi: LEXI_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     iroh: IROH_AGENT_MD,
   };
 
-
-  const body = SINGLE_BODIES[entry.id];
-  if (!body) return null;
+  const rawBody = SINGLE_BODIES[entry.id];
+  if (!rawBody) return null;
+  // Tenant-aware placeholder injection (legal personas use this; others are
+  // no-ops since they contain no {{...}} tokens).
+  const body = renderTenantPlaceholders(rawBody, getTenantContext(tenant));
   return {
     kind: "single",
     id: entry.id,
@@ -263,7 +283,11 @@ function extractJson(s: string): any {
   return JSON.parse(t.slice(first, last + 1));
 }
 
-function validateMinute(m: any, freshness: string): MinuteShape {
+function validateMinute(
+  m: any,
+  freshness: string,
+  participating: string[],
+): MinuteShape {
   if (!m || typeof m !== "object") throw new Error("minute_shape");
   const horizon = Array.isArray(m.anticipatory_horizon)
     ? m.anticipatory_horizon.filter((x: any) => typeof x === "string")
@@ -288,24 +312,55 @@ function validateMinute(m: any, freshness: string): MinuteShape {
       rigor: Math.max(0, Math.min(1, rigor)),
     },
     freshness: typeof m.freshness === "string" && m.freshness ? m.freshness : freshness,
-    participating_chairs: ["Leo", "Spock", "Alfred", "Iroh", "Lucius"],
+    participating_chairs: participating,
     signature: "— COB_COUNCIL",
   };
 }
+
+// Chair-mode override appended to a legal persona body when it sits as the
+// 6th chair inside convene_council. Prevents the single-advisor JSON output
+// shape from breaking Leo's Stage-2 horizon and Opus Stage-3 synthesis, both
+// of which expect free-text chair contributions.
+const LEGAL_CHAIR_ADDENDUM = `
+
+---
+
+## Council mode (override output spec)
+You are sitting as a chair inside The Council, not delivering a single-advisor
+minute. Contribute ONLY your legal lens: 2–5 tight prose points covering
+exposure, the safeguard or move, and the escalation call. Do NOT emit JSON.
+Do NOT emit the "agent / assessment / recommendation / ..." object. Leo will
+synthesize the final minute.
+`;
 
 async function runCouncil(
   question: string,
   context: string,
   clientContext: string = "",
+  tenant: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
 
-  // Stage 1 · five chairs in parallel.
+  // Seat the tenant's legal advisor as the 6th chair. Body is tenant-aware
+  // (placeholders rendered) and switched to chair-mode output.
+  const seatId = getLegalSeat(tenant);
+  const seatBody = renderTenantPlaceholders(
+    seatId === "knox" ? KNOX_MD : LEXI_MD,
+    getTenantContext(tenant),
+  );
+  const seatName = seatId === "knox" ? "KNOX" : "LEXI";
+  const legalChair = {
+    name: seatName,
+    system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+  };
+  const allChairs = [...CHAIRS, legalChair];
+
+  // Stage 1 · six chairs in parallel (five core + seated legal).
   const userMsg = chairUserPrompt(question, context);
   const stage1Raw = await Promise.all(
-    CHAIRS.map((c) =>
+    allChairs.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
@@ -327,6 +382,8 @@ async function runCouncil(
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
+  const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
+
   // Stage 3 · Opus lead synthesis · JSON minute.
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
@@ -342,7 +399,7 @@ async function runCouncil(
       maxTokens: MAX_TOKENS_SYNTH,
     });
     passes.push({ model: res.model, usage: res.usage });
-    return validateMinute(extractJson(res.text), freshness);
+    return validateMinute(extractJson(res.text), freshness, participating);
   };
 
   let minute = await synthesize(false);
@@ -619,6 +676,11 @@ Deno.serve(async (req) => {
       },
     );
   }
+  // SECURITY INVARIANT: `tenant` is sourced EXCLUSIVELY from the verified
+  // identity — static SPINNEY bearer or `app_metadata.tenant` from the
+  // ES256-verified JWT (see auth.ts). It is NEVER read from the JSON-RPC
+  // body, tool arguments, query string, or any client-controlled header.
+  // The legal-seat and tenant-context lookups below depend on this.
   const tenant = identity.tenant;
 
   // Rate limit · per-IP, 30 req/min.
@@ -698,7 +760,8 @@ Deno.serve(async (req) => {
       };
 
       if (name === "show_council") {
-        const roster = listEnabledAgentsPublic();
+        // Tenant comes from the verified identity (see invariant above).
+        const roster = listSeatedAgentsPublic(tenant);
         const lines = roster.map((a) => `- ${a.name} (${a.id}) · ${a.lens}`).join("\n");
         const text = `Advisors currently seated on your Council:\n${lines}`;
         const structured = { advisors: roster };
@@ -727,7 +790,7 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context, clientContext);
+          const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
           });
@@ -752,14 +815,27 @@ Deno.serve(async (req) => {
         if (agentId === "council") {
           return rpcError(id, -32005, "use_council_tool");
         }
-        const bundle = loadAgent(agentId, clientContext);
+        // Legal-seat enforcement · one legal advisor per tenant. If the
+        // caller asked for the non-seated legal id, silently remap to the
+        // tenant's seated id. This is an operator-loop guarantee: LEXI's
+        // persona may recommend escalation to KNOX, but runtime stays on
+        // LEXI until the operator flips the entitlement in tenants.ts.
+        let resolvedId = agentId;
+        if (agentId === "lexi" || agentId === "knox") {
+          const seat = getLegalSeat(tenant);
+          if (agentId !== seat) {
+            console.log("legal_id_remap", { from: agentId, to: seat, tenant });
+            resolvedId = seat;
+          }
+        }
+        const bundle = loadAgent(resolvedId, clientContext, tenant);
         if (!bundle || bundle.kind !== "single") {
           return rpcError(id, -32004, "agent_not_available");
         }
         try {
           const { minute, passes } = await runSingleAgent(bundle, question, context);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "consult_advisor", agent_id: agentId, passes,
+            tenant, tool: "consult_advisor", agent_id: resolvedId, passes,
           });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(minute) }],
@@ -779,7 +855,7 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context, clientContext);
+          const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
 
 
           // Boundary scrub on the full text destined for the OFFICE before any write.

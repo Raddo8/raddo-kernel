@@ -1,6 +1,8 @@
 // Phase-1 agent registry. Bundled. Promotes to a Supabase table with
 // entitlements in Phase 3.
 
+import { getLegalSeat } from "../tenants.ts";
+
 export type AgentKind = "council" | "single";
 
 export interface AgentEntry {
@@ -21,6 +23,14 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       tier_min: "any",
       enabled: true,
       kind: "council",
+    },
+    {
+      id: "lexi",
+      name: "LEXI",
+      lens: "Legal & compliance advisory",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
     },
     {
       id: "knox",
@@ -62,10 +72,10 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       enabled: true,
       kind: "single",
     },
-
-
   ],
 };
+
+const LEGAL_IDS = new Set(["lexi", "knox"]);
 
 export function findEnabledAgent(id: string): AgentEntry | null {
   const a = AGENT_MANIFEST.agents.find((x) => x.id === id);
@@ -76,5 +86,17 @@ export function findEnabledAgent(id: string): AgentEntry | null {
 export function listEnabledAgentsPublic(): Array<{ id: string; name: string; lens: string }> {
   return AGENT_MANIFEST.agents
     .filter((a) => a.enabled)
+    .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
+}
+
+// Public roster filtered to one legal seat per tenant. Tenant MUST come from
+// the verified identity (see index.ts), never from client input.
+export function listSeatedAgentsPublic(
+  tenant: string,
+): Array<{ id: string; name: string; lens: string }> {
+  const seat = getLegalSeat(tenant);
+  return AGENT_MANIFEST.agents
+    .filter((a) => a.enabled)
+    .filter((a) => !LEGAL_IDS.has(a.id) || a.id === seat)
     .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
 }
