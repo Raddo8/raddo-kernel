@@ -255,9 +255,17 @@ export async function triage(
   const stakes = normalizeStakes(parsed.stakes);
   let detected_subdomain = normalizeSubdomain(parsed.detected_subdomain);
   let gap_reason = normalizeGapReason(parsed.gap_reason);
-  // Coherence: capability requires a named subdomain; otherwise drop to null.
-  if (gap_reason === "capability" && !detected_subdomain) gap_reason = null;
-  if (gap_reason !== "capability") detected_subdomain = null;
+  // Coherence v2 · Capability dominates data. When a specialist sub-domain
+  // is named (outside the seated head's range), that IS a capability gap
+  // even if the principal's own figures are also missing. Only fall to
+  // "data" when no sub-domain was named and the question is in-lane but
+  // lacking the principal's inputs (e.g., "what's our runway").
+  if (detected_subdomain) {
+    gap_reason = "capability";
+  } else if (gap_reason === "capability") {
+    // capability without a named subdomain is incoherent · drop to null.
+    gap_reason = null;
+  }
   const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 240) : "";
 
   return applyGates({
