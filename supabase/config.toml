@@ -52,3 +52,5 @@ verify_jwt = false
 verify_jwt = false
 
 
+[functions.triage-eval]
+verify_jwt = false
