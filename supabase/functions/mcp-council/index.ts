@@ -766,6 +766,46 @@ async function runCouncilGated(
   };
 }
 
+// ── Confidence-gated panel ────────────────────────────────────────────────
+// Same shape as runCouncilGated: re_reason once on below-floor, then cap
+// with a gap. Prevents panels from silently returning ε 0.30 capped:false.
+async function runPanelGated(
+  question: string,
+  context: string,
+  chairIds: string[],
+  clientContext: string,
+  tenant: string,
+): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
+  const allPasses: Pass[] = [];
+  let iter = 0;
+  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
+    async (_state) => {
+      iter++;
+      const { minute, passes } = await runPanel(question, context, chairIds, clientContext, tenant);
+      for (const p of passes) allPasses.push(p);
+      const eps = minute.confidence.epistemic;
+      const rho = minute.confidence.rigor;
+      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
+      const closing_action: ClosingAction = belowFloor
+        ? (iter >= 2 ? "needs_external_info" : "re_reason")
+        : "none";
+      return {
+        output: minute, epsilon: eps, rho,
+        closing_action,
+        gap: belowFloor ? "panel_confidence_below_floor" : undefined,
+      };
+    },
+    { state: { reason: "initial" }, apply: (_s) => ({ reason: "re_reason" }) },
+  );
+  return {
+    minute: result.output,
+    passes: allPasses,
+    iters: result.iters,
+    capped: result.capped,
+    gap: result.gap,
+  };
+}
+
 // ── summon_best_advisor orchestrator ──────────────────────────────────────
 type SummonResult = {
   selected_advisor: string;
@@ -826,24 +866,25 @@ async function runSummonBestAdvisor(args: {
     };
   }
 
-  // Panel mode → multi-chair panel.
+  // Panel mode → multi-chair panel (confidence-gated).
   if (t.recommended_mode === "panel") {
-    const { minute, passes } = await runPanel(question, context, t.chairs, clientContext, tenant);
-    for (const p of passes) allPasses.push(p);
+    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant);
+    for (const pp of p.passes) allPasses.push(pp);
     return {
       result: {
         selected_advisor: "panel",
         mode: "panel",
-        minute,
+        minute: p.minute,
         lane_fit: null,
         missing_lanes: [],
         refer_to: null,
-        epsilon: minute.confidence.epistemic,
-        rho: minute.confidence.rigor,
-        capped: false,
+        epsilon: p.minute.confidence.epistemic,
+        rho: p.minute.confidence.rigor,
+        capped: p.capped,
+        gap: p.gap,
         routing_trace: {
           triage: t, gates_fired,
-          iters: 0, calls: allPasses.length, hops: 0,
+          iters: p.iters, calls: allPasses.length, hops: 0,
           routing_hint_ignored: routingHintIgnored || undefined,
         },
       },
@@ -928,23 +969,24 @@ async function runSummonBestAdvisor(args: {
           l === "strategy" ? "leo" : null)
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
-        const { minute: pmin, passes: pp } = await runPanel(
+        const pg = await runPanelGated(
           question, context, panelIds, clientContext, tenant);
-        for (const p of pp) allPasses.push(p);
+        for (const p of pg.passes) allPasses.push(p);
         return {
           result: {
             selected_advisor: "panel",
             mode: "panel",
-            minute: pmin,
+            minute: pg.minute,
             lane_fit: null,
             missing_lanes: minute.missing_lanes,
             refer_to: minute.refer_to,
-            epsilon: pmin.confidence.epistemic,
-            rho: pmin.confidence.rigor,
-            capped: false,
+            epsilon: pg.minute.confidence.epistemic,
+            rho: pg.minute.confidence.rigor,
+            capped: pg.capped,
+            gap: pg.gap,
             routing_trace: {
               triage: t, gates_fired,
-              iters: loop.iters, calls: allPasses.length, hops: 1,
+              iters: loop.iters + pg.iters, calls: allPasses.length, hops: 1,
               routing_hint_ignored: routingHintIgnored || undefined,
             },
           },
