@@ -47,6 +47,7 @@ import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
+import LEXI_MD from "./agents/lexi.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
@@ -56,8 +57,9 @@ import IROH_AGENT_MD from "./agents/iroh.ts";
 import {
   AGENT_MANIFEST,
   findEnabledAgent,
-  listEnabledAgentsPublic,
+  listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
+import { getLegalSeat, getTenantContext, type TenantContext } from "./tenants.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
