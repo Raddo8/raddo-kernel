@@ -16,7 +16,8 @@ export const ROUTING_CONFIG = {
   stakes_floor_council: "existential",   // full board
   stakes_floor_dissent: "medium",        // steelman pass
   // Fanout: triage implicating ≥ this many distinct lanes → council.
-  multi_lane_council_threshold: 3,
+  // 4+ lanes → full board. 2–3 lanes → panel of just those lanes.
+  multi_lane_council_threshold: 4,
   // Confidence loop guards.
   max_iters: 3,
   budget_calls: 6,
