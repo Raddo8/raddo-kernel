@@ -97,17 +97,48 @@ lane_confidence is your honest 0–1 score that primary_lane is the right
 primary lane. Be candid. If two lanes tie, set primary to the heavier one
 and put the other in secondary_lanes with low confidence.`;
 
+export type GapReason = "capability" | "data" | null;
+
 export type TriageDecision = {
   primary_lane: Lane;
   lane_confidence: number;
   secondary_lanes: Lane[];
   one_way_door: boolean;
   stakes: Stakes;
+  detected_subdomain: string | null;
+  gap_reason: GapReason;
   recommended_mode: Mode;
   chairs: string[];           // specialist ids in order
   reasoning: string;
   gates_fired: string[];      // which mode-selection gate fired (A0/A1/A2/B/none)
 };
+
+// Controlled sub-domain vocabulary (matches the triage prompt).
+const SUBDOMAIN_PREFIX_OK = ["industry:"];
+const SUBDOMAIN_VOCAB = new Set<string>([
+  "re-finance", "quant-modeling", "derivatives", "tax", "vc-captable",
+  "securities", "employment-law", "privacy-intl", "ip-patents",
+  "antitrust", "comp-design", "supply-chain", "engineering", "security",
+  "marketing", "risk-esg",
+]);
+
+function normalizeSubdomain(x: any): string | null {
+  if (typeof x !== "string") return null;
+  const v = x.trim().toLowerCase();
+  if (!v || v === "null" || v === "none") return null;
+  if (SUBDOMAIN_VOCAB.has(v)) return v;
+  for (const pfx of SUBDOMAIN_PREFIX_OK) {
+    if (v.startsWith(pfx) && v.length > pfx.length) return v;
+  }
+  return null;
+}
+
+function normalizeGapReason(x: any): GapReason {
+  if (typeof x !== "string") return null;
+  const v = x.trim().toLowerCase();
+  if (v === "capability" || v === "data") return v;
+  return null;
+}
 
 // Lane → specialist id (tenant-aware for legal).
 function laneToId(lane: Lane, tenant: string): string {
