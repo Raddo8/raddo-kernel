@@ -82,7 +82,22 @@ function renderPreamble(clientContext: string = ""): string {
   return GLOBAL_PREAMBLE_MD.replace("<<CLIENT_CONTEXT>>", clientContext ?? "");
 }
 
-function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
+// Substitute {{CLIENT}}, {{PRINCIPAL}}, {{PRINCIPAL_VALUES}},
+// {{ACTIVE_MATTERS}}, {{BEARING_DEFAULT}} from verified tenant context.
+function renderTenantPlaceholders(body: string, ctx: TenantContext): string {
+  return body
+    .replaceAll("{{CLIENT}}", ctx.client)
+    .replaceAll("{{PRINCIPAL}}", ctx.principal)
+    .replaceAll("{{PRINCIPAL_VALUES}}", ctx.principal_values)
+    .replaceAll("{{ACTIVE_MATTERS}}", ctx.active_matters)
+    .replaceAll("{{BEARING_DEFAULT}}", ctx.bearing_default);
+}
+
+function loadAgent(
+  id: string,
+  clientContext: string = "",
+  tenant: string = "",
+): AgentBundle | null {
   const entry = findEnabledAgent(id);
   if (!entry) return null;
   if (entry.kind === "council") {
@@ -91,15 +106,18 @@ function loadAgent(id: string, clientContext: string = ""): AgentBundle | null {
   // Single-agent registry. Keep server-side · never echo body to clients.
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
+    lexi: LEXI_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     iroh: IROH_AGENT_MD,
   };
 
-
-  const body = SINGLE_BODIES[entry.id];
-  if (!body) return null;
+  const rawBody = SINGLE_BODIES[entry.id];
+  if (!rawBody) return null;
+  // Tenant-aware placeholder injection (legal personas use this; others are
+  // no-ops since they contain no {{...}} tokens).
+  const body = renderTenantPlaceholders(rawBody, getTenantContext(tenant));
   return {
     kind: "single",
     id: entry.id,
