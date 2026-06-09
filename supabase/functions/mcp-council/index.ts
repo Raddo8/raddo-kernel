@@ -403,11 +403,24 @@ async function runCouncilWithResynth(
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
-  resynth: () => Promise<{ minute: MinuteShape; pass: Pass }>;
+  metrics: ConveneMetrics;
+  resynth: () => Promise<{ minute: MinuteShape; pass: Pass; resynth_ms: number }>;
 }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
+  const metrics: ConveneMetrics = {
+    mode: "council",
+    chairs_count: 0,
+    calls_total: 0,
+    stage1_ms: 0,
+    horizon_ms: 0,
+    synth1_ms: 0,
+    synth2_ms: 0,
+    resynth_ms: 0,
+    fast_resynth_used: false,
+    boundary_regen: false,
+  };
 
   const seatId = getLegalSeat(tenant);
   const seatBody = renderTenantPlaceholders(
@@ -420,8 +433,10 @@ async function runCouncilWithResynth(
     system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
   const allChairs = [...CHAIRS, legalChair];
+  metrics.chairs_count = allChairs.length;
 
   const userMsg = chairUserPrompt(question, context);
+  const stage1T0 = Date.now();
   const stage1Raw = await Promise.all(
     allChairs.map((c) =>
       callAnthropic({
@@ -432,21 +447,25 @@ async function runCouncilWithResynth(
       }).then((res) => ({ name: c.name, res })),
     ),
   );
+  metrics.stage1_ms = Date.now() - stage1T0;
   for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
   const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
+  const horizonT0 = Date.now();
   const horizonRes = await callAnthropic({
     model: MODEL_CHAIR,
     system: `${preamble}\n\n${LEO_MD}`,
     user: horizonUserPrompt(question, context, stage1Results),
     maxTokens: MAX_TOKENS_CHAIR,
   });
+  metrics.horizon_ms = Date.now() - horizonT0;
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
   const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
 
   const synthesize = async (reinforce: boolean) => {
+    const t0 = Date.now();
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
@@ -457,17 +476,21 @@ async function runCouncilWithResynth(
       }),
       maxTokens: MAX_TOKENS_SYNTH,
     });
+    const elapsed = Date.now() - t0;
     const pass: Pass = { model: res.model, usage: res.usage };
     const minute = validateMinute(extractJson(res.text), freshness, participating);
-    return { minute, pass };
+    return { minute, pass, elapsed };
   };
 
   const first = await synthesize(false);
+  metrics.synth1_ms = first.elapsed;
   passes.push(first.pass);
   let minute = first.minute;
 
   if (hasBoundaryViolation(JSON.stringify(minute))) {
+    metrics.boundary_regen = true;
     const second = await synthesize(true);
+    metrics.synth2_ms = second.elapsed;
     passes.push(second.pass);
     if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
@@ -477,11 +500,15 @@ async function runCouncilWithResynth(
 
   const resynth = async () => {
     const next = await synthesize(true);
-    return { minute: next.minute, pass: next.pass };
+    metrics.resynth_ms = next.elapsed;
+    metrics.fast_resynth_used = true;
+    return { minute: next.minute, pass: next.pass, resynth_ms: next.elapsed };
   };
 
-  return { minute, passes, resynth };
+  metrics.calls_total = passes.length;
+  return { minute, passes, metrics, resynth };
 }
+
 
 // ── Single-agent runner ────────────────────────────────────────────────────
 type SingleMinute = {
