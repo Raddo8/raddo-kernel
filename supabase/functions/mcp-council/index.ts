@@ -380,6 +380,24 @@ Do NOT emit the "agent / assessment / recommendation / ..." object. Leo will
 synthesize the final minute.
 `;
 
+// Structured per-convene metrics. Bubbled up through the gated wrappers
+// and stamped into the routing ledger (metadata.convene_metrics) so the
+// routing/capability-gap analyses can attribute wall-clock and call counts
+// per stage and detect the fast-resynth path.
+type ConveneMetrics = {
+  mode: "council" | "panel";
+  chairs_count: number;
+  calls_total: number;
+  stage1_ms: number;     // parallel chair fan-out
+  horizon_ms: number;    // Leo Stage 2
+  synth1_ms: number;     // first Opus synthesis
+  synth2_ms: number;     // boundary-regen synthesis (0 if not triggered)
+  resynth_ms: number;    // fast resynth on below-floor (0 if not used)
+  fast_resynth_used: boolean;
+  boundary_regen: boolean;
+  total_ms?: number;     // filled by gated wrapper
+};
+
 async function runCouncil(
   question: string,
   context: string,
@@ -389,6 +407,7 @@ async function runCouncil(
   const r = await runCouncilWithResynth(question, context, clientContext, tenant);
   return { minute: r.minute, passes: r.passes };
 }
+
 
 // Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
 // runCouncilGated uses this so a below-floor re_reason re-runs only Stage 3
