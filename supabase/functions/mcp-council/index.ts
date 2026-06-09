@@ -695,6 +695,296 @@ async function runPanel(
   return { minute, passes };
 }
 
+// ── Routing ledger helpers ─────────────────────────────────────────────────
+async function hashQuestion(q: string): Promise<string> {
+  const bytes = new TextEncoder().encode(q);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  const hex = Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0")).join("");
+  return hex.slice(0, 16);
+}
+
+type RoutingLog = {
+  question_hash: string;
+  triage: {
+    primary_lane: string;
+    lane_confidence: number;
+    one_way_door: boolean;
+    stakes: string;
+    mode: string;
+  };
+  gates_fired: string[];
+  selected_advisor: string;
+  escalated: boolean;
+  final_mode: string;
+  epsilon: number;
+  rho: number;
+  capped: boolean;
+  iters: number;
+  hops: number;
+  routing_hint_ignored?: boolean;
+};
+
+// ── Confidence-gated council ──────────────────────────────────────────────
+// Wraps runCouncil in the completion loop. Closing action is derived from
+// the minute's confidence axes: below floor → "re_reason" (cheap re-synth);
+// after diminishing-returns the loop returns capped with a gap.
+async function runCouncilGated(
+  question: string,
+  context: string,
+  clientContext: string,
+  tenant: string,
+): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
+  const allPasses: Pass[] = [];
+  let iter = 0;
+  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
+    async (_state) => {
+      iter++;
+      const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
+      for (const p of passes) allPasses.push(p);
+      const eps = minute.confidence.epistemic;
+      const rho = minute.confidence.rigor;
+      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
+      const closing_action: ClosingAction = belowFloor
+        ? (iter >= 2 ? "needs_external_info" : "re_reason")
+        : "none";
+      const r: ProduceResult<MinuteShape> = {
+        output: minute, epsilon: eps, rho,
+        closing_action,
+        gap: belowFloor ? "council_confidence_below_floor" : undefined,
+      };
+      return r;
+    },
+    { state: { reason: "initial" }, apply: (s) => ({ reason: "re_reason" }) },
+  );
+  return {
+    minute: result.output,
+    passes: allPasses,
+    iters: result.iters,
+    capped: result.capped,
+    gap: result.gap,
+  };
+}
+
+// ── summon_best_advisor orchestrator ──────────────────────────────────────
+type SummonResult = {
+  selected_advisor: string;
+  mode: "solo" | "panel" | "council";
+  minute: SingleMinute | MinuteShape;
+  lane_fit: number | null;
+  missing_lanes: string[];
+  refer_to: string | null;
+  epsilon: number;
+  rho: number;
+  capped: boolean;
+  gap?: string;
+  routing_trace: {
+    triage: TriageDecision;
+    gates_fired: string[];
+    iters: number;
+    calls: number;
+    hops: number;
+    routing_hint_ignored?: boolean;
+  };
+};
+
+async function runSummonBestAdvisor(args: {
+  question: string;
+  context: string;
+  clientContext: string;
+  tenant: string;
+  routingHintIgnored: boolean;
+}): Promise<{ result: SummonResult; passes: Pass[] }> {
+  const { question, context, clientContext, tenant, routingHintIgnored } = args;
+  const allPasses: Pass[] = [];
+  const t = await triage(question, context, tenant);
+  const gates_fired = [...t.gates_fired];
+
+  // Council mode → full board.
+  if (t.recommended_mode === "council") {
+    const c = await runCouncilGated(question, context, clientContext, tenant);
+    for (const p of c.passes) allPasses.push(p);
+    return {
+      result: {
+        selected_advisor: "council",
+        mode: "council",
+        minute: c.minute,
+        lane_fit: null,
+        missing_lanes: [],
+        refer_to: null,
+        epsilon: c.minute.confidence.epistemic,
+        rho: c.minute.confidence.rigor,
+        capped: c.capped,
+        gap: c.gap,
+        routing_trace: {
+          triage: t, gates_fired,
+          iters: c.iters, calls: allPasses.length, hops: 0,
+          routing_hint_ignored: routingHintIgnored || undefined,
+        },
+      },
+      passes: allPasses,
+    };
+  }
+
+  // Panel mode → multi-chair panel.
+  if (t.recommended_mode === "panel") {
+    const { minute, passes } = await runPanel(question, context, t.chairs, clientContext, tenant);
+    for (const p of passes) allPasses.push(p);
+    return {
+      result: {
+        selected_advisor: "panel",
+        mode: "panel",
+        minute,
+        lane_fit: null,
+        missing_lanes: [],
+        refer_to: null,
+        epsilon: minute.confidence.epistemic,
+        rho: minute.confidence.rigor,
+        capped: false,
+        routing_trace: {
+          triage: t, gates_fired,
+          iters: 0, calls: allPasses.length, hops: 0,
+          routing_hint_ignored: routingHintIgnored || undefined,
+        },
+      },
+      passes: allPasses,
+    };
+  }
+
+  // Solo mode → specialist + confidence loop + gates C/D.
+  let hops = 0;
+  let currentSpecialistId = t.chairs[0];
+
+  type SoloState = { specialistId: string; note: string };
+  const loop = await runWithConfidenceFloor<SingleMinute, SoloState>(
+    async (state) => {
+      const bundle = loadAgent(state.specialistId, clientContext, tenant);
+      if (!bundle || bundle.kind !== "single") throw new Error("agent_not_available");
+      const { minute, passes } = await runSingleAgent(bundle, question, context, state.note);
+      for (const p of passes) allPasses.push(p);
+      // Derive closing action: prefer the persona's self-report; if it
+      // returned "none" but the floor isn't met, fall back to "re_reason".
+      const belowFloor =
+        minute.confidence.epistemic < ROUTING_CONFIG.floor.eps_min ||
+        minute.confidence.rigor < ROUTING_CONFIG.floor.rho_min;
+      let closing_action: ClosingAction = minute.closing_action;
+      if (closing_action === "none" && belowFloor) closing_action = "re_reason";
+      const r: ProduceResult<SingleMinute> = {
+        output: minute,
+        epsilon: minute.confidence.epistemic,
+        rho: minute.confidence.rigor,
+        closing_action,
+        gap: belowFloor ? "specialist_below_floor" : undefined,
+      };
+      return r;
+    },
+    {
+      state: { specialistId: currentSpecialistId, note: "" },
+      apply: (state, r) => {
+        if (r.closing_action === "re_reason") {
+          return { ...state, note: "Re-reason: another synthesis pass on the same facts. Be more precise; raise ε and ρ honestly only if a real re-derivation supports it." };
+        }
+        if (r.closing_action === "gather_context") {
+          return { ...state, note: "Gather context: name precisely what you would ask the principal to raise your epistemic score, then proceed with your best current call." };
+        }
+        return state;
+      },
+    },
+  );
+
+  let minute = loop.output;
+  let mode: "solo" | "panel" | "council" = "solo";
+  let selected = minute.agent;
+
+  // Gate C · lane_fit / missing_lanes / refer_to
+  const lowFit = minute.lane_fit < ROUTING_CONFIG.tau_fit;
+  if ((lowFit || minute.missing_lanes.length || minute.refer_to) && hops === 0) {
+    gates_fired.push("C");
+    if (minute.refer_to && !minute.missing_lanes.length) {
+      // One-hop re-route to the referred specialist (seated-collapsed).
+      let target = minute.refer_to.toLowerCase();
+      if (target === "lexi" || target === "knox") target = getLegalSeat(tenant);
+      const bundle2 = loadAgent(target, clientContext, tenant);
+      if (bundle2 && bundle2.kind === "single") {
+        hops = 1;
+        const { minute: m2, passes: p2 } = await runSingleAgent(
+          bundle2, question, context,
+          "You are the referred advisor. Address the question fully in your lane.",
+        );
+        for (const p of p2) allPasses.push(p);
+        minute = m2;
+        selected = minute.agent;
+      }
+    } else {
+      // Escalate to panel over [primary, ...missing_lanes].
+      const panelIds = [t.chairs[0], ...minute.missing_lanes
+        .map((l) => l.toLowerCase())
+        .map((l) =>
+          l === "legal" ? getLegalSeat(tenant) :
+          l === "finance" ? "lucius" :
+          l === "ops" ? "leo" :
+          l === "trust" ? "alfred" :
+          l === "people" ? "iroh" :
+          l === "strategy" ? "leo" : null)
+        .filter((x): x is string => !!x)];
+      if (panelIds.length >= 2) {
+        const { minute: pmin, passes: pp } = await runPanel(
+          question, context, panelIds, clientContext, tenant);
+        for (const p of pp) allPasses.push(p);
+        return {
+          result: {
+            selected_advisor: "panel",
+            mode: "panel",
+            minute: pmin,
+            lane_fit: null,
+            missing_lanes: minute.missing_lanes,
+            refer_to: minute.refer_to,
+            epsilon: pmin.confidence.epistemic,
+            rho: pmin.confidence.rigor,
+            capped: false,
+            routing_trace: {
+              triage: t, gates_fired,
+              iters: loop.iters, calls: allPasses.length, hops: 1,
+              routing_hint_ignored: routingHintIgnored || undefined,
+            },
+          },
+          passes: allPasses,
+        };
+      }
+    }
+  }
+
+  // Gate D · steelman pass when stakes ≥ medium.
+  if (stakesAtLeast(t.stakes, "medium")) {
+    gates_fired.push("D");
+    // Self-steelman is already part of the persona contract (steelman field).
+    // v1: trust the in-band steelman; escalate only if persona explicitly set
+    // closing_action="escalate_panel" or refer_to/missing_lanes still set
+    // (handled above). No extra model call.
+  }
+
+  return {
+    result: {
+      selected_advisor: selected,
+      mode,
+      minute,
+      lane_fit: minute.lane_fit,
+      missing_lanes: minute.missing_lanes,
+      refer_to: minute.refer_to,
+      epsilon: minute.confidence.epistemic,
+      rho: minute.confidence.rigor,
+      capped: loop.capped,
+      gap: loop.gap,
+      routing_trace: {
+        triage: t, gates_fired,
+        iters: loop.iters, calls: allPasses.length, hops,
+        routing_hint_ignored: routingHintIgnored || undefined,
+      },
+    },
+    passes: allPasses,
+  };
+}
+
 
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
 const PROTOCOL_VERSION = "2025-06-18";
