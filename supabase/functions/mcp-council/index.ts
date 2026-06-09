@@ -283,7 +283,11 @@ function extractJson(s: string): any {
   return JSON.parse(t.slice(first, last + 1));
 }
 
-function validateMinute(m: any, freshness: string): MinuteShape {
+function validateMinute(
+  m: any,
+  freshness: string,
+  participating: string[],
+): MinuteShape {
   if (!m || typeof m !== "object") throw new Error("minute_shape");
   const horizon = Array.isArray(m.anticipatory_horizon)
     ? m.anticipatory_horizon.filter((x: any) => typeof x === "string")
@@ -308,24 +312,55 @@ function validateMinute(m: any, freshness: string): MinuteShape {
       rigor: Math.max(0, Math.min(1, rigor)),
     },
     freshness: typeof m.freshness === "string" && m.freshness ? m.freshness : freshness,
-    participating_chairs: ["Leo", "Spock", "Alfred", "Iroh", "Lucius"],
+    participating_chairs: participating,
     signature: "— COB_COUNCIL",
   };
 }
+
+// Chair-mode override appended to a legal persona body when it sits as the
+// 6th chair inside convene_council. Prevents the single-advisor JSON output
+// shape from breaking Leo's Stage-2 horizon and Opus Stage-3 synthesis, both
+// of which expect free-text chair contributions.
+const LEGAL_CHAIR_ADDENDUM = `
+
+---
+
+## Council mode (override output spec)
+You are sitting as a chair inside The Council, not delivering a single-advisor
+minute. Contribute ONLY your legal lens: 2–5 tight prose points covering
+exposure, the safeguard or move, and the escalation call. Do NOT emit JSON.
+Do NOT emit the "agent / assessment / recommendation / ..." object. Leo will
+synthesize the final minute.
+`;
 
 async function runCouncil(
   question: string,
   context: string,
   clientContext: string = "",
+  tenant: string = "",
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
 
-  // Stage 1 · five chairs in parallel.
+  // Seat the tenant's legal advisor as the 6th chair. Body is tenant-aware
+  // (placeholders rendered) and switched to chair-mode output.
+  const seatId = getLegalSeat(tenant);
+  const seatBody = renderTenantPlaceholders(
+    seatId === "knox" ? KNOX_MD : LEXI_MD,
+    getTenantContext(tenant),
+  );
+  const seatName = seatId === "knox" ? "KNOX" : "LEXI";
+  const legalChair = {
+    name: seatName,
+    system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+  };
+  const allChairs = [...CHAIRS, legalChair];
+
+  // Stage 1 · six chairs in parallel (five core + seated legal).
   const userMsg = chairUserPrompt(question, context);
   const stage1Raw = await Promise.all(
-    CHAIRS.map((c) =>
+    allChairs.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
@@ -347,6 +382,8 @@ async function runCouncil(
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
+  const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
+
   // Stage 3 · Opus lead synthesis · JSON minute.
   const synthesize = async (reinforce: boolean) => {
     const res = await callAnthropic({
@@ -362,7 +399,7 @@ async function runCouncil(
       maxTokens: MAX_TOKENS_SYNTH,
     });
     passes.push({ model: res.model, usage: res.usage });
-    return validateMinute(extractJson(res.text), freshness);
+    return validateMinute(extractJson(res.text), freshness, participating);
   };
 
   let minute = await synthesize(false);
