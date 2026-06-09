@@ -954,7 +954,10 @@ type SummonResult = {
     calls: number;
     hops: number;
     routing_hint_ignored?: boolean;
+  };
 };
+
+
 
 // ── Deterministic capability-gap post-step ────────────────────────────────
 // Guarantees structured `missing_lanes` / `refer_to` whenever triage flagged
