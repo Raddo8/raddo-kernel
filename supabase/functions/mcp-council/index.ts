@@ -465,12 +465,19 @@ type SingleMinute = {
   confidence: { epistemic: number; rigor: number };
   escalation: string;
   signature: string;
+  // Confidence-gated routing extensions:
+  lane_fit: number;
+  missing_lanes: string[];
+  refer_to: string | null;
+  closing_action: ClosingAction;
+  steelman: string;
 };
 
 function singleAgentUserPrompt(
   question: string,
   context: string,
   reinforce: boolean,
+  extraNote: string = "",
 ): string {
   const ctxBlock = context && context.trim()
     ? `\n\n## Context provided by the principal\n${context.trim()}`
@@ -478,10 +485,21 @@ function singleAgentUserPrompt(
   const reinforceBlock = reinforce
     ? `\n\nREINFORCED REMINDER: Do not name internal mechanics, source files, or peer products. Speak only as the named agent. Emit ONLY the JSON object specified.`
     : "";
-  return `## Question from the principal\n${question.trim()}${ctxBlock}\n\n## Your task\nProduce your minute as the named agent. Emit ONLY a single valid JSON object per the output spec.${reinforceBlock}`;
+  const note = extraNote ? `\n\n${extraNote}` : "";
+  return `## Question from the principal\n${question.trim()}${ctxBlock}\n\n## Your task\nProduce your minute as the named agent. Emit ONLY a single valid JSON object per the output spec (including the confidence-gated routing keys).${reinforceBlock}${note}`;
 }
 
 const SEVERITY_VALUES = new Set(["low", "medium", "high", "critical"]);
+const VALID_CLOSING: ClosingAction[] = [
+  "none", "gather_context", "add_lens", "re_reason",
+  "escalate_panel", "needs_external_info",
+];
+
+function normalizeClosingAction(x: any): ClosingAction {
+  if (typeof x !== "string") return "none";
+  const v = x.trim().toLowerCase();
+  return (VALID_CLOSING as string[]).includes(v) ? (v as ClosingAction) : "none";
+}
 
 function validateSingleMinute(m: any, agentName: string): SingleMinute {
   if (!m || typeof m !== "object") throw new Error("minute_shape");
@@ -502,6 +520,21 @@ function validateSingleMinute(m: any, agentName: string): SingleMinute {
   ) {
     throw new Error("minute_shape");
   }
+  // Routing-contract fields · all with safe defaults so older personas
+  // that haven't emitted them yet don't break the gateway.
+  const laneFitRaw = Number(m.lane_fit);
+  const lane_fit = Number.isFinite(laneFitRaw)
+    ? Math.max(0, Math.min(1, laneFitRaw))
+    : 1;
+  const missing_lanes = Array.isArray(m.missing_lanes)
+    ? m.missing_lanes.filter((x: any) => typeof x === "string")
+    : [];
+  const refer_to = typeof m.refer_to === "string" && m.refer_to.trim()
+    ? m.refer_to.trim().toLowerCase()
+    : null;
+  const closing_action = normalizeClosingAction(m.closing_action);
+  const steelman = typeof m.steelman === "string" ? m.steelman : "";
+
   return {
     agent: agentName,
     assessment: m.assessment,
@@ -514,6 +547,11 @@ function validateSingleMinute(m: any, agentName: string): SingleMinute {
     },
     escalation: m.escalation,
     signature: `— ${agentName}`,
+    lane_fit,
+    missing_lanes,
+    refer_to,
+    closing_action,
+    steelman,
   };
 }
 
@@ -521,13 +559,14 @@ async function runSingleAgent(
   bundle: Extract<AgentBundle, { kind: "single" }>,
   question: string,
   context: string,
+  extraNote: string = "",
 ): Promise<{ minute: SingleMinute; passes: Pass[] }> {
   const passes: Pass[] = [];
   const ask = async (reinforce: boolean) => {
     const res = await callAnthropic({
       model: MODEL_SYNTHESIS,
       system: bundle.system,
-      user: singleAgentUserPrompt(question, context, reinforce),
+      user: singleAgentUserPrompt(question, context, reinforce, extraNote),
       maxTokens: MAX_TOKENS_SYNTH,
     });
     passes.push({ model: res.model, usage: res.usage });
@@ -544,6 +583,118 @@ async function runSingleAgent(
   }
   return { minute, passes };
 }
+
+// ── Panel runner ───────────────────────────────────────────────────────────
+// Like runCouncil but over an arbitrary chair list (2–4 seated specialists).
+// Used by Gate A2/B/C escalations. Same Stage-1 → Stage-2 → Stage-3 shape,
+// same MinuteShape, so callers can return it unchanged.
+function chairForSpecialistId(
+  id: string,
+  tenant: string,
+): { name: string; system: string } | null {
+  const ctx = getTenantContext(tenant);
+  const SINGLE_BODIES: Record<string, string> = {
+    knox: KNOX_MD,
+    lexi: LEXI_MD,
+    lucius: LUCIUS_AGENT_MD,
+    leo: LEO_AGENT_MD,
+    alfred: ALFRED_AGENT_MD,
+    iroh: IROH_AGENT_MD,
+  };
+  const body = SINGLE_BODIES[id];
+  if (!body) return null;
+  const rendered = renderTenantPlaceholders(body, ctx);
+  // Use chair-mode addendum so the persona returns prose chair contribution
+  // rather than its single-advisor JSON (which would break Leo synthesis).
+  const name =
+    id === "lucius" ? "Lucius" :
+    id === "leo" ? "Leo" :
+    id === "alfred" ? "Alfred" :
+    id === "iroh" ? "Iroh" :
+    id === "knox" ? "KNOX" :
+    id === "lexi" ? "LEXI" :
+    id.toUpperCase();
+  return {
+    name,
+    system: `${rendered}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
+  };
+}
+
+async function runPanel(
+  question: string,
+  context: string,
+  chairIds: string[],
+  clientContext: string = "",
+  tenant: string = "",
+): Promise<{ minute: MinuteShape; passes: Pass[] }> {
+  const freshness = new Date().toISOString();
+  const passes: Pass[] = [];
+  const preamble = renderPreamble(clientContext);
+
+  // Build chair list from supplied specialist ids (tenant-aware for legal).
+  const seen = new Set<string>();
+  const chairs = chairIds
+    .map((id) => (id === "lexi" || id === "knox") ? getLegalSeat(tenant) : id)
+    .filter((id) => { if (seen.has(id)) return false; seen.add(id); return true; })
+    .map((id) => chairForSpecialistId(id, tenant))
+    .filter((c): c is { name: string; system: string } => c !== null);
+
+  if (chairs.length < 2) throw new Error("panel_too_small");
+
+  // Stage 1 · parallel chair contributions.
+  const userMsg = chairUserPrompt(question, context);
+  const stage1Raw = await Promise.all(
+    chairs.map((c) =>
+      callAnthropic({
+        model: MODEL_CHAIR,
+        system: `${preamble}\n\n${c.system}`,
+        user: userMsg,
+        maxTokens: MAX_TOKENS_CHAIR,
+      }).then((res) => ({ name: c.name, res })),
+    ),
+  );
+  for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
+  const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
+
+  // Stage 2 · Leo horizon scan.
+  const horizonRes = await callAnthropic({
+    model: MODEL_CHAIR,
+    system: `${preamble}\n\n${LEO_MD}`,
+    user: horizonUserPrompt(question, context, stage1Results),
+    maxTokens: MAX_TOKENS_CHAIR,
+  });
+  passes.push({ model: horizonRes.model, usage: horizonRes.usage });
+  const horizon = horizonRes.text;
+
+  const participating = chairs.map((c) => c.name);
+
+  // Stage 3 · Opus lead synthesis.
+  const synthesize = async (reinforce: boolean) => {
+    const res = await callAnthropic({
+      model: MODEL_SYNTHESIS,
+      system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
+      user: synthesisUserPrompt({
+        question, context,
+        contributions: stage1Results,
+        horizon, freshness, reinforce,
+      }),
+      maxTokens: MAX_TOKENS_SYNTH,
+    });
+    passes.push({ model: res.model, usage: res.usage });
+    return validateMinute(extractJson(res.text), freshness, participating);
+  };
+
+  let minute = await synthesize(false);
+  if (hasBoundaryViolation(JSON.stringify(minute))) {
+    const second = await synthesize(true);
+    if (hasBoundaryViolation(JSON.stringify(second))) {
+      throw new Error("boundary_violation");
+    }
+    minute = second;
+  }
+  return { minute, passes };
+}
+
 
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
 const PROTOCOL_VERSION = "2025-06-18";
