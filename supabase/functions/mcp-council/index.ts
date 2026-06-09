@@ -1440,11 +1440,23 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes, iters, capped, gap } = await runCouncilGated(
+          const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
             question, context, clientContext, tenant);
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
+          // Structured metric log · machine-grep friendly. Routing /
+          // capability-gap ledgers consume this line.
+          console.log("convene_metrics", JSON.stringify({
+            tool: "convene_council",
+            tenant,
+            question_hash: qhash,
+            ...metrics,
+            iters,
+            capped,
+            epsilon: minute.confidence.epistemic,
+            rho: minute.confidence.rigor,
+          }));
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
@@ -1457,6 +1469,7 @@ Deno.serve(async (req) => {
               epsilon: minute.confidence.epistemic,
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
+              convene_metrics: metrics,
             },
           });
           return rpcResult(id, {
