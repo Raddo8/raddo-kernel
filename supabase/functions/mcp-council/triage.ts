@@ -234,6 +234,8 @@ export async function triage(
       secondary_lanes: [],
       one_way_door: false,
       stakes: "medium",
+      detected_subdomain: null,
+      gap_reason: null,
       reasoning: "triage_unparseable_default",
     }, tenant);
   }
@@ -251,11 +253,16 @@ export async function triage(
   const lane_confidence = Math.max(0, Math.min(1, Number(parsed.lane_confidence) || 0));
   const one_way_door = !!parsed.one_way_door;
   const stakes = normalizeStakes(parsed.stakes);
+  let detected_subdomain = normalizeSubdomain(parsed.detected_subdomain);
+  let gap_reason = normalizeGapReason(parsed.gap_reason);
+  // Coherence: capability requires a named subdomain; otherwise drop to null.
+  if (gap_reason === "capability" && !detected_subdomain) gap_reason = null;
+  if (gap_reason !== "capability") detected_subdomain = null;
   const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 240) : "";
 
   return applyGates({
     primary_lane: primary, lane_confidence, secondary_lanes,
-    one_way_door, stakes, reasoning,
+    one_way_door, stakes, detected_subdomain, gap_reason, reasoning,
   }, tenant);
 }
 
