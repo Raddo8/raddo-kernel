@@ -787,40 +787,39 @@ async function runCouncilGated(
   clientContext: string,
   tenant: string,
 ): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const allPasses: Pass[] = [];
-  let iter = 0;
-  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
-    async (_state) => {
-      iter++;
-      const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
-      for (const p of passes) allPasses.push(p);
-      const eps = minute.confidence.epistemic;
-      const rho = minute.confidence.rigor;
-      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
-      const closing_action: ClosingAction = belowFloor
-        ? (iter >= 2 ? "needs_external_info" : "re_reason")
-        : "none";
-      const r: ProduceResult<MinuteShape> = {
-        output: minute, epsilon: eps, rho,
-        closing_action,
-        gap: belowFloor ? "council_confidence_below_floor" : undefined,
-      };
-      return r;
-    },
-    { state: { reason: "initial" }, apply: (s) => ({ reason: "re_reason" }) },
+  // Chairs + horizon run ONCE. If the first synthesis falls below the
+  // confidence floor, re_reason re-runs only Stage 3 (single Opus call)
+  // via the resynth closure. This keeps full-council wall-clock inside
+  // the edge-function response window.
+  const { minute: firstMinute, passes, resynth } = await runCouncilWithResynth(
+    question, context, clientContext, tenant,
   );
+  let minute = firstMinute;
+  let iters = 1;
+  const epsMin = ROUTING_CONFIG.floor.eps_min;
+  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  let belowFloor =
+    minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+
+  if (belowFloor) {
+    const { minute: next, pass } = await resynth();
+    passes.push(pass);
+    iters = 2;
+    minute = next;
+    belowFloor =
+      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+  }
+
   return {
-    minute: result.output,
-    passes: allPasses,
-    iters: result.iters,
-    capped: result.capped,
-    gap: result.gap,
+    minute,
+    passes,
+    iters,
+    capped: belowFloor,
+    gap: belowFloor ? "council_confidence_below_floor" : undefined,
   };
 }
 
 // ── Confidence-gated panel ────────────────────────────────────────────────
-// Same shape as runCouncilGated: re_reason once on below-floor, then cap
-// with a gap. Prevents panels from silently returning ε 0.30 capped:false.
 async function runPanelGated(
   question: string,
   context: string,
@@ -828,33 +827,31 @@ async function runPanelGated(
   clientContext: string,
   tenant: string,
 ): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const allPasses: Pass[] = [];
-  let iter = 0;
-  const result = await runWithConfidenceFloor<MinuteShape, { reason: "initial" | "re_reason" }>(
-    async (_state) => {
-      iter++;
-      const { minute, passes } = await runPanel(question, context, chairIds, clientContext, tenant);
-      for (const p of passes) allPasses.push(p);
-      const eps = minute.confidence.epistemic;
-      const rho = minute.confidence.rigor;
-      const belowFloor = eps < ROUTING_CONFIG.floor.eps_min || rho < ROUTING_CONFIG.floor.rho_min;
-      const closing_action: ClosingAction = belowFloor
-        ? (iter >= 2 ? "needs_external_info" : "re_reason")
-        : "none";
-      return {
-        output: minute, epsilon: eps, rho,
-        closing_action,
-        gap: belowFloor ? "panel_confidence_below_floor" : undefined,
-      };
-    },
-    { state: { reason: "initial" }, apply: (_s) => ({ reason: "re_reason" }) },
+  const { minute: firstMinute, passes, resynth } = await runPanelWithResynth(
+    question, context, chairIds, clientContext, tenant,
   );
+  let minute = firstMinute;
+  let iters = 1;
+  const epsMin = ROUTING_CONFIG.floor.eps_min;
+  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  let belowFloor =
+    minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+
+  if (belowFloor) {
+    const { minute: next, pass } = await resynth();
+    passes.push(pass);
+    iters = 2;
+    minute = next;
+    belowFloor =
+      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
+  }
+
   return {
-    minute: result.output,
-    passes: allPasses,
-    iters: result.iters,
-    capped: result.capped,
-    gap: result.gap,
+    minute,
+    passes,
+    iters,
+    capped: belowFloor,
+    gap: belowFloor ? "panel_confidence_below_floor" : undefined,
   };
 }
 
