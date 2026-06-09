@@ -954,8 +954,40 @@ type SummonResult = {
     calls: number;
     hops: number;
     routing_hint_ignored?: boolean;
-  };
 };
+
+// ── Deterministic capability-gap post-step ────────────────────────────────
+// Guarantees structured `missing_lanes` / `refer_to` whenever triage flagged
+// a capability gap with a named sub-domain that the seated roster doesn't
+// cover. Persona prose escalation (boundary clause · rider) is untouched —
+// this is the machine signal the Capability Gap Ledger consumes.
+//
+// MUST NOT fire when triage.gap_reason === "data" (in-scope, missing input).
+function applyGapSignal(
+  current: { missing_lanes: string[]; refer_to: string | null },
+  t: TriageDecision,
+  tenant: string,
+  question_hash: string,
+  mode: "solo" | "panel" | "council",
+  epsilon: number,
+): { missing_lanes: string[]; refer_to: string | null; gap_logged: string | null } {
+  if (t.gap_reason !== "capability" || !t.detected_subdomain) {
+    return { ...current, gap_logged: null };
+  }
+  const sub = t.detected_subdomain;
+  if (rosterHasSeatedSpecialist(sub, tenant)) {
+    return { ...current, gap_logged: null };
+  }
+  const missing = current.missing_lanes.includes(sub)
+    ? current.missing_lanes
+    : [...current.missing_lanes, sub];
+  const refer = current.refer_to ?? sub;
+  logCapabilityGap({
+    subdomain: sub, tenant, question_hash, mode, epsilon,
+  });
+  return { missing_lanes: missing, refer_to: refer, gap_logged: sub };
+}
+
 
 async function runSummonBestAdvisor(args: {
   question: string;
