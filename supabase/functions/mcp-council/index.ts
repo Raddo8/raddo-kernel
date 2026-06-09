@@ -676,6 +676,11 @@ Deno.serve(async (req) => {
       },
     );
   }
+  // SECURITY INVARIANT: `tenant` is sourced EXCLUSIVELY from the verified
+  // identity — static SPINNEY bearer or `app_metadata.tenant` from the
+  // ES256-verified JWT (see auth.ts). It is NEVER read from the JSON-RPC
+  // body, tool arguments, query string, or any client-controlled header.
+  // The legal-seat and tenant-context lookups below depend on this.
   const tenant = identity.tenant;
 
   // Rate limit · per-IP, 30 req/min.
