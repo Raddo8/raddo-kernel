@@ -86,17 +86,24 @@ export async function recordMcpUsage(
     tool: string;
     agent_id: string | null;
     passes: Pass[];
+    // Optional routing ledger payload (confidence-gated routing).
+    // Hashed/redacted only — never raw question text.
+    routing_log?: Record<string, unknown>;
   },
 ): Promise<void> {
   if (!supabaseAdmin) return;
   try {
     const { total_cost_usd, model_breakdown } = aggregate(args.passes);
+    const metadata = args.routing_log
+      ? { routing_log: args.routing_log }
+      : {};
     const { error } = await supabaseAdmin.from("mcp_usage_events").insert({
       tenant: args.tenant,
       tool: args.tool,
       agent_id: args.agent_id,
       model_breakdown,
       total_cost_usd,
+      metadata,
     });
     if (error) console.error("usage_write_failed", error.message);
   } catch (e) {
