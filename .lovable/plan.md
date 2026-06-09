@@ -1,109 +1,85 @@
+# Legal Seat: add LEXI, reconcile KNOX
 
-# Phase 2B · OAuth AS + client-registerable MCP connector
+Scope: `supabase/functions/mcp-council/` only. No DB schema changes (no tenants table exists yet — seats and context live in code, ejectable to DB later).
 
-## STEP 0 verdict (research, not a step to build)
+## 1. Tenant context + legal-seat map (new file)
 
-**Path: Supabase-native OAuth 2.1 AS.** Public beta went live 2025-11-26 with explicit MCP authentication support: PKCE, `/.well-known/oauth-authorization-server`, Dynamic Client Registration (DCR), JWKS, refresh-token rotation. Discovery doc is hosted at `https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1`. This is the path Anthropic/Claude custom connectors expect. Stytch fallback is **not** needed.
+Create `supabase/functions/mcp-council/tenants.ts`:
 
-Source: Supabase docs · `Auth → OAuth 2.1 Server → MCP Authentication` and `OAuth 2.1 Server Capabilities` changelog (Nov 26, 2025: "Public beta is live now").
+- `LEGAL_SEAT_BY_TENANT: Record<string,"lexi"|"knox">` with `SPINNEY: "knox"`. Default `"lexi"` for any tenant not listed.
+- `TENANT_CONTEXT: Record<string, { client: string; principal: string; principal_values: string; active_matters: string; bearing_default: string }>` — seed entry for SPINNEY. Default for unlisted tenants returns degraded-but-readable strings, not the literal word "unspecified", e.g.:
+  - `client`: "the principal's company (capture at onboarding)"
+  - `principal`: "the principal (capture at onboarding)"
+  - `principal_values`: "the principal's stated values (capture at onboarding)"
+  - `active_matters`: "no active matters on file (capture at onboarding)"
+  - `bearing_default`: "85/60"
+- `getLegalSeat(tenant)` and `getTenantContext(tenant)` helpers.
 
-Reported up front per the dispatch's STEP 0 gate.
+## 2. Tenant source — security gate (must-fix)
 
-## What Lovable builds vs. what needs operator action
+Tenant MUST be sourced exclusively from the validated identity:
 
-**Lovable (this build):**
-- Edge-function changes in `mcp-council` (JWT validation, tenant resolution, security cleanup)
-- Cloudflare Worker source + wrangler config checked into the repo at `edge/mcp-proxy/`
-- `/.well-known/oauth-protected-resource` JSON (served by the Worker; points clients at the Supabase AS)
-- Docs + DNS instructions in `docs/PHASE_2B_DEPLOY.md`
+- Static SPINNEY bearer path → `tenant = "SPINNEY"` (already so).
+- OAuth path → `tenant = identity.tenant` (= verified `app_metadata.tenant` from `verifySupabaseJwt`, ES256, iss+exp checked). Already so in `auth.ts`.
+- Hard rule, enforced and commented in `index.ts`: `tenant` is NEVER read from `req.json()` body, tool `arguments`, query string, or any client-controlled header. No `args.tenant`, no `X-Tenant`, no override path.
+- Add an inline comment in `index.ts` next to the tenant assignment stating this invariant so future edits don't regress.
 
-**Operator (out of Lovable's reach, called out explicitly):**
-- Toggle **Authentication → OAuth Server** ON in the Supabase project, enable **Dynamic Client Registration**, set consent screen copy
-- Deploy the Worker (`wrangler deploy`) and bind the route to `mcp.chiefofbusiness.ai/*`
-- Add the `CNAME mcp → <worker>.workers.dev` record (proxy off) at the DNS registrar
-- Register the connector in a test Claude/Cowork account and run the handshake
+## 3. Registry update
 
-Lovable cannot toggle the OAuth server, cannot create Cloudflare Workers, and cannot edit DNS. The build will be inert until the operator completes those three.
+`supabase/functions/mcp-council/agents/manifest.ts`:
 
-## STEP 1 · Authorization Server (operator toggle; we document)
+- Add `lexi` (`name: "LEXI"`, `lens: "Legal & compliance advisory"`, `kind: "single"`).
+- Keep `knox` as-is (lens `"Legal & compliance intelligence"`).
+- Add `listSeatedAgentsPublic(tenant)` — returns the public roster filtered so only the seated legal advisor of `{lexi, knox}` is included.
 
-Nothing to author in our codebase — the AS is `https://vacpgxxgdfhgvkduljgs.supabase.co/auth/v1` once the toggle is on. We write the operator runbook only (see `docs/PHASE_2B_DEPLOY.md` below) so the Cowork/Claude side knows where to discover.
+## 4. New persona files
 
-Tenant identity: each end-user authenticates as themselves (a Supabase Auth user). Tenant assignment is derived server-side from `app_metadata.tenant` on that user; we add a `profiles.tenant` mirror later if needed. For 2B's SPINNEY proof, the single seeded operator user has `app_metadata.tenant = "SPINNEY"`.
+- `agents/lexi.ts` — runtime system prompt per spec §6, with `{{CLIENT}} / {{PRINCIPAL}} / {{PRINCIPAL_VALUES}} / {{ACTIVE_MATTERS}}` placeholders. Same JSON output contract as other single agents (`agent / assessment / recommendation / risk_flags / severity / confidence / escalation / signature`) so `validateSingleMinute` works unchanged.
+- `agents/knox.ts` — **replace** body with the reconciled persona per spec §5, adding `{{BEARING_DEFAULT}}` placeholder. Same JSON output contract.
 
-## STEP 2 · `mcp.chiefofbusiness.ai` Cloudflare Worker proxy
+Both files: `// Auto-bundled. Server-only. Never echoed to clients.` header and `export default String.raw\`...\`` shape.
 
-New folder `edge/mcp-proxy/`:
+## 5. Tenant-context injection in `index.ts`
 
-- `wrangler.toml` — name `cob-mcp-proxy`, route `mcp.chiefofbusiness.ai/*`, compatibility date 2026-06-01.
-- `src/index.ts` — minimal Worker:
-  - `GET /.well-known/oauth-authorization-server` → 302 to `https://vacpgxxgdfhgvkduljgs.supabase.co/.well-known/oauth-authorization-server/auth/v1` (Anthropic clients follow redirects per RFC 8414).
-  - `GET /.well-known/oauth-protected-resource` → static JSON `{ resource: "https://mcp.chiefofbusiness.ai/", authorization_servers: ["https://vacpgxxgdfhgvkduljgs.supabase.co/auth/v1"], bearer_methods_supported: ["header"], scopes_supported: ["mcp:council"] }` per RFC 9728.
-  - Any other path (incl. `POST /`) → reverse-proxy to `https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council`, forwarding method/headers/body unchanged, stripping `cf-*` headers, and on 401 adding `WWW-Authenticate: Bearer resource_metadata="https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource"` so MCP clients can self-discover the AS.
+- Add `renderTenantPlaceholders(body, ctx)` that substitutes `{{CLIENT}}`, `{{PRINCIPAL}}`, `{{PRINCIPAL_VALUES}}`, `{{ACTIVE_MATTERS}}`, `{{BEARING_DEFAULT}}` from `getTenantContext(tenant)`. Missing fields fall back to the degraded strings in §1 (never a bare "unspecified" in the middle of a sentence).
+- Extend `loadAgent(id, clientContext, tenant)` to add `lexi` to `SINGLE_BODIES` and run the body through `renderTenantPlaceholders` before composing the final system prompt.
 
-DNS: `CNAME mcp cob-mcp-proxy.<account>.workers.dev` (proxy OFF — Worker route handles TLS via Cloudflare for SaaS or the workers.dev cert). Documented in the runbook; not auto-applied.
+## 6. Legal-seat enforcement in tool handlers
 
-## STEP 3 · `mcp-council` accepts OAuth JWTs (token validator)
+In `index.ts` `tools/call`:
 
-In `supabase/functions/mcp-council/index.ts`, replace the single bearer gate with a dual-mode validator:
+- **`show_council`**: call `listSeatedAgentsPublic(tenant)` so the response shows exactly one of `{LEXI, KNOX}` per tenant.
+- **`consult_advisor`**: before `loadAgent`, if `agentId` ∈ `{"lexi","knox"}` and ≠ `getLegalSeat(tenant)`, silently remap to the seated id. `console.log("legal_id_remap", { from, to, tenant })` server-only. No error, no client-visible signal. This is operator-loop by design — LEXI persona may recommend escalating to KNOX, but runtime stays on LEXI until the operator flips the entitlement.
+- **`convene_council`**: add the seated legal advisor as a 6th chair.
+  - `runCouncil(question, context, clientContext, tenant)`: load seated legal body via `loadAgent(seatedId, clientContext, tenant)` to get tenant placeholders rendered, then build `chairs = [...CHAIRS, { name: seatedName, system: <preamble + rendered legal body + approach principles> }]`.
+  - **Chair-shape compatibility (#2):** the persona files in `agents/{knox,lexi}.ts` define the single-advisor JSON output. For Stage-1 chair use, override the output instruction by appending a chair-mode addendum to the system prompt: "**Council mode (override output spec):** Contribute ONLY your legal lens as a chair would — 2–5 tight prose points covering exposure, the safeguard, and the escalation call. Do NOT emit JSON. Leo synthesizes the final minute." This keeps Stage-1 prose-shaped so Leo's Stage-2 horizon and Opus Stage-3 synthesis (which expect free-text chair contributions) work unchanged.
+  - Update `validateMinute` to set `participating_chairs = ["Leo","Spock","Alfred","Iroh","Lucius", seatedName]` dynamically (no longer hard-coded).
+  - `file_to_office` inherits via the same `runCouncil` path.
 
-```text
-1. Read Authorization: Bearer <token>
-2. If token === COUNCIL_TENANT_TOKEN_SPINNEY → tenant = "SPINNEY" (legacy curl path, kept for regression)
-3. Else verify as Supabase JWT:
-   - fetch + cache JWKS from https://<ref>.supabase.co/auth/v1/.well-known/jwks.json (60-min TTL)
-   - verify RS256/ES256 signature, exp, iat, iss=https://<ref>.supabase.co/auth/v1
-   - require aud contains "https://mcp.chiefofbusiness.ai/" (the protected-resource id) OR scope contains "mcp:council"
-   - tenant := app_metadata.tenant (string); reject if missing → 401 invalid_token
-4. On any failure → 401 with WWW-Authenticate: Bearer error="invalid_token", resource_metadata="https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource"
-```
+## 7. Cost note (decision, not a surprise)
 
-New file `supabase/functions/mcp-council/auth.ts` holds JWKS fetch/cache + `verifySupabaseJwt(token)` returning `{ tenant, sub, scope }`. Uses Deno's built-in `crypto.subtle` (no new deps).
+Adding a 6th chair adds one Sonnet call per `convene_council` / `file_to_office` — roughly +20% per convene. Captured here so it's an explicit, accepted cost of putting legal in the room every time. Not gated; not configurable in this slice.
 
-Tenant is then threaded into `runCouncil` / `runSingleAgent` / `recordMcpUsage` in place of the hard-coded `"SPINNEY"` literal. SPINNEY remains the only seeded tenant; other tenant values are accepted but route to the same OFFICE until 3+.
+## 8. Out of scope (called out, not done)
 
-## STEP 4 · Security cleanup (`_client_context` hardening)
+- SPINNEY_AGENT_MANIFEST.md doc reconciliation (spec §4 marks "tracked separately, not blocking").
+- DB `tenants` table — deferred per Phase-1/Phase-2 doctrine.
+- Operator UI for switching seats — entitlement is in-code for now.
 
-Two-line discipline change in the `tools/call` handler:
+## Files touched
 
-- When the request is OAuth-authenticated, **ignore** any incoming `_client_context` field entirely (`clientContext = ""`). The Standing Context Refresh, when wired in Phase 2/3, will populate the slot server-side from the verified tenant only.
-- When the request is on the legacy static-bearer SPINNEY path, **still** accept `_client_context` (gated by a new env `COUNCIL_ALLOW_TEST_CONTEXT=1`, default off in prod) so curl validation of the Tier-1 seam keeps working during the transition. Without the env, the field is dropped on both paths.
+- new: `supabase/functions/mcp-council/tenants.ts`
+- new: `supabase/functions/mcp-council/agents/lexi.ts`
+- edit: `supabase/functions/mcp-council/agents/knox.ts` (full body replace)
+- edit: `supabase/functions/mcp-council/agents/manifest.ts` (add lexi, add seated-roster helper)
+- edit: `supabase/functions/mcp-council/index.ts` (tenant placeholder render, loadAgent signature, tenant-only-from-JWT comment, show_council/consult_advisor/runCouncil tenant-aware, chair-mode addendum)
 
-This removes the OAuth-side prompt-injection surface without losing the curl seam.
+## Acceptance verification (after deploy)
 
-## STEP 5 · Register + prove (operator runs, we document)
+Via `supabase--curl_edge_functions` against `/mcp-council`:
 
-`docs/PHASE_2B_DEPLOY.md` walks the operator through:
-1. Supabase: enable OAuth Server, enable DCR, consent copy.
-2. Create one Supabase Auth user; set `app_metadata.tenant = "SPINNEY"` via SQL.
-3. Deploy Worker (`cd edge/mcp-proxy && wrangler deploy`).
-4. Add the CNAME; verify `curl https://mcp.chiefofbusiness.ai/.well-known/oauth-protected-resource` returns the JSON.
-5. In Claude.ai → Custom Connectors → Add → URL `https://mcp.chiefofbusiness.ai/`. Confirm discovery → consent → PKCE → token → `cob_run_council` returns a minute.
-6. Regression `curl` with `Authorization: Bearer $COUNCIL_TENANT_TOKEN_SPINNEY` still works.
-7. Negative: random bearer → 401 with `invalid_token` and `WWW-Authenticate` pointing at the resource-metadata URL.
-
-## Acceptance gates (mirrored from dispatch)
-
-- STEP 0 verdict reported above (Supabase-native).
-- `/.well-known/*` reachable at `mcp.chiefofbusiness.ai` — verified after operator DNS+Worker.
-- Full OAuth handshake completes through Claude custom connector — verified by operator.
-- Unauthorized / bad-token → 401 `invalid_token`, no body leakage — covered by validator.
-- `_client_context` ignored on OAuth path; gated behind env on legacy path.
-- Static-bearer SPINNEY curl + Notion write-back unchanged — same code path, just an additional branch above it.
-
-## Files
-
-- ADD `supabase/functions/mcp-council/auth.ts` (JWKS + JWT verifier)
-- MODIFY `supabase/functions/mcp-council/index.ts` (dual-mode auth, tenant threading, `_client_context` gating, 401 `WWW-Authenticate` with resource-metadata pointer)
-- ADD `edge/mcp-proxy/wrangler.toml`
-- ADD `edge/mcp-proxy/src/index.ts`
-- ADD `edge/mcp-proxy/README.md`
-- ADD `docs/PHASE_2B_DEPLOY.md` (operator runbook · STEPs 1, 2, 5)
-
-## Out of scope (per dispatch)
-
-Per-tenant entitlements + Stripe (Phase 3) · real customer data + Jake-owned Supabase eject (Phase 4) · multi-client OFFICE provisioning · Standing Context Refresh wiring of `<<CLIENT_CONTEXT>>`.
-
-## Operator hand-off note
-
-After the build lands, Lovable will post the runbook path and the exact strings needed (Supabase project ref, AS discovery URL, Worker route). The handshake itself requires the three operator actions above before any connector test can pass.
+1. Static SPINNEY bearer → `show_council` lists KNOX, no LEXI.
+2. Static SPINNEY bearer → `consult_advisor("lexi", …)` returns a KNOX minute (silent remap, server-side log line).
+3. OAuth token for a non-SPINNEY tenant → roster shows LEXI only; `consult_advisor("knox", …)` returns a LEXI minute. (If no non-SPINNEY OAuth fixture is available, temporarily map a test tenant to `"lexi"` for the curl, then revert.)
+4. `convene_council` minute includes the seated legal advisor in `participating_chairs`; output JSON parses cleanly (proves chair-mode override worked — Stage-1 legal wasn't JSON that broke Leo).
+5. **Security:** a token whose `app_metadata.tenant = "ACME"` calling `show_council` with `{"tenant":"SPINNEY"}` in the JSON-RPC arguments or an `X-Tenant: SPINNEY` header still returns the ACME (default-LEXI) roster, never SPINNEY's. No path to spoof.
