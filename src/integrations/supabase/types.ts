@@ -606,6 +606,7 @@ export type Database = {
           agent_id: string | null
           created_at: string
           id: string
+          metadata: Json
           model_breakdown: Json
           tenant: string
           tool: string
@@ -615,6 +616,7 @@ export type Database = {
           agent_id?: string | null
           created_at?: string
           id?: string
+          metadata?: Json
           model_breakdown?: Json
           tenant: string
           tool: string
@@ -624,6 +626,7 @@ export type Database = {
           agent_id?: string | null
           created_at?: string
           id?: string
+          metadata?: Json
           model_breakdown?: Json
           tenant?: string
           tool?: string
