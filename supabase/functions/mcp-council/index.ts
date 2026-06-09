@@ -31,6 +31,7 @@ import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from ".
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
 import { ROUTING_CONFIG, stakesAtLeast } from "./routing-config.ts";
+import { rosterHasSeatedSpecialist, logCapabilityGap } from "./capability-gaps.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
