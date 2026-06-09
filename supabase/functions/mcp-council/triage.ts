@@ -45,17 +45,24 @@ Stakes ladder (be conservative — most business questions are medium):
 - existential  · bet-the-company tier: pivot, shutdown, whole-company M&A,
                  sue-the-cofounder, founder-removal, criminal exposure
 
-one_way_door BAR (high — default false):
-- true ONLY if the principal is about to TAKE the irreversible act, or has
-  already committed and is asking how to live with it. Personal guaranty
-  being signed, wire being sent, resignation being delivered, public
-  statement being posted.
-- false when the principal is ANALYZING, COMPARING, or PLANNING an action
-  that COULD become one-way-door but is not the act itself. "Should I
-  consider a personal guaranty?" is medium / analysis, not high / OWD.
-  "I'm signing this PG tomorrow, last check" is high / OWD.
-- false for routine contracts (NDAs, vendor SOWs, standard employment
-  offers) unless something in the question marks them as load-bearing.
+one_way_door AXIS · commit-decision vs. pure analysis:
+- true whenever the question is a DECISION TO COMMIT to an irreversible act,
+  even if the principal is only weighing it. The axis is "is this question
+  about whether to do the irreversible thing," not "is the principal signing
+  right now." Examples that are TRUE:
+    · "Should I personally guarantee this lease?"
+    · "Should we accept the acquisition offer?"
+    · "Should I fire my co-founder?"
+    · "Should we wire the non-refundable deposit?"
+    · "I'm signing the PG tomorrow — last check."
+- false ONLY for PURE ANALYSIS that does not itself decide the commit:
+    · "Is this indemnity clause standard?"
+    · "What's market for a Series A SAFE cap?"
+    · "Explain how an MSA termination-for-convenience clause works."
+    · "Is this NDA reasonable?" (analysis of a routine doc, not a commit)
+- When in doubt between "weighing a commit" and "analyzing a clause," prefer
+  true. The cost of a missed OWD is far higher than an over-cautious panel.
+
 
 Output ONLY a single valid JSON object — no prose, no code fences:
 
