@@ -273,6 +273,8 @@ function applyGates(
     secondary_lanes: Lane[];
     one_way_door: boolean;
     stakes: Stakes;
+    detected_subdomain: string | null;
+    gap_reason: GapReason;
     reasoning: string;
   },
   tenant: string,
