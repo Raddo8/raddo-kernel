@@ -1270,13 +1270,28 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
+          const { minute, passes, iters, capped, gap } = await runCouncilGated(
+            question, context, clientContext, tenant);
+          const out: any = { ...minute };
+          if (capped) { out.capped = true; if (gap) out.gap = gap; }
+          const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
+            routing_log: {
+              question_hash: qhash,
+              triage: { primary_lane: "council", lane_confidence: 1, one_way_door: false, stakes: "n/a", mode: "council" },
+              gates_fired: capped ? ["floor", "capped"] : ["floor"],
+              selected_advisor: "council",
+              escalated: false,
+              final_mode: "council",
+              epsilon: minute.confidence.epistemic,
+              rho: minute.confidence.rigor,
+              capped, iters, hops: 0,
+            },
           });
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(minute) }],
-            structuredContent: minute,
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
             isError: false,
           });
         } catch (e) {
@@ -1284,42 +1299,54 @@ Deno.serve(async (req) => {
         }
       }
 
-      if (name === "consult_advisor") {
-        const agentId = typeof args?.agent_id === "string" ? args.agent_id.trim().toLowerCase() : "";
+      // summon_best_advisor (and the consult_advisor alias for one release).
+      if (name === "summon_best_advisor" || name === "consult_advisor") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
-        if (!agentId || !question) return rpcError(id, -32602, "invalid_params");
+        // Backwards alias: agent_id is captured as a hint only — logged,
+        // never honored as a directive. The router still selects.
+        const routingHintIgnored =
+          name === "consult_advisor" && typeof args?.agent_id === "string" && !!args.agent_id.trim();
+        if (routingHintIgnored) {
+          console.log("routing_hint_ignored", { hint: args.agent_id, tenant });
+        }
+        if (!question) return rpcError(id, -32602, "invalid_params");
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        if (agentId === "council") {
-          return rpcError(id, -32005, "use_council_tool");
-        }
-        // Legal-seat enforcement · one legal advisor per tenant. If the
-        // caller asked for the non-seated legal id, silently remap to the
-        // tenant's seated id. This is an operator-loop guarantee: LEXI's
-        // persona may recommend escalation to KNOX, but runtime stays on
-        // LEXI until the operator flips the entitlement in tenants.ts.
-        let resolvedId = agentId;
-        if (agentId === "lexi" || agentId === "knox") {
-          const seat = getLegalSeat(tenant);
-          if (agentId !== seat) {
-            console.log("legal_id_remap", { from: agentId, to: seat, tenant });
-            resolvedId = seat;
-          }
-        }
-        const bundle = loadAgent(resolvedId, clientContext, tenant);
-        if (!bundle || bundle.kind !== "single") {
-          return rpcError(id, -32004, "agent_not_available");
-        }
         try {
-          const { minute, passes } = await runSingleAgent(bundle, question, context);
+          const { result, passes } = await runSummonBestAdvisor({
+            question, context, clientContext, tenant, routingHintIgnored,
+          });
+          const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "consult_advisor", agent_id: resolvedId, passes,
+            tenant, tool: "summon_best_advisor",
+            agent_id: result.mode === "solo" ? result.selected_advisor : null,
+            passes,
+            routing_log: {
+              question_hash: qhash,
+              triage: {
+                primary_lane: result.routing_trace.triage.primary_lane,
+                lane_confidence: result.routing_trace.triage.lane_confidence,
+                one_way_door: result.routing_trace.triage.one_way_door,
+                stakes: result.routing_trace.triage.stakes,
+                mode: result.routing_trace.triage.recommended_mode,
+              },
+              gates_fired: result.routing_trace.gates_fired,
+              selected_advisor: result.selected_advisor,
+              escalated: result.routing_trace.hops > 0 || result.mode !== result.routing_trace.triage.recommended_mode,
+              final_mode: result.mode,
+              epsilon: result.epsilon,
+              rho: result.rho,
+              capped: result.capped,
+              iters: result.routing_trace.iters,
+              hops: result.routing_trace.hops,
+              routing_hint_ignored: routingHintIgnored || undefined,
+            },
           });
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(minute) }],
-            structuredContent: minute,
+            content: [{ type: "text", text: JSON.stringify(result) }],
+            structuredContent: result,
             isError: false,
           });
         } catch (e) {
@@ -1335,16 +1362,37 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { minute, passes } = await runCouncil(question, context, clientContext, tenant);
+          // file_to_office runs the same triage → mode pipeline so OFFICE
+          // entries reflect the actual deliberation that happened.
+          const { result, passes } = await runSummonBestAdvisor({
+            question, context, clientContext, tenant, routingHintIgnored: false,
+          });
+          // Only minutes with a council-shape (recommendation + dissent +
+          // horizon) file cleanly to Notion. Single-advisor minutes get
+          // wrapped into a council-shape envelope so the OFFICE write works.
+          const m: any = result.minute;
+          const filedMinute: MinuteShape = (m.dissent && m.anticipatory_horizon)
+            ? m as MinuteShape
+            : {
+                recommendation: m.recommendation,
+                dissent: m.steelman && m.steelman.trim()
+                  ? m.steelman
+                  : "No formal dissent · single-advisor minute.",
+                anticipatory_horizon: Array.isArray(m.risk_flags) && m.risk_flags.length
+                  ? m.risk_flags.slice(0, 5)
+                  : ["No horizon items surfaced by the advisor."],
+                confidence: m.confidence,
+                freshness: new Date().toISOString(),
+                participating_chairs: [result.selected_advisor],
+                signature: "— COB_COUNCIL",
+              };
 
-
-          // Boundary scrub on the full text destined for the OFFICE before any write.
           const notionPayloadText = [
             question,
-            minute.recommendation,
-            minute.dissent,
-            minute.anticipatory_horizon.join(" · "),
-            minute.participating_chairs.join(" · "),
+            filedMinute.recommendation,
+            filedMinute.dissent,
+            filedMinute.anticipatory_horizon.join(" · "),
+            filedMinute.participating_chairs.join(" · "),
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
@@ -1353,11 +1401,33 @@ Deno.serve(async (req) => {
             throw new Error("boundary_violation");
           }
 
-          const { url: notion_url } = await writeMinuteToNotion(minute, question);
+          const { url: notion_url } = await writeMinuteToNotion(filedMinute, question);
+          const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
-            tenant, tool: "file_to_office", agent_id: null, passes,
+            tenant, tool: "file_to_office",
+            agent_id: result.mode === "solo" ? result.selected_advisor : null,
+            passes,
+            routing_log: {
+              question_hash: qhash,
+              triage: {
+                primary_lane: result.routing_trace.triage.primary_lane,
+                lane_confidence: result.routing_trace.triage.lane_confidence,
+                one_way_door: result.routing_trace.triage.one_way_door,
+                stakes: result.routing_trace.triage.stakes,
+                mode: result.routing_trace.triage.recommended_mode,
+              },
+              gates_fired: result.routing_trace.gates_fired,
+              selected_advisor: result.selected_advisor,
+              escalated: result.routing_trace.hops > 0 || result.mode !== result.routing_trace.triage.recommended_mode,
+              final_mode: result.mode,
+              epsilon: result.epsilon,
+              rho: result.rho,
+              capped: result.capped,
+              iters: result.routing_trace.iters,
+              hops: result.routing_trace.hops,
+            },
           });
-          const out = { minute, notion_url };
+          const out = { minute: filedMinute, notion_url, routing_trace: result.routing_trace };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
@@ -1367,6 +1437,7 @@ Deno.serve(async (req) => {
           return toRpc(e);
         }
       }
+
 
       return rpcError(id, -32601, "unknown_tool");
     }
