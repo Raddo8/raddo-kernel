@@ -859,12 +859,12 @@ async function runCouncilGated(
   context: string,
   clientContext: string,
   tenant: string,
-): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  // Chairs + horizon run ONCE. If the first synthesis falls below the
-  // confidence floor, re_reason re-runs only Stage 3 (single Opus call)
-  // via the resynth closure. This keeps full-council wall-clock inside
-  // the edge-function response window.
-  const { minute: firstMinute, passes, resynth } = await runCouncilWithResynth(
+): Promise<{
+  minute: MinuteShape; passes: Pass[]; iters: number;
+  capped: boolean; gap?: string; metrics: ConveneMetrics;
+}> {
+  const t0 = Date.now();
+  const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
     question, context, clientContext, tenant,
   );
   let minute = firstMinute;
@@ -883,12 +883,13 @@ async function runCouncilGated(
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
 
+  metrics.calls_total = passes.length;
+  metrics.total_ms = Date.now() - t0;
   return {
-    minute,
-    passes,
-    iters,
+    minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "council_confidence_below_floor" : undefined,
+    metrics,
   };
 }
 
@@ -899,8 +900,12 @@ async function runPanelGated(
   chairIds: string[],
   clientContext: string,
   tenant: string,
-): Promise<{ minute: MinuteShape; passes: Pass[]; iters: number; capped: boolean; gap?: string }> {
-  const { minute: firstMinute, passes, resynth } = await runPanelWithResynth(
+): Promise<{
+  minute: MinuteShape; passes: Pass[]; iters: number;
+  capped: boolean; gap?: string; metrics: ConveneMetrics;
+}> {
+  const t0 = Date.now();
+  const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
     question, context, chairIds, clientContext, tenant,
   );
   let minute = firstMinute;
@@ -919,12 +924,13 @@ async function runPanelGated(
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
 
+  metrics.calls_total = passes.length;
+  metrics.total_ms = Date.now() - t0;
   return {
-    minute,
-    passes,
-    iters,
+    minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "panel_confidence_below_floor" : undefined,
+    metrics,
   };
 }
 
