@@ -674,11 +674,11 @@ async function runSingleAgent(
 function chairForSpecialistId(
   id: string,
   tenant: string,
+  question: string = "",
 ): { name: string; system: string } | null {
   const ctx = getTenantContext(tenant);
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
-    lexi: LEXI_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
@@ -686,7 +686,10 @@ function chairForSpecialistId(
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
-  const rendered = renderTenantPlaceholders(body, ctx);
+  const posture = id === "knox"
+    ? computeKnoxPosture(ctx.active_matters, question)
+    : "advisory";
+  const rendered = renderTenantPlaceholders(body, ctx, posture);
   // Use chair-mode addendum so the persona returns prose chair contribution
   // rather than its single-advisor JSON (which would break Leo synthesis).
   const name =
@@ -695,7 +698,6 @@ function chairForSpecialistId(
     id === "alfred" ? "Alfred" :
     id === "iroh" ? "Iroh" :
     id === "knox" ? "KNOX" :
-    id === "lexi" ? "LEXI" :
     id.toUpperCase();
   return {
     name,
@@ -746,9 +748,9 @@ async function runPanelWithResynth(
 
   const seen = new Set<string>();
   const chairs = chairIds
-    .map((id) => (id === "lexi" || id === "knox") ? getLegalSeat(tenant) : id)
+    .map((id) => (id === "lexi") ? "knox" : id)
     .filter((id) => { if (seen.has(id)) return false; seen.add(id); return true; })
-    .map((id) => chairForSpecialistId(id, tenant))
+    .map((id) => chairForSpecialistId(id, tenant, question))
     .filter((c): c is { name: string; system: string } => c !== null);
 
   if (chairs.length < 2) throw new Error("panel_too_small");
@@ -1071,7 +1073,7 @@ async function runSummonBestAdvisor(args: {
   type SoloState = { specialistId: string; note: string };
   const loop = await runWithConfidenceFloor<SingleMinute, SoloState>(
     async (state) => {
-      const bundle = loadAgent(state.specialistId, clientContext, tenant);
+      const bundle = loadAgent(state.specialistId, clientContext, tenant, question);
       if (!bundle || bundle.kind !== "single") throw new Error("agent_not_available");
       const { minute, passes } = await runSingleAgent(bundle, question, context, state.note);
       for (const p of passes) allPasses.push(p);
@@ -1116,8 +1118,8 @@ async function runSummonBestAdvisor(args: {
     if (minute.refer_to && !minute.missing_lanes.length) {
       // One-hop re-route to the referred specialist (seated-collapsed).
       let target = minute.refer_to.toLowerCase();
-      if (target === "lexi" || target === "knox") target = getLegalSeat(tenant);
-      const bundle2 = loadAgent(target, clientContext, tenant);
+      if (target === "lexi") target = "knox";
+      const bundle2 = loadAgent(target, clientContext, tenant, question);
       if (bundle2 && bundle2.kind === "single") {
         hops = 1;
         const { minute: m2, passes: p2 } = await runSingleAgent(
@@ -1133,7 +1135,7 @@ async function runSummonBestAdvisor(args: {
       const panelIds = [t.chairs[0], ...minute.missing_lanes
         .map((l) => l.toLowerCase())
         .map((l) =>
-          l === "legal" ? getLegalSeat(tenant) :
+          l === "legal" ? "knox" :
           l === "finance" ? "lucius" :
           l === "ops" ? "leo" :
           l === "trust" ? "alfred" :
