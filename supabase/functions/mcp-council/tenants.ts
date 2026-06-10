@@ -1,14 +1,15 @@
 // supabase/functions/mcp-council/tenants.ts
 //
-// Phase-1 tenant registry · seats and tenant context live in code.
-// Phase-2 promote to a `tenants` table with operator UI for entitlement flips.
+// Phase-1 tenant registry · tenant context lives in code.
+// Phase-2 promote to a `tenants` table with operator UI for context edits.
 //
-// SECURITY: callers of getLegalSeat/getTenantContext MUST pass a tenant value
-// sourced exclusively from the verified JWT claim (app_metadata.tenant) or
-// the static SPINNEY bearer path. Never from request body, args, query, or
+// SECURITY: callers of getTenantContext MUST pass a tenant value sourced
+// exclusively from the verified JWT claim (app_metadata.tenant) or the
+// static SPINNEY bearer path. Never from request body, args, query, or
 // any client-controlled header. See index.ts tenant assignment.
-
-export type LegalSeat = "lexi" | "knox";
+//
+// Legal seat: collapsed to a single seat (KNOX) for every tenant.
+// Tier remap, LEXI, and legal_seat are removed.
 
 export interface TenantContext {
   client: string;
@@ -18,13 +19,7 @@ export interface TenantContext {
   bearing_default: string;
 }
 
-// Default legal seat for any tenant not explicitly listed is LEXI
-// (advisory-grade). KNOX (litigation-grade) is opt-in per tenant.
-export const LEGAL_SEAT_BY_TENANT: Record<string, LegalSeat> = {
-  SPINNEY: "knox",
-};
-
-// Per-tenant context injected into legal persona bodies via {{PLACEHOLDERS}}.
+// Per-tenant context injected into persona bodies via {{PLACEHOLDERS}}.
 // Anything missing degrades to a readable "(capture at onboarding)" hint so
 // rendered prose does not contain the bare word "unspecified".
 const TENANT_CONTEXT: Record<string, TenantContext> = {
@@ -33,7 +28,8 @@ const TENANT_CONTEXT: Record<string, TenantContext> = {
     principal: "the Spinney principal",
     principal_values:
       "fiduciary duty to clients, defensible craft over volume, durable reputation",
-    active_matters: "no active matters on file",
+    active_matters:
+      "active wind-down litigation with a former counterparty (live adversarial matter)",
     bearing_default: "85/60",
   },
 };
@@ -46,10 +42,6 @@ const DEFAULT_CONTEXT: TenantContext = {
   bearing_default: "85/60",
 };
 
-export function getLegalSeat(tenant: string): LegalSeat {
-  return LEGAL_SEAT_BY_TENANT[tenant] ?? "lexi";
-}
-
 export function getTenantContext(tenant: string): TenantContext {
   const t = TENANT_CONTEXT[tenant];
   if (!t) return DEFAULT_CONTEXT;
@@ -60,4 +52,48 @@ export function getTenantContext(tenant: string): TenantContext {
     active_matters: t.active_matters?.trim() || DEFAULT_CONTEXT.active_matters,
     bearing_default: t.bearing_default?.trim() || DEFAULT_CONTEXT.bearing_default,
   };
+}
+
+// ── KNOX context-flex posture computation ───────────────────────────────
+// "advisory" by default; "offensive" only when a live adversarial matter
+// exists OR the question itself is adversarial in nature. Operator may
+// override per call via the optional posture argument upstream.
+export type KnoxPosture = "advisory" | "offensive";
+
+const ADVERSARIAL_PATTERNS = [
+  /\blitigat/i,
+  /\blawsuit\b/i,
+  /\bsue(d|s|ing)?\b/i,
+  /\bsuing\b/i,
+  /\bdispute\b/i,
+  /\bdemand letter\b/i,
+  /\bcease[\s-]?and[\s-]?desist\b/i,
+  /\bregulatory (action|inquiry|investigation)\b/i,
+  /\bsubpoena\b/i,
+  /\bdeposition\b/i,
+  /\bopposing counsel\b/i,
+  /\bopponent\b/i,
+  /\badversar/i,
+  /\bbreach of contract\b/i,
+  /\binjunction\b/i,
+  /\barbitration\b/i,
+  /\bclaim against\b/i,
+  /\bcounterclaim\b/i,
+  /\bwind[\s-]?down litigation\b/i,
+  /\bactive matter\b/i,
+  /\blive adversarial\b/i,
+];
+
+function looksAdversarial(text: string): boolean {
+  if (!text) return false;
+  return ADVERSARIAL_PATTERNS.some((re) => re.test(text));
+}
+
+export function computeKnoxPosture(
+  activeMatters: string,
+  question: string,
+): KnoxPosture {
+  if (looksAdversarial(activeMatters)) return "offensive";
+  if (looksAdversarial(question)) return "offensive";
+  return "advisory";
 }
