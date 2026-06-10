@@ -748,9 +748,9 @@ async function runPanelWithResynth(
 
   const seen = new Set<string>();
   const chairs = chairIds
-    .map((id) => (id === "lexi" || id === "knox") ? getLegalSeat(tenant) : id)
+    .map((id) => (id === "lexi") ? "knox" : id)
     .filter((id) => { if (seen.has(id)) return false; seen.add(id); return true; })
-    .map((id) => chairForSpecialistId(id, tenant))
+    .map((id) => chairForSpecialistId(id, tenant, question))
     .filter((c): c is { name: string; system: string } => c !== null);
 
   if (chairs.length < 2) throw new Error("panel_too_small");
