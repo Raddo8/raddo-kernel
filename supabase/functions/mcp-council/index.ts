@@ -1073,7 +1073,7 @@ async function runSummonBestAdvisor(args: {
   type SoloState = { specialistId: string; note: string };
   const loop = await runWithConfidenceFloor<SingleMinute, SoloState>(
     async (state) => {
-      const bundle = loadAgent(state.specialistId, clientContext, tenant);
+      const bundle = loadAgent(state.specialistId, clientContext, tenant, question);
       if (!bundle || bundle.kind !== "single") throw new Error("agent_not_available");
       const { minute, passes } = await runSingleAgent(bundle, question, context, state.note);
       for (const p of passes) allPasses.push(p);
