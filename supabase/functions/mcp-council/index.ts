@@ -1118,8 +1118,8 @@ async function runSummonBestAdvisor(args: {
     if (minute.refer_to && !minute.missing_lanes.length) {
       // One-hop re-route to the referred specialist (seated-collapsed).
       let target = minute.refer_to.toLowerCase();
-      if (target === "lexi" || target === "knox") target = getLegalSeat(tenant);
-      const bundle2 = loadAgent(target, clientContext, tenant);
+      if (target === "lexi") target = "knox";
+      const bundle2 = loadAgent(target, clientContext, tenant, question);
       if (bundle2 && bundle2.kind === "single") {
         hops = 1;
         const { minute: m2, passes: p2 } = await runSingleAgent(
@@ -1135,7 +1135,7 @@ async function runSummonBestAdvisor(args: {
       const panelIds = [t.chairs[0], ...minute.missing_lanes
         .map((l) => l.toLowerCase())
         .map((l) =>
-          l === "legal" ? getLegalSeat(tenant) :
+          l === "legal" ? "knox" :
           l === "finance" ? "lucius" :
           l === "ops" ? "leo" :
           l === "trust" ? "alfred" :
