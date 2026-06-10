@@ -152,6 +152,7 @@ function loadAgent(
   id: string,
   clientContext: string = "",
   tenant: string = "",
+  question: string = "",
 ): AgentBundle | null {
   const entry = findEnabledAgent(id);
   if (!entry) return null;
@@ -161,7 +162,6 @@ function loadAgent(
   // Single-agent registry. Keep server-side · never echo body to clients.
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
-    lexi: LEXI_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
@@ -172,7 +172,11 @@ function loadAgent(
   if (!rawBody) return null;
   // Tenant-aware placeholder injection (legal personas use this; others are
   // no-ops since they contain no {{...}} tokens).
-  const body = renderTenantPlaceholders(rawBody, getTenantContext(tenant));
+  const ctx = getTenantContext(tenant);
+  const posture = entry.id === "knox"
+    ? computeKnoxPosture(ctx.active_matters, question)
+    : "advisory";
+  const body = renderTenantPlaceholders(rawBody, ctx, posture);
   return {
     kind: "single",
     id: entry.id,
@@ -449,14 +453,11 @@ async function runCouncilWithResynth(
     boundary_regen: false,
   };
 
-  const seatId = getLegalSeat(tenant);
-  const seatBody = renderTenantPlaceholders(
-    seatId === "knox" ? KNOX_MD : LEXI_MD,
-    getTenantContext(tenant),
-  );
-  const seatName = seatId === "knox" ? "KNOX" : "LEXI";
+  const ctx = getTenantContext(tenant);
+  const knoxPosture = computeKnoxPosture(ctx.active_matters, question);
+  const seatBody = renderTenantPlaceholders(KNOX_MD, ctx, knoxPosture);
   const legalChair = {
-    name: seatName,
+    name: "KNOX",
     system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
   const allChairs = [...CHAIRS, legalChair];
