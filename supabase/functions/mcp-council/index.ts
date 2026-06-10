@@ -51,7 +51,6 @@ import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
-import LEXI_MD from "./agents/lexi.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
@@ -63,7 +62,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getLegalSeat, getTenantContext, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tenants.ts";
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
@@ -87,14 +86,22 @@ function renderPreamble(clientContext: string = ""): string {
 }
 
 // Substitute {{CLIENT}}, {{PRINCIPAL}}, {{PRINCIPAL_VALUES}},
-// {{ACTIVE_MATTERS}}, {{BEARING_DEFAULT}} from verified tenant context.
-function renderTenantPlaceholders(body: string, ctx: TenantContext): string {
+// {{ACTIVE_MATTERS}}, {{BEARING_DEFAULT}}, {{POSTURE}} from verified
+// tenant context. {{POSTURE}} is KNOX-only (context-flex); when not
+// supplied it defaults to "advisory" so non-KNOX bodies are unaffected
+// (they contain no {{POSTURE}} token).
+function renderTenantPlaceholders(
+  body: string,
+  ctx: TenantContext,
+  posture: "advisory" | "offensive" = "advisory",
+): string {
   return body
     .replaceAll("{{CLIENT}}", ctx.client)
     .replaceAll("{{PRINCIPAL}}", ctx.principal)
     .replaceAll("{{PRINCIPAL_VALUES}}", ctx.principal_values)
     .replaceAll("{{ACTIVE_MATTERS}}", ctx.active_matters)
-    .replaceAll("{{BEARING_DEFAULT}}", ctx.bearing_default);
+    .replaceAll("{{BEARING_DEFAULT}}", ctx.bearing_default)
+    .replaceAll("{{POSTURE}}", posture);
 }
 
 // Contract-extension appended to every single-advisor persona at compose
