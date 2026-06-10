@@ -674,11 +674,11 @@ async function runSingleAgent(
 function chairForSpecialistId(
   id: string,
   tenant: string,
+  question: string = "",
 ): { name: string; system: string } | null {
   const ctx = getTenantContext(tenant);
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
-    lexi: LEXI_MD,
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
@@ -686,7 +686,10 @@ function chairForSpecialistId(
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
-  const rendered = renderTenantPlaceholders(body, ctx);
+  const posture = id === "knox"
+    ? computeKnoxPosture(ctx.active_matters, question)
+    : "advisory";
+  const rendered = renderTenantPlaceholders(body, ctx, posture);
   // Use chair-mode addendum so the persona returns prose chair contribution
   // rather than its single-advisor JSON (which would break Leo synthesis).
   const name =
@@ -695,7 +698,6 @@ function chairForSpecialistId(
     id === "alfred" ? "Alfred" :
     id === "iroh" ? "Iroh" :
     id === "knox" ? "KNOX" :
-    id === "lexi" ? "LEXI" :
     id.toUpperCase();
   return {
     name,
