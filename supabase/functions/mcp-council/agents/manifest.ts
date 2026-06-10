@@ -1,7 +1,8 @@
 // Phase-1 agent registry. Bundled. Promotes to a Supabase table with
 // entitlements in Phase 3.
-
-import { getLegalSeat } from "../tenants.ts";
+//
+// Legal seat: single seat (KNOX) for every tenant — LEXI removed
+// 2026-06-09. No tier remap, no legal_seat field.
 
 export type AgentKind = "council" | "single";
 
@@ -25,17 +26,9 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       kind: "council",
     },
     {
-      id: "lexi",
-      name: "LEXI",
-      lens: "Legal & compliance advisory",
-      tier_min: "any",
-      enabled: true,
-      kind: "single",
-    },
-    {
       id: "knox",
       name: "KNOX",
-      lens: "Legal & compliance intelligence",
+      lens: "Legal & risk intelligence",
       tier_min: "any",
       enabled: true,
       kind: "single",
@@ -75,8 +68,6 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
   ],
 };
 
-const LEGAL_IDS = new Set(["lexi", "knox"]);
-
 export function findEnabledAgent(id: string): AgentEntry | null {
   const a = AGENT_MANIFEST.agents.find((x) => x.id === id);
   if (!a || !a.enabled) return null;
@@ -89,14 +80,10 @@ export function listEnabledAgentsPublic(): Array<{ id: string; name: string; len
     .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
 }
 
-// Public roster filtered to one legal seat per tenant. Tenant MUST come from
-// the verified identity (see index.ts), never from client input.
+// Public roster. Tenant arg retained for API stability; KNOX is the single
+// legal seat for every tenant.
 export function listSeatedAgentsPublic(
-  tenant: string,
+  _tenant: string,
 ): Array<{ id: string; name: string; lens: string }> {
-  const seat = getLegalSeat(tenant);
-  return AGENT_MANIFEST.agents
-    .filter((a) => a.enabled)
-    .filter((a) => !LEGAL_IDS.has(a.id) || a.id === seat)
-    .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
+  return listEnabledAgentsPublic();
 }

@@ -6,7 +6,7 @@
 // of the routing plan. Council is reserved for existential or ≥3-lane fanout.
 
 import { ROUTING_CONFIG, type Lane, type Mode, type Stakes } from "./routing-config.ts";
-import { getLegalSeat } from "./tenants.ts";
+
 
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
@@ -140,10 +140,10 @@ function normalizeGapReason(x: any): GapReason {
   return null;
 }
 
-// Lane → specialist id (tenant-aware for legal).
-function laneToId(lane: Lane, tenant: string): string {
+// Lane → specialist id. Legal seat collapsed to single seat (KNOX).
+function laneToId(lane: Lane, _tenant: string): string {
   switch (lane) {
-    case "legal": return getLegalSeat(tenant);
+    case "legal": return "knox";
     case "finance": return "lucius";
     case "ops": return "leo";
     case "trust": return "alfred";
@@ -154,8 +154,8 @@ function laneToId(lane: Lane, tenant: string): string {
 
 const FULL_BOARD_IDS = ["leo", "spock", "lucius", "alfred", "iroh"];
 
-function fullBoardWithLegal(tenant: string): string[] {
-  return [...FULL_BOARD_IDS, getLegalSeat(tenant)];
+function fullBoardWithLegal(_tenant: string): string[] {
+  return [...FULL_BOARD_IDS, "knox"];
 }
 
 function extractJson(s: string): any {
