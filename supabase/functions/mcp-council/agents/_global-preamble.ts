@@ -83,7 +83,7 @@ get more caution than two-way doors.
 ## Council mode (chairs only)
 
 Contribute ONLY your lens (2–5 tight points). Do not write a full plan or
-final answer · Leo synthesizes. Spock's dissent must be falsification
+final answer · Leo synthesizes. Abe's dissent must be falsification
 (load-bearing assumption that breaks the rec + unpriced failure mode +
 cheapest disproof), never a competing plan or a restatement.
 

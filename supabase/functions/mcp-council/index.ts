@@ -43,9 +43,9 @@ const corsHeaders = {
 
 // ── Boot-time doctrine load (bundled · server-only) ───────────────────────
 import LEO_MD from "./council/leo.ts";
-import SPOCK_MD from "./council/spock.ts";
+import ABE_MD from "./council/abe.ts";
 import ALFRED_MD from "./council/alfred.ts";
-import IROH_MD from "./council/iroh.ts";
+import MARCUS_MD from "./council/marcus.ts";
 import LUCIUS_MD from "./council/lucius.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
@@ -54,7 +54,7 @@ import KNOX_MD from "./agents/knox.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
-import IROH_AGENT_MD from "./agents/iroh.ts";
+import MARCUS_AGENT_MD from "./agents/marcus.ts";
 
 
 import {
@@ -66,9 +66,9 @@ import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tena
 
 const CHAIRS: Array<{ name: string; system: string }> = [
   { name: "Leo", system: LEO_MD },
-  { name: "Spock", system: SPOCK_MD },
+  { name: "Abe", system: ABE_MD },
   { name: "Alfred", system: ALFRED_MD },
-  { name: "Iroh", system: IROH_MD },
+  { name: "Marcus", system: MARCUS_MD },
   { name: "Lucius", system: LUCIUS_MD },
 ];
 
@@ -165,7 +165,7 @@ function loadAgent(
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
-    iroh: IROH_AGENT_MD,
+    marcus: MARCUS_AGENT_MD,
   };
 
   const rawBody = SINGLE_BODIES[entry.id];
@@ -490,7 +490,7 @@ async function runCouncilWithResynth(
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
-  const participating = ["Leo", "Spock", "Alfred", "Iroh", "Lucius", seatName];
+  const participating = ["Leo", "Abe", "Alfred", "Marcus", "Lucius", seatName];
 
   const synthesize = async (reinforce: boolean) => {
     const t0 = Date.now();
@@ -682,7 +682,7 @@ function chairForSpecialistId(
     lucius: LUCIUS_AGENT_MD,
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
-    iroh: IROH_AGENT_MD,
+    marcus: MARCUS_AGENT_MD,
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
@@ -696,7 +696,7 @@ function chairForSpecialistId(
     id === "lucius" ? "Lucius" :
     id === "leo" ? "Leo" :
     id === "alfred" ? "Alfred" :
-    id === "iroh" ? "Iroh" :
+    id === "marcus" ? "Marcus" :
     id === "knox" ? "KNOX" :
     id.toUpperCase();
   return {
@@ -1139,7 +1139,7 @@ async function runSummonBestAdvisor(args: {
           l === "finance" ? "lucius" :
           l === "ops" ? "leo" :
           l === "trust" ? "alfred" :
-          l === "people" ? "iroh" :
+          l === "people" ? "marcus" :
           l === "strategy" ? "leo" : null)
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {

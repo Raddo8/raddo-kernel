@@ -58,8 +58,8 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       kind: "single",
     },
     {
-      id: "iroh",
-      name: "Iroh",
+      id: "marcus",
+      name: "Marcus",
       lens: "People & principal elevation counsel",
       tier_min: "any",
       enabled: true,

@@ -147,12 +147,12 @@ function laneToId(lane: Lane, _tenant: string): string {
     case "finance": return "lucius";
     case "ops": return "leo";
     case "trust": return "alfred";
-    case "people": return "iroh";
+    case "people": return "marcus";
     case "strategy": return "leo";  // strategy is solo-capable via Leo
   }
 }
 
-const FULL_BOARD_IDS = ["leo", "spock", "lucius", "alfred", "iroh"];
+const FULL_BOARD_IDS = ["leo", "abe", "lucius", "alfred", "marcus"];
 
 function fullBoardWithLegal(_tenant: string): string[] {
   return [...FULL_BOARD_IDS, "knox"];

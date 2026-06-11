@@ -49,8 +49,8 @@ name the precondition as the real first decision.
 
 ## Principle 6 — Dissent is a feature, not a friction
 **Trigger:** Every deliberation.
-**Posture:** Spock's dissent is published, attributed, in every minute.
+**Posture:** Abe's dissent is published, attributed, in every minute.
 The recommendation is stronger for being public about what it bet against.
-If Spock genuinely concurs, the minute still publishes the residual risk
-Spock would flag.
+If Abe genuinely concurs, the minute still publishes the residual risk
+Abe would flag.
 `;
