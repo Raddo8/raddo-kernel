@@ -7,19 +7,30 @@ import { SeoHead } from "@/components/SeoHead";
  * OAuth 2.1 consent screen — wired to the Supabase OAuth Server.
  *
  * Flow:
- *   1. Read `authorization_id` from URL.
- *   2. Require an authenticated user — if missing, bounce to /login with a
- *      `redirect` param so the user returns here after sign-in.
- *   3. Call `supabase.auth.oauth.getAuthorizationDetails(authorization_id)`.
- *      If the AS reports no pending authorization (already consented), follow
- *      its `redirect_url` immediately.
- *   4. Render client name + scopes.
- *   5. Approve / Deny call the matching AS endpoints and follow the returned
- *      `redirect_url` back to the client (e.g. claude.ai).
+ *   1. Read `authorization_id` from the URL. Supabase's /authorize endpoint
+ *      redirects the browser here after the user is authenticated against
+ *      the Authorization Server project (rnjqpwmzmbnnaonppfkm).
+ *   2. Require an authenticated session — if missing, bounce to /login with
+ *      a `redirect` param so the user returns here after sign-in.
+ *   3. Call `supabase.auth.oauth.getAuthorizationDetails(authorization_id)`
+ *      to fetch the client name, redirect_uri and requested scopes.
+ *   4. Render Approve / Deny wired to approveAuthorization /
+ *      denyAuthorization. Both return a `redirect_url` we navigate to so the
+ *      MCP client (Claude desktop/mobile, Cowork, etc.) receives the code.
  *
- * Brand: light-dominant paper surface, Fraunces headline, Inter body,
- * brass CTA. No motion beyond standard button states.
+ * Note on configuration: hosted Supabase does NOT expose
+ * `GOTRUE_OAUTH_SERVER_AUTHORIZATION_PATH` in the dashboard. The consent
+ * screen path is set under Authentication → URL Configuration on the AS
+ * project (rnjqpwmzmbnnaonppfkm) by adding the absolute URL of this page
+ * (`https://chiefofbusiness.ai/oauth/consent`) as the consent screen
+ * redirect, then enabling the OAuth Server. Operator runbook lives in
+ * `docs/PHASE_2B_DEPLOY.md`.
+ *
+ * Brand: COB navy (raddo-ink) + amber (raddo-brass) on paper.
  */
+
+const BRAND_ICON_URL =
+  "https://rnjqpwmzmbnnaonppfkm.supabase.co/functions/v1/brand-icon";
 
 type Decision = "approve" | "deny";
 
@@ -85,7 +96,6 @@ export default function OAuthConsent() {
         return;
       }
 
-      // Require an authenticated session before talking to the OAuth server.
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         const back = `/oauth/consent?authorization_id=${encodeURIComponent(authorizationId)}`;
@@ -103,8 +113,7 @@ export default function OAuthConsent() {
 
         const details = (data || {}) as AuthDetails;
 
-        // If the AS reports no pending authorization, the user already
-        // consented — follow the redirect_url straight back to the client.
+        // Already-consented: AS returns the redirect immediately.
         if (!details.authorization_id && (details.redirect_url || details.redirect_uri)) {
           window.location.assign((details.redirect_url || details.redirect_uri)!);
           return;
@@ -156,18 +165,29 @@ export default function OAuthConsent() {
   return (
     <>
       <SeoHead
-        title="Authorize access · RADDO"
-        description="Review the application requesting access to your COB and approve or deny."
+        title="Connect to COB · Council"
+        description="Review the application requesting access to your COB Council and approve or deny."
         path="/oauth/consent"
       />
       <main className="min-h-screen bg-raddo-paper text-raddo-charcoal flex items-start justify-center px-6 py-16">
         <div className="w-full max-w-lg">
-          <p
-            className="text-xs uppercase tracking-[0.2em] text-raddo-ash mb-4"
-            style={{ fontFamily: "Inter, sans-serif" }}
-          >
-            Clarity · Origin · Decision
-          </p>
+          <div className="flex items-center gap-3 mb-6">
+            <img
+              src={BRAND_ICON_URL}
+              alt="COB"
+              width={40}
+              height={40}
+              className="block"
+              style={{ borderRadius: 4 }}
+            />
+            <span
+              className="text-xs uppercase tracking-[0.22em] text-raddo-ash"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              Clarity · Origin · Decision
+            </span>
+          </div>
+
           <h1
             className="text-raddo-ink"
             style={{
@@ -178,7 +198,7 @@ export default function OAuthConsent() {
               letterSpacing: "-0.01em",
             }}
           >
-            Authorize access to your COB
+            Connect to COB — Council
           </h1>
 
           {loading ? (
@@ -195,7 +215,8 @@ export default function OAuthConsent() {
                 style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.55 }}
               >
                 <span className="font-medium text-raddo-ink">{label}</span> is
-                requesting permission to connect to your COB workspace.
+                requesting permission to convene your COB Council and act on
+                your behalf inside your COB workspace.
               </p>
 
               <section
@@ -291,8 +312,8 @@ export default function OAuthConsent() {
             className="mt-10 text-xs text-raddo-ash"
             style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.6 }}
           >
-            You can revoke this access at any time from your account settings.
-            Approving grants only the permissions listed above.
+            You can revoke this access at any time from your COB account
+            settings. Approving grants only the permissions listed above.
           </p>
         </div>
       </main>
