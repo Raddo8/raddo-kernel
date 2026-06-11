@@ -65,7 +65,7 @@ function buildBody(minute: Minute): any[] {
   blocks.push(h2("Anticipatory Horizon"));
   for (const item of minute.anticipatory_horizon) blocks.push(bullet(item));
 
-  blocks.push(h2("Dissent · Spock"));
+  blocks.push(h2("Dissent · Abe"));
   blocks.push(para(minute.dissent));
 
   blocks.push(h2("Confidence"));
@@ -85,7 +85,7 @@ function buildFullProperties(minute: Minute, title: string): Record<string, any>
     "Title": { title: rt(title) },
     "Date": { date: { start: minute.freshness } },
     "Recommendation": { rich_text: rt(minute.recommendation) },
-    "Dissent (Spock)": { rich_text: rt(minute.dissent) },
+    "Dissent (Abe)": { rich_text: rt(minute.dissent) },
     "Anticipatory Horizon": { rich_text: rt(horizonJoined) },
     "Participating Chairs": {
       multi_select: minute.participating_chairs.map((n) => ({ name: n })),
