@@ -490,7 +490,7 @@ async function runCouncilWithResynth(
   passes.push({ model: horizonRes.model, usage: horizonRes.usage });
   const horizon = horizonRes.text;
 
-  const participating = ["Leo", "Abe", "Alfred", "Marcus", "Lucius", seatName];
+  const participating = ["Leo", "Abe", "Alfred", "Marcus", "Lucius", legalChair.name];
 
   const synthesize = async (reinforce: boolean) => {
     const t0 = Date.now();
