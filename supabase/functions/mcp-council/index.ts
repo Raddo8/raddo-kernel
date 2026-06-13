@@ -1851,7 +1851,129 @@ async function runSummonBestAdvisor(args: {
 }
 
 
+// ── Raise-the-Bar · platform escalate-below-floor ladder ─────────────────
+// Runs AFTER runSummonBestAdvisor returns, BEFORE the RPC reply. Mutates
+// `result` and `passes` in place when an escalation hop fires; returns the
+// internal-only `quality` telemetry bag (vault-side, never exposed on the
+// wire). Council mode is terminal in the ladder.
+//
+// NB: nothing here is added to the client-facing minute or routing_trace.
+function laneToChairId(lane: string): string | null {
+  const l = lane.toLowerCase();
+  if (l === "legal") return "knox";
+  if (l === "finance") return "lucius";
+  if (l === "ops") return "leo";
+  if (l === "trust") return "alfred";
+  if (l === "people") return "marcus";
+  if (l === "strategy") return "leo";
+  if (l === "growth") return "felix";
+  if (l === "vision") return "aims";
+  if (
+    l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
+    l === "marcus" || l === "felix" || l === "aims"
+  ) return l;
+  return null;
+}
+
+async function applyRaiseTheBar(args: {
+  result: SummonResult;
+  passes: Pass[];
+  question: string;
+  context: string;
+  clientContext: string;
+  tenant: string;
+}): Promise<QualityTelemetry> {
+  const { result, passes, question, context, clientContext, tenant } = args;
+  const quality = newQualityTelemetry();
+  const tri = result.routing_trace.triage;
+  const minuteAny: any = result.minute;
+  const degraded = !!minuteAny?.degraded;
+  const closingAction: string | undefined = minuteAny?.closing_action;
+
+  const gapType = classifyGap({
+    missingLanes: result.missing_lanes,
+    secondaryLaneCount: tri.secondary_lanes?.length ?? 0,
+    closingAction,
+  });
+
+  const decision = decideEscalation({
+    mode: result.mode,
+    eps: result.epsilon,
+    rho: result.rho,
+    degraded,
+    stakes: tri.stakes,
+    hops: result.routing_trace.hops,
+    gapType,
+  });
+
+  if (decision.shouldEscalate && decision.to_mode) {
+    if (decision.to_mode === "panel") {
+      const primary = tri.chairs[0];
+      const ids = [
+        primary,
+        ...result.missing_lanes.map(laneToChairId).filter((x): x is string => !!x),
+      ];
+      const dedup = Array.from(new Set(ids));
+      if (dedup.length >= 2) {
+        const p = await runPanelGated(question, context, dedup, clientContext, tenant, tri);
+        for (const pp of p.passes) passes.push(pp);
+        const cleared = !isBelowPlatformFloor(
+          p.minute.confidence.epistemic, p.minute.confidence.rigor);
+        quality.escalations.push({
+          from_mode: "solo", to_mode: "panel", reason: "reasoning_gap", cleared,
+        });
+        result.mode = "panel";
+        result.selected_advisor = "panel";
+        result.minute = p.minute;
+        result.epsilon = p.minute.confidence.epistemic;
+        result.rho = p.minute.confidence.rigor;
+        result.capped = p.capped;
+        result.gap = p.gap;
+        result.routing_trace.hops += 1;
+        result.routing_trace.iters += p.iters;
+        result.routing_trace.calls = passes.length;
+      }
+    } else {
+      const c = await runCouncilGated(question, context, clientContext, tenant, tri);
+      for (const pp of c.passes) passes.push(pp);
+      const cleared = !isBelowPlatformFloor(
+        c.minute.confidence.epistemic, c.minute.confidence.rigor);
+      quality.escalations.push({
+        from_mode: result.mode, to_mode: "council", reason: "reasoning_gap", cleared,
+      });
+      result.mode = "council";
+      result.selected_advisor = "council";
+      result.minute = c.minute;
+      result.epsilon = c.minute.confidence.epistemic;
+      result.rho = c.minute.confidence.rigor;
+      result.capped = c.capped;
+      result.gap = c.gap;
+      result.routing_trace.hops += 1;
+      result.routing_trace.iters += c.iters;
+      result.routing_trace.calls = passes.length;
+    }
+  }
+
+  // Stamp terminal cap when we still sit below the platform floor and the
+  // run isn't structurally degraded (degraded path has its own honesty cap).
+  const finalMinuteAny: any = result.minute;
+  if (!finalMinuteAny?.degraded) {
+    const finalGapType = classifyGap({
+      missingLanes: result.missing_lanes,
+      secondaryLaneCount: tri.secondary_lanes?.length ?? 0,
+      closingAction: finalMinuteAny?.closing_action,
+    });
+    stampTerminalCap(quality, {
+      eps: result.epsilon, rho: result.rho, gapType: finalGapType,
+    });
+  }
+
+  return quality;
+}
+
+
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
+
 const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = {
   name: "the-council",
