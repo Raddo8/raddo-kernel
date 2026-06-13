@@ -95,14 +95,16 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
 export function findEnabledAgent(id: string): AgentEntry | null {
   const a = AGENT_MANIFEST.agents.find((x) => x.id === id);
   if (!a || !a.enabled) return null;
+  if (!canSeat(a)) return null;
   return a;
 }
 
 export function listEnabledAgentsPublic(): Array<{ id: string; name: string; lens: string }> {
   return AGENT_MANIFEST.agents
-    .filter((a) => a.enabled)
+    .filter((a) => a.enabled && canSeat(a))
     .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
 }
+
 
 // Public roster. Tenant arg retained for API stability; KNOX is the single
 // legal seat for every tenant.
