@@ -1469,13 +1469,14 @@ async function runCouncilGated(
   context: string,
   clientContext: string,
   tenant: string,
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
-    question, context, clientContext, tenant,
+    question, context, clientContext, tenant, triageDecision,
   );
   let minute = firstMinute;
   let iters = 1;
@@ -1513,14 +1514,16 @@ async function runPanelGated(
   chairIds: string[],
   clientContext: string,
   tenant: string,
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
-    question, context, chairIds, clientContext, tenant,
+    question, context, chairIds, clientContext, tenant, triageDecision,
   );
+
   let minute = firstMinute;
   let iters = 1;
   const epsMin = ROUTING_CONFIG.floor.eps_min;
