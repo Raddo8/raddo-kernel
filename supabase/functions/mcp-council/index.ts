@@ -1197,7 +1197,9 @@ async function runCouncilGated(
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
-  if (belowFloor) {
+  // Skip resynth when the minute is structurally degraded · the cap won't
+  // lift on another synth pass and we'd just burn an Opus call.
+  if (belowFloor && !minute.degraded) {
     const { minute: next, pass } = await resynth();
     passes.push(pass);
     iters = 2;
@@ -1205,6 +1207,7 @@ async function runCouncilGated(
     belowFloor =
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
+
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
