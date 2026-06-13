@@ -3,8 +3,10 @@
 //
 // Legal seat: single seat (KNOX) for every tenant — LEXI removed
 // 2026-06-09. No tier remap, no legal_seat field.
+import { canSeat } from "./eval-gate.ts";
 
 export type AgentKind = "council" | "single";
+
 
 export interface AgentEntry {
   id: string;
@@ -13,7 +15,14 @@ export interface AgentEntry {
   tier_min: string;
   enabled: boolean;
   kind: AgentKind;
+  // Raise-the-Bar · platform eval pass-mark (vault-side, never client-visible).
+  // Absent today (no harness yet); the eval-gate treats absence as
+  // "unblocked" so behavior is unchanged. The stress-test/eval harness
+  // (AGENT_SUITE_GAMEPLAN Phase 5) will write these once it ships.
+  eval_score?: number;
+  eval_scored_at?: string;
 }
+
 
 export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
   agents: [
@@ -88,14 +97,16 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
 export function findEnabledAgent(id: string): AgentEntry | null {
   const a = AGENT_MANIFEST.agents.find((x) => x.id === id);
   if (!a || !a.enabled) return null;
+  if (!canSeat(a)) return null;
   return a;
 }
 
 export function listEnabledAgentsPublic(): Array<{ id: string; name: string; lens: string }> {
   return AGENT_MANIFEST.agents
-    .filter((a) => a.enabled)
+    .filter((a) => a.enabled && canSeat(a))
     .map((a) => ({ id: a.id, name: a.name, lens: a.lens }));
 }
+
 
 // Public roster. Tenant arg retained for API stability; KNOX is the single
 // legal seat for every tenant.

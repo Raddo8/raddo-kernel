@@ -30,8 +30,17 @@ import { writeMinuteToNotion } from "./notion.ts";
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
-import { ROUTING_CONFIG, stakesAtLeast } from "./routing-config.ts";
+import { ROUTING_CONFIG, stakesAtLeast, PLATFORM_QUALITY } from "./routing-config.ts";
 import { rosterHasSeatedSpecialist, logCapabilityGap } from "./capability-gaps.ts";
+import {
+  newQualityTelemetry,
+  isBelowPlatformFloor,
+  classifyGap,
+  decideEscalation,
+  stampTerminalCap,
+  type QualityTelemetry,
+} from "./escalate.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1473,6 +1482,7 @@ async function runCouncilGated(
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
+  quality: QualityTelemetry;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
@@ -1480,8 +1490,9 @@ async function runCouncilGated(
   );
   let minute = firstMinute;
   let iters = 1;
-  const epsMin = ROUTING_CONFIG.floor.eps_min;
-  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  // Raise-the-Bar · platform-level final floor (vault constant, never per-tenant).
+  const epsMin = PLATFORM_QUALITY.eps_floor;
+  const rhoMin = PLATFORM_QUALITY.rho_floor;
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
@@ -1499,13 +1510,29 @@ async function runCouncilGated(
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
+
+  const quality = newQualityTelemetry();
+  // Council is terminal in the ladder · cannot escalate further. Stamp the
+  // honest terminal cap when we still sit below the platform floor.
+  if (belowFloor && !minute.degraded) {
+    stampTerminalCap(quality, {
+      eps: minute.confidence.epistemic,
+      rho: minute.confidence.rigor,
+      // Treat council-level below-floor as a reasoning-gap by default;
+      // chairs naming external info would surface via the next-pass
+      // recommendation, not via a per-chair closing_action here.
+      gapType: "reasoning",
+    });
+  }
+
   return {
     minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "council_confidence_below_floor" : undefined,
-    metrics,
+    metrics, quality,
   };
 }
+
 
 // ── Confidence-gated panel ────────────────────────────────────────────────
 async function runPanelGated(
@@ -1518,6 +1545,7 @@ async function runPanelGated(
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
+  quality: QualityTelemetry;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
@@ -1526,8 +1554,9 @@ async function runPanelGated(
 
   let minute = firstMinute;
   let iters = 1;
-  const epsMin = ROUTING_CONFIG.floor.eps_min;
-  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  // Raise-the-Bar · platform-level final floor.
+  const epsMin = PLATFORM_QUALITY.eps_floor;
+  const rhoMin = PLATFORM_QUALITY.rho_floor;
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
@@ -1543,13 +1572,17 @@ async function runPanelGated(
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
+
+  const quality = newQualityTelemetry();
+
   return {
     minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "panel_confidence_below_floor" : undefined,
-    metrics,
+    metrics, quality,
   };
 }
+
 
 // ── summon_best_advisor orchestrator ──────────────────────────────────────
 type SummonResult = {
@@ -1685,11 +1718,13 @@ async function runSummonBestAdvisor(args: {
       for (const p of passes) allPasses.push(p);
       // Derive closing action: prefer the persona's self-report; if it
       // returned "none" but the floor isn't met, fall back to "re_reason".
+      // Raise-the-Bar · platform-level final floor (vault constant).
       const belowFloor =
-        minute.confidence.epistemic < ROUTING_CONFIG.floor.eps_min ||
-        minute.confidence.rigor < ROUTING_CONFIG.floor.rho_min;
+        minute.confidence.epistemic < PLATFORM_QUALITY.eps_floor ||
+        minute.confidence.rigor < PLATFORM_QUALITY.rho_floor;
       let closing_action: ClosingAction = minute.closing_action;
       if (closing_action === "none" && belowFloor) closing_action = "re_reason";
+
       const r: ProduceResult<SingleMinute> = {
         output: minute,
         epsilon: minute.confidence.epistemic,
@@ -1816,7 +1851,129 @@ async function runSummonBestAdvisor(args: {
 }
 
 
+// ── Raise-the-Bar · platform escalate-below-floor ladder ─────────────────
+// Runs AFTER runSummonBestAdvisor returns, BEFORE the RPC reply. Mutates
+// `result` and `passes` in place when an escalation hop fires; returns the
+// internal-only `quality` telemetry bag (vault-side, never exposed on the
+// wire). Council mode is terminal in the ladder.
+//
+// NB: nothing here is added to the client-facing minute or routing_trace.
+function laneToChairId(lane: string): string | null {
+  const l = lane.toLowerCase();
+  if (l === "legal") return "knox";
+  if (l === "finance") return "lucius";
+  if (l === "ops") return "leo";
+  if (l === "trust") return "alfred";
+  if (l === "people") return "marcus";
+  if (l === "strategy") return "leo";
+  if (l === "growth") return "felix";
+  if (l === "vision") return "aims";
+  if (
+    l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
+    l === "marcus" || l === "felix" || l === "aims"
+  ) return l;
+  return null;
+}
+
+async function applyRaiseTheBar(args: {
+  result: SummonResult;
+  passes: Pass[];
+  question: string;
+  context: string;
+  clientContext: string;
+  tenant: string;
+}): Promise<QualityTelemetry> {
+  const { result, passes, question, context, clientContext, tenant } = args;
+  const quality = newQualityTelemetry();
+  const tri = result.routing_trace.triage;
+  const minuteAny: any = result.minute;
+  const degraded = !!minuteAny?.degraded;
+  const closingAction: string | undefined = minuteAny?.closing_action;
+
+  const gapType = classifyGap({
+    missingLanes: result.missing_lanes,
+    secondaryLaneCount: tri.secondary_lanes?.length ?? 0,
+    closingAction,
+  });
+
+  const decision = decideEscalation({
+    mode: result.mode,
+    eps: result.epsilon,
+    rho: result.rho,
+    degraded,
+    stakes: tri.stakes,
+    hops: result.routing_trace.hops,
+    gapType,
+  });
+
+  if (decision.shouldEscalate && decision.to_mode) {
+    if (decision.to_mode === "panel") {
+      const primary = tri.chairs[0];
+      const ids = [
+        primary,
+        ...result.missing_lanes.map(laneToChairId).filter((x): x is string => !!x),
+      ];
+      const dedup = Array.from(new Set(ids));
+      if (dedup.length >= 2) {
+        const p = await runPanelGated(question, context, dedup, clientContext, tenant, tri);
+        for (const pp of p.passes) passes.push(pp);
+        const cleared = !isBelowPlatformFloor(
+          p.minute.confidence.epistemic, p.minute.confidence.rigor);
+        quality.escalations.push({
+          from_mode: "solo", to_mode: "panel", reason: "reasoning_gap", cleared,
+        });
+        result.mode = "panel";
+        result.selected_advisor = "panel";
+        result.minute = p.minute;
+        result.epsilon = p.minute.confidence.epistemic;
+        result.rho = p.minute.confidence.rigor;
+        result.capped = p.capped;
+        result.gap = p.gap;
+        result.routing_trace.hops += 1;
+        result.routing_trace.iters += p.iters;
+        result.routing_trace.calls = passes.length;
+      }
+    } else {
+      const c = await runCouncilGated(question, context, clientContext, tenant, tri);
+      for (const pp of c.passes) passes.push(pp);
+      const cleared = !isBelowPlatformFloor(
+        c.minute.confidence.epistemic, c.minute.confidence.rigor);
+      quality.escalations.push({
+        from_mode: result.mode, to_mode: "council", reason: "reasoning_gap", cleared,
+      });
+      result.mode = "council";
+      result.selected_advisor = "council";
+      result.minute = c.minute;
+      result.epsilon = c.minute.confidence.epistemic;
+      result.rho = c.minute.confidence.rigor;
+      result.capped = c.capped;
+      result.gap = c.gap;
+      result.routing_trace.hops += 1;
+      result.routing_trace.iters += c.iters;
+      result.routing_trace.calls = passes.length;
+    }
+  }
+
+  // Stamp terminal cap when we still sit below the platform floor and the
+  // run isn't structurally degraded (degraded path has its own honesty cap).
+  const finalMinuteAny: any = result.minute;
+  if (!finalMinuteAny?.degraded) {
+    const finalGapType = classifyGap({
+      missingLanes: result.missing_lanes,
+      secondaryLaneCount: tri.secondary_lanes?.length ?? 0,
+      closingAction: finalMinuteAny?.closing_action,
+    });
+    stampTerminalCap(quality, {
+      eps: result.epsilon, rho: result.rho, gapType: finalGapType,
+    });
+  }
+
+  return quality;
+}
+
+
 // ── MCP JSON-RPC (minimal · Streamable HTTP) ───────────────────────────────
+
 const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = {
   name: "the-council",
@@ -2108,7 +2265,7 @@ Deno.serve(async (req) => {
           // Failures are non-fatal — runCouncilGated handles undefined.
           let convTriage: TriageDecision | undefined;
           try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
-          const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
+          const { minute, passes, iters, capped, gap, metrics, quality } = await runCouncilGated(
             question, context, clientContext, tenant, convTriage);
 
           const out: any = { ...minute };
@@ -2125,6 +2282,7 @@ Deno.serve(async (req) => {
             capped,
             epsilon: minute.confidence.epistemic,
             rho: minute.confidence.rigor,
+            quality_standard_version: quality.quality_standard_version,
           }));
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
@@ -2139,8 +2297,11 @@ Deno.serve(async (req) => {
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
               convene_metrics: metrics,
+              // Raise-the-Bar telemetry · vault-side only (never on the wire).
+              quality,
             },
           });
+
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
@@ -2167,8 +2328,16 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { result, passes } = await runSummonBestAdvisor({
+          const summoned = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored,
+          });
+          const result = summoned.result;
+          const passes = [...summoned.passes];
+          // Raise-the-Bar · platform escalate-below-floor ladder.
+          // Mutates `result` and `passes` in place when an eligible hop fires.
+          // Returns internal-only quality telemetry (never on the wire).
+          const quality = await applyRaiseTheBar({
+            result, passes, question, context, clientContext, tenant,
           });
           const qhash = await hashQuestion(question);
           // Deterministic gap-signal post-step · ensures structured
@@ -2217,8 +2386,11 @@ Deno.serve(async (req) => {
               capability_gap: gap.gap_logged
                 ? { subdomain: gap.gap_logged, source: "triage_deterministic" }
                 : null,
+              // Raise-the-Bar telemetry · vault-side only (never on the wire).
+              quality,
             },
           });
+
           // Explicitly shape routing_trace.triage on the wire so the two
           // gap-signal fields are always visible to callers · diagnostic
           // surface for the Capability Gap Ledger.
