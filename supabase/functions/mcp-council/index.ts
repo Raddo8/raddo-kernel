@@ -75,7 +75,10 @@ const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "alfred", name: "Alfred", system: ALFRED_MD },
   { id: "marcus", name: "Marcus", system: MARCUS_MD },
   { id: "lucius", name: "Lucius", system: LUCIUS_MD },
+  { id: "felix", name: "FELIX", system: FELIX_MD },
+  { id: "aims", name: "AIMS", system: AIMS_MD },
 ];
+
 
 
 // ── Generic agent loader ──────────────────────────────────────────────────
@@ -172,7 +175,10 @@ function loadAgent(
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     marcus: MARCUS_AGENT_MD,
+    felix: FELIX_AGENT_MD,
+    aims: AIMS_AGENT_MD,
   };
+
 
   const rawBody = SINGLE_BODIES[entry.id];
   if (!rawBody) return null;
