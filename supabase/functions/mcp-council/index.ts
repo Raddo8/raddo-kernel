@@ -766,13 +766,15 @@ async function runCouncilWithResynth(
   }
   metrics.dropped_chairs = dropped;
 
-  // §2 · degradation floor (council ≥ floor of total). Only throw when zero
-  // chairs survived AND synthesis cannot run at all.
-  const minSurviving = ROUTING_CONFIG.council_min_chairs;
+  // §2 · degradation floor (council ratio-based · scales with roster size).
+  // 8 chairs → ceil(8 * 0.66) = 6; 6 chairs → ceil(6 * 0.66) = 4. Computed
+  // at call time so seating new chairs doesn't leave a stale literal behind.
+  const minSurviving = Math.max(2, Math.ceil(totalSeated * ROUTING_CONFIG.council_min_ratio));
   const countFloorBreached = stage1Fulfilled.length < minSurviving;
   if (stage1Fulfilled.length === 0) {
     throw new Error("stage1_total_failure");
   }
+
 
   const stage1Results = stage1Fulfilled.map((r) => ({ name: r.name, text: r.text }));
 
