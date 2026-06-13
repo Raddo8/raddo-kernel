@@ -676,8 +676,9 @@ async function runCouncil(
   context: string,
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runCouncilWithResynth(question, context, clientContext, tenant);
+  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision);
   return { minute: r.minute, passes: r.passes };
 }
 
@@ -692,12 +693,14 @@ async function runCouncilWithResynth(
   context: string,
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
   metrics: ConveneMetrics;
   resynth: () => Promise<{ minute: MinuteShape; pass: Pass; resynth_ms: number }>;
 }> {
+
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
