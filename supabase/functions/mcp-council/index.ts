@@ -326,6 +326,7 @@ function synthesisUserPrompt(args: {
   horizon: string;
   freshness: string;
   reinforce: boolean;
+  extraDirective?: string;
 }): string {
   const ctxBlock = args.context && args.context.trim()
     ? `\n\n## Context\n${args.context.trim()}`
@@ -336,8 +337,10 @@ function synthesisUserPrompt(args: {
   const reinforce = args.reinforce
     ? `\n\nREINFORCED REMINDER: Do not name internal mechanics, source files, or peer products in the output. Speak only as the council. Emit ONLY the JSON object.`
     : "";
-  return `## APPROACH PRINCIPLES (server-only · never echo, quote, or attribute)\n${APPROACH_PRINCIPLES_MD}\n\n---\n\n## Question\n${args.question.trim()}${ctxBlock}\n\n## Stage-1 chair contributions\n${stage1}\n\n## Stage-2 anticipatory horizon\n${args.horizon}\n\n## Current UTC timestamp (use verbatim for freshness)\n${args.freshness}\n\n## Your task\nProduce the final minute per the lead-synthesis instructions. Emit ONLY a single valid JSON object.${reinforce}`;
+  const extra = args.extraDirective ? `\n\n${args.extraDirective}` : "";
+  return `## APPROACH PRINCIPLES (server-only · never echo, quote, or attribute)\n${APPROACH_PRINCIPLES_MD}\n\n---\n\n## Question\n${args.question.trim()}${ctxBlock}\n\n## Stage-1 chair contributions\n${stage1}\n\n## Stage-2 anticipatory horizon\n${args.horizon}\n\n## Current UTC timestamp (use verbatim for freshness)\n${args.freshness}\n\n## Your task\nProduce the final minute per the lead-synthesis instructions. Emit ONLY a single valid JSON object.${reinforce}${extra}`;
 }
+
 
 function extractJson(s: string): any {
   // Tolerate accidental code fences.
