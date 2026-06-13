@@ -279,6 +279,8 @@ function hasBoundaryViolation(text: string): boolean {
 }
 
 // ── Deliberation ───────────────────────────────────────────────────────────
+type DroppedChair = { id: string; name: string; reason: string };
+
 type MinuteShape = {
   recommendation: string;
   dissent: string;
@@ -287,7 +289,14 @@ type MinuteShape = {
   freshness: string;
   participating_chairs: string[];
   signature: string;
+  // Degraded-run honesty fields · optional, only set when a chair drop or
+  // synthesis fault degraded the run. Surfaced in the minute body so callers
+  // see the cap directly, not just buried in metadata.
+  degraded?: boolean;
+  dropped_chairs?: DroppedChair[];
+  dissent_status?: "ok" | "unavailable";
 };
+
 
 function chairUserPrompt(question: string, context: string): string {
   const ctxBlock = context && context.trim()
