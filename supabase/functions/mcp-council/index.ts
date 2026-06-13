@@ -1545,6 +1545,7 @@ async function runPanelGated(
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
+  quality: QualityTelemetry;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
@@ -1553,8 +1554,9 @@ async function runPanelGated(
 
   let minute = firstMinute;
   let iters = 1;
-  const epsMin = ROUTING_CONFIG.floor.eps_min;
-  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  // Raise-the-Bar · platform-level final floor.
+  const epsMin = PLATFORM_QUALITY.eps_floor;
+  const rhoMin = PLATFORM_QUALITY.rho_floor;
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
@@ -1570,13 +1572,17 @@ async function runPanelGated(
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
+
+  const quality = newQualityTelemetry();
+
   return {
     minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "panel_confidence_below_floor" : undefined,
-    metrics,
+    metrics, quality,
   };
 }
+
 
 // ── summon_best_advisor orchestrator ──────────────────────────────────────
 type SummonResult = {
