@@ -2265,7 +2265,7 @@ Deno.serve(async (req) => {
           // Failures are non-fatal — runCouncilGated handles undefined.
           let convTriage: TriageDecision | undefined;
           try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
-          const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
+          const { minute, passes, iters, capped, gap, metrics, quality } = await runCouncilGated(
             question, context, clientContext, tenant, convTriage);
 
           const out: any = { ...minute };
@@ -2282,6 +2282,7 @@ Deno.serve(async (req) => {
             capped,
             epsilon: minute.confidence.epistemic,
             rho: minute.confidence.rigor,
+            quality_standard_version: quality.quality_standard_version,
           }));
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
@@ -2296,8 +2297,11 @@ Deno.serve(async (req) => {
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
               convene_metrics: metrics,
+              // Raise-the-Bar telemetry · vault-side only (never on the wire).
+              quality,
             },
           });
+
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
