@@ -943,6 +943,13 @@ async function runCouncilWithResynth(
     minute = second.minute;
   }
 
+  // Seam (b) post-check · if AIMS contributed, the minute MUST mention a
+  // Leo handoff. Stamp the trip-wire when absent so the dashboard can flag.
+  if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
+    metrics.handoff_missing = true;
+  }
+
+
   const resynth = async () => {
     const next = await synthesize(true);
     metrics.resynth_ms = next.elapsed;
