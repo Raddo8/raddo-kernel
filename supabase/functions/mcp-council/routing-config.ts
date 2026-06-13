@@ -23,7 +23,21 @@ export const ROUTING_CONFIG = {
   budget_calls: 6,
   // Diminishing-returns: if Δepsilon < this between iters, stop capped.
   min_eps_delta: 0.02,
+  // Degraded-minute honesty caps (tunable · surfaced in the minute body,
+  // not just metadata). Applied when chair-count floor breached OR when
+  // Abe (dissent) drops · whichever fires.
+  degraded: {
+    // Chair-count floor breach · cap both axes.
+    eps_cap: 0.60,
+    rho_cap: 0.55,
+    // Abe-drop · cap rigor only (dissent is structurally part of rigor).
+    dissent_missing_rho_cap: 0.55,
+  },
+  // Multi-advisor degradation floors.
+  council_min_chairs: 4,   // of 6 (5 standard + KNOX)
+  panel_min_chairs: 2,     // of N
 } as const;
+
 
 export type Stakes = "low" | "medium" | "high" | "existential";
 export type Mode = "solo" | "panel" | "council";
