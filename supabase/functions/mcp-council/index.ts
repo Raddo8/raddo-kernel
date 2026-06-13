@@ -1718,11 +1718,13 @@ async function runSummonBestAdvisor(args: {
       for (const p of passes) allPasses.push(p);
       // Derive closing action: prefer the persona's self-report; if it
       // returned "none" but the floor isn't met, fall back to "re_reason".
+      // Raise-the-Bar · platform-level final floor (vault constant).
       const belowFloor =
-        minute.confidence.epistemic < ROUTING_CONFIG.floor.eps_min ||
-        minute.confidence.rigor < ROUTING_CONFIG.floor.rho_min;
+        minute.confidence.epistemic < PLATFORM_QUALITY.eps_floor ||
+        minute.confidence.rigor < PLATFORM_QUALITY.rho_floor;
       let closing_action: ClosingAction = minute.closing_action;
       if (closing_action === "none" && belowFloor) closing_action = "re_reason";
+
       const r: ProduceResult<SingleMinute> = {
         output: minute,
         epsilon: minute.confidence.epistemic,
