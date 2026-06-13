@@ -1241,7 +1241,7 @@ async function runPanelGated(
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
-  if (belowFloor) {
+  if (belowFloor && !minute.degraded) {
     const { minute: next, pass } = await resynth();
     passes.push(pass);
     iters = 2;
@@ -1249,6 +1249,7 @@ async function runPanelGated(
     belowFloor =
       minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
   }
+
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
