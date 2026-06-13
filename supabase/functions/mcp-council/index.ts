@@ -64,13 +64,14 @@ import {
 } from "./agents/manifest.ts";
 import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tenants.ts";
 
-const CHAIRS: Array<{ name: string; system: string }> = [
-  { name: "Leo", system: LEO_MD },
-  { name: "Abe", system: ABE_MD },
-  { name: "Alfred", system: ALFRED_MD },
-  { name: "Marcus", system: MARCUS_MD },
-  { name: "Lucius", system: LUCIUS_MD },
+const CHAIRS: Array<{ id: string; name: string; system: string }> = [
+  { id: "leo", name: "Leo", system: LEO_MD },
+  { id: "abe", name: "Abe", system: ABE_MD },
+  { id: "alfred", name: "Alfred", system: ALFRED_MD },
+  { id: "marcus", name: "Marcus", system: MARCUS_MD },
+  { id: "lucius", name: "Lucius", system: LUCIUS_MD },
 ];
+
 
 // ── Generic agent loader ──────────────────────────────────────────────────
 // council → multi-chair bundle (handled by runCouncil).
