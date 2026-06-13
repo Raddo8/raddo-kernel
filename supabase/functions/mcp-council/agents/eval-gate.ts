@@ -9,11 +9,13 @@
 // manifest entries and these checks become live.
 
 import { PLATFORM_QUALITY } from "../routing-config.ts";
-import type { AgentEntry } from "./manifest.ts";
+
+// Structural shape — avoids a circular import with manifest.ts.
+type EvalScored = { eval_score?: number };
 
 // `false` only when there IS a score AND it falls below the platform seat
 // mark. Absent score → unblocked (today's behavior unchanged).
-export function canSeat(entry: AgentEntry): boolean {
+export function canSeat(entry: EvalScored): boolean {
   if (entry.eval_score == null) return true;
   return entry.eval_score >= PLATFORM_QUALITY.eval_seat_mark;
 }
@@ -21,7 +23,7 @@ export function canSeat(entry: AgentEntry): boolean {
 // Internal vault-side flag for the Brahan retain-review queue. Never
 // auto-pulls a seat. Never surfaces to a client.
 export function retainCheck(
-  entry: AgentEntry,
+  entry: EvalScored,
 ): { decertification_candidate: boolean } {
   if (entry.eval_score == null) return { decertification_candidate: false };
   return {
@@ -29,3 +31,4 @@ export function retainCheck(
       entry.eval_score < PLATFORM_QUALITY.eval_retain_mark,
   };
 }
+
