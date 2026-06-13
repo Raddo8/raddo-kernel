@@ -895,7 +895,7 @@ function chairForSpecialistId(
   id: string,
   tenant: string,
   question: string = "",
-): { name: string; system: string } | null {
+): { id: string; name: string; system: string } | null {
   const ctx = getTenantContext(tenant);
   const SINGLE_BODIES: Record<string, string> = {
     knox: KNOX_MD,
@@ -920,10 +920,12 @@ function chairForSpecialistId(
     id === "knox" ? "KNOX" :
     id.toUpperCase();
   return {
+    id,
     name,
     system: `${rendered}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
 }
+
 
 async function runPanel(
   question: string,
