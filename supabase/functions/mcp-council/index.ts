@@ -1746,7 +1746,14 @@ async function runSummonBestAdvisor(args: {
           l === "ops" ? "leo" :
           l === "trust" ? "alfred" :
           l === "people" ? "marcus" :
-          l === "strategy" ? "leo" : null)
+          l === "strategy" ? "leo" :
+          l === "growth" ? "felix" :
+          l === "vision" ? "aims" :
+          // Direct chair id fallthrough · missing_lanes may name a chair id
+          // (e.g., "lucius" from FELIX pricing co-sign · "leo" from AIMS handoff).
+          (l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
+           l === "marcus" || l === "felix" || l === "aims") ? l : null)
+
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
         const pg = await runPanelGated(
