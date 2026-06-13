@@ -421,7 +421,12 @@ type ConveneMetrics = {
   fast_resynth_used: boolean;
   boundary_regen: boolean;
   total_ms?: number;     // filled by gated wrapper
+  // Per-chair fault diagnostics. Empty when no chair dropped.
+  dropped_chairs: DroppedChair[];
+  degraded: boolean;
+  dissent_status: "ok" | "unavailable";
 };
+
 
 async function runCouncil(
   question: string,
