@@ -1,91 +1,112 @@
-# Seat FELIX + AIMS onto the hardened Council path (rev 2)
+# Raise-the-Bar · platform quality standard (mcp-council)
 
-Seat both new chairs on the multi-advisor path that just shipped. Two new agent files (council/single bodies), wire them into every seat map the council, panel, and solo paths iterate, add their lanes to triage, enforce the four seam rules, and re-express the degradation floor as a ratio so it scales with the 8-seat roster. No changes to the minute contract, triage thresholds, or tenant layer.
+A single global vault-level standard layered on the hardened multi-advisor path. Flipping it is a one-line edit by the platform owner; clients never see, set, or vary it. Hard invariant preserved: never inflates ε/ρ — only caps more honestly or escalates once.
 
-## 1. New chair bodies (verbatim personas)
+Separate from FELIX/AIMS seating (green) and from the resilience/quorum ratio (untouched).
 
-Create four files using the existing `council/*.ts` / `agents/*.ts` pattern (each file exports a default string):
+## 1. `routing-config.ts` — single global `PLATFORM_QUALITY`
 
-- `council/felix.ts`, `council/aims.ts` — chair-mode bodies (Stage-1 prose contribution shape, same framing as the other `council/*.ts` files).
-- `agents/felix.ts`, `agents/aims.ts` — single-mode bodies (single-JSON shape, same framing as `agents/leo.ts`).
+Add a vault-only block. Two named value sets for our convenience only; the runtime always reads `PLATFORM_QUALITY`. No tenant/tier/entitlement lookup anywhere.
 
-Personas pasted verbatim from the dispatch — every numbered principle and boundary clause preserved exactly. **Chair-mode adaptation (verify):** the persona's final "Output: ... Frame-choice line first ..." instruction is reshaped in `council/aims.ts` so AIMS-as-chair contributes the *frame-choice judgment* (which mode the question is in, plus the diagnosis/direction reasoning) as Stage-1 input. Leo prints the explicit `Frame-choice:` line in the final minute per seam rule (a) — chairs don't author the final-minute line themselves. Same pattern as existing chair bodies: persona spine intact, output framing adjusted for the synthesis stage. Single-mode (`agents/aims.ts`) keeps the persona's original output framing since AIMS *is* the author there.
+```ts
+// VAULT-LEVEL · platform owner only. Not client-exposed. Not per-tenant.
+const QUALITY_STANDARD = {
+  current: {
+    eps_floor: 0.88, rho_floor: 0.88,
+    escalate_below_floor: false, max_escalations: 0,
+    escalate_min_stakes: "medium",
+    eval_seat_mark: 0.85, eval_retain_mark: 0.80,
+    reprobe_every_interactions: 50, reprobe_every_new_specialists: 10,
+  },
+  elevated: {
+    eps_floor: 0.92, rho_floor: 0.90,
+    escalate_below_floor: true, max_escalations: 1,
+    escalate_min_stakes: "medium",
+    eval_seat_mark: 0.92, eval_retain_mark: 0.88,
+    reprobe_every_interactions: 25, reprobe_every_new_specialists: 5,
+  },
+} as const;
 
-## 2. Registry wiring (every seat map · §1 of the dispatch)
+export const PLATFORM_QUALITY = QUALITY_STANDARD.current;       // ← flip to .elevated globally
+export const PLATFORM_QUALITY_VERSION: "current" | "elevated" = "current";
+```
 
-`mcp-council/index.ts`:
-- Import `FELIX_MD`, `AIMS_MD`, `FELIX_AGENT_MD`, `AIMS_AGENT_MD`.
-- Append to `CHAIRS` (line 67): FELIX + AIMS. This is what the hardened `Promise.allSettled` in `runCouncilWithResynth` iterates, so per-chair isolation picks them up automatically.
-- Add `felix`/`aims` to BOTH `SINGLE_BODIES` maps (line 164 in `loadAgent`, line 900 in `chairForSpecialistId`).
-- Extend the name lookup in `chairForSpecialistId` (line 915).
+Explicitly do **not** add any `quality_profile` field to `tenants.ts` / `client_entitlements` / `TenantContext`. No resolver function. Single import site.
 
-`mcp-council/agents/manifest.ts`:
-- Add two `kind: "single"` entries (`felix`, `aims`, `enabled: true`) so `findEnabledAgent` resolves them and `listSeatedAgentsPublic` returns the 8-seat roster for `show_council`.
+Leave `ROUTING_CONFIG.floor.eps_min` / `rho_min` in place — that governs the per-iteration `confidence.ts` loop. The new `PLATFORM_QUALITY` floors govern the **final minute-level** below-floor check only (the seam the dispatch targets).
 
-## 3. Triage lanes (§2 of the dispatch)
+## 2. `index.ts` — swap hardcoded 0.88 at the three minute-finalize sites
 
-`routing-config.ts`:
-- Extend `Lane` union with `"growth" | "vision"`.
-- **Re-express the council degradation floor as a ratio, not a literal.** The hardening currently encodes `council_min_chairs: 4` (written when the board was 6). Replace with `council_min_ratio: 0.66` (round up; floor for 6 stays 4, floor for 8 becomes 6) — OR keep an absolute `council_min_chairs` but recompute it from the live `CHAIRS.length + 1 (KNOX)` at call time in `runCouncilWithResynth`. Pick the call-time computation: it's the single seam where seating meets hardening, and a constant will go stale again the next time we seat. Panel ratio stays `panel_min_chairs: 2` (absolute is correct for variable panel sizes).
+Replace the floor reads at:
 
-`triage.ts`:
-- Add `"growth"` and `"vision"` to `VALID_LANES`.
-- Extend lane definitions in `TRIAGE_SYSTEM` (FELIX ← demand/GTM/positioning/channels/pricing-for-growth/retention/NRR; AIMS ← vision/direction/strategy kernel/where-to-play/focus/Power/flywheel/self-executing master plan/multi-horizon).
-- Extend `laneToId`: `growth → "felix"`, `vision → "aims"`.
-- Extend `FULL_BOARD_IDS` with `"felix"`, `"aims"` so `fullBoardWithLegal` returns all 8 ids for Gate A0/A1.
-- Gate A2/B filler heuristic: `growth → finance`, `vision → ops` (default), **but rule (d) below overrides this on any one-way-door — Lucius is always added.**
+- `runCouncilWithResynth` (~line 1483) — council post-synthesis gate
+- `runPanelWithResynth` (~line 1529) — panel post-synthesis gate
+- solo finalize (~line 1689) — `belowFloor` check before return
 
-## 4. Seam rules (§3 + user refinements)
+Each now reads `PLATFORM_QUALITY.eps_floor` / `.rho_floor`. The degraded-minute caps and the Abe-drop rigor cap stay untouched (separate honesty caps, not aptitude floors).
 
-All four enforced inside `runCouncilWithResynth` / `runPanelWithResynth` post-Stage-1, before Stage-3 synthesis prompt assembly. **Primary trigger: the triage signal (`primary_lane`, `one_way_door`, `stakes`). Regex on question text is supplemental, not primary.** Every fire stamps `metadata.seam_fired: [...]` plus its specific metadata key, so the 30-day watch has tuning data.
+## 3. Escalate-below-floor ladder (uniform platform behavior)
 
-a. **AIMS revenue-goal first-test → FELIX (biased toward firing).** Primary trigger: `triage.primary_lane === "growth"` OR (`secondary_lanes.includes("growth")` AND question matches a revenue-number supplement regex — "close $", "hit the number", "Nx revenue", "this quarter / this year"). When the trigger fires AND AIMS is in the chair set, the Stage-3 synthesis prompt forces Leo to print `Frame-choice: [NEW DIRECTION → AIMS leads | PULL HARDER → FELIX leads]` in the minute body and defaults the recommendation owner to FELIX unless AIMS's contribution explicitly flagged a genuine new-direction need (parsed from AIMS's Stage-1 output). **Bias rule: when ambiguous, default to FELIX-leads** — the dangerous miss is AIMS seizing a pull-harder ask. Stamp `metadata.frame_choice = { ruling: "felix" | "aims", source: "triage" | "regex" | "aims_flag" }`.
+New `escalate.ts` exporting `maybeEscalateBelowFloor({ minute, mode, triage, metrics, hops, rerun })`. Invoked **after** synthesis and the degraded/Abe-cap pass, **before** returning the minute.
 
-b. **AIMS → Leo handoff required.** When AIMS is a contributing chair, the synthesis prompt mandates a "Leo handoff" section in the minute body. If absent from the parsed minute, push `"leo"` into `metrics.missing_lanes` and stamp `metadata.handoff_missing = true`.
+Fires only when all hold:
+- `PLATFORM_QUALITY.escalate_below_floor === true`
+- minute is below `eps_floor` or `rho_floor`
+- `minute.degraded !== true` (degraded path already capped honestly)
+- `stakesAtLeast(triage.stakes, PLATFORM_QUALITY.escalate_min_stakes)`
+- `hops < PLATFORM_QUALITY.max_escalations`
 
-c. **FELIX pricing → Lucius co-sign.** Primary trigger: FELIX contributing AND FELIX's Stage-1 output flags a price/discount move (parse FELIX's contribution for pricing keywords + a margin/cash impact signal). Supplemental regex on question text. If Lucius isn't seated, push `"lucius"` to `missing_lanes` and append a co-sign line to the synthesis prompt. Stamp `metadata.pricing_cosign = { caller: "felix", to: "lucius" }`.
+Gap classification:
+- **Data-gap** — `metrics.closing_action === "needs_external_info"` OR Lucius/any chair flagged external info needed → **do not escalate**. Return capped; stamp `below_floor_terminal = { capped: true, gap_type: "data", final_eps, final_rho, ask }`. The synthesis "needs" line already names the missing inputs; re-surface in the stamp.
+- **Reasoning-gap** — `missing_lanes` non-empty OR cross-lane (`triage.secondary_lanes.length > 0`) answered solo/panel → escalate one tier: `solo → panel(addedLanes = missing_lanes)`, `panel → council`. Re-run through the existing hardened path with `hops + 1`. Stamp `escalations.push({ from_mode, to_mode, reason: "reasoning_gap", cleared })`. Re-check floor after.
 
-d. **Survival-risking one-way-door → Lucius + full-panel co-sign (hardened trigger).**
-  - **Always-add Lucius:** when `triage.one_way_door === true`, ensure Lucius is in the chair set regardless of primary_lane (closes the vision-one-way-door hole where the filler heuristic would pull Leo instead of Lucius). Implement at the chair-assembly seam in `runPanelWithResynth` — before the chair list is finalized, if `triage.one_way_door && !chairIds.includes("lucius")` then push `"lucius"`.
-  - **Severity-first trigger:** survival-risk fires when (Lucius's contribution has `severity >= "high"`) OR (`risk_flags` keyword match for `survival|existential|insolvency|cash-out|exhausts runway|runway gone|out of cash`) OR (Lucius's `closing_action === "needs_external_info"` AND he names a survival concern in his note). Severity is the primary signal; keyword set is supplemental and expanded for paraphrase coverage.
-  - When fired, promote the run to council mode (add any missing seated chairs through the hardened `Promise.allSettled` path so a chair drop still degrades cleanly) and stamp `metadata.cosign = { caller: "lucius", panel: [...participating_chairs], trigger: "severity" | "keyword" | "closing_action" }`.
+Bounded by `max_escalations` (default 1). If still below floor: return capped with `below_floor_terminal.gap_type` set and the last `escalations[].cleared = false`. Never loops, never mutates ε/ρ.
 
-## 5. 30-day governance trip-wires (§4 · runtime stamps)
+## 4. Eval pass-mark plumbing (latent until harness ships)
 
-Surface in `metadata` on every minute (no schema migration needed — fits existing JSONB column):
+`agents/manifest.ts`: add optional `eval_score?: number` and `eval_scored_at?: string`. Today: absent — behavior unchanged.
 
-- `metadata.seam_fired: string[]` — array of `"frame_choice" | "handoff_required" | "pricing_cosign" | "survival_cosign"` for every seam that fired on this run. Single tuning signal for the 30-day watch.
-- `metadata.frame_choice`, `metadata.pricing_cosign`, `metadata.cosign`, `metadata.handoff_missing` — per-rule detail as above.
-- `metadata.boundary_flags` — array of `{chair, opined_on_lane, missing_handoff}` from KNOX boundary-bleed pass: when KNOX is in the chair set, parse each chair's contribution for out-of-lane opinion without a handoff.
+New `agents/eval-gate.ts`:
+- `canSeat(entry)` — returns `false` only when `entry.eval_score != null && entry.eval_score < PLATFORM_QUALITY.eval_seat_mark`. Absent score = unblocked (preserves today's Brahan-seats-it gate; this adds an objective precondition on top).
+- `retainCheck(entry)` — when `eval_score != null && < eval_retain_mark`, returns `{ decertification_candidate: true }` for our internal alert path. Never auto-pulls. Never surfaced to client.
 
-14-day fallback + 30-day KNOX memo are operational procedures, documented in `MIGRATIONS.md` under "FELIX/AIMS seating · 30-day watch."
+Wire `canSeat` into `findEnabledAgent` / `listSeatedAgentsPublic`. With no scores in manifest today, no behavior change.
 
-## 6. Acceptance probes (§5 + verify items)
+## 5. Internal-only observability stamps
 
-Via `supabase--curl_edge_functions` against `/mcp-gateway`:
+Attach to the run's `metrics`/internal `metadata` channel (the `mcp_usage_events.metadata` bag — vault-side telemetry, never rendered in the client-facing minute body or `show_council`):
 
-1. `show_council` → 8-seat roster including FELIX + AIMS.
-2. Pure demand/pricing question → routes solo to FELIX, returns minute.
-3. "Where should this business go in 3 years" → routes solo to AIMS, minute includes Leo handoff section.
-4. "How do we close $X this quarter" → AIMS Frame-Choice line visible, FELIX leads (no double-ownership). `metadata.frame_choice.ruling === "felix"`, `metadata.seam_fired.includes("frame_choice")`.
-5. `convene_council` with existential question → full 8-chair minute, dissent attributed to Abe, no `internal_error`. **Floor check: forced-drop of 2 chairs (8 → 6 surviving) stays GREEN; forced-drop of 3 (8 → 5 surviving) triggers degraded-minute path with the new ratio floor.** Forced-Abe-drop still caps rigor ≤ 0.55.
-6. **One-way-door vision question** ("should we shut down the consumer line?") → Lucius is in the chair set even though primary_lane is vision; if Lucius flags severity high, `metadata.cosign` populated.
-7. **Verify (no fix):**
-   - AIMS-as-chair contribution does NOT print the final `Frame-choice:` line itself — Leo prints it at synthesis (inspect Stage-1 trace vs final minute).
-   - Regression set: 5 ordinary ops questions still route to Leo, 5 ordinary finance questions still route to Lucius (growth/vision lanes don't over-capture). 6-seat solo/panel summons unchanged in shape.
+- `quality_standard_version: "current" | "elevated"`
+- `floor_applied: { eps_floor, rho_floor }`
+- `escalations: [{ from_mode, to_mode, reason: "reasoning_gap", cleared }]` (empty array when none fired)
+- `below_floor_terminal: { capped, gap_type: "reasoning" | "data", final_eps, final_rho, ask? }` (only when returning still-capped)
 
-## 7. Out of scope
+Audit pass: confirm none of these keys leak into the minute schema returned to clients or into `show_council`'s public roster output. They live only in our usage-events ledger.
 
-- Abe's visibility in `show_council`.
-- Triage threshold dials beyond adding the two lanes.
-- Minute contract / tenant layer changes.
-- Front-end / consent / brand surface beyond the manual chiefofbusiness.ai push after gateway acceptance.
+## 6. Files touched
 
-## Files touched
+- edit: `supabase/functions/mcp-council/routing-config.ts` (add `QUALITY_STANDARD` + exported `PLATFORM_QUALITY` constant + version tag)
+- edit: `supabase/functions/mcp-council/index.ts` (swap floor reads at 3 sites, invoke escalation helper, stamp internal telemetry, audit that nothing leaks to client surface)
+- new: `supabase/functions/mcp-council/escalate.ts` (gap classifier + one-hop ladder)
+- new: `supabase/functions/mcp-council/agents/eval-gate.ts` (latent seat/retain checks; no-op without scores)
+- edit: `supabase/functions/mcp-council/agents/manifest.ts` (optional `eval_score` / `eval_scored_at` fields)
+- edit: `supabase/functions/mcp-council/MIGRATIONS.md` (raise-the-bar standard · how Brahan flips the one line · explicit non-feature for clients)
 
-- new: `council/felix.ts`, `council/aims.ts`, `agents/felix.ts`, `agents/aims.ts`
-- edit: `index.ts` (CHAIRS, both SINGLE_BODIES, chairForSpecialistId name map, seam-rule helpers, synthesis-prompt injection, metadata stamps, **ratio-based council floor computed from `CHAIRS.length + 1`**, always-add-Lucius on one_way_door)
-- edit: `agents/manifest.ts` (two new single entries)
-- edit: `routing-config.ts` (Lane union + growth/vision; council floor as ratio or call-time computation)
-- edit: `triage.ts` (lane vocab, laneToId, FULL_BOARD_IDS, filler heuristic)
-- edit: `MIGRATIONS.md` (30-day watch notes)
+Explicitly untouched: `tenants.ts`, any entitlement field, any client-facing component (`StatusBadge`, minute renderers, `ActionInspectorDrawer`, brand surfaces).
+
+## 7. Acceptance (curl `/mcp-gateway` with `PLATFORM_QUALITY` temporarily pointed at `.elevated`)
+
+1. **No client surface**: minute JSON returned to client contains no `quality_standard_version` / `floor_applied` / `escalations` / `below_floor_terminal`. `show_council` output unchanged.
+2. **No per-tenant variance**: two distinct tenant tokens hitting the same borderline question get identical floor behavior — no entitlement/tier branch exists in code (grep confirms zero references to a quality field on `TenantContext`).
+3. **Higher floor caps more**: borderline question that landed ε 0.90 clean under `current` returns capped (0.90 < 0.92) under `elevated` with the gap named; ε unchanged.
+4. **Reasoning-gap escalates once**: cross-lane solo below-floor escalates one tier (solo→panel or panel→council), re-deliberates, then clears or returns capped. Internal telemetry: `escalations.length === 1`.
+5. **Data-gap does NOT escalate**: `closing_action: "needs_external_info"` returns capped with named ask; `escalations === []`, `below_floor_terminal.gap_type === "data"`.
+6. **Bounded**: no run exceeds `max_escalations`; no loops; latency stays sane.
+7. **Degraded interaction**: chairs-dropped run does not escalate — returns the degraded minute with the existing cap.
+8. **Eval gate latent**: with no `eval_score` in manifest, all seats remain seated. Planting a low score on a test entry blocks seating via `canSeat` and surfaces `decertification_candidate` via `retainCheck` (internal only).
+
+Once green, the only activation step is Brahan flipping `PLATFORM_QUALITY = QUALITY_STANDARD.elevated` and `PLATFORM_QUALITY_VERSION = "elevated"`, then redeploy. Global, uniform, no client step.
+
+## Out of scope
+
+Per-client / per-tier quality control · quorum/degradation ratio · minute contract · triage dials · auto-decertification · building the eval harness itself.
