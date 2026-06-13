@@ -575,75 +575,165 @@ async function runCouncilWithResynth(
     resynth_ms: 0,
     fast_resynth_used: false,
     boundary_regen: false,
+    dropped_chairs: [],
+    degraded: false,
+    dissent_status: "ok",
   };
 
   const ctx = getTenantContext(tenant);
   const knoxPosture = computeKnoxPosture(ctx.active_matters, question);
   const seatBody = renderTenantPlaceholders(KNOX_MD, ctx, knoxPosture);
   const legalChair = {
+    id: "knox",
     name: "KNOX",
     system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
   const allChairs = [...CHAIRS, legalChair];
-  metrics.chairs_count = allChairs.length;
+  const totalSeated = allChairs.length;
+  metrics.chairs_count = totalSeated;
 
+  const qhash = await hashQuestion(question);
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
-  const stage1Raw = await Promise.all(
+  // §1 · per-chair isolation: one chair fault must NOT down the board.
+  const stage1Settled = await Promise.allSettled(
     allChairs.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((res) => ({ name: c.name, res })),
+      }).then((res) => ({ id: c.id, name: c.name, res })),
     ),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
-  for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
-  const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
+  const stage1Fulfilled: Array<{ id: string; name: string; text: string }> = [];
+  const dropped: DroppedChair[] = [];
+  for (let i = 0; i < stage1Settled.length; i++) {
+    const s = stage1Settled[i];
+    const seat = allChairs[i];
+    if (s.status === "fulfilled") {
+      passes.push({ model: s.value.res.model, usage: s.value.res.usage });
+      stage1Fulfilled.push({ id: s.value.id, name: s.value.name, text: s.value.res.text });
+    } else {
+      const err = s.reason;
+      const error_class = err?.name ?? "Error";
+      const message = String(err?.message ?? err).slice(0, 300);
+      console.warn("council_chair_dropped", JSON.stringify({
+        seat_id: seat.id, seat_name: seat.name, tenant, mode: "council",
+        question_hash: qhash, error_class, message,
+      }));
+      dropped.push({ id: seat.id, name: seat.name, reason: `${error_class}: ${message}` });
+    }
+  }
+  metrics.dropped_chairs = dropped;
+
+  // §2 · degradation floor (council ≥ floor of total). Only throw when zero
+  // chairs survived AND synthesis cannot run at all.
+  const minSurviving = ROUTING_CONFIG.council_min_chairs;
+  const countFloorBreached = stage1Fulfilled.length < minSurviving;
+  if (stage1Fulfilled.length === 0) {
+    throw new Error("stage1_total_failure");
+  }
+
+  const stage1Results = stage1Fulfilled.map((r) => ({ name: r.name, text: r.text }));
+
+  // Horizon · isolate too; on failure synthesize without horizon block.
+  let horizon = "";
   const horizonT0 = Date.now();
-  const horizonRes = await callAnthropic({
-    model: MODEL_CHAIR,
-    system: `${preamble}\n\n${LEO_MD}`,
-    user: horizonUserPrompt(question, context, stage1Results),
-    maxTokens: MAX_TOKENS_CHAIR,
-  });
+  try {
+    const horizonRes = await callAnthropic({
+      model: MODEL_CHAIR,
+      system: `${preamble}\n\n${LEO_MD}`,
+      user: horizonUserPrompt(question, context, stage1Results),
+      maxTokens: MAX_TOKENS_CHAIR,
+    });
+    passes.push({ model: horizonRes.model, usage: horizonRes.usage });
+    horizon = horizonRes.text;
+  } catch (err) {
+    console.warn("council_horizon_dropped", JSON.stringify({
+      tenant, mode: "council", question_hash: qhash,
+      error_class: (err as any)?.name ?? "Error",
+      message: String((err as any)?.message ?? err).slice(0, 300),
+    }));
+    horizon = "Horizon pass unavailable this run · synthesizer will operate without anticipatory-horizon input.";
+  }
   metrics.horizon_ms = Date.now() - horizonT0;
-  passes.push({ model: horizonRes.model, usage: horizonRes.usage });
-  const horizon = horizonRes.text;
 
-  const participating = ["Leo", "Abe", "Alfred", "Marcus", "Lucius", legalChair.name];
+  // §4 · participating reflects actual contributors. Always include Leo
+  // (synthesizer) even if Stage-1 Leo dropped, per the directive.
+  const participatingSet = new Set(stage1Fulfilled.map((r) => r.name));
+  participatingSet.add("Leo");
+  const participating = Array.from(participatingSet);
 
+  const extraDirective = buildDegradedDirective(dropped);
+  metrics.degraded = countFloorBreached || dropped.length > 0;
+  metrics.dissent_status = dropped.some((d) => d.id === ABE_ID) ? "unavailable" : "ok";
+
+  // §3 · synthesize wrapped with one repair retry. Any failure on the repair
+  // pass too → return a fallback degraded minute instead of throwing.
   const synthesize = async (reinforce: boolean) => {
     const t0 = Date.now();
-    const res = await callAnthropic({
-      model: MODEL_SYNTHESIS,
-      system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
-      user: synthesisUserPrompt({
-        question, context,
-        contributions: stage1Results,
-        horizon, freshness, reinforce,
-      }),
-      maxTokens: MAX_TOKENS_SYNTH,
+    const baseUser = synthesisUserPrompt({
+      question, context,
+      contributions: stage1Results,
+      horizon, freshness, reinforce, extraDirective,
     });
-    const elapsed = Date.now() - t0;
-    const pass: Pass = { model: res.model, usage: res.usage };
-    const minute = validateMinute(extractJson(res.text), freshness, participating);
-    return { minute, pass, elapsed };
+    const localPasses: Pass[] = [];
+
+    const tryOnce = async (user: string) => {
+      const res = await callAnthropic({
+        model: MODEL_SYNTHESIS,
+        system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
+        user,
+        maxTokens: MAX_TOKENS_SYNTH,
+      });
+      localPasses.push({ model: res.model, usage: res.usage });
+      return validateMinute(extractJson(res.text), freshness, participating);
+    };
+
+    let rawMinute: MinuteShape;
+    try {
+      rawMinute = await tryOnce(baseUser);
+    } catch (e1) {
+      const cls = (e1 as any)?.message;
+      if (cls === "minute_unparseable" || cls === "minute_shape") {
+        const repairUser = `${baseUser}\n\nYour previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary.`;
+        try {
+          rawMinute = await tryOnce(repairUser);
+        } catch (e2) {
+          console.warn("council_synthesis_fallback", JSON.stringify({
+            tenant, mode: "council", question_hash: qhash,
+            first_error: cls,
+            second_error: (e2 as any)?.message ?? String(e2),
+          }));
+          rawMinute = buildSynthesisFallbackMinute(freshness, participating, dropped);
+        }
+      } else {
+        throw e1;
+      }
+    }
+
+    const finalMinute = applyDegradedShape(rawMinute, {
+      dropped,
+      countFloorBreached,
+      totalSeated,
+      surviving: stage1Fulfilled.length,
+    });
+    return { minute: finalMinute, passes: localPasses, elapsed: Date.now() - t0 };
   };
 
   const first = await synthesize(false);
   metrics.synth1_ms = first.elapsed;
-  passes.push(first.pass);
+  for (const p of first.passes) passes.push(p);
   let minute = first.minute;
 
   if (hasBoundaryViolation(JSON.stringify(minute))) {
     metrics.boundary_regen = true;
     const second = await synthesize(true);
     metrics.synth2_ms = second.elapsed;
-    passes.push(second.pass);
+    for (const p of second.passes) passes.push(p);
     if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
     }
@@ -654,12 +744,18 @@ async function runCouncilWithResynth(
     const next = await synthesize(true);
     metrics.resynth_ms = next.elapsed;
     metrics.fast_resynth_used = true;
-    return { minute: next.minute, pass: next.pass, resynth_ms: next.elapsed };
+    for (const p of next.passes.slice(1)) passes.push(p);
+    return {
+      minute: next.minute,
+      pass: next.passes[0],
+      resynth_ms: next.elapsed,
+    };
   };
 
   metrics.calls_total = passes.length;
   return { minute, passes, metrics, resynth };
 }
+
 
 
 // ── Single-agent runner ────────────────────────────────────────────────────
