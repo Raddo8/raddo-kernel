@@ -914,6 +914,8 @@ function chairForSpecialistId(
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     marcus: MARCUS_AGENT_MD,
+    felix: FELIX_AGENT_MD,
+    aims: AIMS_AGENT_MD,
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
@@ -929,7 +931,10 @@ function chairForSpecialistId(
     id === "alfred" ? "Alfred" :
     id === "marcus" ? "Marcus" :
     id === "knox" ? "KNOX" :
+    id === "felix" ? "FELIX" :
+    id === "aims" ? "AIMS" :
     id.toUpperCase();
+
   return {
     id,
     name,
