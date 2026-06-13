@@ -3,8 +3,10 @@
 //
 // Legal seat: single seat (KNOX) for every tenant — LEXI removed
 // 2026-06-09. No tier remap, no legal_seat field.
+import { canSeat } from "./eval-gate.ts";
 
 export type AgentKind = "council" | "single";
+
 
 export interface AgentEntry {
   id: string;
