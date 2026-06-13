@@ -809,9 +809,70 @@ async function runCouncilWithResynth(
   participatingSet.add("Leo");
   const participating = Array.from(participatingSet);
 
-  const extraDirective = buildDegradedDirective(dropped);
+  // Seam-rule trip-wires (FELIX/AIMS dispatch 2026-06-13 §3-§4). Inspect
+  // who actually contributed Stage-1 and the triage signal, then stamp the
+  // metrics + augment the Stage-3 directive.
+  const stage1ById = new Map(stage1Fulfilled.map((r) => ({ ...r })).map((r) => [r.id, r]));
+  const aimsContribution = stage1ById.get("aims")?.text;
+  const felixContribution = stage1ById.get("felix")?.text;
+  const luciusContribution = stage1ById.get("lucius")?.text;
+  const seamFired: NonNullable<ConveneMetrics["seam_fired"]> = [];
+
+  // Seam (a) · revenue-goal first-test → FELIX (biased toward firing).
+  let frameChoiceRuling: "felix" | "aims" | undefined;
+  if (triageDecision && stage1ById.has("aims") && isRevenueGoalQuestion(question, triageDecision)) {
+    const aimsFlaggedNew = aimsFlagsNewDirection(aimsContribution);
+    frameChoiceRuling = aimsFlaggedNew ? "aims" : "felix";
+    seamFired.push("frame_choice");
+    metrics.frame_choice = {
+      ruling: frameChoiceRuling,
+      source: aimsFlaggedNew ? "aims_flag"
+        : triageDecision.primary_lane === "growth" ? "triage" : "regex",
+    };
+  }
+
+  // Seam (b) · AIMS contributing → Leo handoff required in the minute.
+  const requireLeoHandoff = stage1ById.has("aims");
+  if (requireLeoHandoff) seamFired.push("handoff_required");
+
+  // Seam (c) · FELIX pricing move → Lucius co-sign.
+  const pricingCosign = stage1ById.has("felix") && felixPricingMove(question, felixContribution);
+  if (pricingCosign) {
+    seamFired.push("pricing_cosign");
+    metrics.pricing_cosign = { caller: "felix", to: "lucius" };
+  }
+
+  // Seam (d) · survival-risking one-way door → Lucius + panel co-sign.
+  // The always-add-Lucius portion is enforced at chair-assembly in
+  // runPanelWithResynth; in council mode Lucius is always seated already.
+  let survivalCosign = false;
+  if (triageDecision?.one_way_door) {
+    const lucius = luciusFlagsSurvival(luciusContribution);
+    if (lucius.fired) {
+      survivalCosign = true;
+      seamFired.push("survival_cosign");
+      metrics.cosign = {
+        caller: "lucius",
+        panel: stage1Fulfilled.map((r) => r.name),
+        trigger: lucius.trigger,
+      };
+    }
+  }
+
+  if (seamFired.length) metrics.seam_fired = seamFired;
+
+  const seamDirective = buildSeamDirective({
+    frameChoice: frameChoiceRuling,
+    requireLeoHandoff,
+    pricingCosign,
+    survivalCosign,
+  });
+  const degradedDirective = buildDegradedDirective(dropped);
+  const extraDirective = [degradedDirective, seamDirective].filter(Boolean).join("\n\n") || undefined;
+
   metrics.degraded = countFloorBreached || dropped.length > 0;
   metrics.dissent_status = dropped.some((d) => d.id === ABE_ID) ? "unavailable" : "ok";
+
 
   // §3 · synthesize wrapped with one repair retry. Any failure on the repair
   // pass too → return a fallback degraded minute instead of throwing.
