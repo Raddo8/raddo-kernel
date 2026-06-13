@@ -1482,6 +1482,7 @@ async function runCouncilGated(
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
+  quality: QualityTelemetry;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
@@ -1489,8 +1490,9 @@ async function runCouncilGated(
   );
   let minute = firstMinute;
   let iters = 1;
-  const epsMin = ROUTING_CONFIG.floor.eps_min;
-  const rhoMin = ROUTING_CONFIG.floor.rho_min;
+  // Raise-the-Bar · platform-level final floor (vault constant, never per-tenant).
+  const epsMin = PLATFORM_QUALITY.eps_floor;
+  const rhoMin = PLATFORM_QUALITY.rho_floor;
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
@@ -1508,13 +1510,29 @@ async function runCouncilGated(
 
   metrics.calls_total = passes.length;
   metrics.total_ms = Date.now() - t0;
+
+  const quality = newQualityTelemetry();
+  // Council is terminal in the ladder · cannot escalate further. Stamp the
+  // honest terminal cap when we still sit below the platform floor.
+  if (belowFloor && !minute.degraded) {
+    stampTerminalCap(quality, {
+      eps: minute.confidence.epistemic,
+      rho: minute.confidence.rigor,
+      // Treat council-level below-floor as a reasoning-gap by default;
+      // chairs naming external info would surface via the next-pass
+      // recommendation, not via a per-chair closing_action here.
+      gapType: "reasoning",
+    });
+  }
+
   return {
     minute, passes, iters,
     capped: belowFloor,
     gap: belowFloor ? "council_confidence_below_floor" : undefined,
-    metrics,
+    metrics, quality,
   };
 }
+
 
 // ── Confidence-gated panel ────────────────────────────────────────────────
 async function runPanelGated(
