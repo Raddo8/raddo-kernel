@@ -1,106 +1,91 @@
-## Goal
+# Seat FELIX + AIMS onto the hardened Council path (rev 2)
 
-Live re-probe is GREEN — `convene_council` and cross-domain `summon_best_advisor` both return full minutes with dissent attributed to Abe. The earlier `internal_error` was transient (cold-start / deploy propagation). Per the directive: stand down on the bug hunt, apply **Option-2 structural hardening + diagnostics** as the durable fix for that failure class so the next single-chair fault degrades instead of downing the board.
+Seat both new chairs on the multi-advisor path that just shipped. Two new agent files (council/single bodies), wire them into every seat map the council, panel, and solo paths iterate, add their lanes to triage, enforce the four seam rules, and re-express the degradation floor as a ratio so it scales with the 8-seat roster. No changes to the minute contract, triage thresholds, or tenant layer.
 
-Scope: `supabase/functions/mcp-council/index.ts` only. No schema, no UI, no triage/routing changes, no new chairs.
+## 1. New chair bodies (verbatim personas)
 
-## Changes
+Create four files using the existing `council/*.ts` / `agents/*.ts` pattern (each file exports a default string):
 
-### 1. Per-chair isolation in `runCouncilWithResynth` (~line 429) and `runPanelWithResynth` (~line 721)
+- `council/felix.ts`, `council/aims.ts` — chair-mode bodies (Stage-1 prose contribution shape, same framing as the other `council/*.ts` files).
+- `agents/felix.ts`, `agents/aims.ts` — single-mode bodies (single-JSON shape, same framing as `agents/leo.ts`).
 
-Replace the Stage-1 `Promise.all(...callAnthropic(...))` with `Promise.allSettled`. For each fulfilled result, push to `stage1Results`. For each rejected, log structured drop and continue:
+Personas pasted verbatim from the dispatch — every numbered principle and boundary clause preserved exactly. **Chair-mode adaptation (verify):** the persona's final "Output: ... Frame-choice line first ..." instruction is reshaped in `council/aims.ts` so AIMS-as-chair contributes the *frame-choice judgment* (which mode the question is in, plus the diagnosis/direction reasoning) as Stage-1 input. Leo prints the explicit `Frame-choice:` line in the final minute per seam rule (a) — chairs don't author the final-minute line themselves. Same pattern as existing chair bodies: persona spine intact, output framing adjusted for the synthesis stage. Single-mode (`agents/aims.ts`) keeps the persona's original output framing since AIMS *is* the author there.
 
-```ts
-console.warn("council_chair_dropped", JSON.stringify({
-  seat_id, seat_name, tenant, mode, question_hash,
-  error_class: err?.name ?? "Error", message: String(err?.message ?? err).slice(0, 300),
-}));
-```
+## 2. Registry wiring (every seat map · §1 of the dispatch)
 
-Track `dropped_chairs: Array<{id,name,reason}>` on `metrics`.
+`mcp-council/index.ts`:
+- Import `FELIX_MD`, `AIMS_MD`, `FELIX_AGENT_MD`, `AIMS_AGENT_MD`.
+- Append to `CHAIRS` (line 67): FELIX + AIMS. This is what the hardened `Promise.allSettled` in `runCouncilWithResynth` iterates, so per-chair isolation picks them up automatically.
+- Add `felix`/`aims` to BOTH `SINGLE_BODIES` maps (line 164 in `loadAgent`, line 900 in `chairForSpecialistId`).
+- Extend the name lookup in `chairForSpecialistId` (line 915).
 
-### 2. Degradation floor (no throw)
+`mcp-council/agents/manifest.ts`:
+- Add two `kind: "single"` entries (`felix`, `aims`, `enabled: true`) so `findEnabledAgent` resolves them and `listSeatedAgentsPublic` returns the 8-seat roster for `show_council`.
 
-After drops:
-- **council**: require ≥4 of 6 chairs (5 standard + KNOX legal). Below floor → degraded-minute path.
-- **panel**: require ≥2 of N. Below floor → degraded-minute path.
+## 3. Triage lanes (§2 of the dispatch)
 
-Degraded-minute path: still run Stage-2 horizon + Stage-3 synthesis on the surviving contributions, stamp `degraded: true`, list `dropped_chairs` in metadata, cap surfaced confidence (see §5). Do NOT throw `panel_too_small` (line 756) on the degraded branch — only throw if Stage-1 returned zero contributions AND synthesis cannot run at all.
+`routing-config.ts`:
+- Extend `Lane` union with `"growth" | "vision"`.
+- **Re-express the council degradation floor as a ratio, not a literal.** The hardening currently encodes `council_min_chairs: 4` (written when the board was 6). Replace with `council_min_ratio: 0.66` (round up; floor for 6 stays 4, floor for 8 becomes 6) — OR keep an absolute `council_min_chairs` but recompute it from the live `CHAIRS.length + 1 (KNOX)` at call time in `runCouncilWithResynth`. Pick the call-time computation: it's the single seam where seating meets hardening, and a constant will go stale again the next time we seat. Panel ratio stays `panel_min_chairs: 2` (absolute is correct for variable panel sizes).
 
-### 3. Stage-3 synthesis repair retry
+`triage.ts`:
+- Add `"growth"` and `"vision"` to `VALID_LANES`.
+- Extend lane definitions in `TRIAGE_SYSTEM` (FELIX ← demand/GTM/positioning/channels/pricing-for-growth/retention/NRR; AIMS ← vision/direction/strategy kernel/where-to-play/focus/Power/flywheel/self-executing master plan/multi-horizon).
+- Extend `laneToId`: `growth → "felix"`, `vision → "aims"`.
+- Extend `FULL_BOARD_IDS` with `"felix"`, `"aims"` so `fullBoardWithLegal` returns all 8 ids for Gate A0/A1.
+- Gate A2/B filler heuristic: `growth → finance`, `vision → ops` (default), **but rule (d) below overrides this on any one-way-door — Lucius is always added.**
 
-Wrap the existing Stage-3 `callAnthropic` + `validateMinute(extractJson(...))` block (lines ~497–509 council, ~790–802 panel) in a single try/catch. On `minute_unparseable` or `minute_shape`, run ONE repair pass appending to the user prompt:
+## 4. Seam rules (§3 + user refinements)
 
-> "Your previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary."
+All four enforced inside `runCouncilWithResynth` / `runPanelWithResynth` post-Stage-1, before Stage-3 synthesis prompt assembly. **Primary trigger: the triage signal (`primary_lane`, `one_way_door`, `stakes`). Regex on question text is supplemental, not primary.** Every fire stamps `metadata.seam_fired: [...]` plus its specific metadata key, so the 30-day watch has tuning data.
 
-If the repair pass also fails, surface a structured degraded minute using the fallback already defined in `lead-synthesis.ts`, with `degraded: true` and gap `"synthesis_unparseable"`. Never let `minute_shape` / `minute_unparseable` bubble to the gateway as `internal_error` on this path.
+a. **AIMS revenue-goal first-test → FELIX (biased toward firing).** Primary trigger: `triage.primary_lane === "growth"` OR (`secondary_lanes.includes("growth")` AND question matches a revenue-number supplement regex — "close $", "hit the number", "Nx revenue", "this quarter / this year"). When the trigger fires AND AIMS is in the chair set, the Stage-3 synthesis prompt forces Leo to print `Frame-choice: [NEW DIRECTION → AIMS leads | PULL HARDER → FELIX leads]` in the minute body and defaults the recommendation owner to FELIX unless AIMS's contribution explicitly flagged a genuine new-direction need (parsed from AIMS's Stage-1 output). **Bias rule: when ambiguous, default to FELIX-leads** — the dangerous miss is AIMS seizing a pull-harder ask. Stamp `metadata.frame_choice = { ruling: "felix" | "aims", source: "triage" | "regex" | "aims_flag" }`.
 
-### 4. `participating_chairs` reflects actual contributors
+b. **AIMS → Leo handoff required.** When AIMS is a contributing chair, the synthesis prompt mandates a "Leo handoff" section in the minute body. If absent from the parsed minute, push `"leo"` into `metrics.missing_lanes` and stamp `metadata.handoff_missing = true`.
 
-Derive from `stage1Results` after drops:
-```ts
-const participating = stage1Results.map((r) => r.name);
-```
-For council mode include the synthesizing chair (Leo) even if dropped from Stage-1 (Leo authors Stage-3); flag that case in metadata.
+c. **FELIX pricing → Lucius co-sign.** Primary trigger: FELIX contributing AND FELIX's Stage-1 output flags a price/discount move (parse FELIX's contribution for pricing keywords + a margin/cash impact signal). Supplemental regex on question text. If Lucius isn't seated, push `"lucius"` to `missing_lanes` and append a co-sign line to the synthesis prompt. Stamp `metadata.pricing_cosign = { caller: "felix", to: "lucius" }`.
 
-### 5. Degraded ε·ρ honesty cap surfaced in the minute body
+d. **Survival-risking one-way-door → Lucius + full-panel co-sign (hardened trigger).**
+  - **Always-add Lucius:** when `triage.one_way_door === true`, ensure Lucius is in the chair set regardless of primary_lane (closes the vision-one-way-door hole where the filler heuristic would pull Leo instead of Lucius). Implement at the chair-assembly seam in `runPanelWithResynth` — before the chair list is finalized, if `triage.one_way_door && !chairIds.includes("lucius")` then push `"lucius"`.
+  - **Severity-first trigger:** survival-risk fires when (Lucius's contribution has `severity >= "high"`) OR (`risk_flags` keyword match for `survival|existential|insolvency|cash-out|exhausts runway|runway gone|out of cash`) OR (Lucius's `closing_action === "needs_external_info"` AND he names a survival concern in his note). Severity is the primary signal; keyword set is supplemental and expanded for paraphrase coverage.
+  - When fired, promote the run to council mode (add any missing seated chairs through the hardened `Promise.allSettled` path so a chair drop still degrades cleanly) and stamp `metadata.cosign = { caller: "lucius", panel: [...participating_chairs], trigger: "severity" | "keyword" | "closing_action" }`.
 
-Caps below are **defaults · tunable in `routing-config.ts`** (not magic numbers); name them `DEGRADED_EPS_CAP = 0.60`, `DEGRADED_RHO_CAP = 0.55`, `DISSENT_MISSING_RHO_CAP = 0.55`.
+## 5. 30-day governance trip-wires (§4 · runtime stamps)
 
-When `degraded: true`:
-- Cap `confidence.epistemic` at `min(model_eps, DEGRADED_EPS_CAP)` and `confidence.rigor` at `min(model_rho, DEGRADED_RHO_CAP)`.
-- Prepend one short sentence to `recommendation`: `"Degraded board · {N} of {M} chairs contributed this run ({dropped names}). Treat as directional, not authoritative."` Middot, no em-dashes.
-- Add a horizon item naming the missing lens's blind spot.
+Surface in `metadata` on every minute (no schema migration needed — fits existing JSONB column):
 
-### 6. Abe-dropped path: dissent unavailable AND rigor capped
+- `metadata.seam_fired: string[]` — array of `"frame_choice" | "handoff_required" | "pricing_cosign" | "survival_cosign"` for every seam that fired on this run. Single tuning signal for the 30-day watch.
+- `metadata.frame_choice`, `metadata.pricing_cosign`, `metadata.cosign`, `metadata.handoff_missing` — per-rule detail as above.
+- `metadata.boundary_flags` — array of `{chair, opined_on_lane, missing_handoff}` from KNOX boundary-bleed pass: when KNOX is in the chair set, parse each chair's contribution for out-of-lane opinion without a handoff.
 
-**Binding rule:** if Abe is in `dropped_chairs`, treat the run as degraded regardless of whether the §2 chair-count floor was breached. Rationale: the dissent / falsification step is structurally part of rigor; a recommendation that was never stress-tested is by definition less rigorous, and the surfaced ε·ρ must reflect that — not just live in a metadata field.
+14-day fallback + 30-day KNOX memo are operational procedures, documented in `MIGRATIONS.md` under "FELIX/AIMS seating · 30-day watch."
 
-Concretely, when Abe is in `dropped_chairs`:
-- Set `degraded: true` even if N≥4 of 6 (council) or N≥2 (panel).
-- Cap `confidence.rigor` at `min(model_rho, DISSENT_MISSING_RHO_CAP = 0.55)`. Leave `confidence.epistemic` uncapped on this branch unless §5's count-floor cap also fires (then take the stricter of the two).
-- In the Stage-3 prompt, append: `"Abe (dissent chair) did not return this run. Set the `dissent` field to: 'Dissent unavailable this run · Abe dropped ({error_class}). The recommendation has not been falsification-tested; treat the load-bearing assumption as unverified.'"`
-- Stamp `metadata.dissent_status = "unavailable"` and add `dropped_chairs` entry for Abe.
-- Adjust the §5 degraded-recommendation prefix to mention dissent specifically when Abe is the only drop: `"Dissent unavailable this run · the recommendation has not been falsification-tested. Treat as directional, not authoritative."`
+## 6. Acceptance probes (§5 + verify items)
 
-This guarantees the dissent-field text ("the load-bearing assumption is unverified") matches the surfaced confidence read instead of contradicting it.
+Via `supabase--curl_edge_functions` against `/mcp-gateway`:
 
-### 7. Outer wrapper (lines ~1430–1500 gated callers + ~1019/1045/1146 invocations)
+1. `show_council` → 8-seat roster including FELIX + AIMS.
+2. Pure demand/pricing question → routes solo to FELIX, returns minute.
+3. "Where should this business go in 3 years" → routes solo to AIMS, minute includes Leo handoff section.
+4. "How do we close $X this quarter" → AIMS Frame-Choice line visible, FELIX leads (no double-ownership). `metadata.frame_choice.ruling === "felix"`, `metadata.seam_fired.includes("frame_choice")`.
+5. `convene_council` with existential question → full 8-chair minute, dissent attributed to Abe, no `internal_error`. **Floor check: forced-drop of 2 chairs (8 → 6 surviving) stays GREEN; forced-drop of 3 (8 → 5 surviving) triggers degraded-minute path with the new ratio floor.** Forced-Abe-drop still caps rigor ≤ 0.55.
+6. **One-way-door vision question** ("should we shut down the consumer line?") → Lucius is in the chair set even though primary_lane is vision; if Lucius flags severity high, `metadata.cosign` populated.
+7. **Verify (no fix):**
+   - AIMS-as-chair contribution does NOT print the final `Frame-choice:` line itself — Leo prints it at synthesis (inspect Stage-1 trace vs final minute).
+   - Regression set: 5 ordinary ops questions still route to Leo, 5 ordinary finance questions still route to Lucius (growth/vision lanes don't over-capture). 6-seat solo/panel summons unchanged in shape.
 
-`runCouncilGated` / `runPanelGated` already catch and map. Audit the catch sites that currently translate to `internal_error`:
-- Keep `internal_error` ONLY for truly unhandled exceptions (network blowup pre-Stage-1, Anthropic auth fail, etc.).
-- The graceful-degrade path returns a normal minute object with `degraded: true` — flows through the existing success branch, no new error code at the MCP layer.
-- The existing `minute_shape` / `minute_unparseable` mapping in `mcp-gateway` stays as belt-and-suspenders for any path the new repair retry doesn't cover.
+## 7. Out of scope
 
-### 8. Residual rename grep
-
-`rg -n "seatName|spock|iroh|lexi" supabase/functions/mcp-council/` — two known benign hits at `index.ts:751` and `:1121` (defensive `lexi → knox` legacy aliases) plus the Kirk/Spock analogy in `council/abe.ts` (doctrine · leave). Zero runtime references to `spock`/`iroh`/`seatName`. Document the two `lexi` aliases inline as legacy compat.
-
-### 9. Light Option-3 pass (not a blocker)
-
-Post-deploy, via `supabase--curl_edge_functions`:
-- existential-stakes question (forces full board);
-- ≥4-lane question that escalates;
-- forced-single-chair-failure (inject a throw on one chair temporarily) → confirm `degraded: true` minute, never `internal_error`;
-- forced-Abe-drop → confirm rigor capped ≤0.55, `dissent_status: "unavailable"`, and the dissent-field text matches.
-
-## Acceptance
-
-1. `convene_council` returns a full minute with dissent attributed to Abe · participating chairs match contributors.
-2. Cross-domain `summon_best_advisor` (legal + people) returns a panel minute · no `internal_error`.
-3. `show_council` unchanged.
-4. Forced single-chair failure → `degraded: true` minute naming the dropped seat in `recommendation` + `metadata.dropped_chairs` · never `internal_error`.
-5. **Forced Abe-drop with N≥4 surviving chairs → `degraded: true`, `confidence.rigor ≤ 0.55`, `metadata.dissent_status = "unavailable"`, dissent-field text states the recommendation was not falsification-tested.**
-6. Solo `summon_best_advisor` regression: unchanged minute shape, no degraded flag.
-7. Logs show `council_chair_dropped` lines only when a chair actually fails.
-
-## Out of scope
-
-- New Growth/Revenue and Vision/Strategy chairs (separate task · prerequisite is this hardening).
-- Triage thresholds, routing-config dials beyond the three new cap constants, JSON minute contract changes, tenant-context layer.
-- Front-end / consent page / brand surface.
+- Abe's visibility in `show_council`.
+- Triage threshold dials beyond adding the two lanes.
+- Minute contract / tenant layer changes.
+- Front-end / consent / brand surface beyond the manual chiefofbusiness.ai push after gateway acceptance.
 
 ## Files touched
 
-- `supabase/functions/mcp-council/index.ts` (primary).
-- `supabase/functions/mcp-council/routing-config.ts` (add the three tunable cap constants).
+- new: `council/felix.ts`, `council/aims.ts`, `agents/felix.ts`, `agents/aims.ts`
+- edit: `index.ts` (CHAIRS, both SINGLE_BODIES, chairForSpecialistId name map, seam-rule helpers, synthesis-prompt injection, metadata stamps, **ratio-based council floor computed from `CHAIRS.length + 1`**, always-add-Lucius on one_way_door)
+- edit: `agents/manifest.ts` (two new single entries)
+- edit: `routing-config.ts` (Lane union + growth/vision; council floor as ratio or call-time computation)
+- edit: `triage.ts` (lane vocab, laneToId, FULL_BOARD_IDS, filler heuristic)
+- edit: `MIGRATIONS.md` (30-day watch notes)

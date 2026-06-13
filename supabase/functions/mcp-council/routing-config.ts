@@ -34,14 +34,27 @@ export const ROUTING_CONFIG = {
     dissent_missing_rho_cap: 0.55,
   },
   // Multi-advisor degradation floors.
-  council_min_chairs: 4,   // of 6 (5 standard + KNOX)
-  panel_min_chairs: 2,     // of N
+  // Council uses a RATIO of total seated chairs (not a hardcoded literal),
+  // so it scales when the roster grows or shrinks (e.g., FELIX/AIMS seating
+  // moved the board from 6 to 8 · floor moved from 4 to 6 automatically).
+  // Computed at call time in runCouncilWithResynth as Math.ceil(total * ratio).
+  council_min_ratio: 0.66,
+  panel_min_chairs: 2,     // of N · absolute is correct for variable panels
 } as const;
 
 
 export type Stakes = "low" | "medium" | "high" | "existential";
 export type Mode = "solo" | "panel" | "council";
-export type Lane = "legal" | "finance" | "ops" | "trust" | "people" | "strategy";
+export type Lane =
+  | "legal"
+  | "finance"
+  | "ops"
+  | "trust"
+  | "people"
+  | "strategy"
+  | "growth"
+  | "vision";
+
 
 const STAKES_RANK: Record<Stakes, number> = {
   low: 0, medium: 1, high: 2, existential: 3,

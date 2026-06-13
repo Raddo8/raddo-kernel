@@ -47,6 +47,8 @@ import ABE_MD from "./council/abe.ts";
 import ALFRED_MD from "./council/alfred.ts";
 import MARCUS_MD from "./council/marcus.ts";
 import LUCIUS_MD from "./council/lucius.ts";
+import FELIX_MD from "./council/felix.ts";
+import AIMS_MD from "./council/aims.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
@@ -55,6 +57,9 @@ import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
 import MARCUS_AGENT_MD from "./agents/marcus.ts";
+import FELIX_AGENT_MD from "./agents/felix.ts";
+import AIMS_AGENT_MD from "./agents/aims.ts";
+
 
 
 import {
@@ -70,7 +75,10 @@ const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "alfred", name: "Alfred", system: ALFRED_MD },
   { id: "marcus", name: "Marcus", system: MARCUS_MD },
   { id: "lucius", name: "Lucius", system: LUCIUS_MD },
+  { id: "felix", name: "FELIX", system: FELIX_MD },
+  { id: "aims", name: "AIMS", system: AIMS_MD },
 ];
+
 
 
 // ── Generic agent loader ──────────────────────────────────────────────────
@@ -167,7 +175,10 @@ function loadAgent(
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     marcus: MARCUS_AGENT_MD,
+    felix: FELIX_AGENT_MD,
+    aims: AIMS_AGENT_MD,
   };
+
 
   const rawBody = SINGLE_BODIES[entry.id];
   if (!rawBody) return null;
@@ -531,7 +542,133 @@ type ConveneMetrics = {
   dropped_chairs: DroppedChair[];
   degraded: boolean;
   dissent_status: "ok" | "unavailable";
+  // FELIX/AIMS seating · seam-rule trip-wires (2026-06-13 dispatch §4).
+  // Each seam stamps when it fires so the 30-day watch has tuning data.
+  seam_fired?: Array<"frame_choice" | "handoff_required" | "pricing_cosign" | "survival_cosign">;
+  frame_choice?: {
+    ruling: "felix" | "aims";
+    source: "triage" | "regex" | "aims_flag";
+  };
+  pricing_cosign?: { caller: "felix"; to: "lucius" };
+  cosign?: {
+    caller: "lucius";
+    panel: string[];
+    trigger: "severity" | "keyword" | "closing_action";
+  };
+  handoff_missing?: boolean;
 };
+
+// ── Seam-rule trigger helpers (FELIX/AIMS dispatch · 2026-06-13) ──────────
+// Primary trigger is the triage signal; regex on question text is supplemental.
+// Each helper is pure so the seam-rule wiring stays auditable.
+
+const REVENUE_GOAL_RE =
+  /\b(close|hit|land|book)\b.{0,40}\$?\d|\bhit the number\b|\b\d+x\b.{0,30}\b(revenue|arr|mrr)\b|\bthis (quarter|year|q[1-4])\b/i;
+
+function isRevenueGoalQuestion(question: string, t: TriageDecision): boolean {
+  // Primary: triage flagged growth as the primary lane.
+  if (t.primary_lane === "growth") return true;
+  // Supplemental: growth secondary AND regex hit on question text.
+  if (t.secondary_lanes.includes("growth") && REVENUE_GOAL_RE.test(question)) return true;
+  return false;
+}
+
+const PRICING_RE = /\b(price|pricing|discount|list[- ]price|margin|packaging|tier|cannibaliz)/i;
+
+function felixPricingMove(question: string, felixContribution?: string): boolean {
+  // Primary: FELIX's own contribution names a pricing move.
+  if (felixContribution && PRICING_RE.test(felixContribution)) return true;
+  // Supplemental: question text mentions pricing/discount.
+  if (PRICING_RE.test(question)) return true;
+  return false;
+}
+
+const SURVIVAL_RE =
+  /\b(survival|existential|insolvency|insolvent|cash-?out|exhaust(?:s|ed)? runway|runway gone|out of cash|bankrupt|wind(?:s|ed)? down|shut(?:s|down)?)\b/i;
+
+// Lucius (when contributing) flagged a survival risk · severity-first, regex
+// supplemental. Reads Lucius's Stage-1 prose contribution (panel/council).
+function luciusFlagsSurvival(luciusContribution?: string): {
+  fired: boolean;
+  trigger: "severity" | "keyword" | "closing_action";
+} {
+  if (!luciusContribution) return { fired: false, trigger: "severity" };
+  // Stage-1 contribution is prose; look for explicit severity tagging and
+  // for the keyword set. Severity-first when the chair surfaced it inline.
+  if (/\bseverity\b\s*[:·-]\s*(high|critical)/i.test(luciusContribution)) {
+    return { fired: true, trigger: "severity" };
+  }
+  if (SURVIVAL_RE.test(luciusContribution)) {
+    return { fired: true, trigger: "keyword" };
+  }
+  if (/\bneeds[_ -]external[_ -]info\b/i.test(luciusContribution) &&
+      /\b(survival|runway|cash|insolven)/i.test(luciusContribution)) {
+    return { fired: true, trigger: "closing_action" };
+  }
+  return { fired: false, trigger: "severity" };
+}
+
+// Compose the synthesis-prompt directive from the seam rules that fired.
+// Concatenated onto the existing degraded directive so we keep one extra
+// instruction block instead of N stacked overrides.
+function buildSeamDirective(opts: {
+  frameChoice?: "felix" | "aims";
+  requireLeoHandoff: boolean;
+  pricingCosign: boolean;
+  survivalCosign: boolean;
+}): string | undefined {
+  const blocks: string[] = [];
+  if (opts.frameChoice) {
+    const owner = opts.frameChoice === "felix" ? "FELIX leads" : "AIMS leads";
+    const tag = opts.frameChoice === "felix" ? "PULL HARDER" : "NEW DIRECTION";
+    blocks.push(
+      `SEAM · FRAME-CHOICE (revenue-goal first-test): Print the line ` +
+      `"Frame-choice: ${tag} → ${owner}" verbatim at the TOP of the ` +
+      `"recommendation" field. The recommendation owner is ${opts.frameChoice.toUpperCase()}. ` +
+      `Default is PULL HARDER → FELIX leads unless AIMS's Stage-1 contribution explicitly flagged ` +
+      `a genuine new-direction need; if AIMS did flag it, set NEW DIRECTION → AIMS leads instead.`
+    );
+  }
+  if (opts.requireLeoHandoff) {
+    blocks.push(
+      `SEAM · LEO HANDOFF (AIMS-contributing): The minute MUST include a ` +
+      `"Leo handoff" section in the "recommendation" field — a sequenced, ` +
+      `owner-assigned backlog deriving the next 30/60/90 day moves. AIMS never ` +
+      `owns run-the-business mechanics solo. If you cannot produce a backlog, ` +
+      `state explicitly that the handoff is missing.`
+    );
+  }
+  if (opts.pricingCosign) {
+    blocks.push(
+      `SEAM · PRICING CO-SIGN (FELIX pricing move): Any list-price or ` +
+      `discount change with material margin or cash impact REQUIRES Lucius ` +
+      `co-sign. Name the Lucius co-sign in the "recommendation" field (e.g. ` +
+      `"co-signed by Lucius on margin floor / cash impact"). Do not ship the ` +
+      `pricing recommendation without it.`
+    );
+  }
+  if (opts.survivalCosign) {
+    blocks.push(
+      `SEAM · SURVIVAL CO-SIGN (one-way door · Lucius flagged survival risk): ` +
+      `Open the "recommendation" with "Survival-risking one-way door · ` +
+      `co-signed by Lucius and the full panel." The minute speaks for the ` +
+      `whole panel, not the lead chair alone.`
+    );
+  }
+  if (!blocks.length) return undefined;
+  return blocks.join("\n\n");
+}
+
+// Inspect AIMS's Stage-1 contribution for an explicit new-direction flag.
+// AIMS-as-chair contributes the frame-choice JUDGMENT in prose; Leo prints
+// the final Frame-choice line at synthesis. Bias: default to PULL HARDER
+// (FELIX leads); only flip to NEW DIRECTION when AIMS made it explicit.
+function aimsFlagsNewDirection(aimsContribution?: string): boolean {
+  if (!aimsContribution) return false;
+  return /\bnew direction\b/i.test(aimsContribution) &&
+    !/\bpull harder\b/i.test(aimsContribution);
+}
+
 
 
 async function runCouncil(
@@ -539,8 +676,9 @@ async function runCouncil(
   context: string,
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runCouncilWithResynth(question, context, clientContext, tenant);
+  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision);
   return { minute: r.minute, passes: r.passes };
 }
 
@@ -555,12 +693,14 @@ async function runCouncilWithResynth(
   context: string,
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
   metrics: ConveneMetrics;
   resynth: () => Promise<{ minute: MinuteShape; pass: Pass; resynth_ms: number }>;
 }> {
+
   const freshness = new Date().toISOString();
   const passes: Pass[] = [];
   const preamble = renderPreamble(clientContext);
@@ -629,13 +769,15 @@ async function runCouncilWithResynth(
   }
   metrics.dropped_chairs = dropped;
 
-  // §2 · degradation floor (council ≥ floor of total). Only throw when zero
-  // chairs survived AND synthesis cannot run at all.
-  const minSurviving = ROUTING_CONFIG.council_min_chairs;
+  // §2 · degradation floor (council ratio-based · scales with roster size).
+  // 8 chairs → ceil(8 * 0.66) = 6; 6 chairs → ceil(6 * 0.66) = 4. Computed
+  // at call time so seating new chairs doesn't leave a stale literal behind.
+  const minSurviving = Math.max(2, Math.ceil(totalSeated * ROUTING_CONFIG.council_min_ratio));
   const countFloorBreached = stage1Fulfilled.length < minSurviving;
   if (stage1Fulfilled.length === 0) {
     throw new Error("stage1_total_failure");
   }
+
 
   const stage1Results = stage1Fulfilled.map((r) => ({ name: r.name, text: r.text }));
 
@@ -667,9 +809,70 @@ async function runCouncilWithResynth(
   participatingSet.add("Leo");
   const participating = Array.from(participatingSet);
 
-  const extraDirective = buildDegradedDirective(dropped);
+  // Seam-rule trip-wires (FELIX/AIMS dispatch 2026-06-13 §3-§4). Inspect
+  // who actually contributed Stage-1 and the triage signal, then stamp the
+  // metrics + augment the Stage-3 directive.
+  const stage1ById = new Map(stage1Fulfilled.map((r) => ({ ...r })).map((r) => [r.id, r]));
+  const aimsContribution = stage1ById.get("aims")?.text;
+  const felixContribution = stage1ById.get("felix")?.text;
+  const luciusContribution = stage1ById.get("lucius")?.text;
+  const seamFired: NonNullable<ConveneMetrics["seam_fired"]> = [];
+
+  // Seam (a) · revenue-goal first-test → FELIX (biased toward firing).
+  let frameChoiceRuling: "felix" | "aims" | undefined;
+  if (triageDecision && stage1ById.has("aims") && isRevenueGoalQuestion(question, triageDecision)) {
+    const aimsFlaggedNew = aimsFlagsNewDirection(aimsContribution);
+    frameChoiceRuling = aimsFlaggedNew ? "aims" : "felix";
+    seamFired.push("frame_choice");
+    metrics.frame_choice = {
+      ruling: frameChoiceRuling,
+      source: aimsFlaggedNew ? "aims_flag"
+        : triageDecision.primary_lane === "growth" ? "triage" : "regex",
+    };
+  }
+
+  // Seam (b) · AIMS contributing → Leo handoff required in the minute.
+  const requireLeoHandoff = stage1ById.has("aims");
+  if (requireLeoHandoff) seamFired.push("handoff_required");
+
+  // Seam (c) · FELIX pricing move → Lucius co-sign.
+  const pricingCosign = stage1ById.has("felix") && felixPricingMove(question, felixContribution);
+  if (pricingCosign) {
+    seamFired.push("pricing_cosign");
+    metrics.pricing_cosign = { caller: "felix", to: "lucius" };
+  }
+
+  // Seam (d) · survival-risking one-way door → Lucius + panel co-sign.
+  // The always-add-Lucius portion is enforced at chair-assembly in
+  // runPanelWithResynth; in council mode Lucius is always seated already.
+  let survivalCosign = false;
+  if (triageDecision?.one_way_door) {
+    const lucius = luciusFlagsSurvival(luciusContribution);
+    if (lucius.fired) {
+      survivalCosign = true;
+      seamFired.push("survival_cosign");
+      metrics.cosign = {
+        caller: "lucius",
+        panel: stage1Fulfilled.map((r) => r.name),
+        trigger: lucius.trigger,
+      };
+    }
+  }
+
+  if (seamFired.length) metrics.seam_fired = seamFired;
+
+  const seamDirective = buildSeamDirective({
+    frameChoice: frameChoiceRuling,
+    requireLeoHandoff,
+    pricingCosign,
+    survivalCosign,
+  });
+  const degradedDirective = buildDegradedDirective(dropped);
+  const extraDirective = [degradedDirective, seamDirective].filter(Boolean).join("\n\n") || undefined;
+
   metrics.degraded = countFloorBreached || dropped.length > 0;
   metrics.dissent_status = dropped.some((d) => d.id === ABE_ID) ? "unavailable" : "ok";
+
 
   // §3 · synthesize wrapped with one repair retry. Any failure on the repair
   // pass too → return a fallback degraded minute instead of throwing.
@@ -739,6 +942,13 @@ async function runCouncilWithResynth(
     }
     minute = second.minute;
   }
+
+  // Seam (b) post-check · if AIMS contributed, the minute MUST mention a
+  // Leo handoff. Stamp the trip-wire when absent so the dashboard can flag.
+  if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
+    metrics.handoff_missing = true;
+  }
+
 
   const resynth = async () => {
     const next = await synthesize(true);
@@ -903,6 +1113,8 @@ function chairForSpecialistId(
     leo: LEO_AGENT_MD,
     alfred: ALFRED_AGENT_MD,
     marcus: MARCUS_AGENT_MD,
+    felix: FELIX_AGENT_MD,
+    aims: AIMS_AGENT_MD,
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
@@ -918,7 +1130,10 @@ function chairForSpecialistId(
     id === "alfred" ? "Alfred" :
     id === "marcus" ? "Marcus" :
     id === "knox" ? "KNOX" :
+    id === "felix" ? "FELIX" :
+    id === "aims" ? "AIMS" :
     id.toUpperCase();
+
   return {
     id,
     name,
@@ -933,8 +1148,9 @@ async function runPanel(
   chairIds: string[],
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant);
+  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant, triageDecision);
   return { minute: r.minute, passes: r.passes };
 }
 
@@ -946,6 +1162,7 @@ async function runPanelWithResynth(
   chairIds: string[],
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
@@ -971,8 +1188,15 @@ async function runPanelWithResynth(
     dissent_status: "ok",
   };
 
+  // Seam (d) · always-add Lucius on any one-way-door panel · survival risk
+  // is inherently financial, so Lucius must be present to flag it even when
+  // primary_lane is growth / vision / etc. (closes the filler-heuristic hole).
+  const baseChairIds = triageDecision?.one_way_door && !chairIds.includes("lucius")
+    ? [...chairIds, "lucius"]
+    : chairIds;
+
   const seen = new Set<string>();
-  const chairs = chairIds
+  const chairs = baseChairIds
     // Legacy compat · the legal lane was renamed (lexi → knox). Old triage
     // / persona paths still emit "lexi"; collapse silently so the panel
     // assembly doesn't drop the legal seat.
@@ -986,6 +1210,7 @@ async function runPanelWithResynth(
   if (chairs.length < ROUTING_CONFIG.panel_min_chairs) {
     throw new Error("panel_too_small");
   }
+
   const totalSeated = chairs.length;
   metrics.chairs_count = totalSeated;
 
@@ -1054,9 +1279,65 @@ async function runPanelWithResynth(
   metrics.horizon_ms = Date.now() - horizonT0;
 
   const participating = stage1Fulfilled.map((r) => r.name);
-  const extraDirective = buildDegradedDirective(dropped);
+
+  // Seam-rule trip-wires (FELIX/AIMS dispatch 2026-06-13 §3-§4). Same shape
+  // as the council runner: inspect Stage-1 contributors + triage, stamp
+  // metrics, augment the Stage-3 directive.
+  const stage1ById = new Map(stage1Fulfilled.map((r) => [r.id, r]));
+  const aimsContribution = stage1ById.get("aims")?.text;
+  const felixContribution = stage1ById.get("felix")?.text;
+  const luciusContribution = stage1ById.get("lucius")?.text;
+  const seamFired: NonNullable<ConveneMetrics["seam_fired"]> = [];
+
+  let frameChoiceRuling: "felix" | "aims" | undefined;
+  if (triageDecision && stage1ById.has("aims") && isRevenueGoalQuestion(question, triageDecision)) {
+    const aimsFlaggedNew = aimsFlagsNewDirection(aimsContribution);
+    frameChoiceRuling = aimsFlaggedNew ? "aims" : "felix";
+    seamFired.push("frame_choice");
+    metrics.frame_choice = {
+      ruling: frameChoiceRuling,
+      source: aimsFlaggedNew ? "aims_flag"
+        : triageDecision.primary_lane === "growth" ? "triage" : "regex",
+    };
+  }
+
+  const requireLeoHandoff = stage1ById.has("aims");
+  if (requireLeoHandoff) seamFired.push("handoff_required");
+
+  const pricingCosign = stage1ById.has("felix") && felixPricingMove(question, felixContribution);
+  if (pricingCosign) {
+    seamFired.push("pricing_cosign");
+    metrics.pricing_cosign = { caller: "felix", to: "lucius" };
+  }
+
+  let survivalCosign = false;
+  if (triageDecision?.one_way_door) {
+    const lucius = luciusFlagsSurvival(luciusContribution);
+    if (lucius.fired) {
+      survivalCosign = true;
+      seamFired.push("survival_cosign");
+      metrics.cosign = {
+        caller: "lucius",
+        panel: stage1Fulfilled.map((r) => r.name),
+        trigger: lucius.trigger,
+      };
+    }
+  }
+
+  if (seamFired.length) metrics.seam_fired = seamFired;
+
+  const seamDirective = buildSeamDirective({
+    frameChoice: frameChoiceRuling,
+    requireLeoHandoff,
+    pricingCosign,
+    survivalCosign,
+  });
+  const degradedDirective = buildDegradedDirective(dropped);
+  const extraDirective = [degradedDirective, seamDirective].filter(Boolean).join("\n\n") || undefined;
+
   metrics.degraded = countFloorBreached || dropped.length > 0;
   metrics.dissent_status = dropped.some((d) => d.id === ABE_ID) ? "unavailable" : "ok";
+
 
   const synthesize = async (reinforce: boolean) => {
     const t0 = Date.now();
@@ -1125,6 +1406,12 @@ async function runPanelWithResynth(
     minute = second.minute;
   }
 
+  // Seam (b) post-check · AIMS contributing requires a Leo handoff in body.
+  if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
+    metrics.handoff_missing = true;
+  }
+
+
   const resynth = async () => {
     const next = await synthesize(true);
     metrics.resynth_ms = next.elapsed;
@@ -1182,13 +1469,14 @@ async function runCouncilGated(
   context: string,
   clientContext: string,
   tenant: string,
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
-    question, context, clientContext, tenant,
+    question, context, clientContext, tenant, triageDecision,
   );
   let minute = firstMinute;
   let iters = 1;
@@ -1226,14 +1514,16 @@ async function runPanelGated(
   chairIds: string[],
   clientContext: string,
   tenant: string,
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runPanelWithResynth(
-    question, context, chairIds, clientContext, tenant,
+    question, context, chairIds, clientContext, tenant, triageDecision,
   );
+
   let minute = firstMinute;
   let iters = 1;
   const epsMin = ROUTING_CONFIG.floor.eps_min;
@@ -1332,7 +1622,7 @@ async function runSummonBestAdvisor(args: {
 
   // Council mode → full board.
   if (t.recommended_mode === "council") {
-    const c = await runCouncilGated(question, context, clientContext, tenant);
+    const c = await runCouncilGated(question, context, clientContext, tenant, t);
     for (const p of c.passes) allPasses.push(p);
     return {
       result: {
@@ -1358,7 +1648,7 @@ async function runSummonBestAdvisor(args: {
 
   // Panel mode → multi-chair panel (confidence-gated).
   if (t.recommended_mode === "panel") {
-    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant);
+    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant, t);
     for (const pp of p.passes) allPasses.push(pp);
     return {
       result: {
@@ -1456,11 +1746,19 @@ async function runSummonBestAdvisor(args: {
           l === "ops" ? "leo" :
           l === "trust" ? "alfred" :
           l === "people" ? "marcus" :
-          l === "strategy" ? "leo" : null)
+          l === "strategy" ? "leo" :
+          l === "growth" ? "felix" :
+          l === "vision" ? "aims" :
+          // Direct chair id fallthrough · missing_lanes may name a chair id
+          // (e.g., "lucius" from FELIX pricing co-sign · "leo" from AIMS handoff).
+          (l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
+           l === "marcus" || l === "felix" || l === "aims") ? l : null)
+
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
         const pg = await runPanelGated(
-          question, context, panelIds, clientContext, tenant);
+          question, context, panelIds, clientContext, tenant, t);
+
         for (const p of pg.passes) allPasses.push(p);
         return {
           result: {
@@ -1805,8 +2103,14 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
+          // Light triage call so the seam rules (frame-choice, survival
+          // co-sign) can fire on direct convene_council invocations too.
+          // Failures are non-fatal — runCouncilGated handles undefined.
+          let convTriage: TriageDecision | undefined;
+          try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
           const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
-            question, context, clientContext, tenant);
+            question, context, clientContext, tenant, convTriage);
+
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
