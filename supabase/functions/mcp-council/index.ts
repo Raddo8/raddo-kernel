@@ -2328,8 +2328,16 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
-          const { result, passes } = await runSummonBestAdvisor({
+          const summoned = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored,
+          });
+          const result = summoned.result;
+          const passes = [...summoned.passes];
+          // Raise-the-Bar · platform escalate-below-floor ladder.
+          // Mutates `result` and `passes` in place when an eligible hop fires.
+          // Returns internal-only quality telemetry (never on the wire).
+          const quality = await applyRaiseTheBar({
+            result, passes, question, context, clientContext, tenant,
           });
           const qhash = await hashQuestion(question);
           // Deterministic gap-signal post-step · ensures structured
@@ -2378,8 +2386,11 @@ Deno.serve(async (req) => {
               capability_gap: gap.gap_logged
                 ? { subdomain: gap.gap_logged, source: "triage_deterministic" }
                 : null,
+              // Raise-the-Bar telemetry · vault-side only (never on the wire).
+              quality,
             },
           });
+
           // Explicitly shape routing_trace.triage on the wire so the two
           // gap-signal fields are always visible to callers · diagnostic
           // surface for the Capability Gap Ledger.
