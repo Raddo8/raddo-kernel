@@ -1622,7 +1622,7 @@ async function runSummonBestAdvisor(args: {
 
   // Council mode → full board.
   if (t.recommended_mode === "council") {
-    const c = await runCouncilGated(question, context, clientContext, tenant);
+    const c = await runCouncilGated(question, context, clientContext, tenant, t);
     for (const p of c.passes) allPasses.push(p);
     return {
       result: {
@@ -1648,7 +1648,7 @@ async function runSummonBestAdvisor(args: {
 
   // Panel mode → multi-chair panel (confidence-gated).
   if (t.recommended_mode === "panel") {
-    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant);
+    const p = await runPanelGated(question, context, t.chairs, clientContext, tenant, t);
     for (const pp of p.passes) allPasses.push(pp);
     return {
       result: {
@@ -1750,7 +1750,8 @@ async function runSummonBestAdvisor(args: {
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
         const pg = await runPanelGated(
-          question, context, panelIds, clientContext, tenant);
+          question, context, panelIds, clientContext, tenant, t);
+
         for (const p of pg.passes) allPasses.push(p);
         return {
           result: {
@@ -2095,8 +2096,14 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
+          // Light triage call so the seam rules (frame-choice, survival
+          // co-sign) can fire on direct convene_council invocations too.
+          // Failures are non-fatal — runCouncilGated handles undefined.
+          let convTriage: TriageDecision | undefined;
+          try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
           const { minute, passes, iters, capped, gap, metrics } = await runCouncilGated(
-            question, context, clientContext, tenant);
+            question, context, clientContext, tenant, convTriage);
+
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
