@@ -13,7 +13,14 @@ export interface AgentEntry {
   tier_min: string;
   enabled: boolean;
   kind: AgentKind;
+  // Raise-the-Bar · platform eval pass-mark (vault-side, never client-visible).
+  // Absent today (no harness yet); the eval-gate treats absence as
+  // "unblocked" so behavior is unchanged. The stress-test/eval harness
+  // (AGENT_SUITE_GAMEPLAN Phase 5) will write these once it ships.
+  eval_score?: number;
+  eval_scored_at?: string;
 }
+
 
 export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
   agents: [
