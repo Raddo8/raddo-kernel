@@ -389,6 +389,112 @@ function validateMinute(
   };
 }
 
+// ── Degraded-minute helpers (Option-2 hardening) ──────────────────────────
+// All applied AFTER validateMinute so the strict schema check still runs.
+// Surfaced in the minute body (not just metadata) per the directive:
+// a degraded board must never read as a full-confidence verdict.
+
+const ABE_ID = "abe";
+
+function buildDegradedDirective(
+  dropped: DroppedChair[],
+): string | undefined {
+  const abe = dropped.find((d) => d.id === ABE_ID);
+  if (!abe) return undefined;
+  // Stage-3 prompt override · ensures the synthesizer carries the dissent
+  // gap into the minute even if our post-validation override fails.
+  return `IMPORTANT · Abe (the dissent / falsification chair) did not return this run (${abe.reason}). Set the "dissent" field to: "Dissent unavailable this run · Abe dropped (${abe.reason}). The recommendation has not been falsification-tested; treat the load-bearing assumption as unverified."`;
+}
+
+function applyDegradedShape(
+  minute: MinuteShape,
+  opts: {
+    dropped: DroppedChair[];
+    countFloorBreached: boolean;
+    totalSeated: number;
+    surviving: number;
+  },
+): MinuteShape {
+  const abeDropped = opts.dropped.some((d) => d.id === ABE_ID);
+  const isDegraded = opts.countFloorBreached || abeDropped || opts.dropped.length > 0;
+  if (!isDegraded) {
+    return { ...minute, degraded: false, dissent_status: "ok" };
+  }
+
+  const caps = ROUTING_CONFIG.degraded;
+  let epsCap = 1;
+  let rhoCap = 1;
+
+  if (opts.countFloorBreached) {
+    epsCap = Math.min(epsCap, caps.eps_cap);
+    rhoCap = Math.min(rhoCap, caps.rho_cap);
+  }
+  if (abeDropped) {
+    // Abe-drop · rigor cap (dissent is structurally part of rigor).
+    rhoCap = Math.min(rhoCap, caps.dissent_missing_rho_cap);
+  }
+
+  const cappedEps = Math.min(minute.confidence.epistemic, epsCap);
+  const cappedRho = Math.min(minute.confidence.rigor, rhoCap);
+
+  const droppedNames = opts.dropped.map((d) => d.name).join(", ");
+  const onlyAbeDropped =
+    abeDropped && opts.dropped.length === 1 && !opts.countFloorBreached;
+
+  const prefix = onlyAbeDropped
+    ? `Dissent unavailable this run · the recommendation has not been falsification-tested. Treat as directional, not authoritative.`
+    : `Degraded board · ${opts.surviving} of ${opts.totalSeated} chairs contributed this run (dropped: ${droppedNames || "none"}). Treat as directional, not authoritative.`;
+
+  const horizonExtra = onlyAbeDropped
+    ? `Dissent absent · the load-bearing assumption behind this recommendation has not been stress-tested and may not survive a falsification pass.`
+    : `Missing-lens blind spot · the dropped chair(s) (${droppedNames}) would have flagged risks this minute may not surface.`;
+
+  // Abe-drop: override the dissent text directly so the minute body matches
+  // the metadata (defense in depth alongside the Stage-3 prompt directive).
+  const abeMeta = opts.dropped.find((d) => d.id === ABE_ID);
+  const dissent = abeMeta
+    ? `Dissent unavailable this run · Abe dropped (${abeMeta.reason}). The recommendation has not been falsification-tested; treat the load-bearing assumption as unverified.`
+    : minute.dissent;
+
+  return {
+    ...minute,
+    recommendation: `${prefix}\n\n${minute.recommendation}`,
+    dissent,
+    anticipatory_horizon: [horizonExtra, ...minute.anticipatory_horizon].slice(0, 6),
+    confidence: { epistemic: cappedEps, rigor: cappedRho },
+    degraded: true,
+    dropped_chairs: opts.dropped,
+    dissent_status: abeDropped ? "unavailable" : "ok",
+  };
+}
+
+// Canonical fallback when even the repair pass fails to produce a valid
+// minute · surfaced as a degraded minute, NOT thrown as internal_error.
+function buildSynthesisFallbackMinute(
+  freshness: string,
+  participating: string[],
+  dropped: DroppedChair[],
+): MinuteShape {
+  return {
+    recommendation:
+      "Synthesis unavailable this run · the council was unable to assemble a valid minute. Reframe the question with one concrete number, constraint, or deadline and ask again.",
+    dissent:
+      "Dissent unavailable this run · synthesis failed before a falsification pass could land. Treat any directional read as unverified.",
+    anticipatory_horizon: [
+      "Reframing the question is itself the next move.",
+      "A repeat failure on the reframed question signals an upstream model fault, not a question-shape issue.",
+    ],
+    confidence: { epistemic: 0.1, rigor: 0.1 },
+    freshness,
+    participating_chairs: participating,
+    signature: "— COB_COUNCIL",
+    degraded: true,
+    dropped_chairs: dropped,
+    dissent_status: "unavailable",
+  };
+}
+
+
 // Chair-mode override appended to a legal persona body when it sits as the
 // 6th chair inside convene_council. Prevents the single-advisor JSON output
 // shape from breaking Leo's Stage-2 horizon and Opus Stage-3 synthesis, both
