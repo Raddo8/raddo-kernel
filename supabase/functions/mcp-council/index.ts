@@ -1761,7 +1761,10 @@ Deno.serve(async (req) => {
         "upstream_empty",
         "notion_write_failed",
         "notion_not_configured",
+        "panel_too_small",
+        "stage1_total_failure",
       ]);
+
       const toRpc = (e: unknown) => {
         const msg = e instanceof Error ? e.message : "internal_error";
         const code = safeErrors.has(msg) ? msg : "internal_error";
