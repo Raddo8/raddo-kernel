@@ -63,3 +63,47 @@ const STAKES_RANK: Record<Stakes, number> = {
 export function stakesAtLeast(s: Stakes, floor: Stakes): boolean {
   return STAKES_RANK[s] >= STAKES_RANK[floor];
 }
+
+
+// ── PLATFORM "Raise-the-Bar" quality standard ─────────────────────────────
+// VAULT-LEVEL · platform owner only. Not client-exposed. Not per-tenant.
+// One global constant; flipping `PLATFORM_QUALITY_VERSION` to `"elevated"`
+// raises the bar globally for every client. There is NO tenant / tier /
+// entitlement resolution of this value — the rigor level is a uniform
+// guarantee, not a client-visible dial.
+//
+// Hard invariant: this never inflates ε/ρ. A higher bar produces more
+// honest caps and (where eligible) one bounded escalation hop — never a
+// fabricated higher score.
+export const QUALITY_STANDARD = {
+  current: {
+    eps_floor: 0.88,
+    rho_floor: 0.88,
+    escalate_below_floor: false,
+    max_escalations: 0,
+    escalate_min_stakes: "medium" as Stakes,
+    eval_seat_mark: 0.85,
+    eval_retain_mark: 0.80,
+    reprobe_every_interactions: 50,
+    reprobe_every_new_specialists: 10,
+  },
+  elevated: {
+    eps_floor: 0.92,
+    rho_floor: 0.90,
+    escalate_below_floor: true,
+    max_escalations: 1,
+    escalate_min_stakes: "medium" as Stakes,
+    eval_seat_mark: 0.92,
+    eval_retain_mark: 0.88,
+    reprobe_every_interactions: 25,
+    reprobe_every_new_specialists: 5,
+  },
+} as const;
+
+export type PlatformQualityVersion = "current" | "elevated";
+
+// ← Platform owner flips this single line to `"elevated"` in the vault to
+//   raise the bar globally. No client step. No client visibility.
+export const PLATFORM_QUALITY_VERSION: PlatformQualityVersion = "current";
+export const PLATFORM_QUALITY = QUALITY_STANDARD[PLATFORM_QUALITY_VERSION];
+
