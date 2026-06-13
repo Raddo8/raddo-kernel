@@ -1406,6 +1406,12 @@ async function runPanelWithResynth(
     minute = second.minute;
   }
 
+  // Seam (b) post-check · AIMS contributing requires a Leo handoff in body.
+  if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
+    metrics.handoff_missing = true;
+  }
+
+
   const resynth = async () => {
     const next = await synthesize(true);
     metrics.resynth_ms = next.elapsed;
