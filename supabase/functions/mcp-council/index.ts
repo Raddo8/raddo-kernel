@@ -1148,8 +1148,9 @@ async function runPanel(
   chairIds: string[],
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant);
+  const r = await runPanelWithResynth(question, context, chairIds, clientContext, tenant, triageDecision);
   return { minute: r.minute, passes: r.passes };
 }
 
@@ -1161,6 +1162,7 @@ async function runPanelWithResynth(
   chairIds: string[],
   clientContext: string = "",
   tenant: string = "",
+  triageDecision?: TriageDecision,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
@@ -1186,8 +1188,15 @@ async function runPanelWithResynth(
     dissent_status: "ok",
   };
 
+  // Seam (d) · always-add Lucius on any one-way-door panel · survival risk
+  // is inherently financial, so Lucius must be present to flag it even when
+  // primary_lane is growth / vision / etc. (closes the filler-heuristic hole).
+  const baseChairIds = triageDecision?.one_way_door && !chairIds.includes("lucius")
+    ? [...chairIds, "lucius"]
+    : chairIds;
+
   const seen = new Set<string>();
-  const chairs = chairIds
+  const chairs = baseChairIds
     // Legacy compat · the legal lane was renamed (lexi → knox). Old triage
     // / persona paths still emit "lexi"; collapse silently so the panel
     // assembly doesn't drop the legal seat.
@@ -1201,6 +1210,7 @@ async function runPanelWithResynth(
   if (chairs.length < ROUTING_CONFIG.panel_min_chairs) {
     throw new Error("panel_too_small");
   }
+
   const totalSeated = chairs.length;
   metrics.chairs_count = totalSeated;
 
