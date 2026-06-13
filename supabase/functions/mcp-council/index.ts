@@ -47,6 +47,8 @@ import ABE_MD from "./council/abe.ts";
 import ALFRED_MD from "./council/alfred.ts";
 import MARCUS_MD from "./council/marcus.ts";
 import LUCIUS_MD from "./council/lucius.ts";
+import FELIX_MD from "./council/felix.ts";
+import AIMS_MD from "./council/aims.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
@@ -55,6 +57,9 @@ import LUCIUS_AGENT_MD from "./agents/lucius.ts";
 import LEO_AGENT_MD from "./agents/leo.ts";
 import ALFRED_AGENT_MD from "./agents/alfred.ts";
 import MARCUS_AGENT_MD from "./agents/marcus.ts";
+import FELIX_AGENT_MD from "./agents/felix.ts";
+import AIMS_AGENT_MD from "./agents/aims.ts";
+
 
 
 import {
