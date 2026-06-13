@@ -1,54 +1,106 @@
 ## Goal
 
-Append a content-only **BOUNDARY** clause to each council head so every head recognizes the edge of its competence and routes/flags instead of bluffing. JSON contract, validators, routing, and orchestration are unchanged. Boundary recognition must hold in both solo and council deliberation — a confident wrong-lane chair contribution is the same silent blind spot, just inside a panel.
+Live re-probe is GREEN — `convene_council` and cross-domain `summon_best_advisor` both return full minutes with dissent attributed to Abe. The earlier `internal_error` was transient (cold-start / deploy propagation). Per the directive: stand down on the bug hunt, apply **Option-2 structural hardening + diagnostics** as the durable fix for that failure class so the next single-chair fault degrades instead of downing the board.
 
-## Scope
+Scope: `supabase/functions/mcp-council/index.ts` only. No schema, no UI, no triage/routing changes, no new chairs.
 
-### Files to edit
+## Changes
 
-Runtime / solo-summon personas — `supabase/functions/mcp-council/agents/`:
-- `lucius.ts` — finance boundary (Quant / Tax / RE-Finance / VC / Derivatives / legal / licensed pro)
-- `iroh.ts` — people boundary (employment-law / comp+equity math / union / clinical care)
-- `alfred.ts` — trust boundary (legal exposure of disclosure / underlying merits / paid-media)
-- `leo.ts` — router boundary (orchestrate, never substitute)
+### 1. Per-chair isolation in `runCouncilWithResynth` (~line 429) and `runPanelWithResynth` (~line 721)
 
-Council-mode personas — `supabase/functions/mcp-council/council/`:
-- `lucius.ts`, `iroh.ts`, `alfred.ts`, `leo.ts` — mirror the same competence boundaries
-- `spock.ts` — dissent boundary (stress-test, never author the domain answer)
+Replace the Stage-1 `Promise.all(...callAnthropic(...))` with `Promise.allSettled`. For each fulfilled result, push to `stage1Results`. For each rejected, log structured drop and continue:
 
-KNOX is intentionally untouched — the spec names five heads; KNOX is already the legal lane.
+```ts
+console.warn("council_chair_dropped", JSON.stringify({
+  seat_id, seat_name, tenant, mode, question_hash,
+  error_class: err?.name ?? "Error", message: String(err?.message ?? err).slice(0, 300),
+}));
+```
 
-### Mode-adapted action (within one shared boundary statement)
+Track `dropped_chairs: Array<{id,name,reason}>` on `metrics`.
 
-Each clause names the same out-of-scope list, then ends with a mode-conditioned action block:
+### 2. Degradation floor (no throw)
 
-- **Solo mode** (agents/*): when the question turns on an out-of-scope sub-domain, give a generalist read, set `refer_to` to the named specialist, add a `missing_lanes` flag if that specialist isn't seated, and include the disclosure rider: "generalist read · the [X] specialist doesn't exist yet; directional, not authoritative." Never answer out-of-scope at high confidence unflagged.
-- **Council mode** (council/*): the panel already has the other lanes, so do NOT use `refer_to`. Instead, flag the out-of-scope portion inside this chair's contribution (named sub-domain + disclosure rider + cap your own confidence on that portion) so Leo's synthesis carries the gap forward. Never assert out-of-scope expertise at high confidence inside a panel contribution.
+After drops:
+- **council**: require ≥4 of 6 chairs (5 standard + KNOX legal). Below floor → degraded-minute path.
+- **panel**: require ≥2 of N. Below floor → degraded-minute path.
 
-### Placement convention
+Degraded-minute path: still run Stage-2 horizon + Stage-3 synthesis on the surviving contributions, stamp `degraded: true`, list `dropped_chairs` in metadata, cap surfaced confidence (see §5). Do NOT throw `panel_too_small` (line 756) on the degraded branch — only throw if Stage-1 returned zero contributions AND synthesis cannot run at all.
 
-Insert each clause as a new `## BOUNDARY` block, placed directly after the existing `## SEAT BOUNDARY` (or equivalent) section, before `## Global-preamble honor` / `## Output`. Lift the substantive content verbatim from `LOVABLE_SPEC_boundary_maps.md`, normalizing any em/en-dashes to middots (·) per the project's no-dash rule. The `→` arrow (used for routing in the spec) is not a dash and is preserved.
+### 3. Stage-3 synthesis repair retry
 
-For Leo and Spock, the BOUNDARY is structural (orchestrate-don't-substitute / stress-test-don't-author) and reads the same in both modes; only Lucius/Iroh/Alfred carry the solo-vs-council action split.
+Wrap the existing Stage-3 `callAnthropic` + `validateMinute(extractJson(...))` block (lines ~497–509 council, ~790–802 panel) in a single try/catch. On `minute_unparseable` or `minute_shape`, run ONE repair pass appending to the user prompt:
 
-### What does NOT change
+> "Your previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary."
 
-- JSON output keys, types, `confidence.{epistemic,rigor}`, signatures
-- `triage.ts`, routing thresholds, gate logic, validators
-- `index.ts` orchestration, metrics, resynth path, timeouts
-- Tool list, `consult_advisor` alias, advisor registry
-- No DB migrations, no UI changes, no frontend changes
+If the repair pass also fails, surface a structured degraded minute using the fallback already defined in `lead-synthesis.ts`, with `degraded: true` and gap `"synthesis_unparseable"`. Never let `minute_shape` / `minute_unparseable` bubble to the gateway as `internal_error` on this path.
 
-## Acceptance (from spec + the mode-adaptation rule)
+### 4. `participating_chairs` reflects actual contributors
 
-1. `summon_best_advisor("what cap rate and DSCR should we target refinancing the warehouse?")` → Lucius solo: generalist read + `refer_to` (Real-Estate Finance) + `missing_lanes` flag + disclosure rider. Not confident expert depth.
-2. `summon_best_advisor("model the LBO leverage and earnout")` → Lucius solo: refers to Quant (or escalates) with the rider.
-3. Clean in-scope finance question → Lucius answers solo with no spurious `refer_to`, no missing_lanes flag (no over-referral).
-4. `convene_council` on a question that touches an out-of-scope sub-domain (e.g. cap-table mechanics) → Lucius's chair contribution flags the cap-table portion + caps confidence on that portion + includes the rider inline; no `refer_to`; Leo's synthesis carries the gap forward.
-5. BOUNDARY clauses present in all five personas across both runtime and council variants. JSON shape and ε·ρ unchanged.
+Derive from `stage1Results` after drops:
+```ts
+const participating = stage1Results.map((r) => r.name);
+```
+For council mode include the synthesizing chair (Leo) even if dropped from Stage-1 (Leo authors Stage-3); flag that case in metadata.
 
-## Verification
+### 5. Degraded ε·ρ honesty cap surfaced in the minute body
 
-- Run the three solo acceptance prompts (1, 2, 3); paste trimmed JSON showing `refer_to` / `missing_lanes` / rider on (1)+(2) and clean solo on (3).
-- Run one `convene_council` on a mixed-lane question (acceptance 4); confirm Lucius's contribution carries the inline flag + rider, Leo's synthesis surfaces the gap, JSON shape intact, and timing inside the function window.
-- Sanity-check that an in-scope `convene_council` (no out-of-scope sub-domain touched) shows no spurious boundary riders from any chair.
+Caps below are **defaults · tunable in `routing-config.ts`** (not magic numbers); name them `DEGRADED_EPS_CAP = 0.60`, `DEGRADED_RHO_CAP = 0.55`, `DISSENT_MISSING_RHO_CAP = 0.55`.
+
+When `degraded: true`:
+- Cap `confidence.epistemic` at `min(model_eps, DEGRADED_EPS_CAP)` and `confidence.rigor` at `min(model_rho, DEGRADED_RHO_CAP)`.
+- Prepend one short sentence to `recommendation`: `"Degraded board · {N} of {M} chairs contributed this run ({dropped names}). Treat as directional, not authoritative."` Middot, no em-dashes.
+- Add a horizon item naming the missing lens's blind spot.
+
+### 6. Abe-dropped path: dissent unavailable AND rigor capped
+
+**Binding rule:** if Abe is in `dropped_chairs`, treat the run as degraded regardless of whether the §2 chair-count floor was breached. Rationale: the dissent / falsification step is structurally part of rigor; a recommendation that was never stress-tested is by definition less rigorous, and the surfaced ε·ρ must reflect that — not just live in a metadata field.
+
+Concretely, when Abe is in `dropped_chairs`:
+- Set `degraded: true` even if N≥4 of 6 (council) or N≥2 (panel).
+- Cap `confidence.rigor` at `min(model_rho, DISSENT_MISSING_RHO_CAP = 0.55)`. Leave `confidence.epistemic` uncapped on this branch unless §5's count-floor cap also fires (then take the stricter of the two).
+- In the Stage-3 prompt, append: `"Abe (dissent chair) did not return this run. Set the `dissent` field to: 'Dissent unavailable this run · Abe dropped ({error_class}). The recommendation has not been falsification-tested; treat the load-bearing assumption as unverified.'"`
+- Stamp `metadata.dissent_status = "unavailable"` and add `dropped_chairs` entry for Abe.
+- Adjust the §5 degraded-recommendation prefix to mention dissent specifically when Abe is the only drop: `"Dissent unavailable this run · the recommendation has not been falsification-tested. Treat as directional, not authoritative."`
+
+This guarantees the dissent-field text ("the load-bearing assumption is unverified") matches the surfaced confidence read instead of contradicting it.
+
+### 7. Outer wrapper (lines ~1430–1500 gated callers + ~1019/1045/1146 invocations)
+
+`runCouncilGated` / `runPanelGated` already catch and map. Audit the catch sites that currently translate to `internal_error`:
+- Keep `internal_error` ONLY for truly unhandled exceptions (network blowup pre-Stage-1, Anthropic auth fail, etc.).
+- The graceful-degrade path returns a normal minute object with `degraded: true` — flows through the existing success branch, no new error code at the MCP layer.
+- The existing `minute_shape` / `minute_unparseable` mapping in `mcp-gateway` stays as belt-and-suspenders for any path the new repair retry doesn't cover.
+
+### 8. Residual rename grep
+
+`rg -n "seatName|spock|iroh|lexi" supabase/functions/mcp-council/` — two known benign hits at `index.ts:751` and `:1121` (defensive `lexi → knox` legacy aliases) plus the Kirk/Spock analogy in `council/abe.ts` (doctrine · leave). Zero runtime references to `spock`/`iroh`/`seatName`. Document the two `lexi` aliases inline as legacy compat.
+
+### 9. Light Option-3 pass (not a blocker)
+
+Post-deploy, via `supabase--curl_edge_functions`:
+- existential-stakes question (forces full board);
+- ≥4-lane question that escalates;
+- forced-single-chair-failure (inject a throw on one chair temporarily) → confirm `degraded: true` minute, never `internal_error`;
+- forced-Abe-drop → confirm rigor capped ≤0.55, `dissent_status: "unavailable"`, and the dissent-field text matches.
+
+## Acceptance
+
+1. `convene_council` returns a full minute with dissent attributed to Abe · participating chairs match contributors.
+2. Cross-domain `summon_best_advisor` (legal + people) returns a panel minute · no `internal_error`.
+3. `show_council` unchanged.
+4. Forced single-chair failure → `degraded: true` minute naming the dropped seat in `recommendation` + `metadata.dropped_chairs` · never `internal_error`.
+5. **Forced Abe-drop with N≥4 surviving chairs → `degraded: true`, `confidence.rigor ≤ 0.55`, `metadata.dissent_status = "unavailable"`, dissent-field text states the recommendation was not falsification-tested.**
+6. Solo `summon_best_advisor` regression: unchanged minute shape, no degraded flag.
+7. Logs show `council_chair_dropped` lines only when a chair actually fails.
+
+## Out of scope
+
+- New Growth/Revenue and Vision/Strategy chairs (separate task · prerequisite is this hardening).
+- Triage thresholds, routing-config dials beyond the three new cap constants, JSON minute contract changes, tenant-context layer.
+- Front-end / consent page / brand surface.
+
+## Files touched
+
+- `supabase/functions/mcp-council/index.ts` (primary).
+- `supabase/functions/mcp-council/routing-config.ts` (add the three tunable cap constants).
