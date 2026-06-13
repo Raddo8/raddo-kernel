@@ -966,75 +966,159 @@ async function runPanelWithResynth(
     resynth_ms: 0,
     fast_resynth_used: false,
     boundary_regen: false,
+    dropped_chairs: [],
+    degraded: false,
+    dissent_status: "ok",
   };
 
   const seen = new Set<string>();
   const chairs = chairIds
+    // Legacy compat · the legal lane was renamed (lexi → knox). Old triage
+    // / persona paths still emit "lexi"; collapse silently so the panel
+    // assembly doesn't drop the legal seat.
     .map((id) => (id === "lexi") ? "knox" : id)
     .filter((id) => { if (seen.has(id)) return false; seen.add(id); return true; })
     .map((id) => chairForSpecialistId(id, tenant, question))
-    .filter((c): c is { name: string; system: string } => c !== null);
+    .filter((c): c is { id: string; name: string; system: string } => c !== null);
 
-  if (chairs.length < 2) throw new Error("panel_too_small");
-  metrics.chairs_count = chairs.length;
+  // Panel needs ≥2 seats to even attempt deliberation. Below that, the
+  // single-advisor path is the right shape — bubble the error up.
+  if (chairs.length < ROUTING_CONFIG.panel_min_chairs) {
+    throw new Error("panel_too_small");
+  }
+  const totalSeated = chairs.length;
+  metrics.chairs_count = totalSeated;
 
+  const qhash = await hashQuestion(question);
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
-  const stage1Raw = await Promise.all(
+  const stage1Settled = await Promise.allSettled(
     chairs.map((c) =>
       callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((res) => ({ name: c.name, res })),
+      }).then((res) => ({ id: c.id, name: c.name, res })),
     ),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
-  for (const r of stage1Raw) passes.push({ model: r.res.model, usage: r.res.usage });
-  const stage1Results = stage1Raw.map((r) => ({ name: r.name, text: r.res.text }));
 
+  const stage1Fulfilled: Array<{ id: string; name: string; text: string }> = [];
+  const dropped: DroppedChair[] = [];
+  for (let i = 0; i < stage1Settled.length; i++) {
+    const s = stage1Settled[i];
+    const seat = chairs[i];
+    if (s.status === "fulfilled") {
+      passes.push({ model: s.value.res.model, usage: s.value.res.usage });
+      stage1Fulfilled.push({ id: s.value.id, name: s.value.name, text: s.value.res.text });
+    } else {
+      const err = s.reason;
+      const error_class = err?.name ?? "Error";
+      const message = String(err?.message ?? err).slice(0, 300);
+      console.warn("council_chair_dropped", JSON.stringify({
+        seat_id: seat.id, seat_name: seat.name, tenant, mode: "panel",
+        question_hash: qhash, error_class, message,
+      }));
+      dropped.push({ id: seat.id, name: seat.name, reason: `${error_class}: ${message}` });
+    }
+  }
+  metrics.dropped_chairs = dropped;
+
+  const countFloorBreached = stage1Fulfilled.length < ROUTING_CONFIG.panel_min_chairs;
+  if (stage1Fulfilled.length === 0) {
+    throw new Error("stage1_total_failure");
+  }
+
+  const stage1Results = stage1Fulfilled.map((r) => ({ name: r.name, text: r.text }));
+
+  let horizon = "";
   const horizonT0 = Date.now();
-  const horizonRes = await callAnthropic({
-    model: MODEL_CHAIR,
-    system: `${preamble}\n\n${LEO_MD}`,
-    user: horizonUserPrompt(question, context, stage1Results),
-    maxTokens: MAX_TOKENS_CHAIR,
-  });
+  try {
+    const horizonRes = await callAnthropic({
+      model: MODEL_CHAIR,
+      system: `${preamble}\n\n${LEO_MD}`,
+      user: horizonUserPrompt(question, context, stage1Results),
+      maxTokens: MAX_TOKENS_CHAIR,
+    });
+    passes.push({ model: horizonRes.model, usage: horizonRes.usage });
+    horizon = horizonRes.text;
+  } catch (err) {
+    console.warn("panel_horizon_dropped", JSON.stringify({
+      tenant, mode: "panel", question_hash: qhash,
+      error_class: (err as any)?.name ?? "Error",
+      message: String((err as any)?.message ?? err).slice(0, 300),
+    }));
+    horizon = "Horizon pass unavailable this run · synthesizer will operate without anticipatory-horizon input.";
+  }
   metrics.horizon_ms = Date.now() - horizonT0;
-  passes.push({ model: horizonRes.model, usage: horizonRes.usage });
-  const horizon = horizonRes.text;
 
-  const participating = chairs.map((c) => c.name);
+  const participating = stage1Fulfilled.map((r) => r.name);
+  const extraDirective = buildDegradedDirective(dropped);
+  metrics.degraded = countFloorBreached || dropped.length > 0;
+  metrics.dissent_status = dropped.some((d) => d.id === ABE_ID) ? "unavailable" : "ok";
 
   const synthesize = async (reinforce: boolean) => {
     const t0 = Date.now();
-    const res = await callAnthropic({
-      model: MODEL_SYNTHESIS,
-      system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
-      user: synthesisUserPrompt({
-        question, context,
-        contributions: stage1Results,
-        horizon, freshness, reinforce,
-      }),
-      maxTokens: MAX_TOKENS_SYNTH,
+    const baseUser = synthesisUserPrompt({
+      question, context,
+      contributions: stage1Results,
+      horizon, freshness, reinforce, extraDirective,
     });
-    const elapsed = Date.now() - t0;
-    const pass: Pass = { model: res.model, usage: res.usage };
-    const minute = validateMinute(extractJson(res.text), freshness, participating);
-    return { minute, pass, elapsed };
+    const localPasses: Pass[] = [];
+
+    const tryOnce = async (user: string) => {
+      const res = await callAnthropic({
+        model: MODEL_SYNTHESIS,
+        system: `${preamble}\n\n${LEAD_SYNTH_MD}`,
+        user,
+        maxTokens: MAX_TOKENS_SYNTH,
+      });
+      localPasses.push({ model: res.model, usage: res.usage });
+      return validateMinute(extractJson(res.text), freshness, participating);
+    };
+
+    let rawMinute: MinuteShape;
+    try {
+      rawMinute = await tryOnce(baseUser);
+    } catch (e1) {
+      const cls = (e1 as any)?.message;
+      if (cls === "minute_unparseable" || cls === "minute_shape") {
+        const repairUser = `${baseUser}\n\nYour previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary.`;
+        try {
+          rawMinute = await tryOnce(repairUser);
+        } catch (e2) {
+          console.warn("panel_synthesis_fallback", JSON.stringify({
+            tenant, mode: "panel", question_hash: qhash,
+            first_error: cls,
+            second_error: (e2 as any)?.message ?? String(e2),
+          }));
+          rawMinute = buildSynthesisFallbackMinute(freshness, participating, dropped);
+        }
+      } else {
+        throw e1;
+      }
+    }
+
+    const finalMinute = applyDegradedShape(rawMinute, {
+      dropped,
+      countFloorBreached,
+      totalSeated,
+      surviving: stage1Fulfilled.length,
+    });
+    return { minute: finalMinute, passes: localPasses, elapsed: Date.now() - t0 };
   };
 
   const first = await synthesize(false);
   metrics.synth1_ms = first.elapsed;
-  passes.push(first.pass);
+  for (const p of first.passes) passes.push(p);
   let minute = first.minute;
 
   if (hasBoundaryViolation(JSON.stringify(minute))) {
     metrics.boundary_regen = true;
     const second = await synthesize(true);
     metrics.synth2_ms = second.elapsed;
-    passes.push(second.pass);
+    for (const p of second.passes) passes.push(p);
     if (hasBoundaryViolation(JSON.stringify(second.minute))) {
       throw new Error("boundary_violation");
     }
@@ -1045,12 +1129,18 @@ async function runPanelWithResynth(
     const next = await synthesize(true);
     metrics.resynth_ms = next.elapsed;
     metrics.fast_resynth_used = true;
-    return { minute: next.minute, pass: next.pass, resynth_ms: next.elapsed };
+    for (const p of next.passes.slice(1)) passes.push(p);
+    return {
+      minute: next.minute,
+      pass: next.passes[0],
+      resynth_ms: next.elapsed,
+    };
   };
 
   metrics.calls_total = passes.length;
   return { minute, passes, metrics, resynth };
 }
+
 
 
 // ── Routing ledger helpers ─────────────────────────────────────────────────
