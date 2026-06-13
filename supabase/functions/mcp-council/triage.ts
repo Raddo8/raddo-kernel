@@ -320,10 +320,18 @@ function applyGates(
     if (lanes.length < 2) {
       const filler: Lane = cls.primary_lane === "legal" ? "finance"
         : cls.primary_lane === "finance" ? "legal"
+        : cls.primary_lane === "growth" ? "finance"
+        : cls.primary_lane === "vision" ? "ops"
         : "ops";
       if (!lanes.includes(filler)) lanes.push(filler);
     }
     chairs = dedupe(lanes.map((l) => laneToId(l, tenant)));
+    // Survival-risking one-way-door · Lucius is always added at the
+    // chair-assembly seam in runPanelWithResynth (seam rule (d)). This is
+    // belt-and-suspenders at triage time.
+    if (cls.one_way_door && !chairs.includes("lucius")) {
+      chairs.push("lucius");
+    }
   }
   // Gate B · routing uncertainty → panel
   else if (cls.lane_confidence < ROUTING_CONFIG.tau_route) {
@@ -331,7 +339,10 @@ function applyGates(
     mode = "panel";
     const lanes: Lane[] = [cls.primary_lane, ...cls.secondary_lanes].slice(0, 4);
     if (lanes.length < 2) {
-      const filler: Lane = cls.primary_lane === "legal" ? "finance" : "ops";
+      const filler: Lane = cls.primary_lane === "legal" ? "finance"
+        : cls.primary_lane === "growth" ? "finance"
+        : cls.primary_lane === "vision" ? "ops"
+        : "ops";
       if (!lanes.includes(filler)) lanes.push(filler);
     }
     chairs = dedupe(lanes.map((l) => laneToId(l, tenant)));
@@ -341,6 +352,7 @@ function applyGates(
     mode = "solo";
     chairs = [laneToId(cls.primary_lane, tenant)];
   }
+
 
   return {
     ...cls,
