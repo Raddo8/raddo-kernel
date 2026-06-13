@@ -30,8 +30,17 @@ import { writeMinuteToNotion } from "./notion.ts";
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
-import { ROUTING_CONFIG, stakesAtLeast } from "./routing-config.ts";
+import { ROUTING_CONFIG, stakesAtLeast, PLATFORM_QUALITY } from "./routing-config.ts";
 import { rosterHasSeatedSpecialist, logCapabilityGap } from "./capability-gaps.ts";
+import {
+  newQualityTelemetry,
+  isBelowPlatformFloor,
+  classifyGap,
+  decideEscalation,
+  stampTerminalCap,
+  type QualityTelemetry,
+} from "./escalate.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
