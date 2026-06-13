@@ -14,7 +14,7 @@ const TRIAGE_MODEL = Deno.env.get("MCP_TRIAGE_MODEL") ?? "claude-haiku-4-5";
 const TRIAGE_FALLBACK = "claude-sonnet-4-5";
 const TRIAGE_MAX_TOKENS = 400;
 
-const VALID_LANES: Lane[] = ["legal", "finance", "ops", "trust", "people", "strategy"];
+const VALID_LANES: Lane[] = ["legal", "finance", "ops", "trust", "people", "strategy", "growth", "vision"];
 const VALID_STAKES: Stakes[] = ["low", "medium", "high", "existential"];
 
 const TRIAGE_SYSTEM = `You are TRIAGE, an internal classifier inside The Council.
@@ -31,7 +31,10 @@ rare; four signals a true board-level question):
 - ops       · sequencing, execution, the next move, project plans, throughput
 - trust     · reputation, continuity, brand integrity, customer/partner trust
 - people    · talent, principal elevation, team dynamics, succession, hiring
-- strategy  · positioning, market, long-range direction (route to ops chair)
+- strategy  · positioning vs. competitors at the tactical level (route to ops chair · use 'vision' for company-level direction)
+- growth    · demand · go-to-market · positioning · channels · sales motion & pipeline · marketing mix · pricing-for-growth & packaging · retention/activation loops · NRR & expansion (route to FELIX)
+- vision    · company direction · "where should this whole business go" · the strategy kernel (diagnosis → guiding policy → coherent action) · where-to-play & how-to-win · what-NOT-to-do & focus · durable Power & moat design · the flywheel & loop architecture · the self-executing master plan · operating-cadence design · multi-horizon (H1/H2/H3) · "build me the plan to hit [goal]" (route to AIMS)
+
 
 Stakes ladder (be conservative — most business questions are medium):
 - low          · routine, easily reversible (a single email, a draft, a plan)
@@ -148,15 +151,18 @@ function laneToId(lane: Lane, _tenant: string): string {
     case "ops": return "leo";
     case "trust": return "alfred";
     case "people": return "marcus";
-    case "strategy": return "leo";  // strategy is solo-capable via Leo
+    case "strategy": return "leo";  // tactical positioning → solo-capable via Leo
+    case "growth": return "felix";
+    case "vision": return "aims";
   }
 }
 
-const FULL_BOARD_IDS = ["leo", "abe", "lucius", "alfred", "marcus"];
+const FULL_BOARD_IDS = ["leo", "abe", "lucius", "alfred", "marcus", "felix", "aims"];
 
 function fullBoardWithLegal(_tenant: string): string[] {
   return [...FULL_BOARD_IDS, "knox"];
 }
+
 
 function extractJson(s: string): any {
   let t = s.trim();
