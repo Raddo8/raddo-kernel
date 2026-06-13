@@ -542,7 +542,133 @@ type ConveneMetrics = {
   dropped_chairs: DroppedChair[];
   degraded: boolean;
   dissent_status: "ok" | "unavailable";
+  // FELIX/AIMS seating · seam-rule trip-wires (2026-06-13 dispatch §4).
+  // Each seam stamps when it fires so the 30-day watch has tuning data.
+  seam_fired?: Array<"frame_choice" | "handoff_required" | "pricing_cosign" | "survival_cosign">;
+  frame_choice?: {
+    ruling: "felix" | "aims";
+    source: "triage" | "regex" | "aims_flag";
+  };
+  pricing_cosign?: { caller: "felix"; to: "lucius" };
+  cosign?: {
+    caller: "lucius";
+    panel: string[];
+    trigger: "severity" | "keyword" | "closing_action";
+  };
+  handoff_missing?: boolean;
 };
+
+// ── Seam-rule trigger helpers (FELIX/AIMS dispatch · 2026-06-13) ──────────
+// Primary trigger is the triage signal; regex on question text is supplemental.
+// Each helper is pure so the seam-rule wiring stays auditable.
+
+const REVENUE_GOAL_RE =
+  /\b(close|hit|land|book)\b.{0,40}\$?\d|\bhit the number\b|\b\d+x\b.{0,30}\b(revenue|arr|mrr)\b|\bthis (quarter|year|q[1-4])\b/i;
+
+function isRevenueGoalQuestion(question: string, t: TriageDecision): boolean {
+  // Primary: triage flagged growth as the primary lane.
+  if (t.primary_lane === "growth") return true;
+  // Supplemental: growth secondary AND regex hit on question text.
+  if (t.secondary_lanes.includes("growth") && REVENUE_GOAL_RE.test(question)) return true;
+  return false;
+}
+
+const PRICING_RE = /\b(price|pricing|discount|list[- ]price|margin|packaging|tier|cannibaliz)/i;
+
+function felixPricingMove(question: string, felixContribution?: string): boolean {
+  // Primary: FELIX's own contribution names a pricing move.
+  if (felixContribution && PRICING_RE.test(felixContribution)) return true;
+  // Supplemental: question text mentions pricing/discount.
+  if (PRICING_RE.test(question)) return true;
+  return false;
+}
+
+const SURVIVAL_RE =
+  /\b(survival|existential|insolvency|insolvent|cash-?out|exhaust(?:s|ed)? runway|runway gone|out of cash|bankrupt|wind(?:s|ed)? down|shut(?:s|down)?)\b/i;
+
+// Lucius (when contributing) flagged a survival risk · severity-first, regex
+// supplemental. Reads Lucius's Stage-1 prose contribution (panel/council).
+function luciusFlagsSurvival(luciusContribution?: string): {
+  fired: boolean;
+  trigger: "severity" | "keyword" | "closing_action";
+} {
+  if (!luciusContribution) return { fired: false, trigger: "severity" };
+  // Stage-1 contribution is prose; look for explicit severity tagging and
+  // for the keyword set. Severity-first when the chair surfaced it inline.
+  if (/\bseverity\b\s*[:·-]\s*(high|critical)/i.test(luciusContribution)) {
+    return { fired: true, trigger: "severity" };
+  }
+  if (SURVIVAL_RE.test(luciusContribution)) {
+    return { fired: true, trigger: "keyword" };
+  }
+  if (/\bneeds[_ -]external[_ -]info\b/i.test(luciusContribution) &&
+      /\b(survival|runway|cash|insolven)/i.test(luciusContribution)) {
+    return { fired: true, trigger: "closing_action" };
+  }
+  return { fired: false, trigger: "severity" };
+}
+
+// Compose the synthesis-prompt directive from the seam rules that fired.
+// Concatenated onto the existing degraded directive so we keep one extra
+// instruction block instead of N stacked overrides.
+function buildSeamDirective(opts: {
+  frameChoice?: "felix" | "aims";
+  requireLeoHandoff: boolean;
+  pricingCosign: boolean;
+  survivalCosign: boolean;
+}): string | undefined {
+  const blocks: string[] = [];
+  if (opts.frameChoice) {
+    const owner = opts.frameChoice === "felix" ? "FELIX leads" : "AIMS leads";
+    const tag = opts.frameChoice === "felix" ? "PULL HARDER" : "NEW DIRECTION";
+    blocks.push(
+      `SEAM · FRAME-CHOICE (revenue-goal first-test): Print the line ` +
+      `"Frame-choice: ${tag} → ${owner}" verbatim at the TOP of the ` +
+      `"recommendation" field. The recommendation owner is ${opts.frameChoice.toUpperCase()}. ` +
+      `Default is PULL HARDER → FELIX leads unless AIMS's Stage-1 contribution explicitly flagged ` +
+      `a genuine new-direction need; if AIMS did flag it, set NEW DIRECTION → AIMS leads instead.`
+    );
+  }
+  if (opts.requireLeoHandoff) {
+    blocks.push(
+      `SEAM · LEO HANDOFF (AIMS-contributing): The minute MUST include a ` +
+      `"Leo handoff" section in the "recommendation" field — a sequenced, ` +
+      `owner-assigned backlog deriving the next 30/60/90 day moves. AIMS never ` +
+      `owns run-the-business mechanics solo. If you cannot produce a backlog, ` +
+      `state explicitly that the handoff is missing.`
+    );
+  }
+  if (opts.pricingCosign) {
+    blocks.push(
+      `SEAM · PRICING CO-SIGN (FELIX pricing move): Any list-price or ` +
+      `discount change with material margin or cash impact REQUIRES Lucius ` +
+      `co-sign. Name the Lucius co-sign in the "recommendation" field (e.g. ` +
+      `"co-signed by Lucius on margin floor / cash impact"). Do not ship the ` +
+      `pricing recommendation without it.`
+    );
+  }
+  if (opts.survivalCosign) {
+    blocks.push(
+      `SEAM · SURVIVAL CO-SIGN (one-way door · Lucius flagged survival risk): ` +
+      `Open the "recommendation" with "Survival-risking one-way door · ` +
+      `co-signed by Lucius and the full panel." The minute speaks for the ` +
+      `whole panel, not the lead chair alone.`
+    );
+  }
+  if (!blocks.length) return undefined;
+  return blocks.join("\n\n");
+}
+
+// Inspect AIMS's Stage-1 contribution for an explicit new-direction flag.
+// AIMS-as-chair contributes the frame-choice JUDGMENT in prose; Leo prints
+// the final Frame-choice line at synthesis. Bias: default to PULL HARDER
+// (FELIX leads); only flip to NEW DIRECTION when AIMS made it explicit.
+function aimsFlagsNewDirection(aimsContribution?: string): boolean {
+  if (!aimsContribution) return false;
+  return /\bnew direction\b/i.test(aimsContribution) &&
+    !/\bpull harder\b/i.test(aimsContribution);
+}
+
 
 
 async function runCouncil(
