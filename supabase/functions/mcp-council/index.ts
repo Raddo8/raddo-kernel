@@ -33,7 +33,13 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "harden-v1";
+const BUILD_ID = "harden-v2";
+// Stamp build_id into a tool result payload so it's visible in the MCP
+// client's rendered text (not only in the outer JSON-RPC envelope, which
+// most clients hide). Idempotent — only sets if absent.
+function stampBuildId<T extends Record<string, unknown>>(o: T): T & { build_id: string } {
+  return (o && typeof o === "object" && !("build_id" in o)) ? { ...o, build_id: BUILD_ID } : (o as any);
+}
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
