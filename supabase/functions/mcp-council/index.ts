@@ -2295,6 +2295,40 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── harden-v1 · input sanitization + injection refusal ─────────────
+      // Applied to any tool that carries question/context (convene_council,
+      // summon_best_advisor, file_to_office). show_council exited above.
+      {
+        const rawQ = typeof args?.question === "string" ? args.question : "";
+        const rawC = typeof args?.context === "string" ? args.context : "";
+        if (rawQ || rawC) {
+          if (rawQ.length > 8000 || rawC.length > 8000) {
+            return rpcError(id, -32003, "input_too_large");
+          }
+          const sQ = sanitizeText(rawQ);
+          const sC = sanitizeText(rawC);
+          if (detectInjection(sQ) || detectInjection(sC)) {
+            const refusal = { ...INJECTION_REFUSAL_MINUTE, freshness: new Date().toISOString() };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(refusal) }],
+              structuredContent: refusal,
+              isError: false,
+            });
+          }
+          // Hand sanitized text to downstream handlers.
+          args.question = sQ;
+          args.context = sC;
+        }
+      }
+
+      // ── harden-v1 · per-tenant per-instance concurrency guard ──────────
+      // Best-effort cap (per instance, see breaker.ts). DB rate-limit above
+      // remains the authoritative fleet-wide control.
+      if (!acquireConcurrency(tenant)) {
+        return rpcError(id, -32003, "concurrency_limit");
+      }
+      try {
+
       // Tier-1 grounding seam · `_client_context` (test field).
       // Phase 2B hardening: ignored entirely on OAuth path (prompt-injection
       // surface). Static-bearer path accepts it only when the env opt-in is
@@ -2560,6 +2594,9 @@ Deno.serve(async (req) => {
 
 
       return rpcError(id, -32601, "unknown_tool");
+      } finally {
+        releaseConcurrency(tenant);
+      }
     }
 
 
