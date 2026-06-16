@@ -2116,10 +2116,31 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Access-Control-Allow-Headers":
-          "authorization, content-type, mcp-session-id, x-client-info, apikey",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "authorization, content-type, mcp-session-id, x-client-info, apikey, x-cron-warmup",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       },
     });
+  }
+
+  // harden-v1 · health probe (unauthenticated, no work). For COB liveness
+  // checks and deploy verification. Echoes the build_id.
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    if (url.pathname.endsWith("/health") || url.pathname === "/") {
+      return new Response(
+        JSON.stringify({ ok: true, build_id: BUILD_ID, ts: new Date().toISOString() }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
+      );
+    }
+    return rpcError(null, -32600, "method_not_allowed", 405);
+  }
+
+  // harden-v1 · cron warm-up · accept and ack without doing any work.
+  if (req.method === "POST" && req.headers.get("X-Cron-Warmup") === "1") {
+    return new Response(
+      JSON.stringify({ ok: true, build_id: BUILD_ID, warmed: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
+    );
   }
 
   if (req.method !== "POST") {
@@ -2244,6 +2265,12 @@ Deno.serve(async (req) => {
         "notion_not_configured",
         "panel_too_small",
         "stage1_total_failure",
+        // harden-v1
+        "circuit_open",
+        "concurrency_limit",
+        "injection_refusal",
+        "office_not_configured",
+        "input_too_large",
       ]);
 
       const toRpc = (e: unknown) => {
