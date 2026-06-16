@@ -33,7 +33,13 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "harden-v1";
+const BUILD_ID = "harden-v2";
+// Stamp build_id into a tool result payload so it's visible in the MCP
+// client's rendered text (not only in the outer JSON-RPC envelope, which
+// most clients hide). Idempotent — only sets if absent.
+function stampBuildId<T extends Record<string, unknown>>(o: T): T & { build_id: string } {
+  return (o && typeof o === "object" && !("build_id" in o)) ? { ...o, build_id: BUILD_ID } : (o as any);
+}
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
@@ -2126,7 +2132,7 @@ Deno.serve(async (req) => {
   // checks and deploy verification. Echoes the build_id.
   if (req.method === "GET") {
     const url = new URL(req.url);
-    if (url.pathname.endsWith("/health") || url.pathname === "/") {
+    if (url.pathname.endsWith("/health") || url.pathname.endsWith("/fleet/health") || url.pathname === "/") {
       return new Response(
         JSON.stringify({ ok: true, build_id: BUILD_ID, ts: new Date().toISOString() }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
@@ -2310,8 +2316,8 @@ Deno.serve(async (req) => {
           if (detectInjection(sQ) || detectInjection(sC)) {
             const refusal = { ...INJECTION_REFUSAL_MINUTE, freshness: new Date().toISOString() };
             return rpcResult(id, {
-              content: [{ type: "text", text: JSON.stringify(refusal) }],
-              structuredContent: refusal,
+              content: [{ type: "text", text: JSON.stringify(stampBuildId(refusal as any)) }],
+              structuredContent: stampBuildId(refusal as any),
               isError: false,
             });
           }
@@ -2390,8 +2396,8 @@ Deno.serve(async (req) => {
           });
 
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(out) }],
-            structuredContent: out,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
+            structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
@@ -2499,8 +2505,8 @@ Deno.serve(async (req) => {
             },
           };
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(result) }],
-            structuredContent: result,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
+            structuredContent: stampBuildId(result as any),
             isError: false,
           });
         } catch (e) {
@@ -2601,8 +2607,8 @@ Deno.serve(async (req) => {
           });
           const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(out) }],
-            structuredContent: out,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
+            structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
