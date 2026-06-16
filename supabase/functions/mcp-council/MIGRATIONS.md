@@ -113,3 +113,46 @@ client-facing structured response.
 - `agents/manifest.ts` (optional `eval_score` / `eval_scored_at`; `canSeat`
   wired into `findEnabledAgent` and `listEnabledAgentsPublic`)
 
+
+---
+
+## harden-v1 (COB Connector hardening)
+
+Build stamp `BUILD_ID = "harden-v1"` is echoed on every response body
+(`build_id` field) and as the `X-Build-Id` header on every Response. Verify
+deploy with:
+
+    curl -sS https://<project>.supabase.co/functions/v1/mcp-council/health
+
+Shipped:
+- `retry.ts` · bounded 2-retry with jitter on transient upstream failures.
+- `breaker.ts` · per-instance rolling-window circuit breaker (20 calls /
+  60s, opens at ≥80% failure for 30s) + per-tenant per-instance
+  concurrency guard (cap 2). **Documented caveat:** in-memory, best-effort
+  per instance. The DB-backed `check_rate_limit` per-IP/minute remains the
+  authoritative fleet-wide cap.
+- `injection.ts` · prompt-injection regex filter. On hit, returns a fixed
+  refusal minute (`refused: true`, `refusal_reason: "injection_refusal"`)
+  with no upstream call. Also exports `sanitizeText` to strip ASCII
+  control characters.
+- `pii-scrub.ts` · SSN / IBAN / Luhn-validated card / long digit-block
+  redaction. Applied before Notion write-back as defense-in-depth.
+- `tenants.ts :: getNotionTarget(tenant)` · per-tenant Notion target
+  resolution. `file_to_office` now fails closed with `office_not_configured`
+  when the tenant has no `{TENANT}_NOTION_TOKEN` + `{TENANT}_BOARDROOM_DB`
+  pair. SPINNEY keeps the legacy `SPINNEY_NOTION_TOKEN` pair.
+- `notion.ts :: writeMinuteToNotion(minute, question, target)` · accepts
+  an explicit `{ token, dbId, tenant }` target and prefixes the page title
+  with `[TENANT · yymmdd]`. Legacy positional fallback retained for the
+  SPINNEY env path only.
+- `index.ts` · GET `/health` (unauthenticated, no work), POST with header
+  `X-Cron-Warmup: 1` accepted as warm-ping, `callAnthropic` wrapped in
+  `withRetry` + breaker, per-tool input cap raised to 8000 with control-
+  character strip + injection refusal, per-tenant concurrency guard around
+  every deliberation tool, expanded `safeErrors` set with
+  `circuit_open` · `concurrency_limit` · `injection_refusal` ·
+  `office_not_configured` · `input_too_large`.
+
+Operator handoff (rnjqpw, out of scope here): PKCE S256-only, token TTL +
+refresh rotation, `aud` binding, purge expired pending authz, prune
+duplicate "Claude" clients, DCR rate-limit.

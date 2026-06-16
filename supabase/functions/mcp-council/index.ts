@@ -27,6 +27,13 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { writeMinuteToNotion } from "./notion.ts";
+import { withRetry, isRetryable } from "./retry.ts";
+import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
+import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
+import { scrubPii } from "./pii-scrub.ts";
+
+// harden-v1 · build stamp · echo on every response for deploy verification
+const BUILD_ID = "harden-v1";
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
@@ -76,7 +83,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, getNotionTarget, type TenantContext } from "./tenants.ts";
 
 const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "leo", name: "Leo", system: LEO_MD },
@@ -221,40 +228,53 @@ async function callAnthropic(opts: {
   user: string;
   maxTokens: number;
 }): Promise<{ text: string; usage: ReturnType<typeof readUsage>; model: string }> {
+  // harden-v1 · fail-fast when the per-instance breaker is open
+  if (breakerIsOpen()) throw new Error("circuit_open");
+
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("upstream_unavailable");
-  const r = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": ANTHROPIC_VERSION,
-      "anthropic-beta": "prompt-caching-2024-07-31",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens,
-      // Structured system with cache_control on the static prefix.
-      system: [{
-        type: "text",
-        text: opts.system,
-        cache_control: { type: "ephemeral" },
-      }],
-      messages: [{ role: "user", content: opts.user }],
-    }),
-  });
-  if (!r.ok) {
-    throw new Error("upstream_failed");
+
+  const doCall = async () => {
+    const r = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "anthropic-beta": "prompt-caching-2024-07-31",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens,
+        system: [{
+          type: "text",
+          text: opts.system,
+          cache_control: { type: "ephemeral" },
+        }],
+        messages: [{ role: "user", content: opts.user }],
+      }),
+    });
+    if (!r.ok) throw new Error("upstream_failed");
+    const json = await r.json();
+    const blocks = Array.isArray(json?.content) ? json.content : [];
+    const text = blocks
+      .filter((b: any) => b?.type === "text" && typeof b.text === "string")
+      .map((b: any) => b.text)
+      .join("\n")
+      .trim();
+    if (!text) throw new Error("upstream_empty");
+    return { text, usage: readUsage(json?.usage), model: opts.model };
+  };
+
+  try {
+    const out = await withRetry(doCall);
+    breakerRecord(true);
+    return out;
+  } catch (e) {
+    // Only count truly retryable/upstream failures as breaker signal.
+    if (isRetryable(e)) breakerRecord(false);
+    throw e;
   }
-  const json = await r.json();
-  const blocks = Array.isArray(json?.content) ? json.content : [];
-  const text = blocks
-    .filter((b: any) => b?.type === "text" && typeof b.text === "string")
-    .map((b: any) => b.text)
-    .join("\n")
-    .trim();
-  if (!text) throw new Error("upstream_empty");
-  return { text, usage: readUsage(json?.usage), model: opts.model };
 }
 
 // ── Boundary scrub (narrow · only true internal mechanics) ─────────────────
@@ -2052,20 +2072,26 @@ const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTIO
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, error: { code, message } }),
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: { code, message },
+      build_id: BUILD_ID,
+    }),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
     },
   );
 }
 
 function rpcResult(id: any, result: any): Response {
+  // Non-destructive: stamp build_id alongside result without mutating shape
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result }),
+    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID }),
     {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
     },
   );
 }
@@ -2090,10 +2116,31 @@ Deno.serve(async (req) => {
       headers: {
         ...corsHeaders,
         "Access-Control-Allow-Headers":
-          "authorization, content-type, mcp-session-id, x-client-info, apikey",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "authorization, content-type, mcp-session-id, x-client-info, apikey, x-cron-warmup",
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       },
     });
+  }
+
+  // harden-v1 · health probe (unauthenticated, no work). For COB liveness
+  // checks and deploy verification. Echoes the build_id.
+  if (req.method === "GET") {
+    const url = new URL(req.url);
+    if (url.pathname.endsWith("/health") || url.pathname === "/") {
+      return new Response(
+        JSON.stringify({ ok: true, build_id: BUILD_ID, ts: new Date().toISOString() }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
+      );
+    }
+    return rpcError(null, -32600, "method_not_allowed", 405);
+  }
+
+  // harden-v1 · cron warm-up · accept and ack without doing any work.
+  if (req.method === "POST" && req.headers.get("X-Cron-Warmup") === "1") {
+    return new Response(
+      JSON.stringify({ ok: true, build_id: BUILD_ID, warmed: true }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
+    );
   }
 
   if (req.method !== "POST") {
@@ -2218,6 +2265,12 @@ Deno.serve(async (req) => {
         "notion_not_configured",
         "panel_too_small",
         "stage1_total_failure",
+        // harden-v1
+        "circuit_open",
+        "concurrency_limit",
+        "injection_refusal",
+        "office_not_configured",
+        "input_too_large",
       ]);
 
       const toRpc = (e: unknown) => {
@@ -2241,6 +2294,40 @@ Deno.serve(async (req) => {
           isError: false,
         });
       }
+
+      // ── harden-v1 · input sanitization + injection refusal ─────────────
+      // Applied to any tool that carries question/context (convene_council,
+      // summon_best_advisor, file_to_office). show_council exited above.
+      {
+        const rawQ = typeof args?.question === "string" ? args.question : "";
+        const rawC = typeof args?.context === "string" ? args.context : "";
+        if (rawQ || rawC) {
+          if (rawQ.length > 8000 || rawC.length > 8000) {
+            return rpcError(id, -32003, "input_too_large");
+          }
+          const sQ = sanitizeText(rawQ);
+          const sC = sanitizeText(rawC);
+          if (detectInjection(sQ) || detectInjection(sC)) {
+            const refusal = { ...INJECTION_REFUSAL_MINUTE, freshness: new Date().toISOString() };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(refusal) }],
+              structuredContent: refusal,
+              isError: false,
+            });
+          }
+          // Hand sanitized text to downstream handlers.
+          args.question = sQ;
+          args.context = sC;
+        }
+      }
+
+      // ── harden-v1 · per-tenant per-instance concurrency guard ──────────
+      // Best-effort cap (per instance, see breaker.ts). DB rate-limit above
+      // remains the authoritative fleet-wide control.
+      if (!acquireConcurrency(tenant)) {
+        return rpcError(id, -32003, "concurrency_limit");
+      }
+      try {
 
       // Tier-1 grounding seam · `_client_context` (test field).
       // Phase 2B hardening: ignored entirely on OAuth path (prompt-injection
@@ -2468,7 +2555,25 @@ Deno.serve(async (req) => {
             throw new Error("boundary_violation");
           }
 
-          const { url: notion_url } = await writeMinuteToNotion(filedMinute, question);
+          // harden-v1 · fail-closed tenant resolution. No cross-tenant
+          // fallback. If this tenant has no office configured, refuse.
+          const target = getNotionTarget(tenant);
+          if (!target) throw new Error("office_not_configured");
+
+          // harden-v1 · defense-in-depth PII scrub on the outgoing minute.
+          const scrubbedMinute: MinuteShape = {
+            ...filedMinute,
+            recommendation: scrubPii(filedMinute.recommendation),
+            dissent: scrubPii(filedMinute.dissent),
+            anticipatory_horizon: filedMinute.anticipatory_horizon.map(scrubPii),
+          };
+          const scrubbedQuestion = scrubPii(question);
+
+          const { url: notion_url } = await writeMinuteToNotion(
+            scrubbedMinute,
+            scrubbedQuestion,
+            { token: target.token, dbId: target.dbId, tenant },
+          );
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "file_to_office",
@@ -2494,7 +2599,7 @@ Deno.serve(async (req) => {
               hops: result.routing_trace.hops,
             },
           });
-          const out = { minute: filedMinute, notion_url, routing_trace: result.routing_trace };
+          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
@@ -2507,6 +2612,9 @@ Deno.serve(async (req) => {
 
 
       return rpcError(id, -32601, "unknown_tool");
+      } finally {
+        releaseConcurrency(tenant);
+      }
     }
 
 

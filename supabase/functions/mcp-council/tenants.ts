@@ -97,3 +97,28 @@ export function computeKnoxPosture(
   if (looksAdversarial(question)) return "offensive";
   return "advisory";
 }
+
+// ── harden-v1 · per-tenant Notion target resolution ─────────────────────
+// Returns { token, dbId } for the tenant, or null when no per-tenant office
+// is configured. Callers MUST throw "office_not_configured" on null — never
+// fall back to another tenant's secrets. This prevents cross-tenant writes
+// that the prior single-SPINNEY_NOTION_TOKEN path allowed.
+export interface NotionTarget {
+  token: string;
+  dbId: string;
+}
+
+export function getNotionTarget(tenant: string): NotionTarget | null {
+  if (tenant === "SPINNEY") {
+    const token = Deno.env.get("SPINNEY_NOTION_TOKEN") ?? "";
+    const dbId = Deno.env.get("SPINNEY_BOARDROOM_DB") ?? "";
+    if (!token || !dbId) return null;
+    return { token, dbId };
+  }
+  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN).
+  // Fail-closed when absent.
+  const token = Deno.env.get(`${tenant}_NOTION_TOKEN`) ?? "";
+  const dbId = Deno.env.get(`${tenant}_BOARDROOM_DB`) ?? "";
+  if (!token || !dbId) return null;
+  return { token, dbId };
+}
