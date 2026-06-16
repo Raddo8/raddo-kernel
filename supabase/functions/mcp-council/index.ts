@@ -228,40 +228,53 @@ async function callAnthropic(opts: {
   user: string;
   maxTokens: number;
 }): Promise<{ text: string; usage: ReturnType<typeof readUsage>; model: string }> {
+  // harden-v1 · fail-fast when the per-instance breaker is open
+  if (breakerIsOpen()) throw new Error("circuit_open");
+
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("upstream_unavailable");
-  const r = await fetch(ANTHROPIC_URL, {
-    method: "POST",
-    headers: {
-      "x-api-key": key,
-      "anthropic-version": ANTHROPIC_VERSION,
-      "anthropic-beta": "prompt-caching-2024-07-31",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: opts.model,
-      max_tokens: opts.maxTokens,
-      // Structured system with cache_control on the static prefix.
-      system: [{
-        type: "text",
-        text: opts.system,
-        cache_control: { type: "ephemeral" },
-      }],
-      messages: [{ role: "user", content: opts.user }],
-    }),
-  });
-  if (!r.ok) {
-    throw new Error("upstream_failed");
+
+  const doCall = async () => {
+    const r = await fetch(ANTHROPIC_URL, {
+      method: "POST",
+      headers: {
+        "x-api-key": key,
+        "anthropic-version": ANTHROPIC_VERSION,
+        "anthropic-beta": "prompt-caching-2024-07-31",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: opts.model,
+        max_tokens: opts.maxTokens,
+        system: [{
+          type: "text",
+          text: opts.system,
+          cache_control: { type: "ephemeral" },
+        }],
+        messages: [{ role: "user", content: opts.user }],
+      }),
+    });
+    if (!r.ok) throw new Error("upstream_failed");
+    const json = await r.json();
+    const blocks = Array.isArray(json?.content) ? json.content : [];
+    const text = blocks
+      .filter((b: any) => b?.type === "text" && typeof b.text === "string")
+      .map((b: any) => b.text)
+      .join("\n")
+      .trim();
+    if (!text) throw new Error("upstream_empty");
+    return { text, usage: readUsage(json?.usage), model: opts.model };
+  };
+
+  try {
+    const out = await withRetry(doCall);
+    breakerRecord(true);
+    return out;
+  } catch (e) {
+    // Only count truly retryable/upstream failures as breaker signal.
+    if (isRetryable(e)) breakerRecord(false);
+    throw e;
   }
-  const json = await r.json();
-  const blocks = Array.isArray(json?.content) ? json.content : [];
-  const text = blocks
-    .filter((b: any) => b?.type === "text" && typeof b.text === "string")
-    .map((b: any) => b.text)
-    .join("\n")
-    .trim();
-  if (!text) throw new Error("upstream_empty");
-  return { text, usage: readUsage(json?.usage), model: opts.model };
 }
 
 // ── Boundary scrub (narrow · only true internal mechanics) ─────────────────
