@@ -2072,20 +2072,26 @@ const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTIO
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, error: { code, message } }),
+    JSON.stringify({
+      jsonrpc: "2.0",
+      id: id ?? null,
+      error: { code, message },
+      build_id: BUILD_ID,
+    }),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
     },
   );
 }
 
 function rpcResult(id: any, result: any): Response {
+  // Non-destructive: stamp build_id alongside result without mutating shape
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result }),
+    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID }),
     {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
     },
   );
 }
