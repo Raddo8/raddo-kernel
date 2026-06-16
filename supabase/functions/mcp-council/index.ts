@@ -27,6 +27,13 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { writeMinuteToNotion } from "./notion.ts";
+import { withRetry, isRetryable } from "./retry.ts";
+import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
+import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
+import { scrubPii } from "./pii-scrub.ts";
+
+// harden-v1 · build stamp · echo on every response for deploy verification
+const BUILD_ID = "harden-v1";
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
@@ -76,7 +83,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, getNotionTarget, type TenantContext } from "./tenants.ts";
 
 const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "leo", name: "Leo", system: LEO_MD },
