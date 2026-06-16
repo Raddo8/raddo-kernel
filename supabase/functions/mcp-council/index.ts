@@ -2316,8 +2316,8 @@ Deno.serve(async (req) => {
           if (detectInjection(sQ) || detectInjection(sC)) {
             const refusal = { ...INJECTION_REFUSAL_MINUTE, freshness: new Date().toISOString() };
             return rpcResult(id, {
-              content: [{ type: "text", text: JSON.stringify(refusal) }],
-              structuredContent: refusal,
+              content: [{ type: "text", text: JSON.stringify(stampBuildId(refusal as any)) }],
+              structuredContent: stampBuildId(refusal as any),
               isError: false,
             });
           }
@@ -2396,8 +2396,8 @@ Deno.serve(async (req) => {
           });
 
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(out) }],
-            structuredContent: out,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
+            structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
@@ -2505,8 +2505,8 @@ Deno.serve(async (req) => {
             },
           };
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(result) }],
-            structuredContent: result,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
+            structuredContent: stampBuildId(result as any),
             isError: false,
           });
         } catch (e) {
@@ -2607,8 +2607,8 @@ Deno.serve(async (req) => {
           });
           const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(out) }],
-            structuredContent: out,
+            content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
+            structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
