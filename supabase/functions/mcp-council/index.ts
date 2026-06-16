@@ -2132,7 +2132,7 @@ Deno.serve(async (req) => {
   // checks and deploy verification. Echoes the build_id.
   if (req.method === "GET") {
     const url = new URL(req.url);
-    if (url.pathname.endsWith("/health") || url.pathname === "/") {
+    if (url.pathname.endsWith("/health") || url.pathname.endsWith("/fleet/health") || url.pathname === "/") {
       return new Response(
         JSON.stringify({ ok: true, build_id: BUILD_ID, ts: new Date().toISOString() }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } },
