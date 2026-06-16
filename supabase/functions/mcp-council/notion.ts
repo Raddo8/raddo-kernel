@@ -53,8 +53,9 @@ function truncate(s: string, n: number): string {
   return t.length > n ? t.slice(0, n - 1) + "…" : t;
 }
 
-function buildTitle(question: string, freshness: string): string {
-  return `[${yymmdd(freshness)}] ${truncate(question, 60)}`;
+function buildTitle(question: string, freshness: string, tenant?: string): string {
+  const prefix = tenant ? `[${tenant} · ${yymmdd(freshness)}]` : `[${yymmdd(freshness)}]`;
+  return `${prefix} ${truncate(question, 60)}`;
 }
 
 function buildBody(minute: Minute): any[] {
@@ -109,19 +110,29 @@ async function postPage(token: string, payload: any): Promise<Response> {
   });
 }
 
+export interface WriteMinuteTarget {
+  token: string;
+  dbId: string;
+  tenant: string;
+}
+
 export async function writeMinuteToNotion(
   minute: Minute,
   question: string,
+  target?: WriteMinuteTarget,
 ): Promise<{ url: string; id: string }> {
-  const token = Deno.env.get("SPINNEY_NOTION_TOKEN") ?? "";
-  const dbId = Deno.env.get("SPINNEY_BOARDROOM_DB") ?? "";
-  if (!token || !dbId) throw new Error("notion_not_configured");
+  // harden-v1: prefer tenant-scoped target. Legacy positional call falls
+  // back to SPINNEY env only (kept for any internal callers; new code MUST
+  // pass target explicitly).
+  const token = target?.token ?? Deno.env.get("SPINNEY_NOTION_TOKEN") ?? "";
+  const dbId = target?.dbId ?? Deno.env.get("SPINNEY_BOARDROOM_DB") ?? "";
+  const tenant = target?.tenant;
+  if (!token || !dbId) throw new Error("office_not_configured");
 
-  const title = buildTitle(question, minute.freshness);
+  const title = buildTitle(question, minute.freshness, tenant);
   const children = buildBody(minute);
   const properties = buildFullProperties(minute, title);
 
-  // First attempt: full payload.
   let r = await postPage(token, {
     parent: { database_id: dbId },
     properties,
@@ -136,7 +147,6 @@ export async function writeMinuteToNotion(
     const code = parsed?.code ?? "";
     const msg = parsed?.message ?? bodyText;
 
-    // Retry once with title-only + body for bare/misaligned databases.
     if (code === "validation_error") {
       console.warn("notion_validation_error_retry_title_only", msg?.slice?.(0, 200));
       r = await postPage(token, {
