@@ -2599,7 +2599,7 @@ Deno.serve(async (req) => {
               hops: result.routing_trace.hops,
             },
           });
-          const out = { minute: filedMinute, notion_url, routing_trace: result.routing_trace };
+          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
