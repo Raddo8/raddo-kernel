@@ -2555,7 +2555,25 @@ Deno.serve(async (req) => {
             throw new Error("boundary_violation");
           }
 
-          const { url: notion_url } = await writeMinuteToNotion(filedMinute, question);
+          // harden-v1 · fail-closed tenant resolution. No cross-tenant
+          // fallback. If this tenant has no office configured, refuse.
+          const target = getNotionTarget(tenant);
+          if (!target) throw new Error("office_not_configured");
+
+          // harden-v1 · defense-in-depth PII scrub on the outgoing minute.
+          const scrubbedMinute: MinuteShape = {
+            ...filedMinute,
+            recommendation: scrubPii(filedMinute.recommendation),
+            dissent: scrubPii(filedMinute.dissent),
+            anticipatory_horizon: filedMinute.anticipatory_horizon.map(scrubPii),
+          };
+          const scrubbedQuestion = scrubPii(question);
+
+          const { url: notion_url } = await writeMinuteToNotion(
+            scrubbedMinute,
+            scrubbedQuestion,
+            { token: target.token, dbId: target.dbId, tenant },
+          );
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "file_to_office",
