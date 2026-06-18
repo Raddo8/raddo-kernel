@@ -22,8 +22,10 @@ export const ADVISOR_PROVIDER: Record<string, ProviderId> = {
 };
 
 // Single-source model name for Abe-on-OpenAI. Change here, applies
-// everywhere. Use a current OpenAI reasoning model.
-export const ABE_OPENAI_MODEL = "gpt-5";
+// everywhere. Use a GA chat-completions model that reliably returns
+// non-empty content (reasoning models like gpt-5 burn the token
+// budget on hidden reasoning and return empty `message.content`).
+export const ABE_OPENAI_MODEL = "gpt-4o";
 
 export function providerFor(chairId: string): ProviderId {
   return ADVISOR_PROVIDER[chairId] ?? "anthropic";
@@ -44,7 +46,7 @@ async function callOpenAI(opts: {
 
   const doCall = async () => {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 45_000);
+    const t = setTimeout(() => ctrl.abort(), 15_000);
     try {
       const r = await fetch(OPENAI_URL, {
         method: "POST",
