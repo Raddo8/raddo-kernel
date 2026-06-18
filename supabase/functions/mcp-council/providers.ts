@@ -17,8 +17,11 @@ export type ProviderId = "anthropic" | "openai";
 
 // Advisor → provider map. Default for any chair not listed is "anthropic".
 // Move chairs here to re-route them; no call-site changes required.
+// TEMPORARY: Abe routed to Anthropic while we diagnose the OpenAI
+// empty-content bug (see callOpenAI raw-body logging below). Re-enable
+// "openai" once a successful non-empty test response is observed.
 export const ADVISOR_PROVIDER: Record<string, ProviderId> = {
-  abe: "openai",
+  abe: "anthropic",
 };
 
 // Single-source model name for Abe-on-OpenAI. Change here, applies
