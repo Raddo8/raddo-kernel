@@ -1,0 +1,1134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Continuum HUB — AEL Holdings</title>
+<style>
+:root{
+  --ink:#0A0B0D; --ink2:#101216; --panel:#14171C; --panel2:#191D23;
+  --bone:#F4F4F2; --fog:#B9BEC6; --steel:#7B828C; --hair:#262A31; --hair2:#323843;
+  --ascent:#2E6BFF;       /* Electric Blue — "you are rising" */
+  --ascent-dim:#1C2F57;
+  --forge:#F4B11E;        /* Plasma Gold — "you are becoming" */
+  --forge-dim:#4A3A11;
+  --path:#E7E9EC;         /* Path = black & white only */
+  --good:#43C08A; --bad:#E0604E;
+  --disp: "Helvetica Neue", "Arial Narrow", Arial, sans-serif;
+  --body: ui-sans-serif, -apple-system, "Helvetica Neue", Segoe UI, Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--ink);color:var(--bone);font-family:var(--body);
+  font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:.005em}
+a{color:inherit;text-decoration:none}
+::selection{background:var(--ascent);color:#fff}
+h1,h2,h3,h4{font-family:var(--disp);font-weight:800;letter-spacing:-.02em;line-height:1.02;margin:0}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--steel)}
+
+/* ---------- SHELL ---------- */
+.app{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+.side{position:sticky;top:0;height:100vh;overflow-y:auto;background:linear-gradient(180deg,#0C0E12,#08090B);
+  border-right:1px solid var(--hair);padding:22px 0 40px}
+.brandblock{padding:0 22px 18px;border-bottom:1px solid var(--hair);margin-bottom:14px}
+.ael{font-family:var(--mono);font-size:11px;letter-spacing:.34em;color:var(--steel)}
+.wm{font-family:var(--disp);font-weight:800;font-size:23px;letter-spacing:-.01em;margin-top:7px;line-height:.98}
+.wm b{color:#fff}
+.mantra{font-family:var(--mono);font-size:9.5px;letter-spacing:.22em;color:var(--steel);margin-top:11px;line-height:1.7}
+.mantra .b{color:var(--ascent)} .mantra .g{color:var(--forge)}
+.navsec{font-family:var(--mono);font-size:10px;letter-spacing:.24em;color:#525763;text-transform:uppercase;padding:16px 22px 7px}
+.navlink{display:flex;align-items:center;gap:11px;padding:8px 22px;cursor:pointer;color:var(--fog);
+  border-left:2px solid transparent;font-size:13.5px;transition:.15s}
+.navlink .ix{font-family:var(--mono);font-size:10px;color:#4d525c;width:18px}
+.navlink:hover{color:#fff;background:#0f1318}
+.navlink.on{color:#fff;border-left-color:var(--ascent);background:#0f141b}
+.navlink.on .ix{color:var(--ascent)}
+.lock{margin-left:auto;font-size:9px;font-family:var(--mono);color:var(--forge);border:1px solid var(--forge-dim);
+  padding:1px 5px;border-radius:3px;letter-spacing:.1em}
+
+.main{min-width:0}
+.topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:18px;
+  padding:13px 34px;background:rgba(10,11,13,.86);backdrop-filter:blur(10px);border-bottom:1px solid var(--hair)}
+.topbar .tt{font-family:var(--mono);font-size:11px;letter-spacing:.2em;color:var(--steel);text-transform:uppercase}
+.legend{margin-left:auto;display:flex;gap:16px;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--steel)}
+.legend i{width:9px;height:9px;display:inline-block;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.dot-path{background:var(--path)} .dot-asc{background:var(--ascent)} .dot-forge{background:var(--forge)}
+
+.wrap{max-width:1080px;margin:0 auto;padding:46px 34px 90px}
+.page{display:none;animation:fade .5s ease both}
+.page.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.page,.page.on{animation:none}*{transition:none!important}}
+
+/* ---------- TYPE / SECTIONS ---------- */
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--ascent);margin-bottom:14px}
+.h-xl{font-size:clamp(34px,5.4vw,62px);line-height:.96}
+.h-lg{font-size:clamp(26px,3.6vw,40px)}
+.h-md{font-size:22px}
+.lede{font-size:18px;color:#D6D9DE;max-width:62ch;margin-top:16px;line-height:1.55}
+p{color:#C7CBD1;max-width:70ch}
+.sec{margin-top:48px;padding-top:34px;border-top:1px solid var(--hair)}
+.sec-h{display:flex;align-items:baseline;gap:14px;margin-bottom:18px}
+.sec-h .num{font-family:var(--mono);font-size:12px;color:var(--steel)}
+.muted{color:var(--steel)} .small{font-size:13px} .tiny{font-size:11.5px}
+.bluetext{color:var(--ascent)} .goldtext{color:var(--forge)}
+
+/* ---------- CARDS / GRID ---------- */
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:880px){.g2,.g3,.g4{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--hair);border-radius:11px;padding:20px}
+.card.hov{transition:.18s} .card.hov:hover{border-color:var(--hair2);transform:translateY(-2px)}
+.metric{background:linear-gradient(160deg,#16191f,#101216);border:1px solid var(--hair);border-radius:11px;padding:18px 18px 16px}
+.metric .v{font-family:var(--disp);font-weight:800;font-size:30px;letter-spacing:-.02em;line-height:1}
+.metric .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel);margin-top:9px}
+.metric .s{font-size:12px;color:var(--fog);margin-top:6px}
+.metric.asc{border-color:var(--ascent-dim)} .metric.asc .v{color:var(--ascent)}
+.metric.forge{border-color:var(--forge-dim)} .metric.forge .v{color:var(--forge)}
+
+.pill{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--fog);border:1px solid var(--hair2);border-radius:999px;padding:4px 11px}
+.tag-path{border-color:#3a3f47;color:var(--path)}
+.tag-asc{border-color:var(--ascent-dim);color:var(--ascent)}
+.tag-forge{border-color:var(--forge-dim);color:var(--forge)}
+
+/* ---------- TABLES ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--hair)}
+th{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--steel);font-weight:400}
+td.n,th.n{text-align:right;font-family:var(--mono)}
+tr:hover td{background:#10141a}
+.tbl-wrap{border:1px solid var(--hair);border-radius:11px;overflow:hidden;background:var(--panel)}
+.tbl-wrap table tr:last-child td{border-bottom:none}
+tr.tot td{background:#11151b;font-weight:700;color:#fff}
+
+/* ---------- DRILLDOWN ---------- */
+details{border:1px solid var(--hair);border-radius:10px;background:var(--panel);margin:10px 0;overflow:hidden}
+details[open]{border-color:var(--hair2)}
+summary{cursor:pointer;list-style:none;padding:14px 18px;display:flex;align-items:center;gap:12px;
+  font-family:var(--disp);font-weight:700;font-size:15.5px}
+summary::-webkit-details-marker{display:none}
+summary .chev{margin-left:auto;color:var(--steel);transition:.2s;font-family:var(--mono);font-size:12px}
+details[open] summary .chev{transform:rotate(90deg);color:var(--ascent)}
+summary .mk{font-family:var(--mono);font-size:11px;color:var(--ascent)}
+.dd-body{padding:4px 18px 20px;border-top:1px solid var(--hair)}
+
+/* ---------- SCORE RAIL (signature) ---------- */
+.scorerail{position:relative;height:46px;border-radius:8px;overflow:hidden;border:1px solid var(--hair);
+  display:flex;font-family:var(--mono);font-size:11px}
+.scorerail div{display:flex;align-items:center;justify-content:center;letter-spacing:.12em;text-transform:uppercase;color:#0A0B0D;font-weight:700}
+.sr-path{flex:0 0 40%;background:linear-gradient(90deg,#23262c,#3a3f47);color:var(--path)}
+.sr-asc{flex:0 0 30%;background:linear-gradient(90deg,#1c3a8f,var(--ascent));color:#fff}
+.sr-forge{flex:0 0 30%;background:linear-gradient(90deg,#7a5a10,var(--forge));color:#0A0B0D}
+.sr-scale{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--steel);margin-top:6px;letter-spacing:.1em}
+
+/* formula */
+.formula{font-family:var(--mono);font-size:clamp(18px,2.6vw,30px);letter-spacing:.02em;color:#fff;
+  background:#0e1116;border:1px solid var(--hair);border-radius:10px;padding:22px;text-align:center}
+.formula sub{color:var(--ascent)} .formula .w{color:var(--forge)}
+
+/* domain cards */
+.domain{border-radius:11px;padding:18px;border:1px solid var(--hair);background:var(--panel)}
+.domain .sym{font-family:var(--disp);font-weight:800;font-size:34px;line-height:1}
+.dom-P .sym{color:#7FB0FF}.dom-C .sym{color:var(--ascent)}.dom-S .sym{color:var(--forge)}.dom-Y .sym{color:#E6C25A}
+
+/* timeline */
+.tl{position:relative;margin-left:8px;border-left:2px solid var(--hair2);padding-left:22px}
+.tl .ev{position:relative;padding:9px 0}
+.tl .ev::before{content:"";position:absolute;left:-29px;top:14px;width:10px;height:10px;border-radius:50%;background:var(--ascent);box-shadow:0 0 0 4px #0c1018}
+.tl .tm{font-family:var(--mono);font-size:12px;color:var(--forge);letter-spacing:.08em}
+.tl .lab{font-weight:700;font-family:var(--disp)}
+
+/* entity stack */
+.stack{display:grid;gap:10px}
+.ent{border:1px solid var(--hair);border-radius:10px;padding:14px 16px;background:var(--panel);display:grid;grid-template-columns:1fr auto;gap:6px;align-items:start}
+.ent.master{border-color:var(--ascent-dim);background:linear-gradient(160deg,#121a2e,#11141a)}
+.ent.ip{border-color:var(--forge-dim)}
+.ent .en{font-family:var(--disp);font-weight:800;font-size:16px}
+.ent .ef{font-size:12.5px;color:var(--fog);max-width:60ch}
+.ent .dom{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--steel);text-transform:uppercase}
+.flowline{font-family:var(--mono);font-size:11px;color:var(--steel);text-align:center;padding:2px}
+.flowline b{color:var(--ascent)}
+
+/* svg chart helpers */
+.chart{width:100%;height:auto;display:block}
+.bar-a{fill:var(--ascent)} .bar-b{fill:var(--forge)} .bar-n{fill:#3a4150}
+.axis{stroke:var(--hair2);stroke-width:1}
+.glab{font-family:var(--mono);font-size:10px;fill:var(--steel)}
+.vlab{font-family:var(--mono);font-size:10px;fill:var(--fog)}
+
+/* toggle */
+.toggle{display:inline-flex;border:1px solid var(--hair2);border-radius:8px;overflow:hidden;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em}
+.toggle button{background:transparent;color:var(--fog);border:none;padding:7px 14px;cursor:pointer;text-transform:uppercase}
+.toggle button.on{background:var(--ascent);color:#fff}
+.toggle.gold button.on{background:var(--forge);color:#0A0B0D}
+
+/* confidential banner */
+.confbar{display:flex;align-items:center;gap:12px;border:1px solid var(--forge-dim);background:#16120a;
+  border-radius:10px;padding:12px 16px;font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;color:var(--forge)}
+.note{border-left:3px solid var(--ascent);background:#0e1320;border-radius:0 10px 10px 0;padding:13px 16px;font-size:13.5px;color:#CFD6E2}
+.note.warn{border-left-color:var(--forge);background:#16120a;color:#E8D6A8}
+.src{font-family:var(--mono);font-size:11px;color:var(--steel)}
+hr.thin{border:none;border-top:1px solid var(--hair);margin:26px 0}
+
+.manifesto{font-family:var(--disp);font-weight:800;font-size:clamp(26px,4.5vw,52px);line-height:1.12;letter-spacing:-.02em;max-width:18ch}
+.manifesto .b{color:var(--ascent)} .manifesto .g{color:var(--forge)}
+
+.bignum{font-family:var(--disp);font-weight:800;font-size:clamp(40px,7vw,86px);letter-spacing:-.03em;line-height:.9}
+
+.foot{margin-top:60px;padding-top:22px;border-top:1px solid var(--hair);font-size:12px;color:var(--steel)}
+@media(max-width:880px){
+  .app{grid-template-columns:1fr}
+  .side{position:fixed;left:-280px;transition:.25s;z-index:60;width:264px}
+  .side.open{left:0}
+  .menubtn{display:inline-flex!important}
+}
+.menubtn{display:none;background:var(--panel);border:1px solid var(--hair2);color:#fff;border-radius:8px;padding:7px 11px;cursor:pointer;font-family:var(--mono);font-size:12px}
+
+.gatecard{max-width:440px;margin:30px 0;background:linear-gradient(160deg,#16120a,#101216);border:1px solid var(--forge-dim);border-radius:14px;padding:30px}
+.gateicon{font-size:30px;margin-bottom:14px}
+.gaterow{display:flex;gap:10px}
+.gatecard input{flex:1;background:#0b0d11;border:1px solid var(--hair2);border-radius:8px;color:#fff;padding:11px 13px;font-family:var(--mono);font-size:14px;letter-spacing:.18em}
+.gatecard input:focus{outline:none;border-color:var(--forge)}
+.gatecard button{background:var(--forge);color:#0A0B0D;border:none;border-radius:8px;padding:0 20px;font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;cursor:pointer}
+.gatecard button:hover{filter:brightness(1.08)}
+.gateerr{color:var(--bad);font-family:var(--mono);font-size:12px;margin-top:10px;min-height:16px;opacity:0;transition:.15s}
+
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px;align-items:start}
+@media(max-width:760px){.calc{grid-template-columns:1fr}}
+.calc-controls{background:#0d0f13;border:1px solid var(--hair);border-radius:12px;padding:16px}
+.calc-out{background:linear-gradient(160deg,#0e1014,#0b0d10);border:1px solid var(--hair2);border-radius:12px;padding:16px}
+.ctl{margin-bottom:12px}
+.ctl label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:#aeb4bd;text-transform:uppercase;margin-bottom:6px}
+.ctl label b{color:var(--bone);font-weight:600}
+.rng{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:3px;background:#2a2f37;outline:none}
+.rng::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:16px;height:16px;border-radius:50%;background:var(--forge);cursor:pointer;border:2px solid #0b0d10;box-shadow:0 0 0 1px var(--forge)}
+.rng::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--forge);cursor:pointer;border:2px solid #0b0d10}
+.sel{width:100%;background:#0b0d11;border:1px solid var(--hair2);border-radius:8px;color:var(--bone);padding:10px 12px;font-family:var(--mono);font-size:13px;cursor:pointer}
+.sel:focus{outline:none;border-color:var(--forge)}
+.ecobar{display:flex;height:26px;border-radius:7px;overflow:hidden;border:1px solid var(--hair);background:#0b0d10}
+.ecobar>div{height:100%;transition:width .18s ease}
+.railmark{position:absolute;top:-4px;bottom:-4px;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.6);transition:left .18s ease}
+.mini{background:#0b0d11;border:1px solid var(--hair);border-radius:8px;padding:8px 10px}
+hr.thin{border:none;border-top:1px solid var(--hair)}
+.toggle.gold button.on{background:var(--forge);color:#0A0B0D;border-color:var(--forge)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="side" id="side">
+    <div class="brandblock">
+      <div class="ael">AEL · ATHLETE ENGINEERING LAB</div>
+      <div class="wm">THE<br><b>CONTINUUM</b><br>HUB</div>
+      <div class="mantra">BUILD DAILY ·<br><span class="b">MEASURE EVERYTHING</span> ·<br><span class="g">NO FINISH LINE</span></div>
+    </div>
+    <div class="navsec">Platform</div>
+    <div class="navlink on" data-go="overview"><span class="ix">00</span>Command Overview</div>
+    <div class="navlink" data-go="thesis"><span class="ix">01</span>The Thesis</div>
+    <div class="navlink" data-go="platform"><span class="ix">02</span>The AEL Platform</div>
+    <div class="navlink" data-go="score"><span class="ix">03</span>The Continuum Score™</div>
+    <div class="navsec">The Academy</div>
+    <div class="navlink" data-go="academy"><span class="ix">04</span>Academy &amp; Tiers</div>
+    <div class="navlink" data-go="day"><span class="ix">05</span>The Engineered Day</div>
+    <div class="navlink" data-go="academics"><span class="ix">06</span>Curriculum &amp; Compliance</div>
+    <div class="navsec">Market &amp; Build</div>
+    <div class="navlink" data-go="market"><span class="ix">07</span>Market &amp; Tailwind</div>
+    <div class="navlink" data-go="arch"><span class="ix">08</span>Entity Architecture</div>
+    <div class="navsec">Economics</div>
+    <div class="navlink" data-go="model"><span class="ix">09</span>Financial Model</div>
+    <div class="navlink" data-go="traj"><span class="ix">10</span>5-Year Trajectory</div>
+    <div class="navlink" data-go="capital"><span class="ix">11</span>Capital &amp; Returns<span class="lock">CONF</span></div>
+    <div class="navsec">People &amp; Path</div>
+    <div class="navlink" data-go="team"><span class="ix">12</span>Team &amp; Advisors</div>
+    <div class="navlink" data-go="roadmap"><span class="ix">13</span>Roadmap</div>
+    <div class="navlink" data-go="manifesto"><span class="ix">14</span>The Manifesto</div>
+    <div class="navlink" data-go="sources"><span class="ix">15</span>Sources &amp; Reconciliation</div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <div class="main">
+    <div class="topbar">
+      <button class="menubtn" id="menubtn">☰</button>
+      <span class="tt" id="crumb">Command Overview</span>
+      <div class="legend">
+        <span><i class="dot-path"></i>PATH 0–399</span>
+        <span><i class="dot-asc"></i>ASCENT 400–699</span>
+        <span><i class="dot-forge"></i>FORGE 700–1000</span>
+      </div>
+    </div>
+    <div class="wrap" id="content"><!-- pages injected --></div>
+  </div>
+</div>
+<script id="DATA" type="application/json">
+{}
+</script>
+<script>
+/* =================== DATA =================== */
+const D = {
+  // Residency financial model (Excel)
+  modelRev:[3.2859,9.5447,16.9284,30.2365,43.5500],
+  modelNI:[1.3252,4.3935,9.2793,18.3367,27.5478],
+  modelNIm:[40.3,46.0,54.8,60.6,63.3],
+  modelCOGS:[0.2969,0.9257,1.5340,2.6438,3.5753],
+  modelOpex:[1.1811,2.6992,2.9985,3.1103,3.2155],
+  // Platform rollout (deck/plan/narrative base case)
+  rollCamp:[1,2,4,7,10],
+  rollRev:[1.88,6.11,16.22,32.92,57.14],
+  rollEBITDA:[-0.466,0.259,3.93,10.05,20.8],
+  rollMargin:[-24.8,4.2,24.2,30.5,36.4],
+  rollFCFcum:[-1.2,-2.5,-1.5,4.0,20.3],
+  // Upside (deck appendix) consolidated EBITDA by segment
+  upMain:[-0.4,1.2,6.3,16.4,33.5],
+  upSat:[0,-0.1,0.5,2.6,6.0],
+  upClub:[0,0.2,1.2,3.0,4.6],
+  upPlat:[0,0.7,3.4,10.1,20.8],
+  upCorp:[-1.5,-3.0,-5.5,-8.0,-11.0],
+  // enrollment ramps (model scenarios — total athletes)
+  enrollC:[95,165,235,310,385],
+  enrollB:[170,250,425,595,765],
+  enrollA:[235,505,555,730,955],
+  years:["Y1","Y2","Y3","Y4","Y5"]
+};
+
+/* =================== CHART HELPERS (inline SVG, no deps) =================== */
+function fmt$(v){return (v<0?"-$":"$")+Math.abs(v).toFixed(v>=10||v<=-10?0:1)+"M";}
+function barChart(series, opts){
+  // series: [{name,data,cls}]  opts:{labels,h,unit,fmt}
+  const labels=opts.labels, h=opts.h||230, w=720, padL=44,padB=26,padT=14,padR=8;
+  const all=series.flatMap(s=>s.data);
+  let max=Math.max(...all,0), min=Math.min(...all,0);
+  if(max===min)max=min+1;
+  const span=max-min;
+  const plotH=h-padB-padT, plotW=w-padL-padR;
+  const groups=labels.length, gw=plotW/groups, bw=Math.min(40,(gw*0.7)/series.length);
+  const y0=padT+plotH*(max/span); // zero line
+  let s=`<svg viewBox="0 0 ${w} ${h}" class="chart" role="img">`;
+  // gridlines
+  for(let i=0;i<=4;i++){const gy=padT+plotH*i/4;const val=max-span*i/4;
+    s+=`<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" class="axis" opacity=".4"/>`;
+    s+=`<text x="${padL-6}" y="${gy+3}" text-anchor="end" class="glab">${(opts.fmt?opts.fmt(val):val.toFixed(0))}</text>`;}
+  // zero baseline emphasize
+  s+=`<line x1="${padL}" y1="${y0}" x2="${w-padR}" y2="${y0}" stroke="#3a4150" stroke-width="1.5"/>`;
+  labels.forEach((lb,gi)=>{
+    const gx=padL+gw*gi;
+    series.forEach((se,si)=>{
+      const v=se.data[gi];
+      const bh=Math.abs(v)/span*plotH;
+      const bx=gx+(gw-bw*series.length)/2+si*bw;
+      const by=v>=0? y0-bh : y0;
+      s+=`<rect x="${bx}" y="${by}" width="${bw-3}" height="${Math.max(bh,1)}" rx="2" class="${se.cls}"><title>${se.name} ${lb}: ${v}</title></rect>`;
+      if(opts.valtop&&series.length<=2){
+        s+=`<text x="${bx+(bw-3)/2}" y="${by-4}" text-anchor="middle" class="vlab" font-size="9">${opts.vfmt?opts.vfmt(v):v}</text>`;}
+    });
+    s+=`<text x="${gx+gw/2}" y="${h-7}" text-anchor="middle" class="glab">${lb}</text>`;
+  });
+  s+=`</svg>`;
+  return s;
+}
+function lineChart(data, opts){
+  const labels=opts.labels,h=opts.h||190,w=720,padL=44,padB=26,padT=14,padR=10;
+  let max=Math.max(...data),min=Math.min(...data,0);if(max===min)max=min+1;
+  const span=max-min,plotH=h-padB-padT,plotW=w-padL-padR;
+  const x=i=>padL+plotW*i/(labels.length-1);
+  const y=v=>padT+plotH*(1-(v-min)/span);
+  let pts=data.map((v,i)=>`${x(i)},${y(v)}`).join(" ");
+  let s=`<svg viewBox="0 0 ${w} ${h}" class="chart">`;
+  for(let i=0;i<=4;i++){const gy=padT+plotH*i/4;const val=max-span*i/4;
+    s+=`<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" class="axis" opacity=".4"/>`;
+    s+=`<text x="${padL-6}" y="${gy+3}" text-anchor="end" class="glab">${opts.fmt?opts.fmt(val):val}</text>`;}
+  s+=`<polyline points="${pts}" fill="none" stroke="${opts.color||'#2E6BFF'}" stroke-width="2.5"/>`;
+  data.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${opts.color||'#2E6BFF'}"><title>${labels[i]}: ${v}</title></circle>`;
+    s+=`<text x="${x(i)}" y="${y(v)-9}" text-anchor="middle" class="vlab">${opts.pfmt?opts.pfmt(v):v}</text>`;});
+  labels.forEach((lb,i)=>s+=`<text x="${x(i)}" y="${h-7}" text-anchor="middle" class="glab">${lb}</text>`);
+  s+=`</svg>`;return s;
+}
+function stackChart(series,opts){ // stacked columns w/ negatives
+  const labels=opts.labels,h=opts.h||240,w=720,padL=44,padB=26,padT=14,padR=8;
+  let totPos=labels.map((_,i)=>series.reduce((a,s)=>a+Math.max(s.data[i],0),0));
+  let totNeg=labels.map((_,i)=>series.reduce((a,s)=>a+Math.min(s.data[i],0),0));
+  let max=Math.max(...totPos,0),min=Math.min(...totNeg,0);if(max===min)max=min+1;
+  const span=max-min,plotH=h-padB-padT,plotW=w-padL-padR,gw=plotW/labels.length,bw=Math.min(46,gw*0.6);
+  const y0=padT+plotH*(max/span);
+  let s=`<svg viewBox="0 0 ${w} ${h}" class="chart">`;
+  for(let i=0;i<=4;i++){const gy=padT+plotH*i/4;const val=max-span*i/4;
+    s+=`<line x1="${padL}" y1="${gy}" x2="${w-padR}" y2="${gy}" class="axis" opacity=".4"/>`;
+    s+=`<text x="${padL-6}" y="${gy+3}" text-anchor="end" class="glab">${val.toFixed(0)}</text>`;}
+  s+=`<line x1="${padL}" y1="${y0}" x2="${w-padR}" y2="${y0}" stroke="#3a4150" stroke-width="1.5"/>`;
+  labels.forEach((lb,gi)=>{
+    const bx=padL+gw*gi+(gw-bw)/2;let accP=0,accN=0;
+    series.forEach(se=>{const v=se.data[gi];const bh=Math.abs(v)/span*plotH;
+      if(v>=0){const by=y0-accP-bh;s+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="${se.color}"><title>${se.name} ${lb}: ${v}</title></rect>`;accP+=bh;}
+      else{const by=y0+accN;s+=`<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" fill="${se.color}" opacity=".85"><title>${se.name} ${lb}: ${v}</title></rect>`;accN+=bh;}});
+    s+=`<text x="${bx+bw/2}" y="${h-7}" text-anchor="middle" class="glab">${lb}</text>`;});
+  s+=`</svg>`;return s;
+}
+
+/* =================== PAGES =================== */
+const PAGES={};
+
+PAGES.overview=()=>`
+  <div class="kicker">AEL = THE OPERATING SYSTEM · CONTINUUM = THE FLAGSHIP</div>
+  <h1 class="h-xl">Human development,<br>engineered.</h1>
+  <p class="lede">A multi-campus athlete-development <b>platform</b> that measures physical, cognitive, skill, and psychological growth as one system — and compounds it across cohorts, campuses, and disciplines. The Continuum Academy is the first commercial expression. The platform is the asset.</p>
+  <div class="grid g4" style="margin-top:30px">
+    <div class="metric asc"><div class="v">Aug<span style="font-size:18px"> 2026</span></div><div class="l">Flagship Opens</div><div class="s">Grades 7–12 · DFW / Collin County corridor</div></div>
+    <div class="metric"><div class="v">0–1000</div><div class="l">The Continuum Score™</div><div class="s">Four domains · one index · follows the athlete</div></div>
+    <div class="metric forge"><div class="v">$1.5M</div><div class="l">SAFE Raise · $2M Ceiling</div><div class="s">$10M post-money cap · 15% discount</div></div>
+    <div class="metric"><div class="v">10</div><div class="l">Campuses By Year 5</div><div class="s">Base-case platform rollout</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="num">A</span><h2 class="h-lg">The score is the spine.</h2></div>
+    <p>Every athlete carries one number on a 0–1000 scale, gated into three development tiers. The tier system is the brand, the curriculum, and the navigation of this entire HUB.</p>
+    <div class="scorerail" style="margin-top:16px">
+      <div class="sr-path">THE PATH · LEARN EVERYTHING</div>
+      <div class="sr-asc">THE ASCENT · BUILD WITH INTENT</div>
+      <div class="sr-forge">THE FORGE · EARN IT</div>
+    </div>
+    <div class="sr-scale"><span>0</span><span>399</span><span>699</span><span>1000</span></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-h"><span class="num">B</span><h2 class="h-lg">Three forces, converging on one window.</h2></div>
+    <div class="grid g3">
+      <div class="card hov"><div class="bignum goldtext">$1B</div><div class="eyebrow" style="margin:10px 0 6px">TEFA · Year One</div><p class="small">Texas Education Freedom Accounts launched 2026 — the largest first-year school-choice program in U.S. history. ~$10,300 per student flows to participating private schools.</p></div>
+      <div class="card hov"><div class="bignum bluetext">0</div><div class="eyebrow" style="margin:10px 0 6px">Integrated Incumbents</div><p class="small">No competitor measures physical, cognitive, skill, and psychological development as one system. Academies skip academics; schools skip athletics. The category is open.</p></div>
+      <div class="card hov"><div class="bignum">$25–35B</div><div class="eyebrow" style="margin:10px 0 6px">Addressable Market</div><p class="small">Premium private K-12 integrated with serious athletic development, at $20K+/yr — the intersection Continuum is purpose-built to own.</p></div>
+    </div>
+    <div class="note" style="margin-top:18px">This HUB consolidates the full investor record — deck, business plan, financial model, investor narrative — into one navigable command center. Use the left rail to drill into any layer. Everything renders in Continuum's own brand. <span class="muted">See <b>Sources &amp; Reconciliation</b> for the document set and two financial-scenario constructions.</span></div>
+  </div>`;
+
+PAGES.thesis=()=>`
+  <div class="kicker">01 · The Thesis</div>
+  <h1 class="h-lg">Schools graduate.<br>Platforms compound.</h1>
+  <p class="lede">Traditional schools are designed around a finish line. Students advance on a fixed clock and exit; each cohort restarts the system. The institution accumulates reputation — it does not accumulate measurable improvement.</p>
+  <div class="grid g2 sec">
+    <div class="card"><h3 class="h-md">The two extremes</h3>
+      <p class="small" style="margin-top:10px"><b class="bluetext">Traditional schools</b> — strong academics, athletics treated as extracurricular. Athletes accommodate the school.</p>
+      <p class="small"><b class="goldtext">Sport academies</b> — elite training, academics outsourced to correspondence or weak-accreditation hybrids. Education accommodates the sport. Artisanal, dependent on the specific coach and season. It does not scale.</p>
+    </div>
+    <div class="card"><h3 class="h-md">The premise</h3>
+      <p class="small" style="margin-top:10px">Human development is never finished, only advanced. A platform can measure every dimension of growth and use that data to compound results across cohorts and campuses.</p>
+      <p class="small">The first cohort produces the data that improves the second. The second campus inherits the playbook of the first. The Score becomes more valuable as more athletes generate scores against it.</p>
+    </div>
+  </div>
+  <div class="note" style="margin-top:24px"><b>Why it's fundable as a platform, not a school.</b> A school of 400 students — even an excellent one — is worth a school multiple. A platform that repeats that school across ten campuses, with proprietary measurement and a defensible standard, is worth a platform multiple. The architectural decisions are not aesthetic; they are the asset.</div>`;
+
+PAGES.platform=()=>`
+  <div class="kicker">02 · The AEL Platform</div>
+  <h1 class="h-lg">AEL is not a school.<br>It is the operating system.</h1>
+  <p class="lede">Three pillars define what AEL does and why no incumbent can match it. Continuum is the brand expression of the platform thesis.</p>
+  <div class="grid g3 sec">
+    <div class="card hov"><div class="eyebrow">Pillar 01</div><h3 class="h-md" style="margin-top:8px">Continuity</h3><p class="small">Development tracked across years, campuses, and life stages. The data follows the athlete, not the institution. A transfer to another campus carries the full record; a college recruiter receives a structured profile, not a transcript footnote.</p></div>
+    <div class="card hov"><div class="eyebrow">Pillar 02</div><h3 class="h-md" style="margin-top:8px">Integration</h3><p class="small">Physical, cognitive, skill, and psychological development measured as one system — not four programs glued together by scheduling. A morning lift, an afternoon math block, a film session, a recovery protocol: all inputs to the same Score.</p></div>
+    <div class="card hov"><div class="eyebrow">Pillar 03</div><h3 class="h-md" style="margin-top:8px">Engineering</h3><p class="small">Standardized inputs, repeatable processes, proprietary measurement. The campus-opening playbook is documented, tested, and improved campus over campus. This is what makes ten campuses by Year 5 credible — the system is built to be repeated.</p></div>
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">2.1</span><h2 class="h-md">Partnership strategy</h2></div>
+    ${dd("University &amp; accreditation partners","Advanced specialization tracks are designed with university partners for college-credit equivalency, and partners independently review curricula as a near-term rigor proof point. Accreditation is sequenced — WASC/HLC, Cognia, IBCCES, NAPS — once the regulatory minimum for operation is met.")}
+    ${dd("Sports &amp; recruiting integrations","The Continuum Score™ is built to deliver into college-recruiting and pro-scouting workflows as a structured, comparable profile. As programs adopt it, athletes who carry a Score become advantaged — the integration is the wedge that turns a measurement product into a recruiting standard.")}
+    ${dd("Technology &amp; data partners","The measurement stack composes commodity hardware and SaaS — biometric tracking, video auto-analysis, cognitive assessment — that a decade ago required a research lab. Curriculum runs on licensed platforms (Edgenuity / Imagine Learning); athletic operations on the Athoz stack. AEL owns the integration layer and the calibration data, not the sensors.")}
+  </div>`;
+
+PAGES.score=()=>`
+  <div class="kicker">03 · Proprietary IP</div>
+  <h1 class="h-lg">The Continuum Score™</h1>
+  <p class="lede">A unified development index — one number, 0–1000, updated continuously, that follows each athlete from enrollment through any professional pathway. It is the platform's most strategically important IP and the layer that makes the integration legible.</p>
+  <div class="formula sec">CS = <span class="w">w</span><sub>P</sub>P + <span class="w">w</span><sub>C</sub>C + <span class="w">w</span><sub>S</sub>S + <span class="w">w</span><sub>Ψ</sub>Ψ</div>
+  <p class="src" style="margin-top:8px">Weighting is dynamic — adjusted by age, division, and pathway — so a Path-tier athlete isn't measured against a Forge rubric.</p>
+
+  <div class="sec"><div class="sec-h"><span class="num">3.1</span><h2 class="h-md">Four measured domains</h2></div>
+    <div class="grid g4">
+      <div class="domain dom-P"><div class="sym">P</div><div class="eyebrow" style="margin:8px 0 6px">Physical</div><p class="tiny">Speed · strength · mobility · endurance. Biometric &amp; force-plate data.</p></div>
+      <div class="domain dom-C"><div class="sym">C</div><div class="eyebrow" style="margin:8px 0 6px">Cognitive</div><p class="tiny">Processing speed · decision-making · pattern recognition · working memory under load.</p></div>
+      <div class="domain dom-S"><div class="sym">S</div><div class="eyebrow" style="margin:8px 0 6px">Skill</div><p class="tiny">Sport technique · execution consistency under measured pressure. Coach-rated + video.</p></div>
+      <div class="domain dom-Y"><div class="sym">Ψ</div><div class="eyebrow" style="margin:8px 0 6px">Psychological</div><p class="tiny">Focus · resilience · composure · leadership. Standardized assessment + observation.</p></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">3.2</span><h2 class="h-md">Score tiers &amp; sub-tiers</h2></div>
+    <div class="scorerail"><div class="sr-path">PATH 0–399</div><div class="sr-asc">ASCENT 400–699</div><div class="sr-forge">FORGE 700–1000</div></div>
+    <div class="tbl-wrap" style="margin-top:14px"><table>
+      <tr><th>Range</th><th>Tier</th><th>Sub-tiers</th><th>Designation</th></tr>
+      <tr><td class="mono">0–399</td><td><span class="pill tag-path">The Path</span></td><td>Awareness · Coordination · Readiness</td><td class="small">Foundation movement &amp; learning</td></tr>
+      <tr><td class="mono">400–699</td><td><span class="pill tag-asc">The Ascent</span></td><td>Structured · Consistent · Competitive</td><td class="small">Skill stacking &amp; identity</td></tr>
+      <tr><td class="mono">700–1000</td><td><span class="pill tag-forge">The Forge</span></td><td>Advanced · Elite · Apex</td><td class="small">Performance specialization &amp; pathway</td></tr>
+    </table></div>
+    <p class="src" style="margin-top:10px">Advancement requires a score floor <i>and</i> domain minimums (no extreme weakness), a 4–8 week consistency window, and coach validation. Age modifiers protect younger athletes.</p>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">3.3</span><h2 class="h-md">Five system outputs</h2></div>
+    <div class="grid g3">
+      ${["Athlete dashboard — real-time scoring, domain trends, intervention prompts","Parent dashboard — trajectory &amp; milestones, explanatory framing","Coach view — cohort analytics, training-load &amp; programming","College recruiting profile — a standardized output vs. the transcript-and-reel package","Professional scouting integration — Score format for pro evaluation systems"].map((o,i)=>`<div class="card"><div class="mono bluetext" style="font-size:12px">OUT/${(i+1).toString().padStart(2,'0')}</div><p class="small" style="margin-top:6px">${o}</p></div>`).join("")}
+    </div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">3.4</span><h2 class="h-md">Why the Score is the moat</h2></div>
+    ${dd("It compounds with use","Every athlete who generates a Score makes the system more valuable. Calibration improves with sample size; sub-domain weighting refines with population data. A Score against 5,000 athletes is meaningfully different from one against 50.")}
+    ${dd("It anchors recruiting integration","College recruiting is fragmented and qualitative — video, transcripts, word-of-mouth. A Continuum Score delivered into a recruiter's workflow is comparable. Once enough programs use it, athletes who have one are advantaged. That is a network effect.")}
+    ${dd("It is defensible IP","Weighting methodology, measurement protocols, and calibration data are owned by AEL IP Holdings and licensed to operating subs at a 4% royalty, reinforced by trademark on the Score name and mark. Installed base + calibration history + integrations create switching costs.")}
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">3.5</span><h2 class="h-md">Build a Score — live</h2></div>
+    <p class="small">Set the domain weights and an athlete's four domain scores. The composite and tier band update in real time — the Score logic, made tangible.</p>
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="eyebrow" style="margin-bottom:4px">Domain weights</div>
+        <div class="ctl"><label>Physical · <b id="wPl">30</b></label>${sl('wP',0,100,30,1)}</div>
+        <div class="ctl"><label>Cognitive · <b id="wCl">25</b></label>${sl('wC',0,100,25,1)}</div>
+        <div class="ctl"><label>Skill · <b id="wSl">25</b></label>${sl('wS',0,100,25,1)}</div>
+        <div class="ctl"><label>Psychological · <b id="wYl">20</b></label>${sl('wY',0,100,20,1)}</div>
+        <hr class="thin" style="margin:14px 0">
+        <div class="eyebrow" style="margin-bottom:4px">Athlete domain scores</div>
+        <div class="ctl"><label>P · <b id="dPl">640</b></label>${sl('dP',0,1000,640,5)}</div>
+        <div class="ctl"><label>C · <b id="dCl">600</b></label>${sl('dC',0,1000,600,5)}</div>
+        <div class="ctl"><label>S · <b id="dSl">680</b></label>${sl('dS',0,1000,680,5)}</div>
+        <div class="ctl"><label>Ψ · <b id="dYl">560</b></label>${sl('dY',0,1000,560,5)}</div>
+      </div>
+      <div class="calc-out">
+        <div class="eyebrow">Continuum Score™</div>
+        <div class="bignum" id="csOut" style="margin:6px 0 10px">—</div>
+        <div id="csTier"></div>
+        <div class="scorerail" style="margin-top:18px;position:relative">
+          <div class="sr-path">PATH</div><div class="sr-asc">ASCENT</div><div class="sr-forge">FORGE</div>
+          <div id="csMark" class="railmark"></div>
+        </div>
+        <div class="sr-scale"><span>0</span><span>399</span><span>699</span><span>1000</span></div>
+        <p class="src" style="margin-top:14px">Weighting is dynamic by age, division, and pathway — this is a simplified linear composite for illustration.</p>
+      </div>
+    </div>
+  </div>`;
+
+PAGES.academy=()=>`
+  <div class="kicker">04 · The Flagship</div>
+  <h1 class="h-lg">The Continuum Academy</h1>
+  <p class="lede">The first campus deployment of the AEL platform — K-12 athlete development structured around the Score, delivered through a staged-progression model. Opens August 2026, grades 7–12, in the Dallas–Fort Worth / Collin County corridor.</p>
+
+  <div class="grid g2 sec">
+    <div class="card"><h3 class="h-md">Mission</h3><p class="small" style="margin-top:8px">Develop athletes as whole people — measured across physical, cognitive, skill, and psychological dimensions — in an environment built for continuous advancement rather than time-based graduation.</p></div>
+    <div class="card"><h3 class="h-md">Operating principles</h3>
+      <p class="tiny" style="margin-top:8px">① Measurement is non-negotiable. ② Advancement is earned, not scheduled. ③ Integration is structural — faculty &amp; coaches share one rubric. ④ The campus is engineered, documented, and improved campus over campus.</p></div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">4.1</span><h2 class="h-md">Three levels · three mottos · one arc</h2></div>
+    <div class="grid g3">
+      <div class="card" style="border-color:#3a3f47"><span class="pill tag-path">The Path · K–5</span><h3 style="margin:12px 0 4px">Learn Everything</h3><div class="mono tiny muted">CS 0–399 · black &amp; white only</div><p class="small" style="margin-top:10px">Movement literacy, cognitive foundations, curiosity-driven breadth. Visual identity deliberately spare — "you are beginning." K–6 launches at Dallas in Year 3.</p><div class="mono" style="margin-top:8px">Mature tuition · <b>$18,000</b></div></div>
+      <div class="card" style="border-color:var(--ascent-dim)"><span class="pill tag-asc">The Ascent · 6–8</span><h3 style="margin:12px 0 4px;color:var(--ascent)">Build With Intent</h3><div class="mono tiny muted">CS 400–699 · Electric Blue accent</div><p class="small" style="margin-top:10px">Development becomes deliberate — skill stacking, system introduction, identity. The Score is introduced as a working tool. "You are rising." Entry point at launch.</p><div class="mono" style="margin-top:8px">Mature tuition · <b>$25,000</b></div></div>
+      <div class="card" style="border-color:var(--forge-dim)"><span class="pill tag-forge">The Forge · 9–12</span><h3 style="margin:12px 0 4px;color:var(--forge)">Earn It</h3><div class="mono tiny muted">CS 700–1000 · Plasma Gold accent</div><p class="small" style="margin-top:10px">Performance specialization — competitive exposure, pro pathway, elite collegiate placement. Dense coaching; college-readiness curriculum. "You are becoming."</p><div class="mono" style="margin-top:8px">Day <b>$25,000</b> · Boarding <b>$55,000</b></div></div>
+    </div>
+    <div class="note" style="margin-top:16px">At launch (Years 1–2) all enrolled grades (7–12) operate at a single <b>$22,000</b> introductory tuition. Differentiated tier pricing activates in Year 3 alongside the K–6 launch. Boarding (Forge Apex, $55K) is unlocked with the Series A facility raise.</div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">4.2</span><h2 class="h-md">Mature revenue mix (per campus)</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Tier</th><th class="n">Athletes</th><th class="n">Tuition</th><th class="n">Annual revenue</th></tr>
+      <tr><td><span class="pill tag-path">Path · K-5 day</span></td><td class="n">120</td><td class="n">$18,000</td><td class="n">$2,160,000</td></tr>
+      <tr><td><span class="pill tag-asc">Ascent · 6-8 day</span></td><td class="n">120</td><td class="n">$25,000</td><td class="n">$3,000,000</td></tr>
+      <tr><td><span class="pill tag-forge">Forge · 9-12 day</span></td><td class="n">100</td><td class="n">$25,000</td><td class="n">$2,500,000</td></tr>
+      <tr><td><span class="pill tag-forge">Forge · Boarding</span></td><td class="n">60</td><td class="n">$55,000</td><td class="n">$3,300,000</td></tr>
+      <tr class="tot"><td>Total (gross)</td><td class="n">400</td><td class="n">—</td><td class="n">$10,960,000</td></tr>
+    </table></div>
+    <p class="src" style="margin-top:10px">Net of 4% IP royalty + 5% management fee, mature campus net revenue ≈ <b>$9.81M</b> at a 30.4% EBITDA margin. <b class="goldtext">15% of athletes (boarding) generate ~30% of revenue</b> — the disproportionate driver and the tier most defensible against local competition.</p>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">4.3</span><h2 class="h-md">Live campus economics</h2></div>
+    <p class="small">Drag any lever — enrollment, boarding mix, tuition, scholarships, intercompany rates, costs — and the campus P&amp;L recomputes live. Calibrated to the plan's mature-campus base case; illustrative.</p>
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="ctl"><label><b id="cAthl">400 athletes</b></label>${sl('cAth',100,600,400,10)}</div>
+        <div class="ctl"><label><b id="cBoardl">15% boarding</b></label>${sl('cBoard',0,30,15,1)}</div>
+        <div class="ctl"><label><b id="cDayl">$24.5k day tuition</b></label>${sl('cDay',18000,35000,24500,500)}</div>
+        <div class="ctl"><label><b id="cBoardTl">$55k boarding</b></label>${sl('cBoardT',45000,65000,55000,1000)}</div>
+        <div class="ctl"><label><b id="cScholl">8% scholarship</b></label>${sl('cSchol',0,25,8,1)}</div>
+        <div class="ctl"><label><b id="cRoyl">4% IP royalty</b></label>${sl('cRoy',0,6,4,0.5)}</div>
+        <div class="ctl"><label><b id="cFeel">5% mgmt fee</b></label>${sl('cFee',0,8,5,0.5)}</div>
+        <div class="ctl"><label><b id="cVarl">$12.5k var/athlete</b></label>${sl('cVar',8000,16000,12500,250)}</div>
+        <div class="ctl"><label><b id="cFixl">$1.75M fixed</b></label>${sl('cFix',1000000,4000000,1750000,50000)}</div>
+      </div>
+      <div class="calc-out">
+        <div class="grid g2" style="gap:10px">
+          <div class="metric asc"><div class="v" id="coRev">—</div><div class="l">Net Revenue</div></div>
+          <div class="metric forge"><div class="v" id="coEbit">—</div><div class="l">Campus EBITDA</div></div>
+          <div class="metric"><div class="v" id="coMarg">—</div><div class="l">EBITDA Margin</div></div>
+          <div class="metric"><div class="v" id="coPer">—</div><div class="l">EBITDA / Athlete</div></div>
+        </div>
+        <div class="eyebrow" style="margin:18px 0 7px">Where the revenue goes · <span id="coMix" class="muted"></span></div>
+        <div class="ecobar" id="coBar"></div>
+        <div class="legend" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">
+          <span><i style="background:#5a6270"></i>Intercompany</span><span><i style="background:#3a4150"></i>Variable</span><span><i style="background:#23272e"></i>Fixed</span><span><i style="background:var(--forge)"></i>EBITDA</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">4.4</span><h2 class="h-md">Brand architecture</h2></div>
+    ${dd("AEL is the platform · Continuum is the brand families meet","AEL is the corporate umbrella for all current and future ventures; Continuum is the customer-facing brand. Sub-brands follow the \“Continuum + descriptor\” convention — Continuum Academy (the school), Continuum Performance (training), Continuum Lab (R&amp;D), Continuum Health (medical), Continuum Pro Pathway (elite progression), Continuum Global (international). Naming discipline is enforced across all materials.")}
+  </div>`;
+
+PAGES.day=()=>`
+  <div class="kicker">05 · The Athlete's Experience</div>
+  <h1 class="h-lg">The day is engineered,<br>not improvised.</h1>
+  <p class="lede">A 14-year-old in the Ascent tier at Continuum Dallas. Training load is calibrated to the morning's recovery data; the harder cognitive blocks are placed when cognitive-readiness scores trend high.</p>
+  <div class="tl sec">
+    ${[["6:30 AM","Pre-training biometric scan","HRV, sleep score, recovery readiness. The day's load is calibrated to the result — not a generic plan."],
+       ["7:00 AM","Movement block","Speed, power, mobility. Force-plate measurements logged automatically. Coach-led, 90 minutes."],
+       ["9:00 AM","Academic block one","Full accredited curriculum — math, science, language arts. Cohort of 12."],
+       ["12:30 PM","Nutrition block","Engineered meal, logged, tied to recovery score and afternoon load."],
+       ["1:30 PM","Skill block","Sport-specific work. Filmed, auto-tagged for review. Coach feedback within 24 hours."],
+       ["3:30 PM","Academic block two","Two hours on the harder cognitive subjects — selected from the morning's data."],
+       ["5:30 PM","Recovery block","Sleep-protocol prep. Continuum Score update pushed to athlete &amp; family portal."]
+      ].map(e=>`<div class="ev"><div class="tm">${e[0]}</div><div class="lab">${e[1]}</div><div class="small muted">${e[2]}</div></div>`).join("")}
+  </div>
+  <div class="note" style="margin-top:8px">The athlete's score follows them. The institution does not.</div>`;
+
+PAGES.academics=()=>`
+  <div class="kicker">06 · Curriculum, Governance &amp; Compliance</div>
+  <h1 class="h-lg">Beyond compliance.</h1>
+  <p class="lede">The Academy meets all Texas Education Agency requirements and aligns to state graduation standards. What differentiates it is the systematic enrichment around the core — and the engineered integration of coaching and faculty.</p>
+  <div class="sec">
+    ${dd("Instructional approach","<b>Constructivist sequencing</b> — elicit prior knowledge, create dissonance through novel problems, apply with feedback, reflect. <b>Higher-order integration</b> — critical thinking, decision-making, leadership and entrepreneurship threaded through core instruction, not bolted on as electives. <b>Advanced specialization tracks</b> — Forge-tier athletes select ~8 courses in a focused domain (performance, health, leadership, entrepreneurship, technology, STEM), designed with university partners for college-credit equivalency where applicable.")}
+    ${dd("Coaching–faculty integration","Coaches and teachers are not adjacent staff. Both operate against the same Continuum Score rubric, share weekly programming meetings, and are evaluated on shared metrics. A morning strength session is programmed against that day's cognitive load. This is the structural answer to “why isn't this just a sports school plus a tutor?” — the integration is engineered, not coordinated.")}
+    ${dd("Governance structure","Each campus operates as a Registered Series under Continuum Academy LLC (Delaware, qualified in Texas). Non-sectarian; non-discriminatory. Operational management delivered by AEL Management Services under a master services agreement. A Head of School per campus owns operations, faculty, and compliance.")}
+    ${dd("Accreditation roadmap","Sequenced after the regulatory minimum for operation: WASC and/or HLC (after first full semester) · Cognia · IBCCES (disability-inclusive programming) · NAPS. University partners independently review course curricula for credit-hour equivalency as a near-term rigor proof point.")}
+    ${dd("TEFA participation","The Academy will become a participating provider in the Texas Education Freedom Accounts program, meeting accredited-school requirements and state reporting/audit obligations. Compliance preparation is sequenced to coincide with the August 2026 opening.")}
+    ${dd("Safety &amp; physical plant","DFW / Collin County corridor; ~400 athletes at maturity, 75–100 at launch. Engineered safety: 24/7 security, electronic access control, visitor badging, IP-camera coverage, drills, signed code of conduct. Boarding adds residence-hall directors and 24/7 supervision when activated.")}
+  </div>`;
+
+PAGES.market=()=>`
+  <div class="kicker">07 · Market &amp; Tailwind</div>
+  <h1 class="h-lg">Three forces converging in 2026.</h1>
+  <div class="grid g3 sec">
+    <div class="metric forge"><div class="v">$1B</div><div class="l">TEFA · Year One</div><div class="s">~$10,300 / student · 80k–100k students</div></div>
+    <div class="metric"><div class="v">$30B+</div><div class="l">U.S. Youth Athletic Spend</div><div class="s">Record demand · fragmented supply</div></div>
+    <div class="metric asc"><div class="v">$25–35B</div><div class="l">Integrated TAM</div><div class="s">Premium academic + athletic @ $20K+/yr</div></div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">7.1</span><h2 class="h-md">The TEFA tailwind</h2></div>
+    <p>Texas Senate Bill 2 (signed 2025) established the Education Freedom Accounts program — the largest first-year school-choice initiative in U.S. history, administered by the Texas Comptroller and funded at ~$1B for 2026–27. Standard award ≈ $10,300/student (85% of statewide per-pupil funding); up to $30,000 for students with qualifying disabilities. Unused funds roll over; siblings are individually eligible; priority to disabilities and households below 500% of the Federal Poverty Level. The Academy will become a participating provider — materially reducing families' out-of-pocket cost and expanding the addressable market well beyond full-pay families.</p>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">7.2</span><h2 class="h-md">The competitive map</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>Traditional private schools</th><th>Sport-specific academies</th><th class="bluetext">Continuum Academy</th></tr>
+      <tr><td class="mono">Academics</td><td>Strong, accredited</td><td>Weak, outsourced</td><td class="bluetext">Strong, accredited</td></tr>
+      <tr><td class="mono">Athletic dev</td><td>Extracurricular</td><td>Primary focus, full-day</td><td class="bluetext">Co-equal, integrated</td></tr>
+      <tr><td class="mono">Measurement</td><td>None</td><td>Partial, sport-specific</td><td class="bluetext">Four-domain Score</td></tr>
+      <tr><td class="mono">Multi-sport</td><td>Yes</td><td>No, single sport</td><td class="bluetext">Yes</td></tr>
+      <tr><td class="mono">Multi-campus</td><td>Single campus</td><td>Single / franchise</td><td class="bluetext">Platform from day one</td></tr>
+    </table></div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">7.3</span><h2 class="h-md">Why now</h2></div>
+    <div class="grid g3">
+      <div class="card"><h4>Measurement</h4><p class="tiny" style="margin-top:8px">Biometric tracking, video auto-analysis, and cognitive assessment that once needed a research lab are now commodity hardware + SaaS.</p></div>
+      <div class="card"><h4>Capital</h4><p class="tiny" style="margin-top:8px">Education + sports services as a roll-up is now an established PE thesis (consolidation across childcare, tutoring, adult fitness). The youth-athletic platform play is unbuilt.</p></div>
+      <div class="card"><h4>Demand</h4><p class="tiny" style="margin-top:8px">Youth athletic spending has outgrown education spending for fifteen straight years. The willingness-to-pay for the Continuum model didn't exist in 2010. It does now.</p></div>
+    </div>
+    ${dd("The institutional comparables","Education + sports services as a roll-up is an established PE thesis — e.g. KKR / Spear Education, TSG / Beyond Yoga, Bain / MSL Sports. Multi-location education and athletic platforms trade 12–18× EBITDA in private-equity transactions and 8–14× in strategic acquisitions.")}
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">7.4</span><h2 class="h-md">TEFA family-cost calculator</h2></div>
+    <p class="small">What a family actually pays after the Texas Education Freedom Account award. Pick a tier and an award type.</p>
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="ctl"><label>Tuition tier</label>
+          <select id="tfTuition" class="sel">
+            <option value="22000">Launch · grades 7–12 · $22,000</option>
+            <option value="18000">Path · K–5 · $18,000</option>
+            <option value="25000" selected>Ascent / Forge day · $25,000</option>
+            <option value="55000">Forge boarding · $55,000</option>
+            <option value="35000">Upper mature · $35,000</option>
+          </select>
+        </div>
+        <div class="ctl"><label>TEFA award</label>
+          <select id="tfAward" class="sel">
+            <option value="10300" selected>Standard · $10,300 / yr</option>
+            <option value="30000">Qualifying disability (IEP) · up to $30,000</option>
+            <option value="0">No TEFA · full pay</option>
+          </select>
+        </div>
+      </div>
+      <div class="calc-out" style="display:flex;flex-direction:column;justify-content:center">
+        <div class="eyebrow">Family out-of-pocket</div>
+        <div class="bignum bluetext" id="tfOop" style="margin:8px 0 6px">—</div>
+        <div class="mono small muted" id="tfSub"></div>
+        <div class="pill tag-asc" style="margin-top:14px" id="tfPct"></div>
+        <p class="src" style="margin-top:14px">Standard award ≈ 85% of statewide per-pupil funding; rolls over year-to-year; siblings individually eligible. Illustrative — confirm current TEFA rules and caps.</p>
+      </div>
+    </div>
+  </div>`;
+
+PAGES.arch=()=>`
+  <div class="kicker">08 · Architecture &amp; Capital</div>
+  <h1 class="h-lg">Built to be a platform.</h1>
+  <p class="lede">A five-entity stack — each layer isolating a specific risk and value bucket. Operating entities in Delaware; real estate in Texas (where the property sits and the law applies). This is the legal scaffolding institutional capital expects in a roll-up.</p>
+  <div class="stack sec">
+    <div class="ent master"><div><div class="en">AEL Holdings, LLC</div><div class="ef">Master holding company — control &amp; capital. Manager-managed; founder is sole manager.</div></div><div class="dom">Delaware</div></div>
+    <div class="flowline">▲ equity in all subsidiaries · founder Class A control ▲</div>
+    <div class="grid g2">
+      <div class="ent ip"><div><div class="en">AEL IP Holdings</div><div class="ef">Owns the Continuum Score™, brand marks, curriculum, operating playbook. Licenses to operating subs at a <b>4% royalty</b>.</div></div><div class="dom">Delaware</div></div>
+      <div class="ent"><div><div class="en">AEL Management Services</div><div class="ef">Centralized HR, finance, technology, marketing, compliance. Charges each series a <b>5% management fee</b> (cost-plus).</div></div><div class="dom">Delaware</div></div>
+    </div>
+    <div class="flowline"><b>OpCo pays IP HoldCo 4%</b> · <b>OpCo pays MgmtCo 5%</b></div>
+    <div class="ent"><div><div class="en">Continuum Academy, LLC</div><div class="ef">Operating Series LLC — <b>each campus is a Registered Series</b>. Holds operating contracts, enrollment, faculty employment, campus assets. Risk isolated per campus.</div></div><div class="dom">Delaware</div></div>
+    <div class="ent"><div><div class="en">AEL Real Estate, LLC</div><div class="ef">Property Series LLC — each property a Registered Series. Formed pre-Series A; activates with the first acquisition in Year 2+. Leases back to campus series at market rent.</div></div><div class="dom">Texas</div></div>
+  </div>
+  <div class="sec">
+    ${dd("Why a Delaware Series LLC","Each campus is a separate Registered Series; properly maintained, one series' obligations cannot reach another's assets. Materially cheaper than separate LLCs (~$75/yr per series vs $300+ per standalone) with equivalent or stronger isolation. Requires strict operational separation: separate EIN, bank accounts, books, insurance, and contracts per series. Banking via Series-LLC-friendly providers (Mercury, Brex, Relay).")}
+    ${dd("Real estate strategy (Texas)","Real estate is governed by the law of the state where it sits, so the Delaware advantage doesn't transfer. Texas is also cheapest for the use case (no franchise tax under the 2026 threshold for early-stage rental income). Separating operations (EBITDA multiple) from property (cap-rate multiple) preserves exit optionality — sale-leaseback, mortgage debt, REIT-style spinout — and typically raises total enterprise value.")}
+    ${dd("Equity &amp; control structure","Manager-managed: the founder is sole manager, so operational control is preserved through every economic dilution event. Class A (founder, 100% voting, never diluted) · Class B (founder economics, absorbs dilution) · Class C (15% management pool, 4-yr vest / 1-yr cliff) · Preferred (investors, 1x non-participating liq preference).")}
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">8.4</span><h2 class="h-md">Modeled dilution path</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Stakeholder</th><th class="n">Pre-SAFE</th><th class="n">Post-SAFE</th><th class="n">Post-Series A</th></tr>
+      <tr><td>Founder — Class A (control)</td><td class="n">100%</td><td class="n">100%</td><td class="n bluetext">100%</td></tr>
+      <tr><td>Founder — Class B (economic)</td><td class="n">85.0%</td><td class="n">72.2%</td><td class="n">54.7%</td></tr>
+      <tr><td>Class C pool</td><td class="n">15.0%</td><td class="n">12.8%</td><td class="n">9.7%</td></tr>
+      <tr><td>SAFE investors</td><td class="n">—</td><td class="n">15.0%</td><td class="n">11.4%</td></tr>
+      <tr><td>Series A investors</td><td class="n">—</td><td class="n">—</td><td class="n">24.2%</td></tr>
+    </table></div>
+    <p class="src" style="margin-top:10px">After Series A the founder retains <b>100% voting control</b> and a <b>54.7% economic majority</b> — the direct result of the manager-managed, multi-class design.</p>
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">8.5</span><h2 class="h-md">Operating discipline &amp; conversion</h2></div>
+    ${dd("Operational separation requirements (non-negotiable)","Each Registered Series maintains: a separate EIN · separate bank accounts (no commingling) · separate books &amp; records · insurance in its own name · contracts in its own name · clearly-labeled assets. Banking via Series-LLC-friendly providers (Mercury, Brex, Relay). Failure to maintain separation can let a court pierce the shield between series.")}
+    ${dd("C-corp F-reorganization (pre–Series A)","Before the Series A, AEL Holdings converts from an LLC to a Delaware C-corp via a tax-free F-reorganization: it starts the §1202 QSBS five-year clock (meaningful for founder &amp; early employees at exit), gives institutional investors the corporate form they expect, and cleans up SAFE conversion mechanics. Operating subsidiaries remain LLCs.")}
+    ${dd("Why intercompany flows aren't tax avoidance","The 4% IP royalty and 5% management fee are the legal instruments that concentrate value in the defensible platform layers (IP &amp; Management) while operating risk concentrates in the isolatable campus layer. Each is supported by an arm's-length valuation memo / master services agreement.")}
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">8.6</span><h2 class="h-md">Risk framework</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Risk</th><th>Structural mitigant</th></tr>
+      <tr><td>Enrollment shortfall</td><td class="small">Conservative Y1 floor (50) below sub-scale break-even; centralized acquisition with measurable conversion economics</td></tr>
+      <tr><td>Talent (faculty/coaches)</td><td class="small">Standardized hiring rubric; nationally benchmarked comp; advisor network; 15% Class C pool</td></tr>
+      <tr><td>Operational scaling</td><td class="small">Documented playbook from day one; Campus #2 is the deliberate stress test before Phase 3</td></tr>
+      <tr><td>Brand &amp; reputation</td><td class="small">IP held in AEL IP Holdings, separated from campus operating risk; enforced brand-voice discipline</td></tr>
+      <tr><td>Liability isolation</td><td class="small">Each campus a separate Registered Series; separation discipline enforced</td></tr>
+      <tr><td>Regulatory (TEFA / accreditation)</td><td class="small">Outside counsel retained; accreditation sequenced with operations; TEFA prep for Aug 2026</td></tr>
+      <tr><td>Capital</td><td class="small">Cumulative FCF turns positive Year 4; peak burn $2.5M (Yr 2) covered by SAFE + Series A</td></tr>
+    </table></div>
+  </div>`;
+
+PAGES.model=()=>`
+  <div class="kicker">09 · Financial Model · Residency Build</div>
+  <h1 class="h-lg">The economics work at scale.</h1>
+  <div class="note warn" style="margin-top:16px">This page reflects the <b>Excel financial model</b> (residency-academy construction, Jul-2026 start, 60-month horizon). It is a <b>different scenario</b> from the 10-campus platform rollout on the <b>5-Year Trajectory</b> page. The two are not the same business and the figures don't tie — see <b>Sources &amp; Reconciliation</b>.</div>
+  <div class="grid g4 sec">
+    <div class="metric asc"><div class="v" id="mRev5">$103.5M</div><div class="l">5-Yr Revenue</div><div class="s">Avg $20.7M / yr</div></div>
+    <div class="metric"><div class="v" id="mNI5">$60.9M</div><div class="l">5-Yr Net Income</div><div class="s">58.8% cumulative margin</div></div>
+    <div class="metric"><div class="v">91.3%</div><div class="l">Gross Margin</div><div class="s">COGS $8.98M / 5yr</div></div>
+    <div class="metric forge"><div class="v" id="mExit">$331M</div><div class="l">Model Exit Value</div><div class="s">scenario-adjusted</div></div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">9.1</span><h2 class="h-md">Revenue &amp; net income by year ($M)</h2></div>
+    <div class="toggle gold" id="msTog"><button data-s="base" class="on">Base</button><button data-s="up">Upside ×1.25</button><button data-s="cons">Conservative ×0.75</button></div>
+    <div id="modelChart" style="margin-top:14px"></div>
+    <p class="src" style="margin-top:6px">Scenario multipliers from the model's own assumptions tab — Upside scales revenue ×1.25 / exit ×1.15; Conservative ×0.75 / ×0.85. The headline metrics above move with the toggle; the detail table below holds the Base case.</p>
+    <div class="tbl-wrap" style="margin-top:14px"><table>
+      <tr><th>$ thousands</th><th class="n">Y1</th><th class="n">Y2</th><th class="n">Y3</th><th class="n">Y4</th><th class="n">Y5</th><th class="n">Total</th></tr>
+      <tr><td>Gross revenue</td><td class="n">3,286</td><td class="n">9,545</td><td class="n">16,928</td><td class="n">30,237</td><td class="n">43,550</td><td class="n">103,545</td></tr>
+      <tr><td>COGS</td><td class="n">297</td><td class="n">926</td><td class="n">1,534</td><td class="n">2,644</td><td class="n">3,575</td><td class="n">8,976</td></tr>
+      <tr><td>Operating expenses</td><td class="n">1,181</td><td class="n">2,699</td><td class="n">2,999</td><td class="n">3,110</td><td class="n">3,215</td><td class="n">13,204</td></tr>
+      <tr class="tot"><td>Net income</td><td class="n">1,325</td><td class="n">4,394</td><td class="n">9,279</td><td class="n">18,337</td><td class="n">27,548</td><td class="n">60,882</td></tr>
+      <tr><td>Net margin</td><td class="n">40.3%</td><td class="n">46.0%</td><td class="n">54.8%</td><td class="n">60.6%</td><td class="n">63.3%</td><td class="n">58.8%</td></tr>
+    </table></div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">9.2</span><h2 class="h-md">Enrollment ramp — scenario toggle</h2></div>
+    <div class="toggle" id="enrtog"><button data-e="B" class="on">Base</button><button data-e="C">Conservative</button><button data-e="A">Aggressive</button></div>
+    <div id="enrchart" style="margin-top:14px"></div>
+    <p class="src">Total athletes by year of operation. Drives the tuition build across the Path/Ascent/Forge tier prices.</p>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">9.3</span><h2 class="h-md">Drivers &amp; assumptions</h2></div>
+    ${dd("Tuition by tier &amp; year","<div class='tbl-wrap'><table><tr><th>Grade tier</th><th class='n'>Y1</th><th class='n'>Y2</th><th class='n'>Y3</th><th class='n'>Y4</th><th class='n'>Mature</th></tr><tr><td>Upper · grades 7–12</td><td class='n'>$22k</td><td class='n'>$25k</td><td class='n'>$28k</td><td class='n'>$30k</td><td class='n'>$35k</td></tr><tr><td>Lower · grades 1–6</td><td class='n'>$15k</td><td class='n'>$17.5k</td><td class='n'>$20k</td><td class='n'>$24k</td><td class='n'>$28k</td></tr></table></div><p class='src' style='margin-top:8px'>Sports modeled across Soccer · Baseball · Basketball · Volleyball · Other, each split Upper/Lower tier, rolled forward annually.</p>")}
+    ${dd("Scholarships &amp; realization","Full scholarship 10% (Y1) → 5%; partial 10% at a 30% discount throughout. Effective tuition realization 87% (Y1) → 92% (Y2+).")}
+    ${dd("Camp &amp; ancillary revenue","Winter, Spring Break, and Thanksgiving camps (Summer modeled at $0), each escalating ~5%/yr — ~$42.6k Y1 → ~$51.8k Y5.")}
+    ${dd("Cost structure","Largest cost lines: student lunch, the curriculum license (Edgenuity / Imagine Learning), the Athoz technology stack, sport equipment &amp; technology, ancillary trips, and facility lease. Payroll tax 7.95%, benefits 6.5%, corporate tax rate 25%.")}
+    ${dd("Capital &amp; structure assumptions","Intercompany: 4% IP royalty, 5% cost-plus management fee. Preferred: 8% return, 1× liquidation preference, participating with a 3× cap. Class A 70% founder voting / Class B 20% economics / Class C 10–15% incentive pool. Min operating cash reserve $500k; PALS program $15k/student.")}
+  </div>`;
+
+PAGES.traj=()=>`
+  <div class="kicker">10 · Five-Year Trajectory · Platform Rollout</div>
+  <h1 class="h-lg">Dallas first. National next.</h1>
+  <div class="note" style="margin-top:16px">This page reflects the <b>deck / business-plan / narrative base case</b>: a 1 + 1 + 2 + 3 + 3 campus opening pattern reaching 10 operating campuses by Year 5. (Distinct from the residency Financial Model — see Reconciliation.)</div>
+  <div style="margin-top:18px"><div class="toggle gold" id="trajtog"><button data-t="base" class="on">Base Case</button><button data-t="up">Upside Case</button></div></div>
+  <div id="trajbody"></div>`;
+
+let capUnlocked=false;
+const CAPKEY=String.fromCharCode(67,111,110,116,105,110,117,117,109); // Continuum
+function capitalGate(){return `
+  <div class="kicker">11 · Capital &amp; Returns</div>
+  <h1 class="h-lg">Protected.</h1>
+  <p class="lede">This section holds the financing terms, cap table, dilution path, and return figures. It is gated for investor / founder access.</p>
+  <div class="gatecard">
+    <div class="gateicon">🔒</div>
+    <div class="eyebrow goldtext" style="margin-bottom:10px">CONFIDENTIAL · INVESTOR ACCESS</div>
+    <label class="src" for="capPw" style="display:block;margin-bottom:8px">Enter access password</label>
+    <div class="gaterow">
+      <input id="capPw" type="password" autocomplete="off" placeholder="••••••••" />
+      <button id="capGo">Unlock</button>
+    </div>
+    <div id="capErr" class="gateerr"></div>
+    <p class="src" style="margin-top:14px;max-width:46ch">Distribute under NDA only. This is an in-room access gate, not encryption — the underlying file should still be shared deliberately.</p>
+  </div>`;}
+function capitalContent(){return `
+  <div class="confbar"><span>🔓</span><span>CONFIDENTIAL · INVESTOR — financing terms, cap table &amp; returns. Distribute under NDA only.</span></div>
+  <div class="kicker" style="margin-top:18px">11 · The Ask</div>
+  <h1 class="h-lg">Raising $1.5M.<br>$2M ceiling.</h1>
+  <p class="lede">A post-money SAFE sized to bridge to the Series A. Oversubscription at founder's discretion.</p>
+  <div class="grid g3 sec">
+    <div class="metric"><div class="v">$1.5M</div><div class="l">Target Raise · $2M Ceiling</div></div>
+    <div class="metric asc"><div class="v">$10M</div><div class="l">Post-Money Valuation Cap</div></div>
+    <div class="metric forge"><div class="v">15%</div><div class="l">Discount · Next Round</div></div>
+  </div>
+  <p class="src" style="margin-top:10px">Standard MFN provision. No board seats, no protective provisions, no operational rights granted under the SAFE.</p>
+
+  <div class="sec"><div class="sec-h"><span class="num">11.1</span><h2 class="h-md">Use of funds</h2></div>
+    <div class="grid g4">
+      <div class="card"><div class="bignum bluetext" style="font-size:40px">40%</div><div class="eyebrow" style="margin:8px 0">Dallas Launch · $600k</div><p class="tiny">Lease, fit-out, equipment, opening faculty/coaching &amp; marketing.</p></div>
+      <div class="card"><div class="bignum" style="font-size:40px">30%</div><div class="eyebrow" style="margin:8px 0">Platform Team · $450k</div><p class="tiny">CFO, CTO, head of marketing, recruiting director.</p></div>
+      <div class="card"><div class="bignum" style="font-size:40px">20%</div><div class="eyebrow" style="margin:8px 0">Campus #2 Pre-launch · $300k</div><p class="tiny">Site selection, market analysis, real-estate diligence.</p></div>
+      <div class="card"><div class="bignum goldtext" style="font-size:40px">10%</div><div class="eyebrow" style="margin:8px 0">Systems &amp; IP · $150k</div><p class="tiny">Continuum Score™ infra, trademark filings, technology stack, legal.</p></div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">11.1b</span><h2 class="h-md">Model the raise — live</h2></div>
+    <p class="small">Set the SAFE amount; the dollar allocation and the post-SAFE ownership split recompute against the $10M post-money cap.</p>
+    <div class="calc">
+      <div class="calc-controls">
+        <div class="ctl"><label>SAFE raised · <b id="capRaiseL">$1.50M raised</b></label>${sl('capRaise',1500000,2000000,1500000,50000)}</div>
+        <div class="grid g2" style="gap:8px;margin-top:8px">
+          <div class="mini"><span class="mono tiny muted">Dallas 40%</span><div class="mono" id="f40">—</div></div>
+          <div class="mini"><span class="mono tiny muted">Platform 30%</span><div class="mono" id="f30">—</div></div>
+          <div class="mini"><span class="mono tiny muted">Campus #2 20%</span><div class="mono" id="f20">—</div></div>
+          <div class="mini"><span class="mono tiny muted">Systems/IP 10%</span><div class="mono" id="f10">—</div></div>
+        </div>
+      </div>
+      <div class="calc-out">
+        <div class="eyebrow" style="margin-bottom:8px">Post-SAFE ownership (founder retains 100% voting)</div>
+        <div class="ecobar" id="dilBar" style="height:30px"></div>
+        <div class="legend" style="margin-top:10px;justify-content:flex-start;flex-wrap:wrap">
+          <span><i style="background:var(--ascent)"></i>Class B <b id="dilB" class="mono">—</b></span>
+          <span><i style="background:#5a6270"></i>Class C <b id="dilC" class="mono">—</b></span>
+          <span><i style="background:var(--forge)"></i>SAFE <b id="dilSafe" class="mono">—</b></span>
+        </div>
+        <p class="src" style="margin-top:12px">Post-money SAFE: investor ownership = raise ÷ $10M cap. Founder Class B/C dilute pro-rata; voting control is unaffected by the multi-class design. Illustrative.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">11.2</span><h2 class="h-md">Capital sequence</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th></th><th>SAFE (now)</th><th>Series A (2027)</th><th>Series B (~2029)</th></tr>
+      <tr><td class="mono">Amount</td><td>$1.5M ($2M cap)</td><td>$8M target</td><td>$25M+ target</td></tr>
+      <tr><td class="mono">Instrument</td><td>Post-money SAFE · $10M cap · 15%</td><td>Priced equity · post C-corp F-reorg</td><td>Growth equity (+ real estate financing)</td></tr>
+      <tr><td class="mono">Pre-money</td><td>—</td><td>$25M</td><td>—</td></tr>
+      <tr><td class="mono">Unlock</td><td>Dallas launch · Aug 2026</td><td>Campus #2 + facility / boarding</td><td>National rollout · K-6 expansion</td></tr>
+    </table></div>
+    <p class="src" style="margin-top:10px">Pre–Series A, AEL Holdings converts LLC → Delaware C-corp via tax-free F-reorganization (starts the §1202 QSBS clock; gives institutional investors the corporate form).</p>
+  </div>
+
+  <div class="sec"><div class="sec-h"><span class="num">11.3</span><h2 class="h-md">Returns &amp; exit</h2></div>
+    <div class="grid g2">
+      <div class="card"><h4>Platform rollout exit</h4><p class="small" style="margin-top:8px">Multi-location education/athletic platforms trade 12–18× EBITDA (PE) and 8–14× (strategic). On Year-5 EBITDA of $20.8M → <b>$170M–$375M</b> for operations alone, real estate valued separately on cap-rate multiples.</p></div>
+      <div class="card"><h4>Residency model exit</h4><p class="small" style="margin-top:8px">The financial model returns an exit value of <b>$330.6M</b> (7.59× Y5 revenue). 5-yr distributions to equity classes total <b>$58.4M</b> — Class A $40.9M · Class B $11.7M · Class C $5.8M.</p></div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:14px"><table>
+      <tr><th>Exit multiple (rollout, Y5 EBITDA $20.8M)</th><th class="n">Implied platform value</th></tr>
+      <tr><td>12×</td><td class="n">~$250M</td></tr>
+      <tr><td>15× — premium education-adjacent</td><td class="n">~$312M</td></tr>
+      <tr><td>20× — category-defining + licensing</td><td class="n">$400M+</td></tr>
+    </table></div>
+    <p class="src" style="margin-top:10px">Excludes value attributable to AEL IP Holdings or AEL Management Services as separately monetizable assets.</p>
+  </div>`;}
+PAGES.capital=()=> capUnlocked ? capitalContent() : capitalGate();
+
+PAGES.team=()=>`
+  <div class="kicker">12 · Team &amp; Advisors</div>
+  <h1 class="h-lg">Founder-led. Built to scale.</h1>
+  <div class="card sec" style="border-color:var(--ascent-dim)">
+    <div class="eyebrow bluetext">Founder &amp; CEO</div>
+    <h2 class="h-md" style="margin:8px 0 6px">Reif Chron</h2>
+    <p class="small">20+ years of finance, legal, real estate, and operational experience across public and private companies — as an operator and at board level. Previously founded Elite Performance Training (Frisco, TX). Currently serves on the Board of Trustees at Southwest Christian School. Texas A&amp;M (Accounting &amp; Finance); J.D., Washington University in St. Louis.</p>
+    <p class="small">Designed the Continuum Score™ system and architected the multi-campus operating model end-to-end. Retains <b class="bluetext">100% of Class A voting control</b> through every modeled dilution event; economic Class B vests against scale milestones.</p>
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">12.1</span><h2 class="h-md">Planned key hires (post-SAFE)</h2></div>
+    <div class="grid g2">
+      ${[["CFO / Finance","Year 1","Financial systems, raise execution, intercompany accounting, audit readiness."],
+         ["Head of School — Dallas","Q3 2026","Campus operations, faculty management, academy compliance."],
+         ["Head of Athletic Development","Q3 2026","Coaching standards, athlete progression, Score methodology in practice."],
+         ["Head of Marketing","Year 2","Multi-campus brand, enrollment funnel, family communications."],
+         ["Head of Technology / Data","Year 2–3","Continuum Score™ platform, data infrastructure, integration partners."],
+         ["COO (multi-location ops)","As scaled","Cross-campus operations, family experience, delivery consistency."]
+        ].map(h=>`<div class="card"><h4>${h[0]}</h4><div class="mono tiny goldtext" style="margin:4px 0 6px">${h[1]}</div><p class="tiny">${h[2]}</p></div>`).join("")}
+    </div>
+  </div>
+  <div class="note" style="margin-top:18px">An advisory bench is being assembled across athlete development, education operations, institutional capital, and sports IP — confirmed alongside the SAFE close. A <b>15% Class C pool</b> is reserved for executive and operator equity at scale.</div>`;
+
+PAGES.roadmap=()=>`
+  <div class="kicker">13 · Rollout</div>
+  <h1 class="h-lg">Four phases to platform.</h1>
+  <div class="tl sec">
+    ${[["2026","Phase 1 · Dallas Launch","Single Series. Grades 7–12 only. $22K tuition. Prove unit economics."],
+       ["2027","Phase 2 · Texas Expansion","Campus #2 in Texas. Replicate the operating playbook. SAFE deployed → Series A."],
+       ["2028–29","Phase 3 · National Rollout","K–6 launches at Dallas. Five more campuses across SE/SW. Series A funded."],
+       ["2030+","Phase 4 · Platform Monetization","10+ campuses. Licensing, professional pathway, AEL ventures launch."]
+      ].map(e=>`<div class="ev"><div class="tm">${e[0]}</div><div class="lab">${e[1]}</div><div class="small muted">${e[2]}</div></div>`).join("")}
+  </div>
+  <div class="note">By Year 5: <b>10 campuses operating · ~2,500–3,200 athletes · ~$57M revenue.</b></div>
+  <div class="sec"><div class="sec-h"><span class="num">13.1</span><h2 class="h-md">Use-of-funds milestones</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Workstream</th><th>Milestones</th></tr>
+      <tr><td><b>Dallas launch</b> · 40%</td><td class="small">Site lease executed · build-out complete · Head of School hired · faculty filled · 75-athlete enrollment for Aug 2026</td></tr>
+      <tr><td><b>Platform team</b> · 30%</td><td class="small">CFO hired (Y1) · Head of Marketing (Y2) · Head of Tech (Y2–3) · platform G&amp;A at planned rate</td></tr>
+      <tr><td><b>Campus #2</b> · 20%</td><td class="small">Site selected · lease secured · design complete · Year-2 launch on schedule</td></tr>
+      <tr><td><b>Systems &amp; IP</b> · 10%</td><td class="small">Continuum Score™ trademarks filed · IP license executed · tech stack operational</td></tr>
+    </table></div>
+  </div>`;
+
+PAGES.manifesto=()=>`
+  <div class="kicker">14 · The Manifesto</div>
+  <div class="manifesto" style="margin-top:30px">
+    There is no peak.<br>There is no finished product.<br>
+    There is only the work.<br>The repetition.<br>The refinement.<br><br>
+    While others chase moments,<br>we build <span class="b">systems</span>.<br>
+    While others measure outcomes,<br>we measure <span class="g">progress</span>.<br><br>
+    This is not a place to arrive.<br>This is where you continue.
+  </div>
+  <div style="margin-top:38px" class="eyebrow bluetext">WELCOME TO THE CONTINUUM.</div>
+  <div class="mantra" style="margin-top:14px;font-family:var(--mono);letter-spacing:.22em;color:var(--steel)">BUILD DAILY · <span class="bluetext">MEASURE EVERYTHING</span> · <span class="goldtext">NO FINISH LINE</span></div>`;
+
+PAGES.sources=()=>`
+  <div class="kicker">15 · Sources &amp; Reconciliation</div>
+  <h1 class="h-lg">What this HUB is built from.</h1>
+  <p class="lede">Every figure here is drawn directly from Continuum's own materials. This page names the source set and flags where the documents tell different stories — the items a diligent investor will ask about.</p>
+  <div class="sec"><div class="sec-h"><span class="num">15.1</span><h2 class="h-md">Source documents</h2></div>
+    <div class="tbl-wrap"><table>
+      <tr><th>Document</th><th>Role in the HUB</th></tr>
+      <tr><td>AEL Continuum Investor Deck v1</td><td class="small">Thesis, platform, Score, unit economics, org, rollout, base + upside cases</td></tr>
+      <tr><td>Continuum Academy Business Plan v3</td><td class="small">Master narrative — curriculum, governance, architecture, risk, capital plan</td></tr>
+      <tr><td>Continuum Academy.xlsx (financial model)</td><td class="small">Residency proforma — revenue/NI by year, tuition tiers, enrollment, COGS, returns</td></tr>
+      <tr><td>Continuum Investor Narrative v1</td><td class="small">Day-in-the-life, competitive map, revenue mix, capital sequence</td></tr>
+      <tr><td>AEL SAFE Term Sheet v1</td><td class="small">Financing terms (held to the Confidential Capital page)</td></tr>
+    </table></div>
+  </div>
+  <div class="sec"><div class="sec-h"><span class="num">15.2</span><h2 class="h-md">Reconciliation flags</h2></div>
+    <div class="note warn"><b>① Two financial constructions.</b> The deck / plan / narrative <b>base case</b> models a <b>10-campus platform rollout</b> ($57.1M Y5 revenue · $20.8M EBITDA · ~$250M at 12×). The Excel <b>financial model</b> is a <b>single residency build</b> ($43.5M Y5 revenue · $103.5M 5-yr revenue · $60.9M 5-yr net income · $330.6M exit). These are different businesses; the numbers don't tie. Decide which is the plan of record before external distribution.</div>
+    <div class="note" style="margin-top:12px"><b>② EBITDA vs Net Income.</b> The rollout reports EBITDA; the residency model reports net income — margins aren't directly comparable across the two views.</div>
+    <div class="note" style="margin-top:12px"><b>③ Geography.</b> Deck/plan say "Dallas" (Collin County / DFW corridor); the narrative footer and the founder's prior venture reference "Frisco." Same corridor — worth standardizing the label.</div>
+    <div class="note" style="margin-top:12px"><b>④ TAM stated differently.</b> Deck: $80B+ ($60B private K-12 + $20B+ youth sports). Narrative: $90B private K-12 + $5–8B premium athletic → $25–35B addressable. Pick one framing.</div>
+    <div class="note" style="margin-top:12px"><b>⑤ Year-5 athlete count &amp; mature-campus revenue.</b> Y5 athletes cited as ~3,200 (deck) and 2,500+ (narrative); mature campus shown as $9.81M net and $10.96M–$11.8M gross in different places. Minor, but reconcile before diligence.</div>
+  </div>
+  <div class="foot">Confidence on this HUB — ε 0.90 (every figure traced to a source document; the gap is the unreconciled scenarios above, which are surfaced, not smoothed over) · ρ 0.92 (full source set parsed and cross-checked; exact brand hex values inferred to the documented tier system and trivially swappable). Built for Reif Chron · AEL Holdings, LLC.</div>`;
+
+/* drilldown helper */
+function dd(title,body){return `<details><summary><span class="mk">+</span>${title}<span class="chev">▶</span></summary><div class="dd-body"><p class="small">${body}</p></div></details>`;}
+
+/* =================== TRAJECTORY (interactive) =================== */
+function renderTraj(mode){
+  const el=document.getElementById("trajbody");if(!el)return;
+  if(mode==="base"){
+    el.innerHTML=`
+    <div class="grid g4" style="margin-top:18px">
+      <div class="metric asc"><div class="v">$57.1M</div><div class="l">Year-5 Revenue</div></div>
+      <div class="metric forge"><div class="v">$20.8M</div><div class="l">Year-5 EBITDA · 36.4%</div></div>
+      <div class="metric"><div class="v">10</div><div class="l">Campuses</div></div>
+      <div class="metric"><div class="v">$2.5M</div><div class="l">Peak Burn (Yr 2)</div></div>
+    </div>
+    <div class="sec" style="border:none;margin-top:24px;padding:0"><h3 class="h-md">Revenue &amp; EBITDA ($M)</h3>
+      ${barChart([{name:"Revenue",data:D.rollRev,cls:"bar-a"},{name:"EBITDA",data:D.rollEBITDA,cls:"bar-b"}],{labels:D.years,fmt:v=>"$"+v.toFixed(0)})}
+      <div class="legend" style="margin:8px 0 0 44px;justify-content:flex-start"><span><i class="dot-asc"></i>Revenue</span><span><i class="dot-forge"></i>EBITDA</span></div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:20px"><table>
+      <tr><th></th><th class="n">Y1</th><th class="n">Y2</th><th class="n">Y3</th><th class="n">Y4</th><th class="n">Y5</th></tr>
+      <tr><td>Cumulative campuses</td><td class="n">1</td><td class="n">2</td><td class="n">4</td><td class="n">7</td><td class="n">10</td></tr>
+      <tr><td>Total revenue</td><td class="n">$1.9M</td><td class="n">$6.1M</td><td class="n">$16.2M</td><td class="n">$32.9M</td><td class="n">$57.1M</td></tr>
+      <tr><td>Consolidated EBITDA</td><td class="n">($0.5M)</td><td class="n">$0.3M</td><td class="n">$3.9M</td><td class="n">$10.1M</td><td class="n">$20.8M</td></tr>
+      <tr><td>EBITDA margin</td><td class="n">(24.8%)</td><td class="n">4.2%</td><td class="n">24.2%</td><td class="n">30.5%</td><td class="n">36.4%</td></tr>
+      <tr><td>Cumulative FCF</td><td class="n">($1.2M)</td><td class="n">($2.5M)</td><td class="n">($1.5M)</td><td class="n">$4.0M</td><td class="n">$20.3M</td></tr>
+    </table></div>
+    <div class="note" style="margin-top:16px">Year 1 is sub-scale by design. Year 2 is the inflection — campus #2 opens, cumulative burn peaks at $2.5M (the floor of capital to reach self-funding). The Series A funds Years 3–5. <b>Exit sensitivity:</b> 12× → ~$250M · 15× → ~$312M · 20× → $400M+.</div>`;
+  } else {
+    el.innerHTML=`
+    <div class="grid g4" style="margin-top:18px">
+      <div class="metric forge"><div class="v">$153M</div><div class="l">Year-5 Revenue</div></div>
+      <div class="metric forge"><div class="v">$54M</div><div class="l">Year-5 EBITDA · 35%</div></div>
+      <div class="metric asc"><div class="v">1,200</div><div class="l">Flagship Students</div></div>
+      <div class="metric"><div class="v">$648–972M</div><div class="l">EV @ 12–18×</div></div>
+    </div>
+    <div class="note" style="margin-top:18px">Upside case (deck appendix): a Frisco hub-and-spoke — 1,200-student flagship ($66.5K ARPU) + 4 satellites (~300 each) + club sports + a platform/IP layer.</div>
+    <div class="sec" style="border:none;margin-top:18px;padding:0"><h3 class="h-md">Consolidated EBITDA by segment ($M)</h3>
+      ${stackChart([
+        {name:"Main campus",data:D.upMain,color:"#2E6BFF"},
+        {name:"Satellites",data:D.upSat,color:"#7FB0FF"},
+        {name:"Club sports",data:D.upClub,color:"#43C08A"},
+        {name:"Platform / IP",data:D.upPlat,color:"#F4B11E"},
+        {name:"Corporate",data:D.upCorp,color:"#E0604E"}
+      ],{labels:D.years})}
+      <div class="legend" style="margin:8px 0 0 44px;justify-content:flex-start;flex-wrap:wrap">
+        <span><i style="background:#2E6BFF" class=""></i>Main</span><span><i style="background:#7FB0FF"></i>Satellites</span><span><i style="background:#43C08A"></i>Club</span><span><i style="background:#F4B11E"></i>Platform/IP</span><span><i style="background:#E0604E"></i>Corporate</span>
+      </div>
+    </div>`;
+  }
+  const eb = mode==="up"?54.0:20.8;
+  el.insertAdjacentHTML("beforeend", `
+    <div class="sec" style="border-top:1px solid var(--hair);margin-top:26px;padding-top:20px">
+      <div class="sec-h"><span class="num">10.3</span><h2 class="h-md">Exit calculator</h2></div>
+      <p class="small">Year-5 EBITDA <b id="exEb">$${eb.toFixed(1)}M</b> × the exit multiple → enterprise value. Drag the multiple to see the range.</p>
+      <div class="calc">
+        <div class="calc-controls"><div class="ctl"><label>Exit multiple · <b id="exMl">12.0×</b></label>${sl("exMult",8,20,12,0.5)}</div>
+          <p class="src" style="margin-top:10px">Education + athletic platforms trade ~12–18× (PE) and ~8–14× (strategic).</p></div>
+        <div class="calc-out" style="display:flex;flex-direction:column;justify-content:center">
+          <div class="eyebrow">Enterprise value</div>
+          <div class="bignum bluetext" id="exEV" style="margin:8px 0 4px">—</div>
+          <div class="mono small muted">on Year-5 EBITDA, ${mode==="up"?"upside":"base"} case</div>
+        </div>
+      </div>
+    </div>`);
+  const ms=document.getElementById("exMult");
+  if(ms){const u=()=>{const mlt=+ms.value;document.getElementById("exMl").textContent=mlt.toFixed(1)+"×";document.getElementById("exEV").textContent="$"+Math.round(eb*mlt)+"M";};ms.addEventListener("input",u);u();}
+}
+function renderEnroll(k){
+  const el=document.getElementById("enrchart");if(!el)return;
+  const map={B:D.enrollB,C:D.enrollC,A:D.enrollA};
+  el.innerHTML=lineChart(map[k],{labels:D.years,color:"#2E6BFF",fmt:v=>v.toFixed(0),pfmt:v=>v});
+}
+
+/* ============ INTERACTIVE HELPERS ============ */
+function sl(id,min,max,val,step){return `<input type="range" class="rng" id="${id}" min="${min}" max="${max}" value="${val}" step="${step}">`;}
+function money(n){const a=Math.abs(n);const s=n<0?'-':'';if(a>=1e6)return s+'$'+(a/1e6).toFixed(2)+'M';if(a>=1e3)return s+'$'+(a/1e3).toFixed(0)+'k';return s+'$'+a.toFixed(0);}
+
+/* ---- Continuum Score Builder ---- */
+function initScore(){
+  if(!document.getElementById('wP'))return;
+  const W=['wP','wC','wS','wY'],Dm=['dP','dC','dS','dY'];
+  const upd=()=>{
+    W.concat(Dm).forEach(i=>{const e=document.getElementById(i+'l');if(e)e.textContent=document.getElementById(i).value;});
+    const w=W.map(i=>+document.getElementById(i).value),d=Dm.map(i=>+document.getElementById(i).value);
+    const sw=w.reduce((a,b)=>a+b,0)||1;
+    const cs=Math.round((w[0]*d[0]+w[1]*d[1]+w[2]*d[2]+w[3]*d[3])/sw);
+    const o=document.getElementById('csOut');o.textContent=cs;
+    const t= cs<400?['The Path','tag-path','var(--path)']: cs<700?['The Ascent','tag-asc','var(--ascent)']:['The Forge','tag-forge','var(--forge)'];
+    document.getElementById('csTier').innerHTML='<span class="pill '+t[1]+'">'+t[0]+'</span>';
+    o.style.color=t[2];
+    document.getElementById('csMark').style.left='calc('+(cs/1000*100)+'% - 1px)';
+  };
+  W.concat(Dm).forEach(i=>document.getElementById(i).addEventListener('input',upd));upd();
+}
+
+/* ---- Live Campus Economics ---- */
+function initCampus(){
+  if(!document.getElementById('cAth'))return;
+  const ids=['cAth','cBoard','cDay','cBoardT','cSchol','cRoy','cFee','cVar','cFix'];
+  const lbl={cAth:v=>v+' athletes',cBoard:v=>v+'% boarding',cDay:v=>'$'+(+v/1000).toFixed(1)+'k day tuition',cBoardT:v=>'$'+(+v/1000)+'k boarding',cSchol:v=>v+'% scholarship',cRoy:v=>v+'% IP royalty',cFee:v=>v+'% mgmt fee',cVar:v=>'$'+(+v/1000).toFixed(1)+'k var/athlete',cFix:v=>'$'+(+v/1e6).toFixed(2)+'M fixed'};
+  const upd=()=>{
+    const g=id=>+document.getElementById(id).value;
+    ids.forEach(i=>{const e=document.getElementById(i+'l');if(e)e.textContent=lbl[i](document.getElementById(i).value);});
+    const N=g('cAth'),bsh=g('cBoard')/100,day=g('cDay'),bt=g('cBoardT'),sch=g('cSchol')/100,roy=g('cRoy')/100,fee=g('cFee')/100,vc=g('cVar'),fix=g('cFix');
+    const bAth=Math.round(N*bsh),dAth=N-bAth;
+    const gross=dAth*day+bAth*bt, realized=gross*(1-sch), inter=realized*(roy+fee), varc=N*vc;
+    const ebitda=realized-inter-varc-fix, margin=realized>0?ebitda/realized:0;
+    document.getElementById('coRev').textContent=money(realized);
+    document.getElementById('coEbit').textContent=money(ebitda);
+    document.getElementById('coEbit').style.color=ebitda>=0?'var(--forge)':'var(--bad)';
+    document.getElementById('coMarg').textContent=(margin*100).toFixed(1)+'%';
+    document.getElementById('coPer').textContent=money(N>0?ebitda/N:0);
+    document.getElementById('coMix').textContent=dAth+' day · '+bAth+' boarding';
+    const parts=[['IP royalty + mgmt fee',inter,'#5a6270'],['Variable cost',varc,'#3a4150'],['Fixed cost',Math.max(fix,0),'#23272e'],['EBITDA',Math.max(ebitda,0),'var(--forge)']];
+    document.getElementById('coBar').innerHTML=parts.map(p=>`<div title="${p[0]}: ${money(p[1])}" style="width:${realized>0?Math.max(p[1],0)/realized*100:0}%;background:${p[2]}"></div>`).join('');
+  };
+  ids.forEach(i=>document.getElementById(i).addEventListener('input',upd));upd();
+}
+
+/* ---- Financial Model scenario multipliers ---- */
+let msState='base';
+const MSC={base:[1,1],up:[1.25,1.15],cons:[0.75,0.85]};
+function renderModel(){
+  const m=MSC[msState][0],e=MSC[msState][1];
+  const rev=D.modelRev.map(v=>v*m),ni=D.modelNI.map(v=>v*m);
+  const c=document.getElementById('modelChart');
+  if(c)c.innerHTML=barChart([{name:'Revenue',data:rev,cls:'bar-a'},{name:'Net income',data:ni,cls:'bar-b'}],{labels:D.years,fmt:v=>'$'+v.toFixed(0)});
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set('mRev5','$'+(103.545*m).toFixed(1)+'M'); set('mNI5','$'+(60.882*m).toFixed(1)+'M'); set('mExit','$'+(330.573*m*e).toFixed(0)+'M');
+}
+function initModelScenario(){
+  const tg=document.getElementById('msTog');if(!tg)return;
+  tg.addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;msState=b.dataset.s;
+    tg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');renderModel();});
+  renderModel();
+}
+
+/* ---- TEFA family-cost calculator ---- */
+function initTEFA(){
+  const sel=document.getElementById('tfTuition');if(!sel)return;
+  const upd=()=>{
+    const tu=+sel.value, aw=+document.getElementById('tfAward').value, oop=Math.max(tu-aw,0);
+    document.getElementById('tfOop').textContent=money(oop);
+    document.getElementById('tfPct').textContent= tu>0? 'TEFA covers '+Math.round(Math.min(aw,tu)/tu*100)+'% of this tuition' : '';
+    document.getElementById('tfSub').textContent=money(tu)+' tuition  −  '+money(Math.min(aw,tu))+' TEFA';
+  };
+  sel.addEventListener('change',upd);document.getElementById('tfAward').addEventListener('change',upd);upd();
+}
+
+/* ---- Capital: raise + use-of-funds + dilution ---- */
+function initCapital(){
+  const r=document.getElementById('capRaise');if(!r)return;
+  const CAP=10; // $M post-money cap
+  const upd=()=>{
+    const raise=+r.value, raiseM=raise/1e6;
+    document.getElementById('capRaiseL').textContent='$'+raiseM.toFixed(2)+'M raised';
+    [['f40',0.40],['f30',0.30],['f20',0.20],['f10',0.10]].forEach(([id,p])=>{const e=document.getElementById(id);if(e)e.textContent=money(raise*p);});
+    const safePct=Math.min(raiseM/CAP,0.99), bPost=0.85*(1-safePct), cPost=0.15*(1-safePct);
+    document.getElementById('dilSafe').textContent=(safePct*100).toFixed(1)+'%';
+    document.getElementById('dilB').textContent=(bPost*100).toFixed(1)+'%';
+    document.getElementById('dilC').textContent=(cPost*100).toFixed(1)+'%';
+    const seg=(w,c,t)=>`<div title="${t}" style="width:${w*100}%;background:${c}"></div>`;
+    document.getElementById('dilBar').innerHTML=
+      seg(bPost,'var(--ascent)','Founder Class B '+(bPost*100).toFixed(1)+'%')+
+      seg(cPost,'#5a6270','Class C pool '+(cPost*100).toFixed(1)+'%')+
+      seg(safePct,'var(--forge)','SAFE investors '+(safePct*100).toFixed(1)+'%');
+  };
+  r.addEventListener('input',upd);upd();
+}
+
+/* =================== ROUTER =================== */
+const CRUMB={overview:"Command Overview",thesis:"The Thesis",platform:"The AEL Platform",score:"The Continuum Score™",academy:"Academy & Tiers",day:"The Engineered Day",academics:"Curriculum & Compliance",market:"Market & Tailwind",arch:"Entity Architecture",model:"Financial Model",traj:"5-Year Trajectory",capital:"Capital & Returns",team:"Team & Advisors",roadmap:"Roadmap",manifesto:"The Manifesto",sources:"Sources & Reconciliation"};
+function go(key){
+  const c=document.getElementById("content");
+  c.innerHTML=`<div class="page on">${(PAGES[key]||PAGES.overview)()}</div>`;
+  document.querySelectorAll(".navlink").forEach(n=>n.classList.toggle("on",n.dataset.go===key));
+  document.getElementById("crumb").textContent=CRUMB[key]||"";
+  window.scrollTo(0,0);
+  document.getElementById("side").classList.remove("open");
+  // wire interactives present on this page
+  if(key==="capital" && !capUnlocked){
+    const tryUnlock=()=>{
+      const v=(document.getElementById("capPw").value||"").trim();
+      if(v.toLowerCase()===CAPKEY.toLowerCase()){ capUnlocked=true; go("capital"); }
+      else{ const er=document.getElementById("capErr"); er.textContent="Incorrect password."; er.style.opacity=1;
+        const inp=document.getElementById("capPw"); inp.value=""; inp.focus(); }
+    };
+    document.getElementById("capGo").addEventListener("click",tryUnlock);
+    document.getElementById("capPw").addEventListener("keydown",e=>{if(e.key==="Enter")tryUnlock();});
+    setTimeout(()=>{const i=document.getElementById("capPw");if(i)i.focus();},60);
+  }
+  if(key==="traj"){renderTraj("base");
+    document.getElementById("trajtog").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+      document.querySelectorAll("#trajtog button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderTraj(b.dataset.t);});}
+  if(key==="model"){renderEnroll("B"); initModelScenario();
+    document.getElementById("enrtog").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+      document.querySelectorAll("#enrtog button").forEach(x=>x.classList.remove("on"));b.classList.add("on");renderEnroll(b.dataset.e);});}
+  if(key==="score") initScore();
+  if(key==="academy") initCampus();
+  if(key==="market") initTEFA();
+  if(key==="capital" && capUnlocked) initCapital();
+  try{history.replaceState(null,"","#"+key);}catch(e){}
+}
+document.querySelectorAll(".navlink").forEach(n=>n.addEventListener("click",()=>go(n.dataset.go)));
+document.getElementById("menubtn").addEventListener("click",()=>document.getElementById("side").classList.toggle("open"));
+go((location.hash||"#overview").slice(1));
+
+</script>
+</body>
+</html>
