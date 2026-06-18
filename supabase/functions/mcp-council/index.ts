@@ -773,14 +773,21 @@ async function runCouncilWithResynth(
   const stage1T0 = Date.now();
   // §1 · per-chair isolation: one chair fault must NOT down the board.
   const stage1Settled = await Promise.allSettled(
-    allChairs.map((c) =>
-      callAnthropic({
+    allChairs.map((c) => {
+      const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((res) => ({ id: c.id, name: c.name, res })),
-    ),
+      });
+      return callChair({
+        chairId: c.id,
+        system: `${preamble}\n\n${c.system}`,
+        user: userMsg,
+        maxTokens: MAX_TOKENS_CHAIR,
+        anthropicFallback: anthroCall,
+      }).then((res) => ({ id: c.id, name: c.name, res }));
+    }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
 
