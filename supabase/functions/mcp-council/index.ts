@@ -33,7 +33,7 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "harden-v2";
+const BUILD_ID = "parallel_no_resynth_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -835,6 +835,16 @@ async function runCouncilWithResynth(
     }
   }
   metrics.dropped_chairs = dropped;
+  console.log("convene_stage_metric", JSON.stringify({
+    tool: "convene_council",
+    tenant,
+    question_hash: qhash,
+    stage: "stage1",
+    stage1_ms: metrics.stage1_ms,
+    chairs_count: totalSeated,
+    surviving_chairs: stage1Fulfilled.length,
+    dropped_chairs: dropped,
+  }));
 
   // §2 · degradation floor (council ratio-based · scales with roster size).
   // 8 chairs → ceil(8 * 0.66) = 6; 6 chairs → ceil(6 * 0.66) = 4. Computed
@@ -869,6 +879,13 @@ async function runCouncilWithResynth(
     horizon = "Horizon pass unavailable this run · synthesizer will operate without anticipatory-horizon input.";
   }
   metrics.horizon_ms = Date.now() - horizonT0;
+  console.log("convene_stage_metric", JSON.stringify({
+    tool: "convene_council",
+    tenant,
+    question_hash: qhash,
+    stage: "horizon",
+    horizon_ms: metrics.horizon_ms,
+  }));
 
   // §4 · participating reflects actual contributors. Always include Leo
   // (synthesizer) even if Stage-1 Leo dropped, per the directive.
@@ -996,6 +1013,13 @@ async function runCouncilWithResynth(
 
   const first = await synthesize(false);
   metrics.synth1_ms = first.elapsed;
+  console.log("convene_stage_metric", JSON.stringify({
+    tool: "convene_council",
+    tenant,
+    question_hash: qhash,
+    stage: "synth1",
+    synth1_ms: metrics.synth1_ms,
+  }));
   for (const p of first.passes) passes.push(p);
   let minute = first.minute;
 
