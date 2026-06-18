@@ -37,6 +37,8 @@ import Dossier from "@/pages/Dossier";
 import OAuthConsent from "@/pages/OAuthConsent";
 import OAuthLogin from "@/pages/OAuthLogin";
 import ResetPassword from "@/pages/ResetPassword";
+import BuildView from "@/pages/BuildView";
+import BuildsAdmin from "@/pages/BuildsAdmin";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
@@ -86,6 +88,7 @@ const App = () => (
             <Route path="/oauth/consent" element={<OAuthConsent />} />
             <Route path="/login" element={<OAuthLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/builds/:token" element={<BuildView />} />
           <Route path="/app" element={
             <WorkspaceProvider>
               <AppLayout />
@@ -109,6 +112,7 @@ const App = () => (
             <Route path="suppression" element={<SuppressionList />} />
             <Route path="scheduler-health" element={<SchedulerHealth />} />
             <Route path="billing" element={<BillingUsage />} />
+            <Route path="builds" element={<BuildsAdmin />} />
           </Route>
           {/* Legacy product paths → redirect into /app/* */}
           <Route path="/accounts/*" element={<Navigate to="/app/accounts" replace />} />

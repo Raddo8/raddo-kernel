@@ -236,6 +236,95 @@ export type Database = {
           },
         ]
       }
+      build_views: {
+        Row: {
+          build_id: string
+          id: string
+          ip: string | null
+          opened_at: string
+          ua: string | null
+          viewer_email: string | null
+        }
+        Insert: {
+          build_id: string
+          id?: string
+          ip?: string | null
+          opened_at?: string
+          ua?: string | null
+          viewer_email?: string | null
+        }
+        Update: {
+          build_id?: string
+          id?: string
+          ip?: string | null
+          opened_at?: string
+          ua?: string | null
+          viewer_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "build_views_build_id_fkey"
+            columns: ["build_id"]
+            isOneToOne: false
+            referencedRelation: "builds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      builds: {
+        Row: {
+          access_mode: string
+          client_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          preview_path: string | null
+          recipient: string | null
+          revoked: boolean
+          storage_path: string
+          sub_type: string
+          title: string
+          token: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          access_mode?: string
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          preview_path?: string | null
+          recipient?: string | null
+          revoked?: boolean
+          storage_path: string
+          sub_type?: string
+          title: string
+          token: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          access_mode?: string
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          preview_path?: string | null
+          recipient?: string | null
+          revoked?: boolean
+          storage_path?: string
+          sub_type?: string
+          title?: string
+          token?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       chat_leads: {
         Row: {
           challenge: string
@@ -1322,6 +1411,7 @@ export type Database = {
       get_cron_headers: { Args: never; Returns: Json }
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
+      is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
