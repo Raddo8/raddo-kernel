@@ -165,7 +165,7 @@ export async function callChair(args: {
 //
 // This call is intentionally non-trivial in wall-clock (high reasoning
 // effort) and is used OUTSIDE the synchronous convene path · the
-// `summon_dissent` tool calls this against the FINISHED minute.
+// `abe_weighing_in` tool calls this against the FINISHED minute.
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 

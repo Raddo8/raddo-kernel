@@ -2106,12 +2106,12 @@ const TOOL_COUNCIL_TO_NOTION = {
 // `consult_advisor` is unadvertised but accepted for one release as an alias
 // of `summon_best_advisor`. Any `agent_id` arg is captured as a hint only —
 // the router still selects.
-const TOOL_SUMMON_DISSENT = {
-  name: "summon_dissent",
-  title: "Summon the Loyal Dissent",
+const TOOL_ABE_WEIGHING_IN = {
+  name: "abe_weighing_in",
+  title: "Abe weighing in",
   description:
-    "Run Abe (the Council's loyal dissent) against a FINISHED Council minute on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them.",
-  annotations: { title: "Summon the Loyal Dissent" },
+    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them.",
+  annotations: { title: "Abe weighing in" },
   inputSchema: {
     type: "object",
     properties: {
@@ -2123,7 +2123,8 @@ const TOOL_SUMMON_DISSENT = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_SUMMON_DISSENT, TOOL_LIST_AGENTS];
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS];
+
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
@@ -2454,13 +2455,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── summon_dissent · deferred loyal-dissent pass ─────────────────
+      // ── abe_weighing_in · deferred loyal-dissent pass ────────────────
       // Runs Abe against a FINISHED minute on GPT-5 via the Responses
       // API (separate from the synchronous chair-mode Abe in convene).
       // Anthropic Sonnet fallback on empty/error · logged as
       // `dissent_provider_fallback`. Output is a dissenting opinion to
       // append to the minute · NEVER overwrites the recommendation.
-      if (name === "summon_dissent") {
+      if (name === "abe_weighing_in" || name === "summon_dissent") {
+
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
         const minute = typeof args?.minute === "string" ? args.minute.trim() : "";
@@ -2514,7 +2516,7 @@ Deno.serve(async (req) => {
         }
         const total_ms = Date.now() - t0;
         console.log("dissent_metrics", JSON.stringify({
-          tool: "summon_dissent", tenant, question_hash: qhash,
+          tool: "abe_weighing_in", tenant, question_hash: qhash,
           provider, model, total_ms, degraded,
           ...(fallbackReason ? { fallback_reason: fallbackReason } : {}),
         }));
