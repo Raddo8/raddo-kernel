@@ -2430,6 +2430,83 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── summon_dissent · deferred loyal-dissent pass ─────────────────
+      // Runs Abe against a FINISHED minute on GPT-5 via the Responses
+      // API (separate from the synchronous chair-mode Abe in convene).
+      // Anthropic Sonnet fallback on empty/error · logged as
+      // `dissent_provider_fallback`. Output is a dissenting opinion to
+      // append to the minute · NEVER overwrites the recommendation.
+      if (name === "summon_dissent") {
+        const question = typeof args?.question === "string" ? args.question.trim() : "";
+        const context = typeof args?.context === "string" ? args.context : "";
+        const minute = typeof args?.minute === "string" ? args.minute.trim() : "";
+        if (!question || !minute) return rpcError(id, -32602, "invalid_params");
+        if (question.length > 4000 || context.length > 8000 || minute.length > 16000) {
+          return rpcError(id, -32602, "invalid_params");
+        }
+        const dissentSystem = `${GLOBAL_PREAMBLE_MD}\n\n${ABE_DISSENT_MD}`;
+        const ctxBlock = context ? `\n\n## Situational context\n${context}` : "";
+        const dissentUser = `## Principal's question\n${question}${ctxBlock}\n\n## Council's finished minute\n${minute}\n\n## Your task\nFile the loyal-dissent block per your doctrine · prose only · attack the comfortable answer hardest · close with the tagged confidence line.`;
+        const t0 = Date.now();
+        const qhash = await hashQuestion(question);
+        let provider: "openai" | "anthropic" = "openai";
+        let model = ABE_DISSENT_OPENAI_MODEL;
+        let text = "";
+        let degraded = false;
+        let fallbackReason: string | undefined;
+        try {
+          const r = await callOpenAIResponses({
+            system: dissentSystem,
+            user: dissentUser,
+            maxOutputTokens: 4096,
+            reasoningEffort: "high",
+            timeoutMs: 120_000,
+          });
+          text = r.text;
+          model = r.model;
+          passes.push({ model: r.model, usage: r.usage });
+        } catch (e) {
+          fallbackReason = (e instanceof Error ? e.message : String(e)).slice(0, 300);
+          degraded = true;
+          provider = "anthropic";
+          console.warn("dissent_provider_fallback", JSON.stringify({
+            tenant, question_hash: qhash, from: "openai", to: "anthropic",
+            reason: fallbackReason,
+          }));
+          try {
+            const r = await callAnthropic({
+              model: MODEL_SYNTHESIS,
+              system: dissentSystem,
+              user: dissentUser,
+              maxTokens: 2048,
+            });
+            text = r.text;
+            model = r.model;
+            passes.push({ model: r.model, usage: r.usage });
+          } catch (e2) {
+            return toRpc(e2);
+          }
+        }
+        const total_ms = Date.now() - t0;
+        console.log("dissent_metrics", JSON.stringify({
+          tool: "summon_dissent", tenant, question_hash: qhash,
+          provider, model, total_ms, degraded,
+          ...(fallbackReason ? { fallback_reason: fallbackReason } : {}),
+        }));
+        const out = stampBuildId({
+          dissenting_opinion: text,
+          provider,
+          model,
+          degraded,
+          attribution: "Abe · loyal dissent (deferred pass)",
+        } as any);
+        return rpcResult(id, {
+          content: [{ type: "text", text }],
+          structuredContent: out,
+          isError: false,
+        });
+      }
+
       // summon_best_advisor (and the consult_advisor alias for one release).
       if (name === "summon_best_advisor" || name === "consult_advisor") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
