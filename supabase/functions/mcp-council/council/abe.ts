@@ -57,7 +57,7 @@ I own dissent, falsification, base rates, and disconfirming evidence.
 I defer:
 - money / capital / unit economics → Lucius.
 - sequencing · execution · the critical path → Leo.
-- legal · contracts · regulatory exposure → KNOX.
+- legal · contracts · regulatory exposure → Knox.
 - trust · continuity → Alfred.
 - people · wellbeing → Marcus.
 

@@ -9,7 +9,7 @@ export const ROUTING_CONFIG = {
   tau_route: 0.85,
   // Specialist self-reported lane_fit floor. Below this, escalate.
   tau_fit: 0.80,
-  // Confidence floors for "done". Mirror the KNOX HARD-STOP bands.
+  // Confidence floors for "done". Mirror the Knox HARD-STOP bands.
   floor: { eps_min: 0.90, rho_min: 0.88 },
   // Stakes ladder triggers.
   stakes_floor_panel: "high",            // panel-minimum (never solo)
@@ -35,7 +35,7 @@ export const ROUTING_CONFIG = {
   },
   // Multi-advisor degradation floors.
   // Council uses a RATIO of total seated chairs (not a hardcoded literal),
-  // so it scales when the roster grows or shrinks (e.g., FELIX/AIMS seating
+  // so it scales when the roster grows or shrinks (e.g., Felix/Aims seating
   // moved the board from 6 to 8 · floor moved from 4 to 6 automatically).
   // Computed at call time in runCouncilWithResynth as Math.ceil(total * ratio).
   council_min_ratio: 0.66,
