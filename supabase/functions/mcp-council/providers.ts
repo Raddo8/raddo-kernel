@@ -17,8 +17,11 @@ export type ProviderId = "anthropic" | "openai";
 
 // Advisor → provider map. Default for any chair not listed is "anthropic".
 // Move chairs here to re-route them; no call-site changes required.
+// TEMPORARY: Abe routed to Anthropic while we diagnose the OpenAI
+// empty-content bug (see callOpenAI raw-body logging below). Re-enable
+// "openai" once a successful non-empty test response is observed.
 export const ADVISOR_PROVIDER: Record<string, ProviderId> = {
-  abe: "openai",
+  abe: "anthropic",
 };
 
 // Single-source model name for Abe-on-OpenAI. Change here, applies
@@ -48,6 +51,14 @@ async function callOpenAI(opts: {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), 15_000);
     try {
+      const requestBody = {
+        model: opts.model,
+        max_completion_tokens: opts.maxTokens,
+        messages: [
+          { role: "system", content: opts.system },
+          { role: "user", content: opts.user },
+        ],
+      };
       const r = await fetch(OPENAI_URL, {
         method: "POST",
         headers: {
@@ -55,22 +66,42 @@ async function callOpenAI(opts: {
           "Content-Type": "application/json",
         },
         signal: ctrl.signal,
-        body: JSON.stringify({
-          model: opts.model,
-          max_completion_tokens: opts.maxTokens,
-          messages: [
-            { role: "system", content: opts.system },
-            { role: "user", content: opts.user },
-          ],
-        }),
+        body: JSON.stringify(requestBody),
       });
+      const rawBody = await r.text();
       if (!r.ok) {
-        const body = await r.text().catch(() => "");
-        throw new Error(`openai_upstream_failed:${r.status}:${body.slice(0, 200)}`);
+        throw new Error(`openai_upstream_failed:${r.status}:${rawBody.slice(0, 200)}`);
       }
-      const json = await r.json();
+      let json: any;
+      try { json = JSON.parse(rawBody); }
+      catch { throw new Error(`openai_upstream_unparseable:${rawBody.slice(0, 200)}`); }
       const text = String(json?.choices?.[0]?.message?.content ?? "").trim();
-      if (!text) throw new Error("openai_upstream_empty");
+      if (!text) {
+        // Root-cause diagnostic dump · log FULL raw response, headers,
+        // finish_reason, usage, and the exact request payload (token
+        // param + message shape). Truncated only to satisfy log limits.
+        const headerDump: Record<string, string> = {};
+        r.headers.forEach((v, k) => { headerDump[k] = v; });
+        console.error("openai_empty_content_diagnostic", JSON.stringify({
+          status: r.status,
+          headers: headerDump,
+          finish_reason: json?.choices?.[0]?.finish_reason,
+          choice0: json?.choices?.[0],
+          usage: json?.usage,
+          raw_body: rawBody.slice(0, 4000),
+          request: {
+            model: requestBody.model,
+            token_param: "max_completion_tokens",
+            max_completion_tokens: requestBody.max_completion_tokens,
+            messages_shape: requestBody.messages.map(m => ({
+              role: m.role,
+              content_len: (m.content ?? "").length,
+              content_preview: (m.content ?? "").slice(0, 120),
+            })),
+          },
+        }));
+        throw new Error("openai_upstream_empty");
+      }
       // Adapt OpenAI usage into AnthropicUsage shape for downstream
       // aggregation; cost math will be zero for unknown model rates,
       // which is fine · this is observability, not billing.

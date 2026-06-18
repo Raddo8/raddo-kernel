@@ -1538,15 +1538,12 @@ async function runCouncilGated(
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
   // Skip resynth when the minute is structurally degraded · the cap won't
-  // lift on another synth pass and we'd just burn an Opus call.
-  if (belowFloor && !minute.degraded) {
-    const { minute: next, pass } = await resynth();
-    passes.push(pass);
-    iters = 2;
-    minute = next;
-    belowFloor =
-      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
-  }
+  // lift on another synth pass. Also skip when synth1 produced a clean
+  // (non-degraded) minute · the resynth pass costs ~30-35s and leaves no
+  // headroom under the ~170s connector ceiling. Sub-floor confidence on a
+  // clean minute is stamped as a terminal cap rather than re-synthesized.
+  // (Re-enable resynth via a future quality-vs-latency knob if needed.)
+  void resynth;
 
 
   metrics.calls_total = passes.length;
@@ -1601,14 +1598,9 @@ async function runPanelGated(
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
-  if (belowFloor && !minute.degraded) {
-    const { minute: next, pass } = await resynth();
-    passes.push(pass);
-    iters = 2;
-    minute = next;
-    belowFloor =
-      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
-  }
+  // Skip resynth · same rationale as the council path. Keep the closure
+  // unused so re-enabling is a one-line revert.
+  void resynth;
 
 
   metrics.calls_total = passes.length;
