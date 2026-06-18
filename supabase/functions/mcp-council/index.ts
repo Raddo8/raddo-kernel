@@ -802,6 +802,7 @@ async function runCouncilWithResynth(
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
+        timeoutMs: 15_000,
       });
       return callChair({
         chairId: c.id,
