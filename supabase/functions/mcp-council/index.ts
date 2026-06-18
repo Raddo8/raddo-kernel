@@ -73,7 +73,8 @@ import FELIX_MD from "./council/felix.ts";
 import AIMS_MD from "./council/aims.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
-import { callChair } from "./providers.ts";
+import { callChair, callOpenAIResponses, ABE_DISSENT_OPENAI_MODEL } from "./providers.ts";
+import ABE_DISSENT_MD from "./council/abe-dissent.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
@@ -2081,7 +2082,24 @@ const TOOL_COUNCIL_TO_NOTION = {
 // `consult_advisor` is unadvertised but accepted for one release as an alias
 // of `summon_best_advisor`. Any `agent_id` arg is captured as a hint only —
 // the router still selects.
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_LIST_AGENTS];
+const TOOL_SUMMON_DISSENT = {
+  name: "summon_dissent",
+  title: "Summon the Loyal Dissent",
+  description:
+    "Run Abe (the Council's loyal dissent) against a FINISHED Council minute on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them.",
+  annotations: { title: "Summon the Loyal Dissent" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      question: { type: "string", description: "The original principal's question the minute answered." },
+      context: { type: "string", description: "Optional · the situational context originally weighed." },
+      minute: { type: "string", description: "The Council's finished minute · recommendation, dissent, horizon, confidence, next-step. Paste the JSON or the prose verbatim." },
+    },
+    required: ["question", "minute"],
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_SUMMON_DISSENT, TOOL_LIST_AGENTS];
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
   return new Response(
