@@ -1598,14 +1598,9 @@ async function runPanelGated(
   let belowFloor =
     minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
 
-  if (belowFloor && !minute.degraded) {
-    const { minute: next, pass } = await resynth();
-    passes.push(pass);
-    iters = 2;
-    minute = next;
-    belowFloor =
-      minute.confidence.epistemic < epsMin || minute.confidence.rigor < rhoMin;
-  }
+  // Skip resynth · same rationale as the council path. Keep the closure
+  // unused so re-enabling is a one-line revert.
+  void resynth;
 
 
   metrics.calls_total = passes.length;
