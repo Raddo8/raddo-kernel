@@ -101,7 +101,10 @@ export default function BuildsAdmin() {
           previewPath = pp;
         }
 
-        const patch: Record<string, unknown> = { version, storage_path: path };
+        const patch: { version: number; storage_path: string; preview_path?: string } = {
+          version,
+          storage_path: path,
+        };
         if (previewPath) patch.preview_path = previewPath;
         const upd = await supabase.from("builds").update(patch).eq("id", updateTarget.id);
         if (upd.error) throw upd.error;
