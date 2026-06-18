@@ -8,7 +8,7 @@
 // static SPINNEY bearer path. Never from request body, args, query, or
 // any client-controlled header. See index.ts tenant assignment.
 //
-// Legal seat: collapsed to a single seat (KNOX) for every tenant.
+// Legal seat: collapsed to a single seat (Knox) for every tenant.
 // Tier remap, LEXI, and legal_seat are removed.
 
 export interface TenantContext {
@@ -54,7 +54,7 @@ export function getTenantContext(tenant: string): TenantContext {
   };
 }
 
-// ── KNOX context-flex posture computation ───────────────────────────────
+// ── Knox context-flex posture computation ───────────────────────────────
 // "advisory" by default; "offensive" only when a live adversarial matter
 // exists OR the question itself is adversarial in nature. Operator may
 // override per call via the optional posture argument upstream.

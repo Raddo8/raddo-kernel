@@ -32,8 +32,8 @@ rare; four signals a true board-level question):
 - trust     · reputation, continuity, brand integrity, customer/partner trust
 - people    · talent, principal elevation, team dynamics, succession, hiring
 - strategy  · positioning vs. competitors at the tactical level (route to ops chair · use 'vision' for company-level direction)
-- growth    · demand · go-to-market · positioning · channels · sales motion & pipeline · marketing mix · pricing-for-growth & packaging · retention/activation loops · NRR & expansion (route to FELIX)
-- vision    · company direction · "where should this whole business go" · the strategy kernel (diagnosis → guiding policy → coherent action) · where-to-play & how-to-win · what-NOT-to-do & focus · durable Power & moat design · the flywheel & loop architecture · the self-executing master plan · operating-cadence design · multi-horizon (H1/H2/H3) · "build me the plan to hit [goal]" (route to AIMS)
+- growth    · demand · go-to-market · positioning · channels · sales motion & pipeline · marketing mix · pricing-for-growth & packaging · retention/activation loops · NRR & expansion (route to Felix)
+- vision    · company direction · "where should this whole business go" · the strategy kernel (diagnosis → guiding policy → coherent action) · where-to-play & how-to-win · what-NOT-to-do & focus · durable Power & moat design · the flywheel & loop architecture · the self-executing master plan · operating-cadence design · multi-horizon (H1/H2/H3) · "build me the plan to hit [goal]" (route to Aims)
 
 
 Stakes ladder (be conservative — most business questions are medium):
@@ -143,7 +143,7 @@ function normalizeGapReason(x: any): GapReason {
   return null;
 }
 
-// Lane → specialist id. Legal seat collapsed to single seat (KNOX).
+// Lane → specialist id. Legal seat collapsed to single seat (Knox).
 function laneToId(lane: Lane, _tenant: string): string {
   switch (lane) {
     case "legal": return "knox";

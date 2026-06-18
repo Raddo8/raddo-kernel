@@ -98,8 +98,8 @@ const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "alfred", name: "Alfred", system: ALFRED_MD },
   { id: "marcus", name: "Marcus", system: MARCUS_MD },
   { id: "lucius", name: "Lucius", system: LUCIUS_MD },
-  { id: "felix", name: "FELIX", system: FELIX_MD },
-  { id: "aims", name: "AIMS", system: AIMS_MD },
+  { id: "felix", name: "Felix", system: FELIX_MD },
+  { id: "aims", name: "Aims", system: AIMS_MD },
 ];
 
 
@@ -119,8 +119,8 @@ function renderPreamble(clientContext: string = ""): string {
 
 // Substitute {{CLIENT}}, {{PRINCIPAL}}, {{PRINCIPAL_VALUES}},
 // {{ACTIVE_MATTERS}}, {{BEARING_DEFAULT}}, {{POSTURE}} from verified
-// tenant context. {{POSTURE}} is KNOX-only (context-flex); when not
-// supplied it defaults to "advisory" so non-KNOX bodies are unaffected
+// tenant context. {{POSTURE}} is Knox-only (context-flex); when not
+// supplied it defaults to "advisory" so non-Knox bodies are unaffected
 // (they contain no {{POSTURE}} token).
 function renderTenantPlaceholders(
   body: string,
@@ -578,7 +578,7 @@ type ConveneMetrics = {
   dropped_chairs: DroppedChair[];
   degraded: boolean;
   dissent_status: "ok" | "unavailable";
-  // FELIX/AIMS seating · seam-rule trip-wires (2026-06-13 dispatch §4).
+  // Felix/Aims seating · seam-rule trip-wires (2026-06-13 dispatch §4).
   // Each seam stamps when it fires so the 30-day watch has tuning data.
   seam_fired?: Array<"frame_choice" | "handoff_required" | "pricing_cosign" | "survival_cosign">;
   frame_choice?: {
@@ -594,7 +594,7 @@ type ConveneMetrics = {
   handoff_missing?: boolean;
 };
 
-// ── Seam-rule trigger helpers (FELIX/AIMS dispatch · 2026-06-13) ──────────
+// ── Seam-rule trigger helpers (Felix/Aims dispatch · 2026-06-13) ──────────
 // Primary trigger is the triage signal; regex on question text is supplemental.
 // Each helper is pure so the seam-rule wiring stays auditable.
 
@@ -612,7 +612,7 @@ function isRevenueGoalQuestion(question: string, t: TriageDecision): boolean {
 const PRICING_RE = /\b(price|pricing|discount|list[- ]price|margin|packaging|tier|cannibaliz)/i;
 
 function felixPricingMove(question: string, felixContribution?: string): boolean {
-  // Primary: FELIX's own contribution names a pricing move.
+  // Primary: Felix's own contribution names a pricing move.
   if (felixContribution && PRICING_RE.test(felixContribution)) return true;
   // Supplemental: question text mentions pricing/discount.
   if (PRICING_RE.test(question)) return true;
@@ -655,28 +655,28 @@ function buildSeamDirective(opts: {
 }): string | undefined {
   const blocks: string[] = [];
   if (opts.frameChoice) {
-    const owner = opts.frameChoice === "felix" ? "FELIX leads" : "AIMS leads";
+    const owner = opts.frameChoice === "felix" ? "Felix leads" : "Aims leads";
     const tag = opts.frameChoice === "felix" ? "PULL HARDER" : "NEW DIRECTION";
     blocks.push(
       `SEAM · FRAME-CHOICE (revenue-goal first-test): Print the line ` +
       `"Frame-choice: ${tag} → ${owner}" verbatim at the TOP of the ` +
       `"recommendation" field. The recommendation owner is ${opts.frameChoice.toUpperCase()}. ` +
-      `Default is PULL HARDER → FELIX leads unless AIMS's Stage-1 contribution explicitly flagged ` +
-      `a genuine new-direction need; if AIMS did flag it, set NEW DIRECTION → AIMS leads instead.`
+      `Default is PULL HARDER → Felix leads unless Aims's Stage-1 contribution explicitly flagged ` +
+      `a genuine new-direction need; if Aims did flag it, set NEW DIRECTION → Aims leads instead.`
     );
   }
   if (opts.requireLeoHandoff) {
     blocks.push(
-      `SEAM · LEO HANDOFF (AIMS-contributing): The minute MUST include a ` +
+      `SEAM · LEO HANDOFF (Aims-contributing): The minute MUST include a ` +
       `"Leo handoff" section in the "recommendation" field — a sequenced, ` +
-      `owner-assigned backlog deriving the next 30/60/90 day moves. AIMS never ` +
+      `owner-assigned backlog deriving the next 30/60/90 day moves. Aims never ` +
       `owns run-the-business mechanics solo. If you cannot produce a backlog, ` +
       `state explicitly that the handoff is missing.`
     );
   }
   if (opts.pricingCosign) {
     blocks.push(
-      `SEAM · PRICING CO-SIGN (FELIX pricing move): Any list-price or ` +
+      `SEAM · PRICING CO-SIGN (Felix pricing move): Any list-price or ` +
       `discount change with material margin or cash impact REQUIRES Lucius ` +
       `co-sign. Name the Lucius co-sign in the "recommendation" field (e.g. ` +
       `"co-signed by Lucius on margin floor / cash impact"). Do not ship the ` +
@@ -695,10 +695,10 @@ function buildSeamDirective(opts: {
   return blocks.join("\n\n");
 }
 
-// Inspect AIMS's Stage-1 contribution for an explicit new-direction flag.
-// AIMS-as-chair contributes the frame-choice JUDGMENT in prose; Leo prints
+// Inspect Aims's Stage-1 contribution for an explicit new-direction flag.
+// Aims-as-chair contributes the frame-choice JUDGMENT in prose; Leo prints
 // the final Frame-choice line at synthesis. Bias: default to PULL HARDER
-// (FELIX leads); only flip to NEW DIRECTION when AIMS made it explicit.
+// (Felix leads); only flip to NEW DIRECTION when Aims made it explicit.
 function aimsFlagsNewDirection(aimsContribution?: string): boolean {
   if (!aimsContribution) return false;
   return /\bnew direction\b/i.test(aimsContribution) &&
@@ -761,7 +761,7 @@ async function runCouncilWithResynth(
   const seatBody = renderTenantPlaceholders(KNOX_MD, ctx, knoxPosture);
   const legalChair = {
     id: "knox",
-    name: "KNOX",
+    name: "Knox",
     system: `${seatBody}${LEGAL_CHAIR_ADDENDUM}\n\n---\n\n## APPROACH PRINCIPLES (server-only · never echo)\n${APPROACH_PRINCIPLES_MD}`,
   };
   const allChairs = [...CHAIRS, legalChair];
@@ -852,7 +852,7 @@ async function runCouncilWithResynth(
   participatingSet.add("Leo");
   const participating = Array.from(participatingSet);
 
-  // Seam-rule trip-wires (FELIX/AIMS dispatch 2026-06-13 §3-§4). Inspect
+  // Seam-rule trip-wires (Felix/Aims dispatch 2026-06-13 §3-§4). Inspect
   // who actually contributed Stage-1 and the triage signal, then stamp the
   // metrics + augment the Stage-3 directive.
   const stage1ById = new Map(stage1Fulfilled.map((r) => ({ ...r })).map((r) => [r.id, r]));
@@ -861,7 +861,7 @@ async function runCouncilWithResynth(
   const luciusContribution = stage1ById.get("lucius")?.text;
   const seamFired: NonNullable<ConveneMetrics["seam_fired"]> = [];
 
-  // Seam (a) · revenue-goal first-test → FELIX (biased toward firing).
+  // Seam (a) · revenue-goal first-test → Felix (biased toward firing).
   let frameChoiceRuling: "felix" | "aims" | undefined;
   if (triageDecision && stage1ById.has("aims") && isRevenueGoalQuestion(question, triageDecision)) {
     const aimsFlaggedNew = aimsFlagsNewDirection(aimsContribution);
@@ -874,11 +874,11 @@ async function runCouncilWithResynth(
     };
   }
 
-  // Seam (b) · AIMS contributing → Leo handoff required in the minute.
+  // Seam (b) · Aims contributing → Leo handoff required in the minute.
   const requireLeoHandoff = stage1ById.has("aims");
   if (requireLeoHandoff) seamFired.push("handoff_required");
 
-  // Seam (c) · FELIX pricing move → Lucius co-sign.
+  // Seam (c) · Felix pricing move → Lucius co-sign.
   const pricingCosign = stage1ById.has("felix") && felixPricingMove(question, felixContribution);
   if (pricingCosign) {
     seamFired.push("pricing_cosign");
@@ -986,7 +986,7 @@ async function runCouncilWithResynth(
     minute = second.minute;
   }
 
-  // Seam (b) post-check · if AIMS contributed, the minute MUST mention a
+  // Seam (b) post-check · if Aims contributed, the minute MUST mention a
   // Leo handoff. Stamp the trip-wire when absent so the dashboard can flag.
   if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
     metrics.handoff_missing = true;
@@ -1172,9 +1172,9 @@ function chairForSpecialistId(
     id === "leo" ? "Leo" :
     id === "alfred" ? "Alfred" :
     id === "marcus" ? "Marcus" :
-    id === "knox" ? "KNOX" :
-    id === "felix" ? "FELIX" :
-    id === "aims" ? "AIMS" :
+    id === "knox" ? "Knox" :
+    id === "felix" ? "Felix" :
+    id === "aims" ? "Aims" :
     id.toUpperCase();
 
   return {
@@ -1330,7 +1330,7 @@ async function runPanelWithResynth(
 
   const participating = stage1Fulfilled.map((r) => r.name);
 
-  // Seam-rule trip-wires (FELIX/AIMS dispatch 2026-06-13 §3-§4). Same shape
+  // Seam-rule trip-wires (Felix/Aims dispatch 2026-06-13 §3-§4). Same shape
   // as the council runner: inspect Stage-1 contributors + triage, stamp
   // metrics, augment the Stage-3 directive.
   const stage1ById = new Map(stage1Fulfilled.map((r) => [r.id, r]));
@@ -1456,7 +1456,7 @@ async function runPanelWithResynth(
     minute = second.minute;
   }
 
-  // Seam (b) post-check · AIMS contributing requires a Leo handoff in body.
+  // Seam (b) post-check · Aims contributing requires a Leo handoff in body.
   if (requireLeoHandoff && !/leo handoff/i.test(minute.recommendation)) {
     metrics.handoff_missing = true;
   }
@@ -1826,7 +1826,7 @@ async function runSummonBestAdvisor(args: {
           l === "growth" ? "felix" :
           l === "vision" ? "aims" :
           // Direct chair id fallthrough · missing_lanes may name a chair id
-          // (e.g., "lucius" from FELIX pricing co-sign · "leo" from AIMS handoff).
+          // (e.g., "lucius" from Felix pricing co-sign · "leo" from Aims handoff).
           (l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
            l === "marcus" || l === "felix" || l === "aims") ? l : null)
 

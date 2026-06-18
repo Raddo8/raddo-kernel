@@ -1,7 +1,7 @@
 // Phase-1 agent registry. Bundled. Promotes to a Supabase table with
 // entitlements in Phase 3.
 //
-// Legal seat: single seat (KNOX) for every tenant — LEXI removed
+// Legal seat: single seat (Knox) for every tenant — LEXI removed
 // 2026-06-09. No tier remap, no legal_seat field.
 import { canSeat } from "./eval-gate.ts";
 
@@ -36,7 +36,7 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
     },
     {
       id: "knox",
-      name: "KNOX",
+      name: "Knox",
       lens: "Legal & risk intelligence",
       tier_min: "any",
       enabled: true,
@@ -76,7 +76,7 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
     },
     {
       id: "felix",
-      name: "FELIX",
+      name: "Felix",
       lens: "Growth & revenue architect",
       tier_min: "any",
       enabled: true,
@@ -84,7 +84,7 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
     },
     {
       id: "aims",
-      name: "AIMS",
+      name: "Aims",
       lens: "Vision & strategy advisor",
       tier_min: "any",
       enabled: true,
@@ -108,7 +108,7 @@ export function listEnabledAgentsPublic(): Array<{ id: string; name: string; len
 }
 
 
-// Public roster. Tenant arg retained for API stability; KNOX is the single
+// Public roster. Tenant arg retained for API stability; Knox is the single
 // legal seat for every tenant.
 export function listSeatedAgentsPublic(
   _tenant: string,
