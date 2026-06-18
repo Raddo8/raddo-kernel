@@ -73,6 +73,7 @@ import FELIX_MD from "./council/felix.ts";
 import AIMS_MD from "./council/aims.ts";
 import LEAD_SYNTH_MD from "./council/lead-synthesis.ts";
 import APPROACH_PRINCIPLES_MD from "./council/approach-principles.ts";
+import { callChair } from "./providers.ts";
 import GLOBAL_PREAMBLE_MD from "./agents/_global-preamble.ts";
 import KNOX_MD from "./agents/knox.ts";
 import LUCIUS_AGENT_MD from "./agents/lucius.ts";
@@ -772,14 +773,21 @@ async function runCouncilWithResynth(
   const stage1T0 = Date.now();
   // §1 · per-chair isolation: one chair fault must NOT down the board.
   const stage1Settled = await Promise.allSettled(
-    allChairs.map((c) =>
-      callAnthropic({
+    allChairs.map((c) => {
+      const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((res) => ({ id: c.id, name: c.name, res })),
-    ),
+      });
+      return callChair({
+        chairId: c.id,
+        system: `${preamble}\n\n${c.system}`,
+        user: userMsg,
+        maxTokens: MAX_TOKENS_CHAIR,
+        anthropicFallback: anthroCall,
+      }).then((res) => ({ id: c.id, name: c.name, res }));
+    }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
 
@@ -1253,14 +1261,21 @@ async function runPanelWithResynth(
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
   const stage1Settled = await Promise.allSettled(
-    chairs.map((c) =>
-      callAnthropic({
+    chairs.map((c) => {
+      const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-      }).then((res) => ({ id: c.id, name: c.name, res })),
-    ),
+      });
+      return callChair({
+        chairId: c.id,
+        system: `${preamble}\n\n${c.system}`,
+        user: userMsg,
+        maxTokens: MAX_TOKENS_CHAIR,
+        anthropicFallback: anthroCall,
+      }).then((res) => ({ id: c.id, name: c.name, res }));
+    }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
 
