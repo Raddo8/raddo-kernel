@@ -235,6 +235,7 @@ async function callAnthropic(opts: {
   system: string;
   user: string;
   maxTokens: number;
+  timeoutMs?: number;
 }): Promise<{ text: string; usage: ReturnType<typeof readUsage>; model: string }> {
   // harden-v1 · fail-fast when the per-instance breaker is open
   if (breakerIsOpen()) throw new Error("circuit_open");
@@ -242,36 +243,57 @@ async function callAnthropic(opts: {
   const key = Deno.env.get("ANTHROPIC_API_KEY");
   if (!key) throw new Error("upstream_unavailable");
 
+  // Per-call wall-clock budget. Shared across retries so a stalled
+  // chair cannot drag the Stage-1 fan-out past the connector window.
+  const deadline = opts.timeoutMs ? Date.now() + opts.timeoutMs : null;
+
   const doCall = async () => {
-    const r = await fetch(ANTHROPIC_URL, {
-      method: "POST",
-      headers: {
-        "x-api-key": key,
-        "anthropic-version": ANTHROPIC_VERSION,
-        "anthropic-beta": "prompt-caching-2024-07-31",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: opts.model,
-        max_tokens: opts.maxTokens,
-        system: [{
-          type: "text",
-          text: opts.system,
-          cache_control: { type: "ephemeral" },
-        }],
-        messages: [{ role: "user", content: opts.user }],
-      }),
-    });
-    if (!r.ok) throw new Error("upstream_failed");
-    const json = await r.json();
-    const blocks = Array.isArray(json?.content) ? json.content : [];
-    const text = blocks
-      .filter((b: any) => b?.type === "text" && typeof b.text === "string")
-      .map((b: any) => b.text)
-      .join("\n")
-      .trim();
-    if (!text) throw new Error("upstream_empty");
-    return { text, usage: readUsage(json?.usage), model: opts.model };
+    const ctrl = new AbortController();
+    let t: number | undefined;
+    if (deadline) {
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) throw new Error("chair_timeout");
+      t = setTimeout(() => ctrl.abort(), remaining) as unknown as number;
+    }
+    try {
+      const r = await fetch(ANTHROPIC_URL, {
+        method: "POST",
+        signal: ctrl.signal,
+        headers: {
+          "x-api-key": key,
+          "anthropic-version": ANTHROPIC_VERSION,
+          "anthropic-beta": "prompt-caching-2024-07-31",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: opts.model,
+          max_tokens: opts.maxTokens,
+          system: [{
+            type: "text",
+            text: opts.system,
+            cache_control: { type: "ephemeral" },
+          }],
+          messages: [{ role: "user", content: opts.user }],
+        }),
+      });
+      if (!r.ok) throw new Error("upstream_failed");
+      const json = await r.json();
+      const blocks = Array.isArray(json?.content) ? json.content : [];
+      const text = blocks
+        .filter((b: any) => b?.type === "text" && typeof b.text === "string")
+        .map((b: any) => b.text)
+        .join("\n")
+        .trim();
+      if (!text) throw new Error("upstream_empty");
+      return { text, usage: readUsage(json?.usage), model: opts.model };
+    } catch (e: any) {
+      if (e?.name === "AbortError" || (deadline && Date.now() >= deadline)) {
+        throw new Error("chair_timeout");
+      }
+      throw e;
+    } finally {
+      if (t !== undefined) clearTimeout(t);
+    }
   };
 
   try {
