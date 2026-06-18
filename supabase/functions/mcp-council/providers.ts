@@ -46,7 +46,7 @@ async function callOpenAI(opts: {
 
   const doCall = async () => {
     const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 45_000);
+    const t = setTimeout(() => ctrl.abort(), 15_000);
     try {
       const r = await fetch(OPENAI_URL, {
         method: "POST",
