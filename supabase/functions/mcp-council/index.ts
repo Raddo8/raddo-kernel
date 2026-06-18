@@ -2516,7 +2516,7 @@ Deno.serve(async (req) => {
         }
         const total_ms = Date.now() - t0;
         console.log("dissent_metrics", JSON.stringify({
-          tool: "summon_dissent", tenant, question_hash: qhash,
+          tool: "abe_weighing_in", tenant, question_hash: qhash,
           provider, model, total_ms, degraded,
           ...(fallbackReason ? { fallback_reason: fallbackReason } : {}),
         }));
