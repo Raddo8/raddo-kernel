@@ -154,3 +154,110 @@ export async function callChair(args: {
     return args.anthropicFallback();
   }
 }
+
+// ── OpenAI Responses API (for the deferred loyal-dissent pass) ───────────
+//
+// The chat-completions path (callOpenAI above) burns the token budget on
+// hidden reasoning tokens when called against gpt-5, returning empty
+// message.content — that is the root cause of the convene-time empty bug.
+// The Responses API exposes a separate `max_output_tokens` from the
+// reasoning budget, so gpt-5 reliably returns visible text here.
+//
+// This call is intentionally non-trivial in wall-clock (high reasoning
+// effort) and is used OUTSIDE the synchronous convene path · the
+// `summon_dissent` tool calls this against the FINISHED minute.
+
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+
+// Single-source model for the deferred loyal-dissent pass. Use the
+// strongest GA OpenAI reasoning model. Change here, applies everywhere.
+export const ABE_DISSENT_OPENAI_MODEL = "gpt-5";
+
+export async function callOpenAIResponses(opts: {
+  system: string;
+  user: string;
+  maxOutputTokens: number;
+  reasoningEffort?: "low" | "medium" | "high";
+  timeoutMs?: number;
+}): Promise<{ text: string; usage: AnthropicUsage; model: string }> {
+  const key = Deno.env.get("OPENAI_API_KEY");
+  if (!key) throw new Error("openai_key_missing");
+
+  const ctrl = new AbortController();
+  const timeout = opts.timeoutMs ?? 120_000;
+  const t = setTimeout(() => ctrl.abort(), timeout);
+  try {
+    const requestBody = {
+      model: ABE_DISSENT_OPENAI_MODEL,
+      input: [
+        { role: "system", content: opts.system },
+        { role: "user", content: opts.user },
+      ],
+      reasoning: { effort: opts.reasoningEffort ?? "high" },
+      max_output_tokens: opts.maxOutputTokens,
+    };
+    const r = await fetch(OPENAI_RESPONSES_URL, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      signal: ctrl.signal,
+      body: JSON.stringify(requestBody),
+    });
+    const rawBody = await r.text();
+    if (!r.ok) {
+      throw new Error(`openai_responses_upstream_failed:${r.status}:${rawBody.slice(0, 200)}`);
+    }
+    let json: any;
+    try { json = JSON.parse(rawBody); }
+    catch { throw new Error(`openai_responses_unparseable:${rawBody.slice(0, 200)}`); }
+
+    // Extract visible text · prefer the convenience field, fall back to
+    // walking `output[].content[].text` for type === "output_text".
+    let text = typeof json?.output_text === "string" ? json.output_text.trim() : "";
+    if (!text && Array.isArray(json?.output)) {
+      const parts: string[] = [];
+      for (const item of json.output) {
+        if (item?.type !== "message") continue;
+        const blocks = Array.isArray(item?.content) ? item.content : [];
+        for (const b of blocks) {
+          if (b?.type === "output_text" && typeof b?.text === "string") {
+            parts.push(b.text);
+          }
+        }
+      }
+      text = parts.join("\n").trim();
+    }
+    if (!text) {
+      const headerDump: Record<string, string> = {};
+      r.headers.forEach((v, k) => { headerDump[k] = v; });
+      console.error("openai_responses_empty_diagnostic", JSON.stringify({
+        status: r.status,
+        headers: headerDump,
+        incomplete_details: json?.incomplete_details,
+        status_field: json?.status,
+        usage: json?.usage,
+        raw_body: rawBody.slice(0, 4000),
+        request: {
+          model: requestBody.model,
+          max_output_tokens: requestBody.max_output_tokens,
+          reasoning_effort: requestBody.reasoning.effort,
+        },
+      }));
+      throw new Error("openai_responses_upstream_empty");
+    }
+
+    const u = json?.usage ?? {};
+    const usage = readUsage({
+      input_tokens: u.input_tokens,
+      output_tokens: u.output_tokens,
+      cache_read_input_tokens: u.input_tokens_details?.cached_tokens ?? 0,
+      cache_creation_input_tokens: 0,
+    });
+    return { text, usage, model: String(json?.model ?? ABE_DISSENT_OPENAI_MODEL) };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
