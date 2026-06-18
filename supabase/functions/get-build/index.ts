@@ -1,8 +1,11 @@
 // Public viewer endpoint for /builds/:token
-// - Looks up the build row by opaque token
-// - If not found / revoked / past expires_at → returns 410 "no longer available" HTML
-// - Else: streams the stored self-contained HTML with noindex headers
-// - Logs a build_views row on every successful open
+// - Resolves the token to a build row
+// - If not found / revoked / expired → 410 HTML
+// - Else: logs the view and 302-redirects to a short-lived signed URL on the
+//   private `builds` storage bucket. Storage serves the object with the
+//   content-type it was uploaded with (text/html), and without the Supabase
+//   Edge runtime's "default-src 'none'; sandbox" CSP — so the build's own
+//   JavaScript runs normally inside the iframe.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
@@ -47,11 +50,18 @@ Deno.serve(async (req: Request) => {
   if (error || !build || build.revoked) return gone();
   if (build.expires_at && new Date(build.expires_at).getTime() < Date.now()) return gone();
 
-  const dl = await supabase.storage.from("builds").download(build.storage_path);
-  if (dl.error || !dl.data) return gone();
-  const html = await dl.data.text();
+  // Mint a short-lived signed URL on the private bucket. Storage will serve
+  // the object with the original content-type (text/html) and without the
+  // edge runtime's sandbox CSP, so embedded JS runs normally.
+  const signed = await supabase.storage
+    .from("builds")
+    .createSignedUrl(build.storage_path, 300); // 5 minutes
+  if (signed.error || !signed.data?.signedUrl) {
+    console.log(JSON.stringify({ event: "build_sign_failed", error: signed.error?.message }));
+    return gone();
+  }
 
-  // Fire-and-forget view log (don't block the response on it)
+  // Fire-and-forget view log
   const ua = req.headers.get("user-agent")?.slice(0, 256) ?? null;
   const ip =
     req.headers.get("cf-connecting-ip") ??
@@ -64,13 +74,12 @@ Deno.serve(async (req: Request) => {
       if (e) console.log(JSON.stringify({ event: "build_view_log_failed", error: e.message }));
     });
 
-  return new Response(html, {
-    status: 200,
+  return new Response(null, {
+    status: 302,
     headers: {
       ...corsHeaders,
       ...noindex,
-      "Content-Type": "text/html; charset=utf-8",
-      "Content-Security-Policy": "frame-ancestors 'self' https://chiefofbusiness.ai https://www.chiefofbusiness.ai https://*.lovable.app",
+      Location: signed.data.signedUrl,
     },
   });
 });
