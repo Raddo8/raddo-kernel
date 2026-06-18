@@ -2447,6 +2447,7 @@ Deno.serve(async (req) => {
         const dissentSystem = `${GLOBAL_PREAMBLE_MD}\n\n${ABE_DISSENT_MD}`;
         const ctxBlock = context ? `\n\n## Situational context\n${context}` : "";
         const dissentUser = `## Principal's question\n${question}${ctxBlock}\n\n## Council's finished minute\n${minute}\n\n## Your task\nFile the loyal-dissent block per your doctrine · prose only · attack the comfortable answer hardest · close with the tagged confidence line.`;
+        const passes: Pass[] = [];
         const t0 = Date.now();
         const qhash = await hashQuestion(question);
         let provider: "openai" | "anthropic" = "openai";
