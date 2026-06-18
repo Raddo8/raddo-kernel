@@ -16,5 +16,6 @@ Disallow: /consult/thank-you
 Disallow: /style-guide
 Disallow: /respond/
 Disallow: /app/
+Disallow: /builds/
 
 Sitemap: https://raddo.ai/sitemap.xml
