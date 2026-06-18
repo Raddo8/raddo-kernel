@@ -2455,13 +2455,14 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── summon_dissent · deferred loyal-dissent pass ─────────────────
+      // ── abe_weighing_in · deferred loyal-dissent pass ────────────────
       // Runs Abe against a FINISHED minute on GPT-5 via the Responses
       // API (separate from the synchronous chair-mode Abe in convene).
       // Anthropic Sonnet fallback on empty/error · logged as
       // `dissent_provider_fallback`. Output is a dissenting opinion to
       // append to the minute · NEVER overwrites the recommendation.
-      if (name === "summon_dissent") {
+      if (name === "abe_weighing_in" || name === "summon_dissent") {
+
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
         const minute = typeof args?.minute === "string" ? args.minute.trim() : "";
