@@ -15,6 +15,10 @@ export interface AgentEntry {
   tier_min: string;
   enabled: boolean;
   kind: AgentKind;
+  // Bench tags for the router (queued task B). Felix is the standing growth
+  // specialist · summonable via summon_best_advisor, not in the default
+  // synchronous convene fan-out (which is now 6 chairs).
+  tags?: string[];
   // Raise-the-Bar · platform eval pass-mark (vault-side, never client-visible).
   // Absent today (no harness yet); the eval-gate treats absence as
   // "unblocked" so behavior is unchanged. The stress-test/eval harness
