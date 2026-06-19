@@ -29,8 +29,9 @@ import { SeoHead } from "@/components/SeoHead";
  * Brand: COB navy (raddo-ink) + amber (raddo-brass) on paper.
  */
 
+// Served from the Lovable CDN · public, cacheable, no AS function dependency.
 const BRAND_ICON_URL =
-  "https://rnjqpwmzmbnnaonppfkm.supabase.co/functions/v1/brand-icon";
+  "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png";
 
 type Decision = "approve" | "deny";
 
