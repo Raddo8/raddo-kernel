@@ -32,15 +32,6 @@ const TENANT_CONTEXT: Record<string, TenantContext> = {
       "active wind-down litigation with a former counterparty (live adversarial matter)",
     bearing_default: "85/60",
   },
-  "COB-HQ": {
-    client: "Chief of Business (COB-HQ)",
-    principal: "the COB principal (Jake)",
-    principal_values:
-      "craft over volume, doctrine fidelity, durable systems, principal sovereignty",
-    active_matters:
-      "internal COB build · no live adversarial matters on file",
-    bearing_default: "85/60",
-  },
 };
 
 const DEFAULT_CONTEXT: TenantContext = {
@@ -124,12 +115,10 @@ export function getNotionTarget(tenant: string): NotionTarget | null {
     if (!token || !dbId) return null;
     return { token, dbId };
   }
-  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN,
-  // COB_HQ_NOTION_TOKEN). Tenant names may contain hyphens (e.g. "COB-HQ"),
-  // which are illegal in env-var names — normalize to underscore for lookup.
-  const envKey = tenant.replace(/-/g, "_").toUpperCase();
-  const token = Deno.env.get(`${envKey}_NOTION_TOKEN`) ?? "";
-  const dbId = Deno.env.get(`${envKey}_BOARDROOM_DB`) ?? "";
+  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN).
+  // Fail-closed when absent.
+  const token = Deno.env.get(`${tenant}_NOTION_TOKEN`) ?? "";
+  const dbId = Deno.env.get(`${tenant}_BOARDROOM_DB`) ?? "";
   if (!token || !dbId) return null;
   return { token, dbId };
 }
