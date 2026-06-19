@@ -740,10 +740,16 @@ async function runCouncil(
   clientContext: string = "",
   tenant: string = "",
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision);
+  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision, onProgress);
   return { minute: r.minute, passes: r.passes };
 }
+
+// Progress callback · invoked at each Stage-1 chair settlement, after horizon,
+// and after synth. Wired into the SSE/MCP `notifications/progress` stream so
+// the client's per-request timer resets and a 60-90s convene returns cleanly.
+export type ProgressFn = (message: string) => void;
 
 
 // Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
