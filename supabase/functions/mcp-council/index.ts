@@ -2436,14 +2436,25 @@ Deno.serve(async (req) => {
         "input_too_large",
       ]);
 
-      const toRpc = (e: unknown) => {
+      const toRpcParts = (e: unknown): { code: number; message: string } => {
         const msg = e instanceof Error ? e.message : "internal_error";
-        const code = safeErrors.has(msg) ? msg : "internal_error";
-        if (code === "boundary_violation") {
-          return rpcError(id, -32000, "boundary_violation");
-        }
-        return rpcError(id, -32003, code);
+        const message = safeErrors.has(msg) ? msg : "internal_error";
+        const code = message === "boundary_violation" ? -32000 : -32003;
+        return { code, message };
       };
+      const toRpc = (e: unknown) => {
+        const { code, message } = toRpcParts(e);
+        return rpcError(id, code, message);
+      };
+
+      // MCP Streamable HTTP · per-request progress token. When present, the
+      // convene/summon/file_to_office handlers stream `notifications/progress`
+      // SSE frames every ~10s and at each stage boundary so the client's
+      // ~60s request timer resets · keeps Cowork connected on 60-90s convenes.
+      const progressToken: string | number | undefined =
+        (params?._meta && (typeof params._meta.progressToken === "string" || typeof params._meta.progressToken === "number"))
+          ? params._meta.progressToken
+          : undefined;
 
       if (name === "show_council") {
         // Tenant comes from the verified identity (see invariant above).
