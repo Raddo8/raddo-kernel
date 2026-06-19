@@ -32,6 +32,15 @@ const TENANT_CONTEXT: Record<string, TenantContext> = {
       "active wind-down litigation with a former counterparty (live adversarial matter)",
     bearing_default: "85/60",
   },
+  "COB-HQ": {
+    client: "Chief of Business (COB-HQ)",
+    principal: "the COB principal (Jake)",
+    principal_values:
+      "craft over volume, doctrine fidelity, durable systems, principal sovereignty",
+    active_matters:
+      "internal COB build · no live adversarial matters on file",
+    bearing_default: "85/60",
+  },
 };
 
 const DEFAULT_CONTEXT: TenantContext = {
