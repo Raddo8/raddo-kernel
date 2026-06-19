@@ -43,7 +43,7 @@ function stampBuildId<T extends Record<string, unknown>>(o: T): T & { build_id: 
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
-import { routeConvene, type RoutingDecision as ConveneRoutingDecision } from "./convene-router.ts";
+import { routeConvene } from "./convene-router.ts";
 import { ROUTING_CONFIG, stakesAtLeast, PLATFORM_QUALITY } from "./routing-config.ts";
 import { rosterHasSeatedSpecialist, logCapabilityGap } from "./capability-gaps.ts";
 import {
