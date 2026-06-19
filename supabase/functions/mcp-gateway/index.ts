@@ -97,10 +97,13 @@ Deno.serve(async (req) => {
   if (path === "/.well-known/oauth-protected-resource") {
     const body = {
       resource: GATEWAY_URL,
+      resource_name: "COB · Council",
       authorization_servers: [AS_ISSUER],
       bearer_methods_supported: ["header"],
       scopes_supported: ["openid", "email", "profile"],
       resource_documentation: "https://chiefofbusiness.ai",
+      logo_uri:
+        "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png",
     };
     return new Response(JSON.stringify(body, null, 2), {
       status: 200,
