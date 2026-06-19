@@ -2203,6 +2203,62 @@ function rpcResult(id: any, result: any): Response {
   );
 }
 
+// MCP Streamable HTTP · upgrade a `tools/call` response to SSE so the
+// server can emit `notifications/progress` frames while long-running
+// deliberation work is in flight. Per the MCP spec each frame resets the
+// client's per-request timer (Cowork's binding wall is ~60s), so a 60-90s
+// convene returns cleanly. Final frame carries the JSON-RPC result/error
+// envelope. Heartbeats every 10s in case a stage is silent.
+function rpcStreamingResult(
+  id: any,
+  progressToken: string | number,
+  work: (notify: (message: string, progress?: number, total?: number) => void) => Promise<any>,
+  toRpc: (e: unknown) => { code: number; message: string },
+): Response {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let progress = 0;
+      let closed = false;
+      const write = (obj: any) => {
+        if (closed) return;
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify(obj)}\n\n`)); }
+        catch (_e) { /* controller may be closed mid-write */ }
+      };
+      const notify = (message: string, p?: number, total?: number) => {
+        progress = typeof p === "number" ? p : progress + 1;
+        write({
+          jsonrpc: "2.0",
+          method: "notifications/progress",
+          params: { progressToken, progress, total, message },
+        });
+      };
+      const hb = setInterval(() => notify("working"), 10_000);
+      try {
+        const result = await work(notify);
+        write({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID });
+      } catch (e) {
+        const { code, message } = toRpc(e);
+        write({ jsonrpc: "2.0", id: id ?? null, error: { code, message }, build_id: BUILD_ID });
+      } finally {
+        clearInterval(hb);
+        closed = true;
+        try { controller.close(); } catch (_e) { /* already closed */ }
+      }
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Build-Id": BUILD_ID,
+    },
+  });
+}
+
 // Constant-time compare to resist token-timing probes.
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
