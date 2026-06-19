@@ -93,13 +93,17 @@ import {
 } from "./agents/manifest.ts";
 import { getTenantContext, computeKnoxPosture, getNotionTarget, type TenantContext } from "./tenants.ts";
 
+// Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
+// Marcus, Alfred). Knox is added separately as `legalChair` inside
+// runCouncilWithResynth (renders {{POSTURE}} from tenant context), so the
+// CHAIRS array below carries the other five; Felix is bench-only (summonable
+// via summon_best_advisor, not in the default fan-out); Abe is the deferred
+// loyal-dissent pass via abe_weighing_in, not a synchronous chair.
 const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "leo", name: "Leo", system: LEO_MD },
-  { id: "abe", name: "Abe", system: ABE_MD },
   { id: "alfred", name: "Alfred", system: ALFRED_MD },
   { id: "marcus", name: "Marcus", system: MARCUS_MD },
   { id: "lucius", name: "Lucius", system: LUCIUS_MD },
-  { id: "felix", name: "Felix", system: FELIX_MD },
   { id: "aims", name: "Aims", system: AIMS_MD },
 ];
 
