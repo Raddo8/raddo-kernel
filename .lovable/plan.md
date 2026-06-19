@@ -1,112 +1,46 @@
-# Raise-the-Bar · platform quality standard (mcp-council)
+## Goal
+Ship A + C + D together so a full 6-force convene returns to the Cowork client without timing out. Abe stays untouched.
 
-A single global vault-level standard layered on the hardened multi-advisor path. Flipping it is a one-line edit by the platform owner; clients never see, set, or vary it. Hard invariant preserved: never inflates ε/ρ — only caps more honestly or escalates once.
+## A. Roster — standing synchronous convene = 6 chairs
+In `supabase/functions/mcp-council/index.ts`:
+- Replace `CHAIRS` array with **Aims, Leo, Lucius, Knox, Marcus, Alfred** (6). Drop Felix and Abe from the synchronous set.
+- Felix moves to bench: keep the entry in `agents/manifest.ts` (Knox-style single agent, already there) and add `tags: ["growth"]` so future routing (queued task B) can summon him. He's still callable via `summon_best_advisor`, just not in the default fan-out.
+- Abe is already absent from `CHAIRS`-as-synchronous via the deferred path (`abe_weighing_in`) — no change to Abe.
+- Create `supabase/functions/mcp-council/council/knox.ts` (council-mode persona, same shape as `felix.ts` / `marcus.ts`): legal & risk lens, council-contribution mode (2–5 prose points, Leo synthesizes, no JSON).
+- Guard the Felix-specific synth branches that already exist (`stage1ById.has("felix")` for `frameChoiceRuling` and `pricingCosign`) — they already short-circuit on absence, so they become no-ops on the default convene. No behavior regression.
 
-Separate from FELIX/AIMS seating (green) and from the resilience/quorum ratio (untouched).
+## C. Safe fan-out — already parallel, raise the cap
+In `index.ts` both convene paths (lines ~798 and ~1311):
+- Raise per-chair `timeoutMs: 15_000` → **`35_000`** (Opus needs ~25–40s).
+- Keep `Promise.allSettled` fan-out, keep DroppedChair naming on timeout, keep the existing degraded-board pathway (lowers ε/ρ, never hard-fails unless 0 chairs survive).
+- Confirm no resynth in steady state (already removed; verify the deployed BUILD_ID reflects it — bump `BUILD_ID` to `"roster6_parallel35_progress_v1"` so the next log line proves the deploy landed).
 
-## 1. `routing-config.ts` — single global `PLATFORM_QUALITY`
+## D. MCP progress notifications — keep the client alive past 60s
+Per MCP Streamable HTTP spec, the server may upgrade a `tools/call` POST response to `text/event-stream` and emit `notifications/progress` frames before the final JSON-RPC result frame. Each frame resets the client's ~60s request timer.
 
-Add a vault-only block. Two named value sets for our convenience only; the runtime always reads `PLATFORM_QUALITY`. No tenant/tier/entitlement lookup anywhere.
+Implementation in `index.ts`:
+- When handling `tools/call` for `convene_council`, `summon_best_advisor`, `file_to_office`: read `params._meta.progressToken`. If present, build the response as a streamed SSE `Response` (`Content-Type: text/event-stream`) backed by a `ReadableStream`.
+- Pass an `onProgress(stage, detail)` callback into `runCouncil` / the routed flow. Fire it:
+  - After each chair settles (per-chair stage1 latency reported).
+  - 10s heartbeats during stage1 (so even the slowest single chair doesn't go silent).
+  - After horizon, after synth.
+- Each callback writes one SSE frame: `data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":<token>,"progress":<n>,"total":<chairs+2>,"message":<stage>}}\n\n`.
+- Final frame is the normal JSON-RPC result envelope (also as SSE `data:`), then close.
+- If `_meta.progressToken` is absent (e.g. curl regression), fall through to the existing single-shot JSON response — unchanged.
 
-```ts
-// VAULT-LEVEL · platform owner only. Not client-exposed. Not per-tenant.
-const QUALITY_STANDARD = {
-  current: {
-    eps_floor: 0.88, rho_floor: 0.88,
-    escalate_below_floor: false, max_escalations: 0,
-    escalate_min_stakes: "medium",
-    eval_seat_mark: 0.85, eval_retain_mark: 0.80,
-    reprobe_every_interactions: 50, reprobe_every_new_specialists: 10,
-  },
-  elevated: {
-    eps_floor: 0.92, rho_floor: 0.90,
-    escalate_below_floor: true, max_escalations: 1,
-    escalate_min_stakes: "medium",
-    eval_seat_mark: 0.92, eval_retain_mark: 0.88,
-    reprobe_every_interactions: 25, reprobe_every_new_specialists: 5,
-  },
-} as const;
+## Acceptance / reporting (post-deploy)
+- Fire a convene from Cowork. Read `mcp-council` logs and report:
+  - `BUILD_ID` matches `roster6_parallel35_progress_v1` (confirms deploy landed).
+  - `chairs_count: 6`, per-chair durations, `stage1_ms`, `horizon_ms`, `synth1_ms`, `total_ms`, `dropped_chairs`.
+  - HTTP outcome (no 504, no client timeout); progress frame count.
+- Expected envelope: `stage1_ms` ≤ ~35s, `total_ms` ~60–90s, full minute returned.
 
-export const PLATFORM_QUALITY = QUALITY_STANDARD.current;       // ← flip to .elevated globally
-export const PLATFORM_QUALITY_VERSION: "current" | "elevated" = "current";
-```
+## Out of scope (queued, do NOT build now)
+- **B**: triage routing with ≤6 hard cap.
+- **E**: async escape hatch (write minute to OFFICE after the response cuts).
+- **F**: governed decision-record fields in the minute.
 
-Explicitly do **not** add any `quality_profile` field to `tenants.ts` / `client_entitlements` / `TenantContext`. No resolver function. Single import site.
-
-Leave `ROUTING_CONFIG.floor.eps_min` / `rho_min` in place — that governs the per-iteration `confidence.ts` loop. The new `PLATFORM_QUALITY` floors govern the **final minute-level** below-floor check only (the seam the dispatch targets).
-
-## 2. `index.ts` — swap hardcoded 0.88 at the three minute-finalize sites
-
-Replace the floor reads at:
-
-- `runCouncilWithResynth` (~line 1483) — council post-synthesis gate
-- `runPanelWithResynth` (~line 1529) — panel post-synthesis gate
-- solo finalize (~line 1689) — `belowFloor` check before return
-
-Each now reads `PLATFORM_QUALITY.eps_floor` / `.rho_floor`. The degraded-minute caps and the Abe-drop rigor cap stay untouched (separate honesty caps, not aptitude floors).
-
-## 3. Escalate-below-floor ladder (uniform platform behavior)
-
-New `escalate.ts` exporting `maybeEscalateBelowFloor({ minute, mode, triage, metrics, hops, rerun })`. Invoked **after** synthesis and the degraded/Abe-cap pass, **before** returning the minute.
-
-Fires only when all hold:
-- `PLATFORM_QUALITY.escalate_below_floor === true`
-- minute is below `eps_floor` or `rho_floor`
-- `minute.degraded !== true` (degraded path already capped honestly)
-- `stakesAtLeast(triage.stakes, PLATFORM_QUALITY.escalate_min_stakes)`
-- `hops < PLATFORM_QUALITY.max_escalations`
-
-Gap classification:
-- **Data-gap** — `metrics.closing_action === "needs_external_info"` OR Lucius/any chair flagged external info needed → **do not escalate**. Return capped; stamp `below_floor_terminal = { capped: true, gap_type: "data", final_eps, final_rho, ask }`. The synthesis "needs" line already names the missing inputs; re-surface in the stamp.
-- **Reasoning-gap** — `missing_lanes` non-empty OR cross-lane (`triage.secondary_lanes.length > 0`) answered solo/panel → escalate one tier: `solo → panel(addedLanes = missing_lanes)`, `panel → council`. Re-run through the existing hardened path with `hops + 1`. Stamp `escalations.push({ from_mode, to_mode, reason: "reasoning_gap", cleared })`. Re-check floor after.
-
-Bounded by `max_escalations` (default 1). If still below floor: return capped with `below_floor_terminal.gap_type` set and the last `escalations[].cleared = false`. Never loops, never mutates ε/ρ.
-
-## 4. Eval pass-mark plumbing (latent until harness ships)
-
-`agents/manifest.ts`: add optional `eval_score?: number` and `eval_scored_at?: string`. Today: absent — behavior unchanged.
-
-New `agents/eval-gate.ts`:
-- `canSeat(entry)` — returns `false` only when `entry.eval_score != null && entry.eval_score < PLATFORM_QUALITY.eval_seat_mark`. Absent score = unblocked (preserves today's Brahan-seats-it gate; this adds an objective precondition on top).
-- `retainCheck(entry)` — when `eval_score != null && < eval_retain_mark`, returns `{ decertification_candidate: true }` for our internal alert path. Never auto-pulls. Never surfaced to client.
-
-Wire `canSeat` into `findEnabledAgent` / `listSeatedAgentsPublic`. With no scores in manifest today, no behavior change.
-
-## 5. Internal-only observability stamps
-
-Attach to the run's `metrics`/internal `metadata` channel (the `mcp_usage_events.metadata` bag — vault-side telemetry, never rendered in the client-facing minute body or `show_council`):
-
-- `quality_standard_version: "current" | "elevated"`
-- `floor_applied: { eps_floor, rho_floor }`
-- `escalations: [{ from_mode, to_mode, reason: "reasoning_gap", cleared }]` (empty array when none fired)
-- `below_floor_terminal: { capped, gap_type: "reasoning" | "data", final_eps, final_rho, ask? }` (only when returning still-capped)
-
-Audit pass: confirm none of these keys leak into the minute schema returned to clients or into `show_council`'s public roster output. They live only in our usage-events ledger.
-
-## 6. Files touched
-
-- edit: `supabase/functions/mcp-council/routing-config.ts` (add `QUALITY_STANDARD` + exported `PLATFORM_QUALITY` constant + version tag)
-- edit: `supabase/functions/mcp-council/index.ts` (swap floor reads at 3 sites, invoke escalation helper, stamp internal telemetry, audit that nothing leaks to client surface)
-- new: `supabase/functions/mcp-council/escalate.ts` (gap classifier + one-hop ladder)
-- new: `supabase/functions/mcp-council/agents/eval-gate.ts` (latent seat/retain checks; no-op without scores)
-- edit: `supabase/functions/mcp-council/agents/manifest.ts` (optional `eval_score` / `eval_scored_at` fields)
-- edit: `supabase/functions/mcp-council/MIGRATIONS.md` (raise-the-bar standard · how Brahan flips the one line · explicit non-feature for clients)
-
-Explicitly untouched: `tenants.ts`, any entitlement field, any client-facing component (`StatusBadge`, minute renderers, `ActionInspectorDrawer`, brand surfaces).
-
-## 7. Acceptance (curl `/mcp-gateway` with `PLATFORM_QUALITY` temporarily pointed at `.elevated`)
-
-1. **No client surface**: minute JSON returned to client contains no `quality_standard_version` / `floor_applied` / `escalations` / `below_floor_terminal`. `show_council` output unchanged.
-2. **No per-tenant variance**: two distinct tenant tokens hitting the same borderline question get identical floor behavior — no entitlement/tier branch exists in code (grep confirms zero references to a quality field on `TenantContext`).
-3. **Higher floor caps more**: borderline question that landed ε 0.90 clean under `current` returns capped (0.90 < 0.92) under `elevated` with the gap named; ε unchanged.
-4. **Reasoning-gap escalates once**: cross-lane solo below-floor escalates one tier (solo→panel or panel→council), re-deliberates, then clears or returns capped. Internal telemetry: `escalations.length === 1`.
-5. **Data-gap does NOT escalate**: `closing_action: "needs_external_info"` returns capped with named ask; `escalations === []`, `below_floor_terminal.gap_type === "data"`.
-6. **Bounded**: no run exceeds `max_escalations`; no loops; latency stays sane.
-7. **Degraded interaction**: chairs-dropped run does not escalate — returns the degraded minute with the existing cap.
-8. **Eval gate latent**: with no `eval_score` in manifest, all seats remain seated. Planting a low score on a test entry blocks seating via `canSeat` and surfaces `decertification_candidate` via `retainCheck` (internal only).
-
-Once green, the only activation step is Brahan flipping `PLATFORM_QUALITY = QUALITY_STANDARD.elevated` and `PLATFORM_QUALITY_VERSION = "elevated"`, then redeploy. Global, uniform, no client step.
-
-## Out of scope
-
-Per-client / per-tier quality control · quorum/degradation ratio · minute contract · triage dials · auto-decertification · building the eval harness itself.
+## Files touched
+- `supabase/functions/mcp-council/index.ts` — CHAIRS list, BUILD_ID, both `timeoutMs`, SSE response path + onProgress wiring in `runCouncil` and routed summon path.
+- `supabase/functions/mcp-council/council/knox.ts` — **new**, council-mode Knox persona.
+- `supabase/functions/mcp-council/agents/manifest.ts` — Felix gets `tags: ["growth"]` (no behavior change today; sets up B).

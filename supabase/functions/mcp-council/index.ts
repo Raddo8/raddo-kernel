@@ -33,7 +33,7 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "parallel_no_resynth_v1";
+const BUILD_ID = "roster6_parallel35_progress_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -93,13 +93,17 @@ import {
 } from "./agents/manifest.ts";
 import { getTenantContext, computeKnoxPosture, getNotionTarget, type TenantContext } from "./tenants.ts";
 
+// Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
+// Marcus, Alfred). Knox is added separately as `legalChair` inside
+// runCouncilWithResynth (renders {{POSTURE}} from tenant context), so the
+// CHAIRS array below carries the other five; Felix is bench-only (summonable
+// via summon_best_advisor, not in the default fan-out); Abe is the deferred
+// loyal-dissent pass via abe_weighing_in, not a synchronous chair.
 const CHAIRS: Array<{ id: string; name: string; system: string }> = [
   { id: "leo", name: "Leo", system: LEO_MD },
-  { id: "abe", name: "Abe", system: ABE_MD },
   { id: "alfred", name: "Alfred", system: ALFRED_MD },
   { id: "marcus", name: "Marcus", system: MARCUS_MD },
   { id: "lucius", name: "Lucius", system: LUCIUS_MD },
-  { id: "felix", name: "Felix", system: FELIX_MD },
   { id: "aims", name: "Aims", system: AIMS_MD },
 ];
 
@@ -736,10 +740,16 @@ async function runCouncil(
   clientContext: string = "",
   tenant: string = "",
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{ minute: MinuteShape; passes: Pass[] }> {
-  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision);
+  const r = await runCouncilWithResynth(question, context, clientContext, tenant, triageDecision, onProgress);
   return { minute: r.minute, passes: r.passes };
 }
+
+// Progress callback · invoked at each Stage-1 chair settlement, after horizon,
+// and after synth. Wired into the SSE/MCP `notifications/progress` stream so
+// the client's per-request timer resets and a 60-90s convene returns cleanly.
+export type ProgressFn = (message: string) => void;
 
 
 // Chairs + horizon run ONCE; returns minute plus a cheap resynth closure.
@@ -753,6 +763,7 @@ async function runCouncilWithResynth(
   clientContext: string = "",
   tenant: string = "",
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
@@ -794,15 +805,19 @@ async function runCouncilWithResynth(
   const qhash = await hashQuestion(question);
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
+  onProgress?.(`stage1.start · ${totalSeated} chairs in parallel`);
   // §1 · per-chair isolation: one chair fault must NOT down the board.
+  // Per-chair timeout raised 15s → 35s · Opus chairs land ~25-40s; the 15s
+  // cap was mass-dropping them into degraded 1-2 chair councils.
   const stage1Settled = await Promise.allSettled(
     allChairs.map((c) => {
+      const chairT0 = Date.now();
       const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-        timeoutMs: 15_000,
+        timeoutMs: 35_000,
       });
       return callChair({
         chairId: c.id,
@@ -810,7 +825,16 @@ async function runCouncilWithResynth(
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
         anthropicFallback: anthroCall,
-      }).then((res) => ({ id: c.id, name: c.name, res }));
+      }).then(
+        (res) => {
+          onProgress?.(`${c.name} returned · ${Date.now() - chairT0}ms`);
+          return { id: c.id, name: c.name, res };
+        },
+        (err) => {
+          onProgress?.(`${c.name} dropped · ${Date.now() - chairT0}ms`);
+          throw err;
+        },
+      );
     }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
@@ -879,6 +903,7 @@ async function runCouncilWithResynth(
     horizon = "Horizon pass unavailable this run · synthesizer will operate without anticipatory-horizon input.";
   }
   metrics.horizon_ms = Date.now() - horizonT0;
+  onProgress?.(`horizon · ${metrics.horizon_ms}ms`);
   console.log("convene_stage_metric", JSON.stringify({
     tool: "convene_council",
     tenant,
@@ -1013,6 +1038,7 @@ async function runCouncilWithResynth(
 
   const first = await synthesize(false);
   metrics.synth1_ms = first.elapsed;
+  onProgress?.(`synth · ${metrics.synth1_ms}ms`);
   console.log("convene_stage_metric", JSON.stringify({
     tool: "convene_council",
     tenant,
@@ -1315,7 +1341,7 @@ async function runPanelWithResynth(
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-        timeoutMs: 15_000,
+        timeoutMs: 35_000,
       });
       return callChair({
         chairId: c.id,
@@ -1569,6 +1595,7 @@ async function runCouncilGated(
   clientContext: string,
   tenant: string,
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
@@ -1576,7 +1603,7 @@ async function runCouncilGated(
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
-    question, context, clientContext, tenant, triageDecision,
+    question, context, clientContext, tenant, triageDecision, onProgress,
   );
   let minute = firstMinute;
   let iters = 1;
@@ -2176,6 +2203,62 @@ function rpcResult(id: any, result: any): Response {
   );
 }
 
+// MCP Streamable HTTP · upgrade a `tools/call` response to SSE so the
+// server can emit `notifications/progress` frames while long-running
+// deliberation work is in flight. Per the MCP spec each frame resets the
+// client's per-request timer (Cowork's binding wall is ~60s), so a 60-90s
+// convene returns cleanly. Final frame carries the JSON-RPC result/error
+// envelope. Heartbeats every 10s in case a stage is silent.
+function rpcStreamingResult(
+  id: any,
+  progressToken: string | number,
+  work: (notify: (message: string, progress?: number, total?: number) => void) => Promise<any>,
+  toRpc: (e: unknown) => { code: number; message: string },
+): Response {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let progress = 0;
+      let closed = false;
+      const write = (obj: any) => {
+        if (closed) return;
+        try { controller.enqueue(enc.encode(`data: ${JSON.stringify(obj)}\n\n`)); }
+        catch (_e) { /* controller may be closed mid-write */ }
+      };
+      const notify = (message: string, p?: number, total?: number) => {
+        progress = typeof p === "number" ? p : progress + 1;
+        write({
+          jsonrpc: "2.0",
+          method: "notifications/progress",
+          params: { progressToken, progress, total, message },
+        });
+      };
+      const hb = setInterval(() => notify("working"), 10_000);
+      try {
+        const result = await work(notify);
+        write({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID });
+      } catch (e) {
+        const { code, message } = toRpc(e);
+        write({ jsonrpc: "2.0", id: id ?? null, error: { code, message }, build_id: BUILD_ID });
+      } finally {
+        clearInterval(hb);
+        closed = true;
+        try { controller.close(); } catch (_e) { /* already closed */ }
+      }
+    },
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "X-Build-Id": BUILD_ID,
+    },
+  });
+}
+
 // Constant-time compare to resist token-timing probes.
 function safeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -2353,14 +2436,25 @@ Deno.serve(async (req) => {
         "input_too_large",
       ]);
 
-      const toRpc = (e: unknown) => {
+      const toRpcParts = (e: unknown): { code: number; message: string } => {
         const msg = e instanceof Error ? e.message : "internal_error";
-        const code = safeErrors.has(msg) ? msg : "internal_error";
-        if (code === "boundary_violation") {
-          return rpcError(id, -32000, "boundary_violation");
-        }
-        return rpcError(id, -32003, code);
+        const message = safeErrors.has(msg) ? msg : "internal_error";
+        const code = message === "boundary_violation" ? -32000 : -32003;
+        return { code, message };
       };
+      const toRpc = (e: unknown) => {
+        const { code, message } = toRpcParts(e);
+        return rpcError(id, code, message);
+      };
+
+      // MCP Streamable HTTP · per-request progress token. When present, the
+      // convene/summon/file_to_office handlers stream `notifications/progress`
+      // SSE frames every ~10s and at each stage boundary so the client's
+      // ~60s request timer resets · keeps Cowork connected on 60-90s convenes.
+      const progressToken: string | number | undefined =
+        (params?._meta && (typeof params._meta.progressToken === "string" || typeof params._meta.progressToken === "number"))
+          ? params._meta.progressToken
+          : undefined;
 
       if (name === "show_council") {
         // Tenant comes from the verified identity (see invariant above).
@@ -2426,20 +2520,19 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        try {
+        const produce = async (notify: ProgressFn) => {
           // Light triage call so the seam rules (frame-choice, survival
           // co-sign) can fire on direct convene_council invocations too.
           // Failures are non-fatal — runCouncilGated handles undefined.
           let convTriage: TriageDecision | undefined;
           try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
+          notify("convene.start");
           const { minute, passes, iters, capped, gap, metrics, quality } = await runCouncilGated(
-            question, context, clientContext, tenant, convTriage);
+            question, context, clientContext, tenant, convTriage, notify);
 
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
-          // Structured metric log · machine-grep friendly. Routing /
-          // capability-gap ledgers consume this line.
           console.log("convene_metrics", JSON.stringify({
             tool: "convene_council",
             tenant,
@@ -2464,16 +2557,20 @@ Deno.serve(async (req) => {
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
               convene_metrics: metrics,
-              // Raise-the-Bar telemetry · vault-side only (never on the wire).
               quality,
             },
           });
-
-          return rpcResult(id, {
+          return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
-          });
+          };
+        };
+        if (progressToken !== undefined) {
+          return rpcStreamingResult(id, progressToken, produce, toRpcParts);
+        }
+        try {
+          return rpcResult(id, await produce(() => {}));
         } catch (e) {
           return toRpc(e);
         }
