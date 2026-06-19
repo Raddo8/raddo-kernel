@@ -33,7 +33,7 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "roster6_parallel35_progress_v1";
+const BUILD_ID = "roster6_parallel55_progress_v2";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -807,8 +807,10 @@ async function runCouncilWithResynth(
   const stage1T0 = Date.now();
   onProgress?.(`stage1.start · ${totalSeated} chairs in parallel`);
   // §1 · per-chair isolation: one chair fault must NOT down the board.
-  // Per-chair timeout raised 15s → 35s · Opus chairs land ~25-40s; the 15s
-  // cap was mass-dropping them into degraded 1-2 chair councils.
+  // Per-chair timeout raised 35s → 55s · stays under 150s Edge ceiling
+  // (parallel 55s + horizon ~12s + synth ~30s ≈ ~92s) and progress frames
+  // hold the client open.
+  const chairDurations: Array<{ id: string; name: string; ms: number; outcome: "fulfilled" | "dropped" }> = [];
   const stage1Settled = await Promise.allSettled(
     allChairs.map((c) => {
       const chairT0 = Date.now();
@@ -817,7 +819,7 @@ async function runCouncilWithResynth(
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-        timeoutMs: 35_000,
+        timeoutMs: 55_000,
       });
       return callChair({
         chairId: c.id,
@@ -827,17 +829,22 @@ async function runCouncilWithResynth(
         anthropicFallback: anthroCall,
       }).then(
         (res) => {
-          onProgress?.(`${c.name} returned · ${Date.now() - chairT0}ms`);
+          const ms = Date.now() - chairT0;
+          chairDurations.push({ id: c.id, name: c.name, ms, outcome: "fulfilled" });
+          onProgress?.(`${c.name} returned · ${ms}ms`);
           return { id: c.id, name: c.name, res };
         },
         (err) => {
-          onProgress?.(`${c.name} dropped · ${Date.now() - chairT0}ms`);
+          const ms = Date.now() - chairT0;
+          chairDurations.push({ id: c.id, name: c.name, ms, outcome: "dropped" });
+          onProgress?.(`${c.name} dropped · ${ms}ms`);
           throw err;
         },
       );
     }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
+  (metrics as any).chair_durations = chairDurations;
 
   const stage1Fulfilled: Array<{ id: string; name: string; text: string }> = [];
   const dropped: DroppedChair[] = [];
@@ -867,6 +874,7 @@ async function runCouncilWithResynth(
     stage1_ms: metrics.stage1_ms,
     chairs_count: totalSeated,
     surviving_chairs: stage1Fulfilled.length,
+    chair_durations: chairDurations,
     dropped_chairs: dropped,
   }));
 
@@ -1334,14 +1342,16 @@ async function runPanelWithResynth(
   const qhash = await hashQuestion(question);
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
+  const chairDurations: Array<{ id: string; name: string; ms: number; outcome: "fulfilled" | "dropped" }> = [];
   const stage1Settled = await Promise.allSettled(
     chairs.map((c) => {
+      const chairT0 = Date.now();
       const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-        timeoutMs: 35_000,
+        timeoutMs: 55_000,
       });
       return callChair({
         chairId: c.id,
@@ -1349,10 +1359,20 @@ async function runPanelWithResynth(
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
         anthropicFallback: anthroCall,
-      }).then((res) => ({ id: c.id, name: c.name, res }));
+      }).then(
+        (res) => {
+          chairDurations.push({ id: c.id, name: c.name, ms: Date.now() - chairT0, outcome: "fulfilled" });
+          return { id: c.id, name: c.name, res };
+        },
+        (err) => {
+          chairDurations.push({ id: c.id, name: c.name, ms: Date.now() - chairT0, outcome: "dropped" });
+          throw err;
+        },
+      );
     }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
+  (metrics as any).chair_durations = chairDurations;
 
   const stage1Fulfilled: Array<{ id: string; name: string; text: string }> = [];
   const dropped: DroppedChair[] = [];
