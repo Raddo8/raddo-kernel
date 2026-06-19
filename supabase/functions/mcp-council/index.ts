@@ -903,6 +903,7 @@ async function runCouncilWithResynth(
     horizon = "Horizon pass unavailable this run · synthesizer will operate without anticipatory-horizon input.";
   }
   metrics.horizon_ms = Date.now() - horizonT0;
+  onProgress?.(`horizon · ${metrics.horizon_ms}ms`);
   console.log("convene_stage_metric", JSON.stringify({
     tool: "convene_council",
     tenant,
