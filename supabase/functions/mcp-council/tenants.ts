@@ -124,10 +124,12 @@ export function getNotionTarget(tenant: string): NotionTarget | null {
     if (!token || !dbId) return null;
     return { token, dbId };
   }
-  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN).
-  // Fail-closed when absent.
-  const token = Deno.env.get(`${tenant}_NOTION_TOKEN`) ?? "";
-  const dbId = Deno.env.get(`${tenant}_BOARDROOM_DB`) ?? "";
+  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN,
+  // COB_HQ_NOTION_TOKEN). Tenant names may contain hyphens (e.g. "COB-HQ"),
+  // which are illegal in env-var names — normalize to underscore for lookup.
+  const envKey = tenant.replace(/-/g, "_").toUpperCase();
+  const token = Deno.env.get(`${envKey}_NOTION_TOKEN`) ?? "";
+  const dbId = Deno.env.get(`${envKey}_BOARDROOM_DB`) ?? "";
   if (!token || !dbId) return null;
   return { token, dbId };
 }
