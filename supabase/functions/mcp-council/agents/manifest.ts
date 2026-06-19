@@ -85,6 +85,10 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       tier_min: "any",
       enabled: true,
       kind: "single",
+      // Bench specialist · summonable via summon_best_advisor on growth /
+      // pricing / loops / retention questions. Not in the default 6-chair
+      // synchronous convene fan-out (Aims, Leo, Lucius, Knox, Marcus, Alfred).
+      tags: ["growth"],
     },
     {
       id: "aims",
