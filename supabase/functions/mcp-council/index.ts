@@ -763,6 +763,7 @@ async function runCouncilWithResynth(
   clientContext: string = "",
   tenant: string = "",
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{
   minute: MinuteShape;
   passes: Pass[];
