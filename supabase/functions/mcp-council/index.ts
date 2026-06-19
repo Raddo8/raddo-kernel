@@ -805,15 +805,19 @@ async function runCouncilWithResynth(
   const qhash = await hashQuestion(question);
   const userMsg = chairUserPrompt(question, context);
   const stage1T0 = Date.now();
+  onProgress?.(`stage1.start · ${totalSeated} chairs in parallel`);
   // §1 · per-chair isolation: one chair fault must NOT down the board.
+  // Per-chair timeout raised 15s → 35s · Opus chairs land ~25-40s; the 15s
+  // cap was mass-dropping them into degraded 1-2 chair councils.
   const stage1Settled = await Promise.allSettled(
     allChairs.map((c) => {
+      const chairT0 = Date.now();
       const anthroCall = () => callAnthropic({
         model: MODEL_CHAIR,
         system: `${preamble}\n\n${c.system}`,
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
-        timeoutMs: 15_000,
+        timeoutMs: 35_000,
       });
       return callChair({
         chairId: c.id,
@@ -821,7 +825,16 @@ async function runCouncilWithResynth(
         user: userMsg,
         maxTokens: MAX_TOKENS_CHAIR,
         anthropicFallback: anthroCall,
-      }).then((res) => ({ id: c.id, name: c.name, res }));
+      }).then(
+        (res) => {
+          onProgress?.(`${c.name} returned · ${Date.now() - chairT0}ms`);
+          return { id: c.id, name: c.name, res };
+        },
+        (err) => {
+          onProgress?.(`${c.name} dropped · ${Date.now() - chairT0}ms`);
+          throw err;
+        },
+      );
     }),
   );
   metrics.stage1_ms = Date.now() - stage1T0;
