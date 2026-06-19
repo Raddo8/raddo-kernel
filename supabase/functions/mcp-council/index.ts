@@ -1038,6 +1038,7 @@ async function runCouncilWithResynth(
 
   const first = await synthesize(false);
   metrics.synth1_ms = first.elapsed;
+  onProgress?.(`synth · ${metrics.synth1_ms}ms`);
   console.log("convene_stage_metric", JSON.stringify({
     tool: "convene_council",
     tenant,
