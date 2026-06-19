@@ -2542,18 +2542,129 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         const produce = async (notify: ProgressFn) => {
-          // Light triage call so the seam rules (frame-choice, survival
-          // co-sign) can fire on direct convene_council invocations too.
-          // Failures are non-fatal — runCouncilGated handles undefined.
+          // Stage B · Convene Routing
+          // Fast Haiku-class triage chooses the LIGHTEST mode that fits the
+          // stakes. ≤6 hard cap. Failure → fall back to full standing 6.
+          notify("router.start");
+          const decision = await routeConvene(question, context);
+          notify(
+            `router.done · ${decision.mode} · ${decision.chairs.join(",")} · ${decision.triage_ms}ms${decision.triage_fallback ? " · FALLBACK" : ""}`
+          );
+
+          // Light seam-rule triage (frame-choice, survival co-sign) — kept
+          // so panel/council seam logic still fires. Non-fatal on error.
           let convTriage: TriageDecision | undefined;
           try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
-          notify("convene.start");
-          const { minute, passes, iters, capped, gap, metrics, quality } = await runCouncilGated(
-            question, context, clientContext, tenant, convTriage, notify);
 
-          const out: any = { ...minute };
-          if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
+
+          // Structured routing log · audited per the brief.
+          console.log("routing_decision", JSON.stringify({
+            tool: "convene_council",
+            tenant,
+            question_hash: qhash,
+            consequence: decision.consequence,
+            forces: decision.forces,
+            specialists: decision.specialists,
+            mode: decision.mode,
+            chairs: decision.chairs,
+            run_dissent: decision.run_dissent,
+            rationale: decision.rationale,
+            triage_ms: decision.triage_ms,
+            triage_fallback: decision.triage_fallback,
+            router_model: decision.router_model,
+            build_id: BUILD_ID,
+          }));
+
+          // ── Branch on mode ────────────────────────────────────────────
+          const STANDING = ["aims", "leo", "lucius", "knox", "marcus", "alfred"];
+          const isFullStanding =
+            decision.chairs.length === 6 &&
+            STANDING.every((s) => decision.chairs.includes(s));
+
+          let out: any;
+          let metrics: any;
+          let passes: Pass[] = [];
+          let capped = false;
+          let gap: string | undefined;
+          let epsilon: number | undefined;
+          let rho: number | undefined;
+          let quality: any;
+          let iters = 0;
+          let runMode: "single" | "panel" | "council" = decision.mode === "full" ? "council" : decision.mode;
+
+          if (decision.mode === "single") {
+            notify(`single.start · ${decision.chairs[0]}`);
+            const bundle = loadAgent(decision.chairs[0], clientContext, tenant, question);
+            if (!bundle || bundle.kind !== "single") {
+              // Specialist not seatable as single · fall through to panel-of-2.
+              notify(`single.unavailable · escalating to panel`);
+              const fallbackIds = [decision.chairs[0], decision.forces[1] ?? "leo"]
+                .filter((v, i, a) => v && a.indexOf(v) === i);
+              const pg = await runPanelGated(
+                question, context, fallbackIds, clientContext, tenant, convTriage,
+              );
+              passes = pg.passes; metrics = pg.metrics; capped = pg.capped;
+              gap = pg.gap; quality = pg.quality; iters = pg.iters;
+              epsilon = pg.minute.confidence.epistemic;
+              rho = pg.minute.confidence.rigor;
+              out = { ...pg.minute };
+              runMode = "panel";
+            } else {
+              const t0 = Date.now();
+              const { minute: sm, passes: sp } = await runSingleAgent(bundle, question, context);
+              passes = sp;
+              metrics = { stage1_ms: Date.now() - t0, horizon_ms: 0, synth1_ms: 0, total_ms: Date.now() - t0, calls_total: sp.length };
+              epsilon = sm.confidence.epistemic;
+              rho = sm.confidence.rigor;
+              quality = newQualityTelemetry();
+              out = { ...sm };
+              notify(`single.done · ${metrics.total_ms}ms`);
+            }
+          } else if (decision.mode === "panel" || !isFullStanding) {
+            // Custom chair list (panel · or "full" with <6 standing).
+            notify(`${decision.mode}.start · ${decision.chairs.length} chairs`);
+            const pg = await runPanelGated(
+              question, context, decision.chairs, clientContext, tenant, convTriage,
+            );
+            passes = pg.passes; metrics = pg.metrics; capped = pg.capped;
+            gap = pg.gap; quality = pg.quality; iters = pg.iters;
+            epsilon = pg.minute.confidence.epistemic;
+            rho = pg.minute.confidence.rigor;
+            out = { ...pg.minute };
+            runMode = decision.mode === "full" ? "council" : "panel";
+            notify(`${decision.mode}.done · ${metrics.total_ms}ms`);
+          } else {
+            // FULL · all 6 standing → reuse the gated council runner.
+            notify("convene.start");
+            const c = await runCouncilGated(
+              question, context, clientContext, tenant, convTriage, notify,
+            );
+            passes = c.passes; metrics = c.metrics; capped = c.capped;
+            gap = c.gap; quality = c.quality; iters = c.iters;
+            epsilon = c.minute.confidence.epistemic;
+            rho = c.minute.confidence.rigor;
+            out = { ...c.minute };
+          }
+
+          if (capped) { out.capped = true; if (gap) out.gap = gap; }
+
+          // Attach routing envelope + dissent hint so clients can fire the
+          // deferred abe_weighing_in pass when run_dissent is true.
+          out.routing = {
+            consequence: decision.consequence,
+            mode: decision.mode,
+            run_mode: runMode,
+            chairs: decision.chairs,
+            forces: decision.forces,
+            specialists: decision.specialists,
+            run_dissent: decision.run_dissent,
+            rationale: decision.rationale,
+            triage_ms: decision.triage_ms,
+            triage_fallback: decision.triage_fallback,
+          };
+          out.run_dissent = decision.run_dissent;
+
           console.log("convene_metrics", JSON.stringify({
             tool: "convene_council",
             tenant,
@@ -2561,24 +2672,45 @@ Deno.serve(async (req) => {
             ...metrics,
             iters,
             capped,
-            epsilon: minute.confidence.epistemic,
-            rho: minute.confidence.rigor,
-            quality_standard_version: quality.quality_standard_version,
+            epsilon,
+            rho,
+            quality_standard_version: quality?.quality_standard_version,
+            routed_mode: decision.mode,
+            routed_chairs: decision.chairs,
+            chairs_count: decision.chairs.length,
+            triage_ms: decision.triage_ms,
+            triage_fallback: decision.triage_fallback,
+            run_dissent: decision.run_dissent,
           }));
+
           await recordMcpUsage(supabaseAdmin, {
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
               question_hash: qhash,
-              triage: { primary_lane: "council", lane_confidence: 1, one_way_door: false, stakes: "n/a", mode: "council" },
+              triage: {
+                primary_lane: "council",
+                lane_confidence: 1,
+                one_way_door: decision.consequence === "one_way_door",
+                stakes: decision.consequence,
+                mode: decision.mode,
+              },
               gates_fired: capped ? ["floor", "capped"] : ["floor"],
-              selected_advisor: "council",
+              selected_advisor: runMode,
               escalated: false,
-              final_mode: "council",
-              epsilon: minute.confidence.epistemic,
-              rho: minute.confidence.rigor,
+              final_mode: runMode,
+              epsilon, rho,
               capped, iters, hops: 0,
               convene_metrics: metrics,
               quality,
+              routing_decision: {
+                consequence: decision.consequence,
+                forces: decision.forces,
+                specialists: decision.specialists,
+                chairs: decision.chairs,
+                run_dissent: decision.run_dissent,
+                triage_fallback: decision.triage_fallback,
+                triage_ms: decision.triage_ms,
+              },
             },
           });
           return {
@@ -2596,6 +2728,7 @@ Deno.serve(async (req) => {
           return toRpc(e);
         }
       }
+
 
       // ── abe_weighing_in · deferred loyal-dissent pass ────────────────
       // Runs Abe against a FINISHED minute on GPT-5 via the Responses
