@@ -2520,20 +2520,19 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        try {
+        const produce = async (notify: ProgressFn) => {
           // Light triage call so the seam rules (frame-choice, survival
           // co-sign) can fire on direct convene_council invocations too.
           // Failures are non-fatal — runCouncilGated handles undefined.
           let convTriage: TriageDecision | undefined;
           try { convTriage = await triage(question, context, tenant); } catch { /* ignore */ }
+          notify("convene.start");
           const { minute, passes, iters, capped, gap, metrics, quality } = await runCouncilGated(
-            question, context, clientContext, tenant, convTriage);
+            question, context, clientContext, tenant, convTriage, notify);
 
           const out: any = { ...minute };
           if (capped) { out.capped = true; if (gap) out.gap = gap; }
           const qhash = await hashQuestion(question);
-          // Structured metric log · machine-grep friendly. Routing /
-          // capability-gap ledgers consume this line.
           console.log("convene_metrics", JSON.stringify({
             tool: "convene_council",
             tenant,
@@ -2558,16 +2557,20 @@ Deno.serve(async (req) => {
               rho: minute.confidence.rigor,
               capped, iters, hops: 0,
               convene_metrics: metrics,
-              // Raise-the-Bar telemetry · vault-side only (never on the wire).
               quality,
             },
           });
-
-          return rpcResult(id, {
+          return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
-          });
+          };
+        };
+        if (progressToken !== undefined) {
+          return rpcStreamingResult(id, progressToken, produce, toRpcParts);
+        }
+        try {
+          return rpcResult(id, await produce(() => {}));
         } catch (e) {
           return toRpc(e);
         }
