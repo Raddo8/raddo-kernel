@@ -1595,6 +1595,7 @@ async function runCouncilGated(
   clientContext: string,
   tenant: string,
   triageDecision?: TriageDecision,
+  onProgress?: ProgressFn,
 ): Promise<{
   minute: MinuteShape; passes: Pass[]; iters: number;
   capped: boolean; gap?: string; metrics: ConveneMetrics;
@@ -1602,7 +1603,7 @@ async function runCouncilGated(
 }> {
   const t0 = Date.now();
   const { minute: firstMinute, passes, metrics, resynth } = await runCouncilWithResynth(
-    question, context, clientContext, tenant, triageDecision,
+    question, context, clientContext, tenant, triageDecision, onProgress,
   );
   let minute = firstMinute;
   let iters = 1;
