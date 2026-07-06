@@ -434,6 +434,11 @@ export function ConsultForm() {
 
   // Pre-fill Identity from the hero gate handoff.
   useEffect(() => {
+    track("page_view", "/consult");
+  }, []);
+
+  // Pre-fill Identity from the hero gate handoff.
+  useEffect(() => {
     try {
       const raw = sessionStorage.getItem(GATE_HANDOFF_KEY);
       if (!raw) return;
