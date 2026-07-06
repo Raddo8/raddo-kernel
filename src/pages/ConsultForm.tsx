@@ -636,45 +636,14 @@ export function ConsultForm() {
         }}
       />
       <div className="relative z-10">
-      {/* Top band · cream paper */}
-      <header className="mx-auto max-w-7xl px-6 pt-10 md:px-10 md:pt-14">
-        <Panel className="px-6 py-10 md:px-10 md:py-14">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl">
-              <Overline>CONSULT · 001 · CLASSIFIED · FOR PRINCIPAL</Overline>
-              <h1
-                className="mt-4 font-display"
-                style={{
-                  color: "hsl(var(--raddo-ink-deep))",
-                  fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)",
-                  lineHeight: 1.05,
-                  fontWeight: 800,
-                }}
-              >
-                5 minutes for a quick sync with your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
-              </h1>
-              <p
-                className="mt-5 max-w-2xl"
-                style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
-              >
-                Four short sections · where you are today, where you want to be, the systems you already run, and how you like to work. Skip anything that doesn't apply.
-              </p>
-            </div>
-            <Link
-              to="/"
-              className="font-mono"
-              style={{
-                fontSize: 11,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "hsl(var(--raddo-ink))",
-              }}
-            >
-              ← Back home
-            </Link>
-          </div>
-        </Panel>
-      </header>
+      {/* Top band · navy pane cover (§17 dossier bible) */}
+      <DossierPageBand
+        chip="consult · 001 · classified for principal"
+        headline="A quick sync with your Chief of"
+        keyword="Business"
+        headlineTrail="."
+        subhead="Four short sections · where you are today, where you want to be, the systems you already run, and how you like to work. Skip anything that does not apply."
+      />
 
       {launched ? (
         <MeetYourCobLaunch
