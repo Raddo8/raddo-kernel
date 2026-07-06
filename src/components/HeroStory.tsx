@@ -769,6 +769,60 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
+/**
+ * Chapter overline · mono, brass-deep, 0.22em tracking. Opens every major
+ * hero-story chapter so the whole page reads as one bound executive document.
+ * Uses "chapter" (not "dossier") to keep /hero-story distinct from /dossier.
+ */
+function ChapterOverline({ n, label }: { n: string; label: string }) {
+  return (
+    <div
+      className="font-mono"
+      style={{
+        fontSize: 11,
+        letterSpacing: "0.22em",
+        color: "hsl(var(--raddo-brass-deep))",
+        textTransform: "uppercase",
+        marginBottom: 20,
+      }}
+    >
+      chapter {n} · {label}
+    </div>
+  );
+}
+
+/**
+ * Chapter close · brass hairline with a solid center bead, per the bible
+ * (§5-6). Signals the end of a bound page-section.
+ */
+function ChapterClose() {
+  return (
+    <div
+      aria-hidden
+      className="relative mx-auto mt-16 md:mt-20"
+      style={{
+        width: "min(320px, 60%)",
+        height: 1,
+        backgroundColor: "hsl(var(--raddo-brass) / 0.4)",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          backgroundColor: "hsl(var(--raddo-brass))",
+        }}
+      />
+    </div>
+  );
+}
+
+
 const INTRO_FLAG = "raddo-hero-intro-played-v2";
 
 export function HeroStory() {
