@@ -1134,7 +1134,33 @@ export function HeroStory() {
             Not just in your corner.<br />
             Building your corner.
           </h2>
+
+          {/* ====== B1 · CHAPTER 01 · THE CORNER ====== */}
+          <section className="mx-auto w-full max-w-5xl py-16 lg:py-24">
+            <ChapterOverline n="01" label="the corner" />
+            <p
+              className="font-sans text-raddo-charcoal"
+              style={{ fontSize: 18, lineHeight: 1.65, marginBottom: 20 }}
+            >
+              Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-raddo-ink-deep font-bold">light</strong>.
+            </p>
+            {/* PLACEHOLDER-CONFIRM-CLAIMS */}
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: "hsl(var(--raddo-ash))",
+                fontStyle: "italic",
+              }}
+            >
+              In deployment across capital management, ministry operations, and wealth advisory. Every engagement bespoke. Every dossier prepared for one reader.
+            </p>
+            <ChapterClose />
+          </section>
+
           <BriefingComposition />
+
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
