@@ -66,17 +66,50 @@ export default function BuildView() {
     inset: 0,
     width: "100vw",
     height: "100vh",
-    background: "#0A0B0D",
-    color: "#F4F4F2",
-    fontFamily: "ui-sans-serif,-apple-system,Segoe UI,Helvetica,Arial,sans-serif",
+    background: "hsl(var(--raddo-paper))",
+    color: "hsl(var(--raddo-charcoal))",
+    fontFamily: "Inter, system-ui, -apple-system, sans-serif",
   };
 
   if (error) {
     return (
-      <div style={{ ...shell, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ maxWidth: 480, padding: 32, textAlign: "center" }}>
-          <h1 style={{ fontSize: 22, margin: "0 0 12px" }}>This build is no longer available.</h1>
-          <p style={{ color: "#B9BEC6", margin: 0, fontSize: 14.5, lineHeight: 1.6 }}>
+      <div style={{ ...shell, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div
+          className="dossier-navy-shadow"
+          style={{
+            maxWidth: 480,
+            padding: 40,
+            textAlign: "center",
+            background: "white",
+            border: "1px solid hsl(var(--raddo-paper-edge))",
+            borderRadius: 8,
+          }}
+        >
+          <p
+            className="font-mono uppercase"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "hsl(var(--raddo-brass-deep))",
+              fontWeight: 700,
+              margin: "0 0 14px",
+            }}
+          >
+            build · unavailable
+          </p>
+          <h1
+            className="font-display"
+            style={{
+              fontSize: 22,
+              fontWeight: 800,
+              color: "hsl(var(--raddo-ink-deep))",
+              margin: "0 0 10px",
+              lineHeight: 1.2,
+            }}
+          >
+            This build is no longer available.
+          </h1>
+          <p style={{ color: "hsl(var(--raddo-ash))", margin: 0, fontSize: 14, lineHeight: 1.6 }}>
             The link may have expired or been revoked.
           </p>
         </div>
