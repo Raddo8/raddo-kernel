@@ -1148,16 +1148,7 @@ export function HeroStory() {
 
 
 
-        {/* Briefing · Exhibit composition · 2600ms */}
-        <motion.section
-          variants={rise(800, 2600)}
-          initial={INITIAL}
-          animate="show"
-          className="mt-40 md:mt-52 mx-auto"
-          style={{ maxWidth: "1180px" }}
-        >
-          <DossierIntake />
-        </motion.section>
+        {/* Chat intake removed on /hero-story · staging protagonist swap */}
 
         {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
