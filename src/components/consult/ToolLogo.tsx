@@ -19,7 +19,9 @@ export function ToolLogo({
   domain: string;
   size?: number;
 }) {
-  const [tier, setTier] = useState<Tier>("simpleicons");
+  // Empty slug = known-dead simpleicons entry · skip straight to monogram
+  // (favicon tier can look inconsistent on brands with weak marks).
+  const [tier, setTier] = useState<Tier>(slug ? "simpleicons" : "monogram");
 
   if (tier !== "monogram") {
     const src =
