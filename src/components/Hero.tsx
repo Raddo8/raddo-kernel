@@ -719,7 +719,7 @@ function VaultExhibit({
                 </div>
                 <a
                   href="/consult"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); track("consult_cta_click", "/"); }}
                   className="raddo-cta-brass group inline-flex items-center gap-2 font-sans sm:ml-auto"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
