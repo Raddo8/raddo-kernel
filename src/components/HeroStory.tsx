@@ -1042,7 +1042,7 @@ export function HeroStory() {
       />
 
       {/* ====== PINNED SITE HEADER ====== */}
-      <SiteHeader />
+      <SiteHeader cta={{ label: "Begin the consult", href: "/consult", onClick: () => track("consult_cta_click", "/hero-story") }} />
 
 
 
