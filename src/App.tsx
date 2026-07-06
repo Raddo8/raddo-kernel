@@ -25,6 +25,7 @@ import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
+import HeroStory from "@/components/HeroStory";
 import Consult from "@/pages/Consult";
 import ConsultThankYou from "@/pages/ConsultThankYou";
 import Debrief from "@/pages/Debrief";
