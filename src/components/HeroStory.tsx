@@ -1516,8 +1516,37 @@ export function HeroStory() {
         </motion.div>
       </section>
 
+      {/* ====== B4 · CHAPTER 04 · IN PLAIN TERMS · closing plate ====== */}
+      <section className="relative z-10 mx-auto w-full max-w-5xl px-6 py-16 sm:px-8 md:px-12 lg:py-24 lg:px-16">
+        <ChapterOverline n="04" label="in plain terms" />
+        <p
+          className="font-sans text-raddo-charcoal"
+          style={{ fontSize: 18, lineHeight: 1.7, marginBottom: 32 }}
+        >
+          COB · Chief of Business · is a private operating intelligence built around one principal or one business. It connects to the systems you already run · email, meetings, documents, calendar, financials, business chat · and holds the full context of your operation so you never carry it alone. Your COB prepares your briefings, drafts in your cadence, tracks every commitment, and remembers every decision, so you arrive prepared in every room. Engagements begin with a twenty-minute consult. From access to installed, calibrated operation takes two weeks. COB serves owners and executives who want their operation carried, their history held, and their edge compounding · built for the chair the day answers to. Begin the consult at chiefofbusiness.ai/consult.
+        </p>
+        <a
+          href="/consult"
+          onClick={() => track("consult_cta_click", "/hero-story")}
+          className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+          style={{
+            backgroundColor: "hsl(var(--raddo-brass))",
+            color: "hsl(var(--raddo-ink-deep))",
+            padding: "16px 28px",
+            borderRadius: 4,
+            fontSize: 15,
+            fontWeight: 600,
+            letterSpacing: "0.01em",
+          }}
+        >
+          <span>Begin the consult</span>
+          <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
+        </a>
+        <ChapterClose />
+      </section>
 
       {/* ====== FOOTER ====== */}
+
       <footer
         className="relative z-10 w-full"
         style={{ backgroundColor: "hsl(var(--raddo-ink-deep))" }}
