@@ -1059,8 +1059,8 @@ export function HeroStory() {
             opacity: reduce || stripShown ? 1 : 0,
             transition: "opacity 700ms cubic-bezier(0.22,1,0.36,1)",
           }}
-
         >
+
           <div className="dossier-navy-pane w-full flex flex-col items-center gap-3 px-4 py-4 sm:px-8 sm:py-5 md:px-16">
             <p
               className="m-0 text-center font-sans"
