@@ -27,7 +27,12 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   );
 }
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  /** Optional brass CTA rendered in the primary row (right of logo, left of icons). */
+  cta?: { label: string; href: string; onClick?: () => void };
+};
+
+export function SiteHeader({ cta }: SiteHeaderProps = {}) {
   const reduce = useReducedMotion();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
