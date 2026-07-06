@@ -983,6 +983,7 @@ export function HeroStory() {
             const v = e.currentTarget;
             // Only start timers once the video has actual buffered data ready to play
             if (v.readyState < 2) return;
+            setTimeout(() => setStripShown(true), 1500);
             setTimeout(() => setLitanyShown(true), 2000);
             setTimeout(() => setFinaleShown(true), 6000);
           }}
@@ -990,10 +991,12 @@ export function HeroStory() {
             if (litanyShown) return;
             const v = e.currentTarget;
             if (v.readyState < 3) return;
+            setTimeout(() => setStripShown(true), 1500);
             setTimeout(() => setLitanyShown(true), 2000);
             setTimeout(() => setFinaleShown(true), 6000);
           }}
         />
+
         {/* Soft paper tint so headline contrast holds */}
         <div
           className="absolute inset-0"
