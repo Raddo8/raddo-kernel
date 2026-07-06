@@ -18,6 +18,7 @@ import {
   type ToolCategory,
 } from "@/lib/consult-data";
 import { ToolLogo } from "@/components/consult/ToolLogo";
+import { track } from "@/lib/track";
 
 import type { DiscResponse } from "@/lib/consult-analysis";
 
