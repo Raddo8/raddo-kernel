@@ -3,8 +3,8 @@
 // Never throws · never awaits on caller path.
 import { supabase } from "@/integrations/supabase/client";
 
-const SESSION_KEY = "raddo-session-id";
-const UTM_KEY = "raddo-session-utm";
+const SESSION_KEY = "cob-session-id";
+const UTM_KEY = "cob-session-utm";
 
 type Utm = {
   utm_source?: string | null;

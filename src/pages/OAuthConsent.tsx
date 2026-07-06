@@ -163,28 +163,28 @@ export default function OAuthConsent() {
           style={{
             fontSize: 10,
             letterSpacing: "0.22em",
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontWeight: 700,
           }}
         >
           consent · pending
         </p>
         <h1
-          className="font-display text-raddo-ink-deep"
+          className="font-display text-dossier-ink-deep"
           style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
         >
           Connect to COB · Council
         </h1>
 
         {loading ? (
-          <p className="mt-6 text-sm text-raddo-ash">Loading authorization request…</p>
+          <p className="mt-6 text-sm text-dossier-ash">Loading authorization request…</p>
         ) : (
           <>
             <p
-              className="mt-4 text-base text-raddo-charcoal/85"
+              className="mt-4 text-base text-dossier-charcoal/85"
               style={{ lineHeight: 1.55 }}
             >
-              <span className="font-medium text-raddo-ink-deep">{label}</span> is requesting
+              <span className="font-medium text-dossier-ink-deep">{label}</span> is requesting
               permission to convene your COB Council and act on your behalf inside your COB
               workspace.
             </p>
@@ -195,25 +195,25 @@ export default function OAuthConsent() {
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.22em",
-                  color: "hsl(var(--raddo-brass-deep))",
+                  color: "hsl(var(--dossier-brass-deep))",
                   fontWeight: 700,
                 }}
               >
                 exhibit · scopes requested
               </p>
               {scopes.length === 0 ? (
-                <p className="text-sm text-raddo-charcoal/75">
+                <p className="text-sm text-dossier-charcoal/75">
                   Confirm your identity. No additional access is requested.
                 </p>
               ) : (
-                <ul className="border-t border-raddo-paper-edge">
+                <ul className="border-t border-dossier-paper-edge">
                   {scopes.map((s, i) => (
                     <li
                       key={s}
-                      className="flex items-baseline gap-4 border-b border-raddo-paper-edge py-3"
+                      className="flex items-baseline gap-4 border-b border-dossier-paper-edge py-3"
                     >
                       <span
-                        className="font-mono text-raddo-brass-deep min-w-[28px]"
+                        className="font-mono text-dossier-brass-deep min-w-[28px]"
                         style={{
                           fontSize: 10,
                           letterSpacing: "0.18em",
@@ -222,10 +222,10 @@ export default function OAuthConsent() {
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span className="flex-1">
-                        <span className="block text-[15px] text-raddo-ink-deep font-medium">
+                        <span className="block text-[15px] text-dossier-ink-deep font-medium">
                           {describeScope(s)}
                         </span>
-                        <span className="block mt-0.5 font-mono text-[11px] text-raddo-ash">
+                        <span className="block mt-0.5 font-mono text-[11px] text-dossier-ash">
                           {s}
                         </span>
                       </span>
@@ -235,9 +235,9 @@ export default function OAuthConsent() {
               )}
 
               {redirectPreview && (
-                <p className="mt-5 text-xs text-raddo-ash break-all">
+                <p className="mt-5 text-xs text-dossier-ash break-all">
                   After approval, you will return to{" "}
-                  <span className="font-mono text-raddo-charcoal">
+                  <span className="font-mono text-dossier-charcoal">
                     {safeOrigin(redirectPreview)}
                   </span>
                   .
@@ -248,7 +248,7 @@ export default function OAuthConsent() {
         )}
 
         {error && (
-          <p role="alert" className="mt-6 text-sm text-raddo-brass-deep">
+          <p role="alert" className="mt-6 text-sm text-dossier-brass-deep">
             {error}
           </p>
         )}
@@ -259,7 +259,7 @@ export default function OAuthConsent() {
               variant="outline"
               disabled={!!submitting}
               onClick={() => decide("deny")}
-              className="border-raddo-paper-edge text-raddo-charcoal hover:bg-raddo-paper-edge/40"
+              className="border-dossier-paper-edge text-dossier-charcoal hover:bg-dossier-paper-edge/40"
               style={{ borderRadius: 4 }}
             >
               {submitting === "deny" ? "Declining…" : "Deny"}
@@ -267,7 +267,7 @@ export default function OAuthConsent() {
             <Button
               disabled={!!submitting}
               onClick={() => decide("approve")}
-              className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+              className="bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
               style={{ borderRadius: 4, fontWeight: 600 }}
             >
               {submitting === "approve" ? "Approving…" : "Approve access"}
@@ -275,7 +275,7 @@ export default function OAuthConsent() {
           </div>
         )}
 
-        <p className="mt-10 text-xs text-raddo-ash" style={{ lineHeight: 1.6 }}>
+        <p className="mt-10 text-xs text-dossier-ash" style={{ lineHeight: 1.6 }}>
           You can revoke this access at any time from your COB account settings. Approving grants
           only the permissions listed above.
         </p>

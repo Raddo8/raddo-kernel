@@ -7,7 +7,7 @@ const BOOKING_URL =
 
 export default function NextStep() {
   return (
-    <main className="min-h-screen bg-raddo-paper">
+    <main className="min-h-screen bg-dossier-paper">
       <SeoHead
         title="You are on the list · COB"
         description="Your COB conversation is in. Someone from the deployment team will reach out within one business day."
@@ -23,16 +23,16 @@ export default function NextStep() {
       <section className="mx-auto max-w-3xl px-6 py-16 md:px-10 md:py-20">
         <div
           className="dossier-navy-shadow bg-white p-8 md:p-12"
-          style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+          style={{ border: "1px solid hsl(var(--dossier-paper-edge))", borderRadius: 8 }}
         >
           <p
-            className="font-mono uppercase text-raddo-brass-deep"
+            className="font-mono uppercase text-dossier-brass-deep"
             style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 700 }}
           >
             skip the back and forth
           </p>
           <p
-            className="mt-5 font-sans text-raddo-charcoal"
+            className="mt-5 font-sans text-dossier-charcoal"
             style={{ fontSize: 15, lineHeight: 1.6 }}
           >
             Grab a slot directly · thirty minutes, one conversation, real answers.
@@ -44,8 +44,8 @@ export default function NextStep() {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center font-mono uppercase"
               style={{
-                backgroundColor: "hsl(var(--raddo-brass))",
-                color: "hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-brass))",
+                color: "hsl(var(--dossier-ink-deep))",
                 borderRadius: 4,
                 padding: "14px 22px",
                 fontSize: 12,
@@ -57,7 +57,7 @@ export default function NextStep() {
             </a>
             <Link
               to="/"
-              className="font-mono uppercase text-raddo-ash hover:text-raddo-ink-deep"
+              className="font-mono uppercase text-dossier-ash hover:text-dossier-ink-deep"
               style={{ fontSize: 11, letterSpacing: "0.18em" }}
             >
               Back to home

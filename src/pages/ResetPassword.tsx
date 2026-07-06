@@ -65,16 +65,16 @@ export default function ResetPassword() {
         description="Set a new password for your COB."
         path="/reset-password"
       />
-      <main className="min-h-screen bg-raddo-paper text-raddo-charcoal flex items-start justify-center px-6 py-16">
+      <main className="min-h-screen bg-dossier-paper text-dossier-charcoal flex items-start justify-center px-6 py-16">
         <div className="w-full max-w-sm">
           <p
-            className="text-xs uppercase tracking-[0.2em] text-raddo-ash mb-4"
+            className="text-xs uppercase tracking-[0.2em] text-dossier-ash mb-4"
             style={{ fontFamily: "Inter, sans-serif" }}
           >
             Clarity · Origin · Decision
           </p>
           <h1
-            className="text-raddo-ink"
+            className="text-dossier-ink"
             style={{
               fontFamily: "Fraunces, serif",
               fontWeight: 800,
@@ -86,7 +86,7 @@ export default function ResetPassword() {
             Set a new password
           </h1>
           <p
-            className="mt-4 text-base text-raddo-charcoal/85"
+            className="mt-4 text-base text-dossier-charcoal/85"
             style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.55 }}
           >
             {done
@@ -97,7 +97,7 @@ export default function ResetPassword() {
           {done ? (
             <Button
               onClick={() => window.location.assign("/login")}
-              className="mt-8 w-full bg-raddo-brass text-raddo-night hover:bg-raddo-brass-deep hover:text-raddo-paper"
+              className="mt-8 w-full bg-dossier-brass text-dossier-night hover:bg-dossier-brass-deep hover:text-dossier-paper"
               style={{ borderRadius: 8, fontFamily: "Inter, sans-serif", fontWeight: 600 }}
             >
               Continue to sign in
@@ -107,7 +107,7 @@ export default function ResetPassword() {
               <div>
                 <label
                   htmlFor="password"
-                  className="block text-xs uppercase tracking-[0.18em] text-raddo-ash mb-2"
+                  className="block text-xs uppercase tracking-[0.18em] text-dossier-ash mb-2"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   New password
@@ -120,14 +120,14 @@ export default function ResetPassword() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="bg-white border-raddo-paper-edge text-raddo-ink pr-16"
+                    className="bg-white border-dossier-paper-edge text-dossier-ink pr-16"
                     style={{ fontFamily: "Inter, sans-serif", borderRadius: 8 }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     aria-label={showPassword ? "Hide password" : "Show password"}
-                    className="absolute inset-y-0 right-2 my-auto h-7 px-2 flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-raddo-ash hover:text-raddo-ink"
+                    className="absolute inset-y-0 right-2 my-auto h-7 px-2 flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
@@ -139,7 +139,7 @@ export default function ResetPassword() {
               <div>
                 <label
                   htmlFor="confirm"
-                  className="block text-xs uppercase tracking-[0.18em] text-raddo-ash mb-2"
+                  className="block text-xs uppercase tracking-[0.18em] text-dossier-ash mb-2"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   Confirm password
@@ -151,7 +151,7 @@ export default function ResetPassword() {
                   required
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
-                  className="bg-white border-raddo-paper-edge text-raddo-ink"
+                  className="bg-white border-dossier-paper-edge text-dossier-ink"
                   style={{ fontFamily: "Inter, sans-serif", borderRadius: 8 }}
                 />
               </div>
@@ -159,7 +159,7 @@ export default function ResetPassword() {
               {error && (
                 <p
                   role="alert"
-                  className="text-sm text-raddo-brass-deep"
+                  className="text-sm text-dossier-brass-deep"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   {error}
@@ -168,7 +168,7 @@ export default function ResetPassword() {
 
               {!ready && (
                 <p
-                  className="text-sm text-raddo-ash"
+                  className="text-sm text-dossier-ash"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
                   Verifying recovery link…
@@ -178,7 +178,7 @@ export default function ResetPassword() {
               <Button
                 type="submit"
                 disabled={submitting || !ready}
-                className="w-full bg-raddo-brass text-raddo-night hover:bg-raddo-brass-deep hover:text-raddo-paper"
+                className="w-full bg-dossier-brass text-dossier-night hover:bg-dossier-brass-deep hover:text-dossier-paper"
                 style={{ borderRadius: 8, fontFamily: "Inter, sans-serif", fontWeight: 600 }}
               >
                 {submitting ? "Updating…" : "Update password"}

@@ -33,7 +33,7 @@ export function DossierPageBand({
           {backHref ? (
             <Link
               to={backHref}
-              className="font-mono uppercase text-raddo-paper/70 hover:text-raddo-paper"
+              className="font-mono uppercase text-dossier-paper/70 hover:text-dossier-paper"
               style={{ fontSize: 11, letterSpacing: "0.18em" }}
             >
               {backLabel}
@@ -41,7 +41,7 @@ export function DossierPageBand({
           ) : null}
         </div>
         <h1
-          className="font-display text-raddo-paper max-w-4xl"
+          className="font-display text-dossier-paper max-w-4xl"
           style={{
             fontSize: "clamp(2rem, 4.5vw, 3.5rem)",
             lineHeight: 1.06,
@@ -59,7 +59,7 @@ export function DossierPageBand({
         </h1>
         {subhead ? (
           <p
-            className="max-w-3xl font-sans text-raddo-paper/85"
+            className="max-w-3xl font-sans text-dossier-paper/85"
             style={{ fontSize: 17, lineHeight: 1.6 }}
           >
             {subhead}

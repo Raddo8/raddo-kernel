@@ -56,7 +56,7 @@ export function ConfirmDebriefDialog({
         >
           <div
             className="absolute inset-0"
-            style={{ backgroundColor: "hsl(var(--raddo-ink-deep) / 0.55)" }}
+            style={{ backgroundColor: "hsl(var(--dossier-ink-deep) / 0.55)" }}
             onClick={submitting ? undefined : onCancel}
           />
           <motion.div
@@ -66,16 +66,16 @@ export function ConfirmDebriefDialog({
             transition={{ duration: 0.42, ease: BRAND_EASE }}
             className="relative w-full max-w-xl p-7 max-h-[88vh] overflow-y-auto"
             style={{
-              backgroundColor: "hsl(var(--raddo-paper))",
-              border: "1px solid hsl(var(--raddo-paper-edge))",
+              backgroundColor: "hsl(var(--dossier-paper))",
+              border: "1px solid hsl(var(--dossier-paper-edge))",
               borderRadius: 8,
-              boxShadow: "0 8px 24px -12px hsl(var(--raddo-ink-deep) / 0.35)",
+              boxShadow: "0 8px 24px -12px hsl(var(--dossier-ink-deep) / 0.35)",
             }}
           >
             <span
               className="font-mono"
               style={{
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 fontSize: 10,
                 letterSpacing: "0.18em",
                 fontWeight: 600,
@@ -88,7 +88,7 @@ export function ConfirmDebriefDialog({
               id="confirm-debrief-heading"
               className="font-display mt-3"
               style={{
-                color: "hsl(var(--raddo-ink-deep))",
+                color: "hsl(var(--dossier-ink-deep))",
                 fontSize: 24,
                 lineHeight: 1.2,
                 fontWeight: 700,
@@ -99,7 +99,7 @@ export function ConfirmDebriefDialog({
             <p
               className="mt-3"
               style={{
-                color: "hsl(var(--raddo-charcoal))",
+                color: "hsl(var(--dossier-charcoal))",
                 fontSize: 14,
                 lineHeight: 1.6,
               }}
@@ -110,7 +110,7 @@ export function ConfirmDebriefDialog({
             <dl
               className="mt-5"
               style={{
-                border: "1px solid hsl(var(--raddo-paper-edge))",
+                border: "1px solid hsl(var(--dossier-paper-edge))",
                 borderRadius: 8,
                 backgroundColor: "white",
               }}
@@ -120,7 +120,7 @@ export function ConfirmDebriefDialog({
                   key={row.label}
                   className="grid grid-cols-[140px_minmax(0,1fr)] gap-3 px-4 py-3"
                   style={{
-                    borderTop: idx === 0 ? "none" : "1px solid hsl(var(--raddo-paper-edge))",
+                    borderTop: idx === 0 ? "none" : "1px solid hsl(var(--dossier-paper-edge))",
                   }}
                 >
                   <dt
@@ -129,14 +129,14 @@ export function ConfirmDebriefDialog({
                       fontSize: 10,
                       letterSpacing: "0.16em",
                       textTransform: "uppercase",
-                      color: "hsl(var(--raddo-ash))",
+                      color: "hsl(var(--dossier-ash))",
                     }}
                   >
                     {row.label}
                   </dt>
                   <dd
                     style={{
-                      color: "hsl(var(--raddo-charcoal))",
+                      color: "hsl(var(--dossier-charcoal))",
                       fontSize: 14,
                       lineHeight: 1.5,
                       wordBreak: "break-word",
@@ -155,9 +155,9 @@ export function ConfirmDebriefDialog({
                 disabled={submitting}
                 className="font-mono transition-colors disabled:opacity-50"
                 style={{
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
+                  border: "1px solid hsl(var(--dossier-paper-edge))",
                   backgroundColor: "transparent",
-                  color: "hsl(var(--raddo-charcoal))",
+                  color: "hsl(var(--dossier-charcoal))",
                   borderRadius: 4,
                   padding: "10px 16px",
                   fontSize: 11,
@@ -174,9 +174,9 @@ export function ConfirmDebriefDialog({
                 disabled={submitting}
                 className="font-mono transition-colors disabled:opacity-60"
                 style={{
-                  backgroundColor: "hsl(var(--raddo-brass))",
-                  color: "hsl(var(--raddo-ink-deep))",
-                  border: "1px solid hsl(var(--raddo-brass-deep))",
+                  backgroundColor: "hsl(var(--dossier-brass))",
+                  color: "hsl(var(--dossier-ink-deep))",
+                  border: "1px solid hsl(var(--dossier-brass-deep))",
                   borderRadius: 4,
                   padding: "10px 18px",
                   fontSize: 11,

@@ -35,7 +35,7 @@ export function DossierBrandPane({
           {chip}
         </Link>
         <h2
-          className="font-display mt-8 text-raddo-paper"
+          className="font-display mt-8 text-dossier-paper"
           style={{ fontSize: "clamp(28px, 3.6vw, 44px)", fontWeight: 800, lineHeight: 1.1 }}
         >
           {headline}{" "}
@@ -43,7 +43,7 @@ export function DossierBrandPane({
           {headlineTrail ? <>{headlineTrail}</> : null}
         </h2>
         <p
-          className="mt-6 max-w-md font-sans text-raddo-paper/80"
+          className="mt-6 max-w-md font-sans text-dossier-paper/80"
           style={{ fontSize: 16, lineHeight: 1.6 }}
         >
           {pitch}

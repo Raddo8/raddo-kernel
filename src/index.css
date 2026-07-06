@@ -7,45 +7,45 @@
 @layer base {
   :root {
     /* RADDO brand tokens (HSL triplets — used directly and as the source for semantic tokens) */
-    --raddo-ink: 210 82% 27%;
-    --raddo-ink-deep: 211 93% 17%;
-    --raddo-ink-soft: 210 75% 37%;
-    --raddo-paper: 40 33% 97%;
-    --raddo-paper-edge: 40 12% 88%;
-    --raddo-brass: 35 86% 54%;
-    --raddo-brass-deep: 33 84% 28%;
-    --raddo-ash: 48 4% 37%;
-    --raddo-charcoal: 60 3% 17%;
-    --raddo-night: 240 10% 4%;
+    --dossier-ink: 210 82% 27%;
+    --dossier-ink-deep: 211 93% 17%;
+    --dossier-ink-soft: 210 75% 37%;
+    --dossier-paper: 40 33% 97%;
+    --dossier-paper-edge: 40 12% 88%;
+    --dossier-brass: 35 86% 54%;
+    --dossier-brass-deep: 33 84% 28%;
+    --dossier-ash: 48 4% 37%;
+    --dossier-charcoal: 60 3% 17%;
+    --dossier-night: 240 10% 4%;
 
-    /* Semantic tokens remapped to the RADDO palette (paper-dominant) */
-    --background: var(--raddo-paper);
-    --foreground: var(--raddo-charcoal);
+    /* Semantic tokens remapped to the dossier palette (paper-dominant) */
+    --background: var(--dossier-paper);
+    --foreground: var(--dossier-charcoal);
 
     --card: 0 0% 100%;
-    --card-foreground: var(--raddo-charcoal);
+    --card-foreground: var(--dossier-charcoal);
 
     --popover: 0 0% 100%;
-    --popover-foreground: var(--raddo-charcoal);
+    --popover-foreground: var(--dossier-charcoal);
 
-    --primary: var(--raddo-ink-deep);
-    --primary-foreground: var(--raddo-paper);
+    --primary: var(--dossier-ink-deep);
+    --primary-foreground: var(--dossier-paper);
 
-    --secondary: var(--raddo-paper-edge);
-    --secondary-foreground: var(--raddo-ink-deep);
+    --secondary: var(--dossier-paper-edge);
+    --secondary-foreground: var(--dossier-ink-deep);
 
     --muted: 40 20% 93%;
-    --muted-foreground: var(--raddo-ash);
+    --muted-foreground: var(--dossier-ash);
 
-    --accent: var(--raddo-brass);
-    --accent-foreground: var(--raddo-ink-deep);
+    --accent: var(--dossier-brass);
+    --accent-foreground: var(--dossier-ink-deep);
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: var(--raddo-paper-edge);
-    --input: var(--raddo-paper-edge);
-    --ring: var(--raddo-brass);
+    --border: var(--dossier-paper-edge);
+    --input: var(--dossier-paper-edge);
+    --ring: var(--dossier-brass);
 
     --radius: 0.5rem;
 
@@ -60,14 +60,14 @@
     --status-blue-foreground: 0 0% 100%;
 
     /* Sidebar — ink-deep chrome with brass accent */
-    --sidebar-background: var(--raddo-ink-deep);
+    --sidebar-background: var(--dossier-ink-deep);
     --sidebar-foreground: 40 20% 88%;
-    --sidebar-primary: var(--raddo-brass);
-    --sidebar-primary-foreground: var(--raddo-ink-deep);
+    --sidebar-primary: var(--dossier-brass);
+    --sidebar-primary-foreground: var(--dossier-ink-deep);
     --sidebar-accent: 211 60% 22%;
-    --sidebar-accent-foreground: var(--raddo-paper);
+    --sidebar-accent-foreground: var(--dossier-paper);
     --sidebar-border: 211 60% 22%;
-    --sidebar-ring: var(--raddo-brass);
+    --sidebar-ring: var(--dossier-brass);
   }
 }
 
@@ -100,7 +100,7 @@
   }
 }
 
-@keyframes raddo-shimmer {
+@keyframes dossier-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
@@ -114,12 +114,12 @@
   .dossier-navy-pane {
     position: relative;
     isolation: isolate;
-    color: hsl(var(--raddo-paper));
-    background-color: hsl(var(--raddo-ink-deep));
+    color: hsl(var(--dossier-paper));
+    background-color: hsl(var(--dossier-ink-deep));
     background-image:
-      radial-gradient(ellipse 60% 55% at 82% 12%, hsl(var(--raddo-brass) / 0.18), transparent 60%),
-      radial-gradient(ellipse 55% 55% at 12% 92%, hsl(var(--raddo-ink-soft) / 0.28), transparent 65%),
-      linear-gradient(160deg, hsl(211 93% 8%) 0%, hsl(var(--raddo-ink-deep)) 55%, hsl(210 82% 22%) 100%);
+      radial-gradient(ellipse 60% 55% at 82% 12%, hsl(var(--dossier-brass) / 0.18), transparent 60%),
+      radial-gradient(ellipse 55% 55% at 12% 92%, hsl(var(--dossier-ink-soft) / 0.28), transparent 65%),
+      linear-gradient(160deg, hsl(211 93% 8%) 0%, hsl(var(--dossier-ink-deep)) 55%, hsl(210 82% 22%) 100%);
   }
   .dossier-navy-pane::before {
     content: "";
@@ -138,8 +138,8 @@
 
   .dossier-brass-chip {
     display: inline-block;
-    background-color: hsl(var(--raddo-brass));
-    color: hsl(var(--raddo-ink-deep));
+    background-color: hsl(var(--dossier-brass));
+    color: hsl(var(--dossier-ink-deep));
     font-family: 'JetBrains Mono', monospace;
     font-weight: 700;
     font-size: 11px;
@@ -151,13 +151,13 @@
   }
 
   .dossier-brass-underline {
-    color: hsl(var(--raddo-brass));
-    border-bottom: 2px solid hsl(var(--raddo-brass));
+    color: hsl(var(--dossier-brass));
+    border-bottom: 2px solid hsl(var(--dossier-brass));
     padding-bottom: 2px;
   }
 
   .dossier-navy-shadow {
-    box-shadow: 0 10px 40px -20px hsl(var(--raddo-ink-deep) / 0.25);
+    box-shadow: 0 10px 40px -20px hsl(var(--dossier-ink-deep) / 0.25);
   }
 
   .dossier-mono-footer {
@@ -176,11 +176,11 @@
 /* Print contract · panes flatten to cream paper with ink-deep text. */
 @media print {
   .dossier-navy-pane {
-    background: hsl(var(--raddo-paper)) !important;
-    color: hsl(var(--raddo-charcoal)) !important;
+    background: hsl(var(--dossier-paper)) !important;
+    color: hsl(var(--dossier-charcoal)) !important;
   }
   .dossier-navy-pane::before { display: none !important; }
-  .dossier-navy-pane .dossier-mono-footer { color: hsl(var(--raddo-ash)) !important; }
+  .dossier-navy-pane .dossier-mono-footer { color: hsl(var(--dossier-ash)) !important; }
   .dossier-navy-pane h1,
-  .dossier-navy-pane h2 { color: hsl(var(--raddo-ink-deep)) !important; }
+  .dossier-navy-pane h2 { color: hsl(var(--dossier-ink-deep)) !important; }
 }

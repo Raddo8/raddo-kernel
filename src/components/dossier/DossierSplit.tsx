@@ -22,7 +22,7 @@ export function DossierSplit({
   wide?: boolean;
 }) {
   return (
-    <main className="min-h-screen bg-raddo-paper">
+    <main className="min-h-screen bg-dossier-paper">
       {/* Mobile compact chip lockup · replaces the pane below md */}
       <div className="dossier-navy-pane md:hidden px-6 py-6">
         <span className="dossier-brass-chip">{brand.chip ?? "chief of business · dossier"}</span>
@@ -35,7 +35,7 @@ export function DossierSplit({
         <section className="flex items-center justify-center px-6 py-12 md:px-10 md:py-16">
           <div
             className={`dossier-navy-shadow w-full ${wide ? "max-w-xl" : "max-w-md"} bg-white p-8 md:p-10`}
-            style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+            style={{ border: "1px solid hsl(var(--dossier-paper-edge))", borderRadius: 8 }}
           >
             {children}
           </div>
@@ -54,7 +54,7 @@ export function DossierFieldLabel({ htmlFor, children }: { htmlFor?: string; chi
       style={{
         fontSize: 10,
         letterSpacing: "0.22em",
-        color: "hsl(var(--raddo-ash))",
+        color: "hsl(var(--dossier-ash))",
       }}
     >
       {children}

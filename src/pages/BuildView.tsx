@@ -66,8 +66,8 @@ export default function BuildView() {
     inset: 0,
     width: "100vw",
     height: "100vh",
-    background: "hsl(var(--raddo-paper))",
-    color: "hsl(var(--raddo-charcoal))",
+    background: "hsl(var(--dossier-paper))",
+    color: "hsl(var(--dossier-charcoal))",
     fontFamily: "Inter, system-ui, -apple-system, sans-serif",
   };
 
@@ -81,7 +81,7 @@ export default function BuildView() {
             padding: 40,
             textAlign: "center",
             background: "white",
-            border: "1px solid hsl(var(--raddo-paper-edge))",
+            border: "1px solid hsl(var(--dossier-paper-edge))",
             borderRadius: 8,
           }}
         >
@@ -90,7 +90,7 @@ export default function BuildView() {
             style={{
               fontSize: 10,
               letterSpacing: "0.22em",
-              color: "hsl(var(--raddo-brass-deep))",
+              color: "hsl(var(--dossier-brass-deep))",
               fontWeight: 700,
               margin: "0 0 14px",
             }}
@@ -102,14 +102,14 @@ export default function BuildView() {
             style={{
               fontSize: 22,
               fontWeight: 800,
-              color: "hsl(var(--raddo-ink-deep))",
+              color: "hsl(var(--dossier-ink-deep))",
               margin: "0 0 10px",
               lineHeight: 1.2,
             }}
           >
             This build is no longer available.
           </h1>
-          <p style={{ color: "hsl(var(--raddo-ash))", margin: 0, fontSize: 14, lineHeight: 1.6 }}>
+          <p style={{ color: "hsl(var(--dossier-ash))", margin: 0, fontSize: 14, lineHeight: 1.6 }}>
             The link may have expired or been revoked.
           </p>
         </div>

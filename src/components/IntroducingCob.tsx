@@ -103,24 +103,24 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
   // Real commissioned dioramas drop in here later.
   const toneStyle: Record<Panel["tone"], { bg: string; fg: string; border: string }> = {
     dawn: {
-      bg: "hsl(var(--raddo-paper))",
-      fg: "hsl(var(--raddo-ink-deep))",
-      border: "hsl(var(--raddo-paper-edge))",
+      bg: "hsl(var(--dossier-paper))",
+      fg: "hsl(var(--dossier-ink-deep))",
+      border: "hsl(var(--dossier-paper-edge))",
     },
     dusk: {
-      bg: "hsl(var(--raddo-ink-deep))",
-      fg: "hsl(var(--raddo-paper))",
-      border: "hsl(var(--raddo-ink-soft))",
+      bg: "hsl(var(--dossier-ink-deep))",
+      fg: "hsl(var(--dossier-paper))",
+      border: "hsl(var(--dossier-ink-soft))",
     },
     lamp: {
-      bg: "hsl(var(--raddo-brass) / 0.18)",
-      fg: "hsl(var(--raddo-ink-deep))",
-      border: "hsl(var(--raddo-brass) / 0.6)",
+      bg: "hsl(var(--dossier-brass) / 0.18)",
+      fg: "hsl(var(--dossier-ink-deep))",
+      border: "hsl(var(--dossier-brass) / 0.6)",
     },
     atrium: {
       bg: "hsl(40 28% 94%)",
-      fg: "hsl(var(--raddo-ink-deep))",
-      border: "hsl(var(--raddo-paper-edge))",
+      fg: "hsl(var(--dossier-ink-deep))",
+      border: "hsl(var(--dossier-paper-edge))",
     },
   };
   const s = toneStyle[panel.tone];
@@ -166,8 +166,8 @@ function PlaceholderFigure({ panel, eager }: { panel: Panel; eager: boolean }) {
             style={{
               border: `1px solid ${s.border}`,
               borderRadius: 4,
-              backgroundColor: "hsl(var(--raddo-paper) / 0.85)",
-              color: "hsl(var(--raddo-ink-deep))",
+              backgroundColor: "hsl(var(--dossier-paper) / 0.85)",
+              color: "hsl(var(--dossier-ink-deep))",
               fontFamily: "Inter, system-ui, sans-serif",
               fontSize: 13,
               lineHeight: 1.5,
@@ -374,21 +374,21 @@ export function IntroducingCob() {
                 fontWeight: 700,
                 letterSpacing: "0.22em",
                 color: active
-                  ? "hsl(var(--raddo-ink-deep))"
-                  : "hsl(var(--raddo-ash))",
+                  ? "hsl(var(--dossier-ink-deep))"
+                  : "hsl(var(--dossier-ash))",
                 backgroundColor: active
-                  ? "hsl(var(--raddo-paper))"
+                  ? "hsl(var(--dossier-paper))"
                   : isBack
                     ? "hsl(40 20% 89%)"
                     : "hsl(40 22% 92%)",
                 borderTop: active
-                  ? "2px solid hsl(var(--raddo-brass))"
-                  : "1px solid hsl(var(--raddo-paper-edge))",
-                borderLeft: "1px solid hsl(var(--raddo-paper-edge))",
-                borderRight: "1px solid hsl(var(--raddo-paper-edge))",
+                  ? "2px solid hsl(var(--dossier-brass))"
+                  : "1px solid hsl(var(--dossier-paper-edge))",
+                borderLeft: "1px solid hsl(var(--dossier-paper-edge))",
+                borderRight: "1px solid hsl(var(--dossier-paper-edge))",
                 borderBottom: active
-                  ? "1px solid hsl(var(--raddo-paper))"
-                  : "1px solid hsl(var(--raddo-paper-edge))",
+                  ? "1px solid hsl(var(--dossier-paper))"
+                  : "1px solid hsl(var(--dossier-paper-edge))",
                 borderTopLeftRadius: 6,
                 borderTopRightRadius: 6,
                 marginBottom: active ? -1 : 0,
@@ -398,7 +398,7 @@ export function IntroducingCob() {
                 textOverflow: "ellipsis",
                 cursor: "pointer",
                 boxShadow: isBack
-                  ? "inset 0 -6px 8px -6px hsl(var(--raddo-ink-deep) / 0.08)"
+                  ? "inset 0 -6px 8px -6px hsl(var(--dossier-ink-deep) / 0.08)"
                   : undefined,
               }}
             >
@@ -450,7 +450,7 @@ export function IntroducingCob() {
             left: 12,
             right: 12,
             borderRadius: 8,
-            border: "1px solid hsl(var(--raddo-paper-edge))",
+            border: "1px solid hsl(var(--dossier-paper-edge))",
             backgroundColor: "hsl(40 22% 94%)",
             zIndex: 0,
           }}
@@ -464,7 +464,7 @@ export function IntroducingCob() {
             left: 6,
             right: 6,
             borderRadius: 8,
-            border: "1px solid hsl(var(--raddo-paper-edge))",
+            border: "1px solid hsl(var(--dossier-paper-edge))",
             backgroundColor: "hsl(40 26% 95%)",
             zIndex: 0,
           }}
@@ -480,10 +480,10 @@ export function IntroducingCob() {
           style={{
             zIndex: 1,
             borderRadius: 8,
-            border: "1px solid hsl(var(--raddo-ink-soft) / 0.35)",
-            backgroundColor: "hsl(var(--raddo-paper))",
+            border: "1px solid hsl(var(--dossier-ink-soft) / 0.35)",
+            backgroundColor: "hsl(var(--dossier-paper))",
             boxShadow:
-              "0 1px 0 hsl(var(--raddo-ink-deep) / 0.04), 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.25)",
+              "0 1px 0 hsl(var(--dossier-ink-deep) / 0.04), 0 8px 24px -16px hsl(var(--dossier-ink-deep) / 0.25)",
             overflow: "hidden",
           }}
         >
@@ -494,21 +494,21 @@ export function IntroducingCob() {
               fontSize: 10.5,
               letterSpacing: "0.28em",
               textTransform: "uppercase",
-              color: "hsl(var(--raddo-ash))",
-              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+              color: "hsl(var(--dossier-ash))",
+              borderBottom: "1px solid hsl(var(--dossier-paper-edge))",
               backgroundColor: "hsl(40 28% 96%)",
             }}
           >
             <span>
               Dossier №{" "}
-              <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>
+              <span style={{ color: "hsl(var(--dossier-ink-deep))" }}>
                 {String(index + 1).padStart(2, "0")}
               </span>{" "}
               / {String(PANELS.length).padStart(2, "0")}
             </span>
             <span
               style={{
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 fontWeight: 700,
               }}
             >
@@ -559,7 +559,7 @@ export function IntroducingCob() {
                         <p
                           className="uppercase font-mono"
                           style={{
-                            color: "hsl(var(--raddo-brass))",
+                            color: "hsl(var(--dossier-brass))",
                             fontSize: 11,
                             fontWeight: 700,
                             letterSpacing: "0.32em",
@@ -573,13 +573,13 @@ export function IntroducingCob() {
                             marginTop: 14,
                             width: 36,
                             height: 1,
-                            backgroundColor: "hsl(var(--raddo-brass))",
+                            backgroundColor: "hsl(var(--dossier-brass))",
                           }}
                         />
                         <p
                           className="font-display mt-5"
                           style={{
-                            color: "hsl(var(--raddo-ink-deep))",
+                            color: "hsl(var(--dossier-ink-deep))",
                             fontWeight: 700,
                             fontSize: "clamp(1.2rem, 2.25vw, 1.9rem)",
                             lineHeight: 1.18,
@@ -605,9 +605,9 @@ export function IntroducingCob() {
             className="hidden md:flex absolute left-3 top-1/2 -translate-y-1/2 size-10 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
             style={{
               borderRadius: 4,
-              backgroundColor: "hsl(var(--raddo-paper) / 0.95)",
-              border: "1px solid hsl(var(--raddo-paper-edge))",
-              color: "hsl(var(--raddo-ink-deep))",
+              backgroundColor: "hsl(var(--dossier-paper) / 0.95)",
+              border: "1px solid hsl(var(--dossier-paper-edge))",
+              color: "hsl(var(--dossier-ink-deep))",
               zIndex: 2,
             }}
           >
@@ -620,9 +620,9 @@ export function IntroducingCob() {
             className="hidden md:flex absolute right-3 top-1/2 -translate-y-1/2 size-10 items-center justify-center opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
             style={{
               borderRadius: 4,
-              backgroundColor: "hsl(var(--raddo-paper) / 0.95)",
-              border: "1px solid hsl(var(--raddo-paper-edge))",
-              color: "hsl(var(--raddo-ink-deep))",
+              backgroundColor: "hsl(var(--dossier-paper) / 0.95)",
+              border: "1px solid hsl(var(--dossier-paper-edge))",
+              color: "hsl(var(--dossier-ink-deep))",
               zIndex: 2,
             }}
           >
@@ -639,26 +639,26 @@ export function IntroducingCob() {
           onClick={onCta}
           className="font-sans inline-flex items-center justify-center transition-colors"
           style={{
-            backgroundColor: "hsl(var(--raddo-brass))",
-            color: "hsl(var(--raddo-ink-deep))",
+            backgroundColor: "hsl(var(--dossier-brass))",
+            color: "hsl(var(--dossier-ink-deep))",
             fontWeight: 600,
             fontSize: 15,
             letterSpacing: "0.02em",
             padding: "14px 28px",
             borderRadius: 8,
-            boxShadow: "0 2px 4px hsl(var(--raddo-ink-deep) / 0.12)",
+            boxShadow: "0 2px 4px hsl(var(--dossier-ink-deep) / 0.12)",
           }}
           onMouseEnter={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "hsl(var(--raddo-brass-deep))";
+              "hsl(var(--dossier-brass-deep))";
             (e.currentTarget as HTMLButtonElement).style.color =
-              "hsl(var(--raddo-paper))";
+              "hsl(var(--dossier-paper))";
           }}
           onMouseLeave={(e) => {
             (e.currentTarget as HTMLButtonElement).style.backgroundColor =
-              "hsl(var(--raddo-brass))";
+              "hsl(var(--dossier-brass))";
             (e.currentTarget as HTMLButtonElement).style.color =
-              "hsl(var(--raddo-ink-deep))";
+              "hsl(var(--dossier-ink-deep))";
           }}
         >
           Begin the consult
