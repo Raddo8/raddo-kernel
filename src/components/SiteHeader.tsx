@@ -27,7 +27,12 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   );
 }
 
-export function SiteHeader() {
+type SiteHeaderProps = {
+  /** Optional brass CTA rendered in the primary row (right of logo, left of icons). */
+  cta?: { label: string; href: string; onClick?: () => void };
+};
+
+export function SiteHeader({ cta }: SiteHeaderProps = {}) {
   const reduce = useReducedMotion();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
@@ -151,6 +156,25 @@ export function SiteHeader() {
             </Link>
 
             <div className="flex items-center gap-1.5 sm:gap-2">
+              {cta ? (
+                <a
+                  href={cta.href}
+                  onClick={cta.onClick}
+                  className="raddo-cta-brass hidden sm:inline-flex items-center gap-2 font-sans"
+                  style={{
+                    backgroundColor: "hsl(var(--raddo-brass))",
+                    color: "hsl(var(--raddo-ink-deep))",
+                    padding: "8px 14px",
+                    borderRadius: 4,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    letterSpacing: "0.01em",
+                  }}
+                >
+                  <span>{cta.label}</span>
+                  <span aria-hidden>→</span>
+                </a>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {

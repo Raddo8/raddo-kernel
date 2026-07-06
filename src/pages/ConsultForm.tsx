@@ -18,6 +18,7 @@ import {
   type ToolCategory,
 } from "@/lib/consult-data";
 import { ToolLogo } from "@/components/consult/ToolLogo";
+import { track } from "@/lib/track";
 
 import type { DiscResponse } from "@/lib/consult-analysis";
 
@@ -433,6 +434,11 @@ export function ConsultForm() {
 
   // Pre-fill Identity from the hero gate handoff.
   useEffect(() => {
+    track("page_view", "/consult");
+  }, []);
+
+  // Pre-fill Identity from the hero gate handoff.
+  useEffect(() => {
     try {
       const raw = sessionStorage.getItem(GATE_HANDOFF_KEY);
       if (!raw) return;
@@ -566,6 +572,7 @@ export function ConsultForm() {
     if (typeof window !== "undefined") {
       window.plausible?.("consult_submission");
     }
+    track("consult_submitted", "/consult");
 
     setSubmitting(false);
     setConfirmOpen(false);

@@ -6,7 +6,6 @@ import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 import { IntroducingCob } from "@/components/IntroducingCob";
-import DossierIntake from "@/components/hero/DossierIntake";
 import { track } from "@/lib/track";
 
 
@@ -719,7 +718,7 @@ function VaultExhibit({
                 </div>
                 <a
                   href="/consult"
-                  onClick={(e) => { e.stopPropagation(); track("consult_cta_click", "/"); }}
+                  onClick={(e) => e.stopPropagation()}
                   className="raddo-cta-brass group inline-flex items-center gap-2 font-sans sm:ml-auto"
                   style={{
                     backgroundColor: "hsl(var(--raddo-brass))",
@@ -770,9 +769,9 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
-const INTRO_FLAG = "raddo-hero-intro-played-v1";
+const INTRO_FLAG = "raddo-hero-intro-played-v2";
 
-export function Hero() {
+export function HeroStory() {
   const reduce = useReducedMotion();
 
   /**
@@ -797,7 +796,7 @@ export function Hero() {
   }, [introPlayed]);
 
   useEffect(() => {
-    track("page_view", "/");
+    track("page_view", "/hero-story");
   }, []);
 
   const [now, setNow] = useState(() =>
@@ -894,9 +893,10 @@ export function Hero() {
   return (
     <main className="relative w-full bg-raddo-paper text-raddo-charcoal selection:bg-raddo-brass/30">
       <SeoHead
-        path="/"
-        title="COB · Your Chief of Business"
-        description="COB is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
+        path="/hero-story"
+        title="COB · Hero Story (staging)"
+        description="Staging surface for the COB Hero Story protagonist swap · not indexed."
+        noindex
       />
       {/* Top dark-blue bar · scrolls with the page */}
       <div
@@ -958,11 +958,11 @@ export function Hero() {
               style={{ fontSize: "clamp(14px, 2.6vw, 40px)" }}
             >
               {[
-                { verb: "INITIATES", rest: "Operating Leverage." },
-                { verb: "CREATES", rest: "Institutional Memory." },
-                { verb: "BUILDS", rest: "Infrastructures of Execution." },
-                { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
-                { verb: "DEPLOYS", rest: "Strategic Clarity." },
+                { verb: "RECLAIM", rest: "the hours." },
+                { verb: "HOLD", rest: "every decision ever made." },
+                { verb: "WALK IN", rest: "already briefed." },
+                { verb: "COMMAND", rest: "the full picture." },
+                { verb: "COMPOUND", rest: "while others reset." },
               ].map(({ verb, rest }, i) => (
                 <p
                   key={verb}
@@ -974,7 +974,7 @@ export function Hero() {
                     transitionDelay: reduce ? "0ms" : litanyShown ? `${i * 400}ms` : "0ms",
                   }}
                 >
-                  COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
+                  YOU <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
             </div>
@@ -985,9 +985,51 @@ export function Hero() {
               className="m-0 text-center transition-opacity duration-700 ease-out"
               style={{ fontSize: "clamp(22px, 4.3vw, 52px)", opacity: finaleShown || reduce ? 1 : 0 }}
             >
-              COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
+              You <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOME</span> the chair the day answers to.
             </p>
           </div>
+        </div>
+
+        {/* Five-second read strip · sits at the bottom edge of the video band. */}
+        <div
+          className="absolute inset-x-0 bottom-4 sm:bottom-6 md:bottom-8 flex flex-col items-center gap-3 px-4 sm:px-8 md:px-16"
+          style={{
+            opacity: reduce || finaleShown ? 1 : 0,
+            transition: "opacity 700ms cubic-bezier(0.22,1,0.36,1)",
+            transitionDelay: reduce ? "0ms" : "800ms",
+          }}
+        >
+          <p
+            className="m-0 text-center font-sans"
+            style={{
+              color: "hsl(var(--raddo-ink-deep))",
+              fontSize: "clamp(12px, 1.6vw, 17px)",
+              letterSpacing: "0.01em",
+              lineHeight: 1.45,
+              textShadow:
+                "0 0 14px hsl(0 0% 100% / 0.7), 0 0 28px hsl(0 0% 100% / 0.5)",
+              pointerEvents: "none",
+            }}
+          >
+            A Chief of Business · built around you · carrying your operation so you carry the room.
+          </p>
+          <a
+            href="/consult"
+            onClick={() => track("consult_cta_click", "/hero-story")}
+            className="raddo-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
+            style={{
+              backgroundColor: "hsl(var(--raddo-brass))",
+              color: "hsl(var(--raddo-ink-deep))",
+              padding: "12px 22px",
+              borderRadius: 4,
+              fontSize: 14,
+              fontWeight: 600,
+              letterSpacing: "0.01em",
+            }}
+          >
+            <span>Begin the consult</span>
+            <span aria-hidden>→</span>
+          </a>
         </div>
 
       </div>
@@ -1004,7 +1046,7 @@ export function Hero() {
       />
 
       {/* ====== PINNED SITE HEADER ====== */}
-      <SiteHeader />
+      <SiteHeader cta={{ label: "Begin the consult", href: "/consult", onClick: () => track("consult_cta_click", "/hero-story") }} />
 
 
 
@@ -1153,16 +1195,7 @@ export function Hero() {
 
 
 
-        {/* Briefing · Exhibit composition · 2600ms */}
-        <motion.section
-          variants={rise(800, 2600)}
-          initial={INITIAL}
-          animate="show"
-          className="mt-40 md:mt-52 mx-auto"
-          style={{ maxWidth: "1180px" }}
-        >
-          <DossierIntake />
-        </motion.section>
+        {/* Chat intake removed on /hero-story · staging protagonist swap */}
 
         {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
@@ -1186,7 +1219,7 @@ export function Hero() {
         >
           <a
             href="/consult"
-            onClick={() => track("consult_cta_click", "/")}
+            onClick={() => track("consult_cta_click", "/hero-story")}
             className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
             style={{
               backgroundColor: "hsl(var(--raddo-brass))",
@@ -1198,7 +1231,7 @@ export function Hero() {
               letterSpacing: "0.01em",
             }}
           >
-            <span>Begin your 5-minute consult</span>
+            <span>Begin the consult</span>
             <span aria-hidden className="transition-transform duration-220 group-hover:translate-x-[3px]">→</span>
           </a>
           <a
@@ -1212,7 +1245,7 @@ export function Hero() {
             }}
           >
             <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
-              Read the Capability Brief
+              Read the Executive Brief
             </span>
             <span aria-hidden>→</span>
           </a>
@@ -1378,3 +1411,5 @@ export function Hero() {
     </main>
   );
 }
+
+export default HeroStory;

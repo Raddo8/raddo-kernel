@@ -1070,6 +1070,42 @@ export type Database = {
           },
         ]
       }
+      site_events: {
+        Row: {
+          event: string
+          id: string
+          referrer: string | null
+          route: string | null
+          session_id: string | null
+          ts: string
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          event: string
+          id?: string
+          referrer?: string | null
+          route?: string | null
+          session_id?: string | null
+          ts?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          event?: string
+          id?: string
+          referrer?: string | null
+          route?: string | null
+          session_id?: string | null
+          ts?: string
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: []
+      }
       suppression_list: {
         Row: {
           contact_id: string | null
