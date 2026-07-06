@@ -572,6 +572,9 @@ export function ConsultForm() {
     if (typeof window !== "undefined") {
       window.plausible?.("consult_submission");
     }
+    track("consult_submitted", "/consult");
+    if (false) {
+    }
 
     setSubmitting(false);
     setConfirmOpen(false);
