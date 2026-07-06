@@ -343,3 +343,125 @@ If any box is unchecked, the dossier is not ready to ship.
 
 *Authority order for /dossier: this file → `docs/BRAND_BIBLE.md` →
 `docs/brand/README.md` → workspace knowledge. On conflict, halt and flag.*
+
+---
+
+## 17 · The navy pane (sanctioned elements · from the visioncre reference)
+
+Adopted from the visioncre.chiefofbusiness.ai sign-in surface and translated
+into RADDO tokens. The pane is the **cover** of the bound document; paper
+sections are the **pages**. Rule of scarcity: **at most one full navy pane per
+surface, plus optionally one thin navy band**. In print, every pane **flattens
+to cream paper** with ink-deep text — the printed dossier stays letterpress.
+
+Utility classes live in `src/index.css` under `@layer components`.
+
+### 17.1 The navy pane (element 1)
+```css
+.dossier-navy-pane {
+  background-color: hsl(var(--raddo-ink-deep));
+  background-image:
+    radial-gradient(ellipse 60% 55% at 82% 12%,
+      hsl(var(--raddo-brass) / 0.18), transparent 60%),
+    radial-gradient(ellipse 55% 55% at 12% 92%,
+      hsl(var(--raddo-ink-soft) / 0.28), transparent 65%),
+    linear-gradient(160deg,
+      hsl(211 93% 8%) 0%,
+      hsl(var(--raddo-ink-deep)) 55%,
+      hsl(210 82% 22%) 100%);
+  color: hsl(var(--raddo-paper));
+}
+```
+Three layers: brass glow top-right, cool-blue lift bottom-left, 160° navy
+gradient. Text on it is always `raddo-paper`.
+
+### 17.2 The engineering grid (element 2)
+Rendered via `::before` on the pane:
+```css
+.dossier-navy-pane::before {
+  background-image:
+    linear-gradient(to right, hsl(0 0% 100% / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(0 0% 100% / 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 75% 70% at 50% 45%,
+    black 40%, transparent 85%);
+}
+```
+44px hairlines at 4.5% white, radially masked so the grid dissolves at the
+pane's edges. Blueprint texture, barely-there.
+
+### 17.3 The brass chip (element 3)
+```css
+.dossier-brass-chip {
+  background: hsl(var(--raddo-brass));
+  color: hsl(var(--raddo-ink-deep));
+  font: 700 11px/1 'JetBrains Mono', monospace;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 3px;
+}
+```
+Used as the eyebrow on a navy pane. Complements the paper-section
+brass-deep text overlines from §6; does not replace them.
+
+### 17.4 The brass-underline emphasis (element 4)
+```css
+.dossier-brass-underline {
+  color: hsl(var(--raddo-brass));
+  border-bottom: 2px solid hsl(var(--raddo-brass));
+  padding-bottom: 2px;
+}
+```
+**One key word per headline, maximum.** Wrap the single word in a `<span>`.
+
+### 17.5 The navy-tinted shadow (element 5)
+```css
+.dossier-navy-shadow {
+  box-shadow: 0 10px 40px -20px hsl(var(--raddo-ink-deep) / 0.25);
+}
+```
+On white cards/figures adjacent to a navy pane. Warmer and deeper than
+`shadow-sm`; still soft. Do **not** stack it with `shadow-sm`.
+
+### 17.6 The mono footer strip (element 6)
+```css
+.dossier-mono-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  font: 400 10px/1 'JetBrains Mono', monospace;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: hsl(0 0% 100% / 0.55);
+}
+```
+Left: `chief of business · dossier`. Right: `© 2026 COB Technologies LLC`.
+Anchored to the base of the navy pane.
+
+### 17.7 Navy/paper split composition (element 7)
+The dossier alternates by rule: one navy pane cover → paper section pages.
+When a paper section needs a moment of gravity (a CTA row, a five-second
+read strip), a **thin navy band** may be used — no full pane. Two full navy
+panes back-to-back is forbidden.
+
+### 17.8 Print contract (binding)
+```css
+@media print {
+  .dossier-navy-pane {
+    background: hsl(var(--raddo-paper)) !important;
+    color: hsl(var(--raddo-charcoal)) !important;
+  }
+  .dossier-navy-pane::before { display: none !important; }
+  .dossier-navy-pane h1,
+  .dossier-navy-pane h2 { color: hsl(var(--raddo-ink-deep)) !important; }
+}
+```
+Every navy pane flattens to cream with ink-deep text. The grid disappears.
+The mono footer softens to `raddo-ash`. The printed dossier remains
+letterpress-on-paper, one section per Letter page.
+
+### 17.9 Pre-ship additions to the §16 checklist
+- [ ] At most one full `.dossier-navy-pane` per surface (plus at most one thin band).
+- [ ] Every navy pane carries: brass chip eyebrow, one brass-underlined word in the H1, mono footer strip.
+- [ ] Print preview shows every pane flattened to cream with ink-deep text.
+- [ ] No color introduced outside the §2 palette (navy layers derive from `--raddo-ink-deep` and `--raddo-ink-soft` only).
+- [ ] `.dossier-navy-shadow` used only on figures/cards adjacent to a pane, never stacked with `shadow-sm`.

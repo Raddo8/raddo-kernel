@@ -104,3 +104,83 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* =====================================================================
+ * Dossier · sanctioned "navy pane" elements (from the visioncre reference)
+ * Panes are COVERS; paper is PAGES. In print, panes flatten to paper.
+ * See docs/brand/DOSSIER_BRAND_BIBLE.md §"The navy pane".
+ * =================================================================== */
+@layer components {
+  .dossier-navy-pane {
+    position: relative;
+    isolation: isolate;
+    color: hsl(var(--raddo-paper));
+    background-color: hsl(var(--raddo-ink-deep));
+    background-image:
+      radial-gradient(ellipse 60% 55% at 82% 12%, hsl(var(--raddo-brass) / 0.18), transparent 60%),
+      radial-gradient(ellipse 55% 55% at 12% 92%, hsl(var(--raddo-ink-soft) / 0.28), transparent 65%),
+      linear-gradient(160deg, hsl(211 93% 8%) 0%, hsl(var(--raddo-ink-deep)) 55%, hsl(210 82% 22%) 100%);
+  }
+  .dossier-navy-pane::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, hsl(0 0% 100% / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(0 0% 100% / 0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);
+            mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);
+  }
+  .dossier-navy-pane > * { position: relative; z-index: 1; }
+
+  .dossier-brass-chip {
+    display: inline-block;
+    background-color: hsl(var(--raddo-brass));
+    color: hsl(var(--raddo-ink-deep));
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 3px;
+    line-height: 1;
+  }
+
+  .dossier-brass-underline {
+    color: hsl(var(--raddo-brass));
+    border-bottom: 2px solid hsl(var(--raddo-brass));
+    padding-bottom: 2px;
+  }
+
+  .dossier-navy-shadow {
+    box-shadow: 0 10px 40px -20px hsl(var(--raddo-ink-deep) / 0.25);
+  }
+
+  .dossier-mono-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: hsl(0 0% 100% / 0.55);
+  }
+}
+
+/* Print contract · panes flatten to cream paper with ink-deep text. */
+@media print {
+  .dossier-navy-pane {
+    background: hsl(var(--raddo-paper)) !important;
+    color: hsl(var(--raddo-charcoal)) !important;
+  }
+  .dossier-navy-pane::before { display: none !important; }
+  .dossier-navy-pane .dossier-mono-footer { color: hsl(var(--raddo-ash)) !important; }
+  .dossier-navy-pane h1,
+  .dossier-navy-pane h2 { color: hsl(var(--raddo-ink-deep)) !important; }
+}

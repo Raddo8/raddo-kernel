@@ -985,51 +985,50 @@ export function HeroStory() {
               className="m-0 text-center transition-opacity duration-700 ease-out"
               style={{ fontSize: "clamp(22px, 4.3vw, 52px)", opacity: finaleShown || reduce ? 1 : 0 }}
             >
-              You <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOME</span> the chair the day answers to.
+              You <span className="dossier-brass-underline">BECOME</span> the chair the day answers to.
             </p>
           </div>
         </div>
 
-        {/* Five-second read strip · sits at the bottom edge of the video band. */}
+        {/* Five-second read strip · navy pane band (sanctioned element 1+2, quiet) */}
         <div
-          className="absolute inset-x-0 bottom-4 sm:bottom-6 md:bottom-8 flex flex-col items-center gap-3 px-4 sm:px-8 md:px-16"
+          className="absolute inset-x-0 bottom-0 flex justify-center"
           style={{
             opacity: reduce || finaleShown ? 1 : 0,
             transition: "opacity 700ms cubic-bezier(0.22,1,0.36,1)",
             transitionDelay: reduce ? "0ms" : "800ms",
           }}
         >
-          <p
-            className="m-0 text-center font-sans"
-            style={{
-              color: "hsl(var(--raddo-ink-deep))",
-              fontSize: "clamp(12px, 1.6vw, 17px)",
-              letterSpacing: "0.01em",
-              lineHeight: 1.45,
-              textShadow:
-                "0 0 14px hsl(0 0% 100% / 0.7), 0 0 28px hsl(0 0% 100% / 0.5)",
-              pointerEvents: "none",
-            }}
-          >
-            A Chief of Business · built around you · carrying your operation so you carry the room.
-          </p>
-          <a
-            href="/consult"
-            onClick={() => track("consult_cta_click", "/hero-story")}
-            className="raddo-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
-            style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
-              padding: "12px 22px",
-              borderRadius: 4,
-              fontSize: 14,
-              fontWeight: 600,
-              letterSpacing: "0.01em",
-            }}
-          >
-            <span>Begin the consult</span>
-            <span aria-hidden>→</span>
-          </a>
+          <div className="dossier-navy-pane w-full flex flex-col items-center gap-3 px-4 py-4 sm:px-8 sm:py-5 md:px-16">
+            <p
+              className="m-0 text-center font-sans"
+              style={{
+                color: "hsl(var(--raddo-paper))",
+                fontSize: "clamp(12px, 1.6vw, 17px)",
+                letterSpacing: "0.01em",
+                lineHeight: 1.45,
+              }}
+            >
+              A Chief of Business · built around you · carrying your operation so you carry the room.
+            </p>
+            <a
+              href="/consult"
+              onClick={() => track("consult_cta_click", "/hero-story")}
+              className="raddo-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
+              style={{
+                backgroundColor: "hsl(var(--raddo-brass))",
+                color: "hsl(var(--raddo-ink-deep))",
+                padding: "12px 22px",
+                borderRadius: 4,
+                fontSize: 14,
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+              }}
+            >
+              <span>Begin the consult</span>
+              <span aria-hidden>→</span>
+            </a>
+          </div>
         </div>
 
       </div>

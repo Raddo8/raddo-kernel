@@ -179,8 +179,8 @@ export default function Dossier() {
         </div>
       </header>
 
-      {/* PAGE 1 · HERO */}
-      <section className="dossier-page relative w-full bg-raddo-paper">
+      {/* PAGE 1 · HERO · navy pane (the cover of the bound document) */}
+      <section className="dossier-page dossier-navy-pane relative w-full">
         <div className="w-full">
           <img
             src={tradeShow.url}
@@ -189,15 +189,20 @@ export default function Dossier() {
           />
         </div>
         <div className="mx-auto max-w-5xl px-6 sm:px-12 lg:px-24 py-16 lg:py-24">
-          <Overline n="01" label="chief of business" />
-          <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-raddo-ink-deep">
-            Your Chief of Business.
+          <span className="dossier-brass-chip mb-8">
+            dossier 01 · a private document
+          </span>
+          <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-raddo-paper mt-2">
+            Your <span className="dossier-brass-underline">Chief</span> of Business.
           </h1>
-          <p className="mt-8 max-w-3xl font-sans text-xl lg:text-2xl leading-relaxed text-raddo-charcoal">
-            An executive-level thinking AI operator who never forgets, never leaves, and gets
+          <p className="mt-8 max-w-3xl font-sans text-xl lg:text-2xl leading-relaxed text-raddo-paper/85">
+            An executive-level thinking operator who never forgets, never leaves, and gets
             sharper every day you run alongside them.
           </p>
-          <BrassHairline className="mt-16" />
+          <div className="dossier-mono-footer mt-20">
+            <span>chief of business <span className="text-raddo-brass">·</span> dossier</span>
+            <span>© 2026 COB Technologies LLC</span>
+          </div>
         </div>
       </section>
 
