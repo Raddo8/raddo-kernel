@@ -1215,6 +1215,7 @@ export function HeroStory() {
         >
           <a
             href="/consult"
+            onClick={() => track("consult_cta_click", "/hero-story")}
             className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
             style={{
               backgroundColor: "hsl(var(--raddo-brass))",
@@ -1226,7 +1227,7 @@ export function HeroStory() {
               letterSpacing: "0.01em",
             }}
           >
-            <span>Begin your 5-minute consult</span>
+            <span>Begin the consult</span>
             <span aria-hidden className="transition-transform duration-220 group-hover:translate-x-[3px]">→</span>
           </a>
           <a
@@ -1240,7 +1241,7 @@ export function HeroStory() {
             }}
           >
             <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
-              Read the Capability Brief
+              Read the Executive Brief
             </span>
             <span aria-hidden>→</span>
           </a>
