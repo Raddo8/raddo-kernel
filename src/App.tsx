@@ -92,9 +92,11 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/builds/:token" element={<BuildView />} />
           <Route path="/app" element={
-            <WorkspaceProvider>
-              <AppLayout />
-            </WorkspaceProvider>
+            <AuthGate>
+              <WorkspaceProvider>
+                <AppLayout />
+              </WorkspaceProvider>
+            </AuthGate>
           }>
             <Route index element={<Index />} />
             <Route path="accounts" element={<AccountsList />} />

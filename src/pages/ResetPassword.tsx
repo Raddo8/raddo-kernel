@@ -61,7 +61,7 @@ export default function ResetPassword() {
   return (
     <>
       <SeoHead
-        title="Reset password · RADDO"
+        title="Reset password · Chief of Business"
         description="Set a new password for your COB."
         path="/reset-password"
       />
