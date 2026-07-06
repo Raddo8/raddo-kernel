@@ -769,9 +769,9 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
-const INTRO_FLAG = "raddo-hero-intro-played-v1";
+const INTRO_FLAG = "raddo-hero-intro-played-v2";
 
-export function Hero() {
+export function HeroStory() {
   const reduce = useReducedMotion();
 
   /**
