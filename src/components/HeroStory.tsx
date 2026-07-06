@@ -6,7 +6,7 @@ import forYourEyesOnly from "@/assets/for-your-eyes-only.png";
 import { SeoHead } from "@/components/SeoHead";
 import { SiteHeader } from "@/components/SiteHeader";
 import { IntroducingCob } from "@/components/IntroducingCob";
-import DossierIntake from "@/components/hero/DossierIntake";
+import { track } from "@/lib/track";
 
 
 // Motion doctrine · two curves only.
