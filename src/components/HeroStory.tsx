@@ -954,11 +954,11 @@ export function HeroStory() {
               style={{ fontSize: "clamp(14px, 2.6vw, 40px)" }}
             >
               {[
-                { verb: "INITIATES", rest: "Operating Leverage." },
-                { verb: "CREATES", rest: "Institutional Memory." },
-                { verb: "BUILDS", rest: "Infrastructures of Execution." },
-                { verb: "EMPLOYS", rest: "the Autonomous C·Suite." },
-                { verb: "DEPLOYS", rest: "Strategic Clarity." },
+                { verb: "RECLAIM", rest: "the hours." },
+                { verb: "HOLD", rest: "every decision ever made." },
+                { verb: "WALK IN", rest: "already briefed." },
+                { verb: "COMMAND", rest: "the full picture." },
+                { verb: "COMPOUND", rest: "while others reset." },
               ].map(({ verb, rest }, i) => (
                 <p
                   key={verb}
@@ -970,7 +970,7 @@ export function HeroStory() {
                     transitionDelay: reduce ? "0ms" : litanyShown ? `${i * 400}ms` : "0ms",
                   }}
                 >
-                  COB <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
+                  YOU <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
             </div>
@@ -981,9 +981,51 @@ export function HeroStory() {
               className="m-0 text-center transition-opacity duration-700 ease-out"
               style={{ fontSize: "clamp(22px, 4.3vw, 52px)", opacity: finaleShown || reduce ? 1 : 0 }}
             >
-              COB <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOMES</span> Executive Output.
+              You <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOME</span> the chair the day answers to.
             </p>
           </div>
+        </div>
+
+        {/* Five-second read strip · sits at the bottom edge of the video band. */}
+        <div
+          className="absolute inset-x-0 bottom-4 sm:bottom-6 md:bottom-8 flex flex-col items-center gap-3 px-4 sm:px-8 md:px-16"
+          style={{
+            opacity: reduce || finaleShown ? 1 : 0,
+            transition: "opacity 700ms cubic-bezier(0.22,1,0.36,1)",
+            transitionDelay: reduce ? "0ms" : "800ms",
+          }}
+        >
+          <p
+            className="m-0 text-center font-sans"
+            style={{
+              color: "hsl(var(--raddo-ink-deep))",
+              fontSize: "clamp(12px, 1.6vw, 17px)",
+              letterSpacing: "0.01em",
+              lineHeight: 1.45,
+              textShadow:
+                "0 0 14px hsl(0 0% 100% / 0.7), 0 0 28px hsl(0 0% 100% / 0.5)",
+              pointerEvents: "none",
+            }}
+          >
+            A Chief of Business · built around you · carrying your operation so you carry the room.
+          </p>
+          <a
+            href="/consult"
+            onClick={() => track("consult_cta_click", "/hero-story")}
+            className="raddo-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
+            style={{
+              backgroundColor: "hsl(var(--raddo-brass))",
+              color: "hsl(var(--raddo-ink-deep))",
+              padding: "12px 22px",
+              borderRadius: 4,
+              fontSize: 14,
+              fontWeight: 600,
+              letterSpacing: "0.01em",
+            }}
+          >
+            <span>Begin the consult</span>
+            <span aria-hidden>→</span>
+          </a>
         </div>
 
       </div>
