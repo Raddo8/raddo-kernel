@@ -78,6 +78,7 @@ const App = () => (
                 + AppLayout. Future marketing routes follow the same split.
             */}
             <Route path="/" element={<Hero />} />
+            <Route path="/hero-story" element={<HeroStory />} />
             <Route path="/consult" element={<Consult />} />
             <Route path="/consult/thank-you" element={<ConsultThankYou />} />
             <Route path="/debrief" element={<Debrief />} />
