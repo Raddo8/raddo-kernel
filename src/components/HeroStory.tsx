@@ -889,9 +889,10 @@ export function HeroStory() {
   return (
     <main className="relative w-full bg-raddo-paper text-raddo-charcoal selection:bg-raddo-brass/30">
       <SeoHead
-        path="/"
-        title="COB · Your Chief of Business"
-        description="COB is a Chief of Business built around you · drawing on every system you run to keep you sharp across email, meetings, decisions, and direction."
+        path="/hero-story"
+        title="COB · Hero Story (staging)"
+        description="Staging surface for the COB Hero Story protagonist swap · not indexed."
+        noindex
       />
       {/* Top dark-blue bar · scrolls with the page */}
       <div
