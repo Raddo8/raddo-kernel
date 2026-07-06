@@ -573,8 +573,6 @@ export function ConsultForm() {
       window.plausible?.("consult_submission");
     }
     track("consult_submitted", "/consult");
-    if (false) {
-    }
 
     setSubmitting(false);
     setConfirmOpen(false);
