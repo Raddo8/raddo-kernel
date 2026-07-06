@@ -985,7 +985,7 @@ export function HeroStory() {
               className="m-0 text-center transition-opacity duration-700 ease-out"
               style={{ fontSize: "clamp(22px, 4.3vw, 52px)", opacity: finaleShown || reduce ? 1 : 0 }}
             >
-              You <span style={{ color: "hsl(var(--raddo-brass))" }}>BECOME</span> the chair the day answers to.
+              You <span className="dossier-brass-underline">BECOME</span> the chair the day answers to.
             </p>
           </div>
         </div>
