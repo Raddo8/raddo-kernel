@@ -99,7 +99,7 @@ function Page({ children, className = "" }: { children: React.ReactNode; classNa
   return (
     <section
       className={
-        "dossier-page relative w-full bg-raddo-paper text-raddo-charcoal " +
+        "dossier-page relative w-full bg-dossier-paper text-dossier-charcoal " +
         "px-6 sm:px-12 lg:px-24 py-16 lg:py-24 " +
         className
       }
@@ -111,8 +111,8 @@ function Page({ children, className = "" }: { children: React.ReactNode; classNa
 
 function Overline({ n, label }: { n: string; label: string }) {
   return (
-    <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-6">
-      dossier {n} <span className="text-raddo-brass">·</span> {label}
+    <p className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-brass-deep mb-6">
+      dossier {n} <span className="text-dossier-brass">·</span> {label}
     </p>
   );
 }
@@ -120,9 +120,9 @@ function Overline({ n, label }: { n: string; label: string }) {
 function BrassHairline({ className = "" }: { className?: string }) {
   return (
     <div className={"flex items-center gap-2 " + className}>
-      <span className="h-px flex-1 bg-raddo-brass/40" />
-      <span className="h-1.5 w-1.5 rounded-full bg-raddo-brass" />
-      <span className="h-px flex-1 bg-raddo-brass/40" />
+      <span className="h-px flex-1 bg-dossier-brass/40" />
+      <span className="h-1.5 w-1.5 rounded-full bg-dossier-brass" />
+      <span className="h-px flex-1 bg-dossier-brass/40" />
     </div>
   );
 }
@@ -131,7 +131,7 @@ export default function Dossier() {
   const handlePrint = () => window.print();
 
   return (
-    <div className="min-h-screen bg-raddo-paper">
+    <div className="min-h-screen bg-dossier-paper">
       <Helmet>
         <title>Chief of Business · Dossier</title>
         <meta
@@ -160,18 +160,18 @@ export default function Dossier() {
       `}</style>
 
       {/* Fixed header · hidden on print */}
-      <header className="dossier-no-print sticky top-0 z-30 border-b border-raddo-paper-edge bg-raddo-paper/90 backdrop-blur">
+      <header className="dossier-no-print sticky top-0 z-30 border-b border-dossier-paper-edge bg-dossier-paper/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3 lg:px-12">
           <a href="/" className="flex items-center gap-3">
             <img src={logo3d} alt="Chief of Business mark" className="h-8 w-8 object-contain" />
-            <span className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-ink-deep">
-              chief of business <span className="text-raddo-brass">·</span> dossier
+            <span className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-ink-deep">
+              chief of business <span className="text-dossier-brass">·</span> dossier
             </span>
           </a>
           <Button
             onClick={handlePrint}
             variant="default"
-            className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+            className="bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
           >
             <Printer className="mr-2 h-4 w-4" />
             Download PDF
@@ -192,15 +192,15 @@ export default function Dossier() {
           <span className="dossier-brass-chip mb-8">
             dossier 01 · a private document
           </span>
-          <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-raddo-paper mt-2">
+          <h1 className="font-display text-5xl lg:text-7xl font-bold leading-[1.05] text-dossier-paper mt-2">
             Your <span className="dossier-brass-underline">Chief</span> of Business.
           </h1>
-          <p className="mt-8 max-w-3xl font-sans text-xl lg:text-2xl leading-relaxed text-raddo-paper/85">
+          <p className="mt-8 max-w-3xl font-sans text-xl lg:text-2xl leading-relaxed text-dossier-paper/85">
             An executive-level thinking operator who never forgets, never leaves, and gets
             sharper every day you run alongside them.
           </p>
           <div className="dossier-mono-footer mt-20">
-            <span>chief of business <span className="text-raddo-brass">·</span> dossier</span>
+            <span>chief of business <span className="text-dossier-brass">·</span> dossier</span>
             <span>© 2026 COB Technologies LLC</span>
           </div>
         </div>
@@ -209,10 +209,10 @@ export default function Dossier() {
       {/* PAGE 2 · THE WALL */}
       <Page>
         <Overline n="02" label="the wall" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-10">
           Every serious operator hits the same wall.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-dossier-charcoal">
           <p>
             The business is talking to you constantly, in your inbox, your numbers, your meetings,
             your people, and no single mind can hold all of it at once. The context that makes your
@@ -232,11 +232,11 @@ export default function Dossier() {
       {/* PAGE 3 · WHAT IS COB · THE TEN-SOURCE VAULT */}
       <Page>
         <Overline n="03" label="what is COB · the vault" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-8">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-8">
           What is COB.
         </h2>
 
-        <figure className="mb-10 border border-raddo-paper-edge bg-white p-2 shadow-sm">
+        <figure className="mb-10 border border-dossier-paper-edge bg-white p-2 shadow-sm">
           <img
             src={chessBoard.url}
             alt="Strategic chess board with brass and navy pieces · COB as executive intelligence"
@@ -244,10 +244,10 @@ export default function Dossier() {
           />
         </figure>
 
-        <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-12">
+        <div className="space-y-5 font-sans text-base lg:text-lg leading-relaxed text-dossier-charcoal mb-12">
           <p>
             COB is a system of{" "}
-            <strong className="text-raddo-ink-deep font-bold">
+            <strong className="text-dossier-ink-deep font-bold">
               intelligence, strategy, and competence
             </strong>{" "}
             built around one person, or one business. It reads what you read, sits in your
@@ -264,14 +264,14 @@ export default function Dossier() {
             holds it instead. Risks surfaced before they hit you. The difficult email drafted in
             your cadence. The numbers behind every line waiting the moment you ask. What you
             decided three years ago, the moment the question returns. You walk in{" "}
-            <strong className="text-raddo-ink-deep font-bold">light</strong>.
+            <strong className="text-dossier-ink-deep font-bold">light</strong>.
           </p>
           <p>
             Two things separate COB from any tool you have used before.{" "}
-            <strong className="text-raddo-ink-deep font-bold">It is portable.</strong> Not locked
+            <strong className="text-dossier-ink-deep font-bold">It is portable.</strong> Not locked
             to one app, one platform, one provider. It carries everything you teach it across the
             systems you already use.{" "}
-            <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong> It does not
+            <strong className="text-dossier-ink-deep font-bold">It is permanent.</strong> It does not
             reset when you change roles, restructure your team, or move on to the next thing. The
             longer you use it, the more of you it carries.
           </p>
@@ -282,25 +282,25 @@ export default function Dossier() {
         {/* Vault exhibit */}
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1fr] gap-10 items-start">
           <div>
-            <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-4">
+            <p className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-brass-deep mb-4">
               exhibit · 01 · the ten source vault
             </p>
-            <div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
+            <div className="border border-dossier-paper-edge rounded-sm overflow-hidden bg-dossier-night">
               <img
                 src={vaultExhibit}
                 alt="The COB vault · ten source pedestals connected by brass tracery to a central briefing plaque"
                 className="block w-full h-auto"
               />
             </div>
-            <p className="font-sans text-sm lg:text-base leading-relaxed text-raddo-charcoal mt-5">
+            <p className="font-sans text-sm lg:text-base leading-relaxed text-dossier-charcoal mt-5">
               Once we get access: we build it. Wire it. Calibrate it. Install it. All in two weeks.
             </p>
           </div>
 
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <span className="h-px w-7 bg-raddo-brass" />
-              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-raddo-ash">
+              <span className="h-px w-7 bg-dossier-brass" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-dossier-ash">
                 Exhibit key
               </span>
             </div>
@@ -308,12 +308,12 @@ export default function Dossier() {
               {VAULT_LEGEND.map((row) => (
                 <li
                   key={row.n}
-                  className="flex items-baseline gap-3 py-2 border-t border-raddo-paper-edge"
+                  className="flex items-baseline gap-3 py-2 border-t border-dossier-paper-edge"
                 >
-                  <span className="font-mono text-[10px] tracking-[0.18em] text-raddo-brass-deep min-w-[24px]">
+                  <span className="font-mono text-[10px] tracking-[0.18em] text-dossier-brass-deep min-w-[24px]">
                     {row.n}
                   </span>
-                  <span className="font-sans text-sm font-medium text-raddo-ink-deep">
+                  <span className="font-sans text-sm font-medium text-dossier-ink-deep">
                     {row.label}
                   </span>
                 </li>
@@ -325,24 +325,24 @@ export default function Dossier() {
         <BrassHairline className="my-10" />
 
         <div>
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-3">
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-brass-deep mb-3">
             What he takes on
           </p>
-          <p className="font-sans text-base lg:text-lg leading-relaxed text-raddo-charcoal mb-8">
+          <p className="font-sans text-base lg:text-lg leading-relaxed text-dossier-charcoal mb-8">
             Once connected, your COB quietly absorbs the work that fills your week. A partial view
             of what he picks up:
           </p>
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6">
             {VAULT_CAPABILITIES.map((group) => (
               <li key={group.title}>
-                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-raddo-brass-deep mb-2">
+                <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-dossier-brass-deep mb-2">
                   {group.title}
                 </div>
                 <ul className="flex flex-col gap-1.5">
                   {group.items.map((item) => (
                     <li
                       key={item}
-                      className="font-sans text-sm leading-snug text-raddo-ink-deep"
+                      className="font-sans text-sm leading-snug text-dossier-ink-deep"
                     >
                       {item}
                     </li>
@@ -357,10 +357,10 @@ export default function Dossier() {
       {/* PAGE 4 · ENGINEERED DIFFERENTLY */}
       <Page>
         <Overline n="04" label="engineered differently" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-4">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-4">
           Eight folders. One operator.
         </h2>
-        <p className="font-sans text-lg text-raddo-ash mb-12">
+        <p className="font-sans text-lg text-dossier-ash mb-12">
           The dossier system underneath every COB. Each folder is a design commitment, not a
           feature.
         </p>
@@ -368,16 +368,16 @@ export default function Dossier() {
           {dossiers.map((d) => (
             <article key={d.n} className="relative">
               <div className="flex items-center gap-3 mb-3">
-                <span className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep">
+                <span className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-brass-deep">
                   dossier {d.n}
                 </span>
-                <span className="h-px flex-1 bg-raddo-brass/40" />
-                <span className="h-1.5 w-1.5 rounded-full bg-raddo-brass" />
+                <span className="h-px flex-1 bg-dossier-brass/40" />
+                <span className="h-1.5 w-1.5 rounded-full bg-dossier-brass" />
               </div>
-              <h3 className="font-display text-2xl font-bold text-raddo-ink-deep mb-3 lowercase">
+              <h3 className="font-display text-2xl font-bold text-dossier-ink-deep mb-3 lowercase">
                 {d.title}
               </h3>
-              <p className="font-sans text-base leading-relaxed text-raddo-charcoal">{d.body}</p>
+              <p className="font-sans text-base leading-relaxed text-dossier-charcoal">{d.body}</p>
             </article>
           ))}
         </div>
@@ -388,7 +388,7 @@ export default function Dossier() {
       {/* PAGE 5 · IN YOUR WORLD */}
       <Page>
         <Overline n="05" label="in your world" />
-        <p className="font-display text-2xl lg:text-3xl leading-snug text-raddo-ink-deep mb-12">
+        <p className="font-display text-2xl lg:text-3xl leading-snug text-dossier-ink-deep mb-12">
           Built to sit inside how you already operate, in any industry.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -399,9 +399,9 @@ export default function Dossier() {
           ].map((img, i) => (
             <figure
               key={i}
-              className="border border-raddo-brass/40 bg-white p-2 shadow-sm"
+              className="border border-dossier-brass/40 bg-white p-2 shadow-sm"
             >
-              <div className="aspect-square overflow-hidden bg-raddo-paper">
+              <div className="aspect-square overflow-hidden bg-dossier-paper">
                 <img
                   src={img.src}
                   alt={img.alt}
@@ -416,10 +416,10 @@ export default function Dossier() {
       {/* PAGE 6 · BUILT FOR TRUST */}
       <Page>
         <Overline n="06" label="built for trust" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-10">
           Transparent. Sourced. Reversible.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-dossier-charcoal">
           <p>
             Every output is transparent, sourced, and reversible, and a person always keeps the
             final call. COB advises, prepares, and surfaces; it never acts on its own authority.
@@ -432,10 +432,10 @@ export default function Dossier() {
       {/* PAGE 7 · WHY UNLIKE */}
       <Page>
         <Overline n="07" label="why it is unlike anything you have used" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-10">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-10">
           Yours. Permanent. Direct.
         </h2>
-        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
+        <div className="space-y-6 font-sans text-lg lg:text-xl leading-relaxed text-dossier-charcoal">
           <p>
             It runs off your business: your current numbers, your real people, your live decisions,
             never public approximations.
@@ -452,25 +452,25 @@ export default function Dossier() {
       {/* PAGE 8 · PRINCIPLES */}
       <Page>
         <Overline n="08" label="the principles" />
-        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-raddo-ink-deep mb-12">
+        <h2 className="font-display text-4xl lg:text-5xl font-bold leading-tight text-dossier-ink-deep mb-12">
           Five principles.
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-6 gap-y-8 md:items-center md:justify-between mb-16">
           {principles.map((p, i) => (
             <div key={p} className="flex items-center justify-center gap-4">
               <div className="flex flex-col items-center text-center">
-                <span className="h-3 w-3 rounded-full bg-raddo-brass ring-4 ring-raddo-brass/15" />
-                <p className="mt-3 font-display text-base md:text-lg font-bold text-raddo-ink-deep max-w-[12ch] leading-tight">
+                <span className="h-3 w-3 rounded-full bg-dossier-brass ring-4 ring-dossier-brass/15" />
+                <p className="mt-3 font-display text-base md:text-lg font-bold text-dossier-ink-deep max-w-[12ch] leading-tight">
                   {p}
                 </p>
               </div>
               {i < principles.length - 1 && (
-                <span className="hidden md:block h-px w-10 bg-raddo-brass/50" />
+                <span className="hidden md:block h-px w-10 bg-dossier-brass/50" />
               )}
             </div>
           ))}
         </div>
-        <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal">
+        <p className="font-sans text-lg lg:text-xl leading-relaxed text-dossier-charcoal">
           Installed to fit exactly how you operate, from a quiet private setup to a fully integrated
           seat inside the tools you already run on.
         </p>
@@ -481,28 +481,28 @@ export default function Dossier() {
       <Page className="text-center">
         <Overline n="09" label="close" />
         <div className="flex flex-col items-center">
-          <figure className="w-full max-w-3xl mb-12 border border-raddo-brass/40 bg-white p-2 shadow-sm">
+          <figure className="w-full max-w-3xl mb-12 border border-dossier-brass/40 bg-white p-2 shadow-sm">
             <img
               src={firePatio.url}
               alt="COB veranda at night · brass fire pit on the marble terrace"
               className="block w-full h-auto object-cover"
             />
           </figure>
-          <h2 className="font-display text-4xl lg:text-6xl font-bold leading-tight text-raddo-ink-deep mb-12 max-w-3xl">
+          <h2 className="font-display text-4xl lg:text-6xl font-bold leading-tight text-dossier-ink-deep mb-12 max-w-3xl">
             Not just in your corner. Building your corner.
           </h2>
-          <p className="font-sans text-lg lg:text-xl leading-relaxed text-raddo-charcoal max-w-2xl mb-12">
+          <p className="font-sans text-lg lg:text-xl leading-relaxed text-dossier-charcoal max-w-2xl mb-12">
             The question is no longer whether decision intelligence at this depth becomes the
             standard for serious operators. The question is whether you have one when it does.
           </p>
           <Button
             asChild
-            className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper px-8 py-6 text-base"
+            className="bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper px-8 py-6 text-base"
           >
             <a href="/debrief">Request more information about COB</a>
           </Button>
           <BrassHairline className="mt-20 w-full max-w-md" />
-          <p className="dossier-no-print mt-6 font-mono text-xs uppercase tracking-[0.22em] text-raddo-ash">
+          <p className="dossier-no-print mt-6 font-mono text-xs uppercase tracking-[0.22em] text-dossier-ash">
             chiefofbusiness.ai
           </p>
         </div>

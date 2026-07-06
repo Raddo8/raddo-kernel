@@ -13,22 +13,22 @@ import { SeoHead } from "@/components/SeoHead";
 type TokenKind = "hsl" | "raw";
 
 type TokenDef = {
-  token: string;          // e.g. "raddo-brass" → CSS var --raddo-brass
+  token: string;          // e.g. "dossier-brass" → CSS var --dossier-brass
   label: string;
   kind: TokenKind;        // hsl = "H S% L%" triplet, raw = anything (rem, font stack, etc.)
 };
 
 const PALETTE: TokenDef[] = [
-  { token: "raddo-ink", label: "Ink", kind: "hsl" },
-  { token: "raddo-ink-deep", label: "Ink Deep", kind: "hsl" },
-  { token: "raddo-ink-soft", label: "Ink Soft", kind: "hsl" },
-  { token: "raddo-paper", label: "Paper", kind: "hsl" },
-  { token: "raddo-paper-edge", label: "Paper Edge", kind: "hsl" },
-  { token: "raddo-brass", label: "Brass", kind: "hsl" },
-  { token: "raddo-brass-deep", label: "Brass Deep", kind: "hsl" },
-  { token: "raddo-ash", label: "Ash", kind: "hsl" },
-  { token: "raddo-charcoal", label: "Charcoal", kind: "hsl" },
-  { token: "raddo-night", label: "Night", kind: "hsl" },
+  { token: "dossier-ink", label: "Ink", kind: "hsl" },
+  { token: "dossier-ink-deep", label: "Ink Deep", kind: "hsl" },
+  { token: "dossier-ink-soft", label: "Ink Soft", kind: "hsl" },
+  { token: "dossier-paper", label: "Paper", kind: "hsl" },
+  { token: "dossier-paper-edge", label: "Paper Edge", kind: "hsl" },
+  { token: "dossier-brass", label: "Brass", kind: "hsl" },
+  { token: "dossier-brass-deep", label: "Brass Deep", kind: "hsl" },
+  { token: "dossier-ash", label: "Ash", kind: "hsl" },
+  { token: "dossier-charcoal", label: "Charcoal", kind: "hsl" },
+  { token: "dossier-night", label: "Night", kind: "hsl" },
 ];
 
 const SEMANTIC: TokenDef[] = [
@@ -227,7 +227,7 @@ export default function StyleGuide() {
             <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
               RADDO · Brand & component reference
             </div>
-            <h1 className="font-display text-raddo-ink-deep mt-1" style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.05 }}>
+            <h1 className="font-display text-dossier-ink-deep mt-1" style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.05 }}>
               Style Guide
             </h1>
           </div>
@@ -334,7 +334,7 @@ export default function StyleGuide() {
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-4">
             {MOTION.map((m) => (
               <div key={m.name} className="rounded-md border border-border bg-card p-4">
-                <div className="font-display text-raddo-ink-deep" style={{ fontSize: 28, fontWeight: 800 }}>
+                <div className="font-display text-dossier-ink-deep" style={{ fontSize: 28, fontWeight: 800 }}>
                   {m.ms}<span className="text-base font-sans text-muted-foreground">ms</span>
                 </div>
                 <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase mt-1">{m.name}</div>
@@ -389,7 +389,7 @@ export default function StyleGuide() {
                 <div className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground uppercase mb-2">
                   BRIEFING · 042
                 </div>
-                <div className="font-display text-raddo-ink-deep" style={{ fontSize: 22, fontWeight: 700 }}>
+                <div className="font-display text-dossier-ink-deep" style={{ fontSize: 22, fontWeight: 700 }}>
                   Q3 review · risk surface
                 </div>
                 <div className="font-sans text-sm text-foreground mt-2">
@@ -417,7 +417,7 @@ export default function StyleGuide() {
                     <li key={it.label} className="flex items-baseline justify-between gap-3">
                       <span>{it.label}</span>
                       {it.route && (
-                        <Link to={it.route} className="font-mono text-[10px] tracking-[0.12em] text-raddo-brass-deep hover:underline">
+                        <Link to={it.route} className="font-mono text-[10px] tracking-[0.12em] text-dossier-brass-deep hover:underline">
                           {it.route}
                         </Link>
                       )}
@@ -437,19 +437,19 @@ export default function StyleGuide() {
           <div className="space-y-8">
             {/* 1 · The navy pane + 2 · engineering grid */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 01 · navy pane · 02 · engineering grid
               </div>
               <div className="dossier-navy-pane relative overflow-hidden p-10 rounded-sm">
                 <span className="dossier-brass-chip">dossier · sample chip</span>
                 <h3
-                  className="font-display text-raddo-paper mt-6"
+                  className="font-display text-dossier-paper mt-6"
                   style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}
                 >
                   A layered navy pane with a{" "}
                   <span className="dossier-brass-underline">brass</span> keyword.
                 </h3>
-                <p className="mt-4 max-w-xl text-raddo-paper/80" style={{ fontSize: 14, lineHeight: 1.6 }}>
+                <p className="mt-4 max-w-xl text-dossier-paper/80" style={{ fontSize: 14, lineHeight: 1.6 }}>
                   160deg gradient, brass glow top-right, cool lift bottom-left, 44px white/4.5% grid
                   masked at the edges.
                 </p>
@@ -462,21 +462,21 @@ export default function StyleGuide() {
 
             {/* 3 · Brass chip */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 03 · brass chip
               </div>
-              <div className="bg-raddo-ink-deep p-6 rounded-sm">
+              <div className="bg-dossier-ink-deep p-6 rounded-sm">
                 <span className="dossier-brass-chip">dossier 01 · a private document</span>
               </div>
             </div>
 
             {/* 4 · Brass-underline emphasis */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 04 · brass-underline emphasis
               </div>
               <p
-                className="font-display text-raddo-ink-deep"
+                className="font-display text-dossier-ink-deep"
                 style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.15 }}
               >
                 One key word carries the{" "}
@@ -486,27 +486,27 @@ export default function StyleGuide() {
 
             {/* 5 · Navy-tinted shadow */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 05 · navy-tinted shadow
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div
                   className="bg-white p-6"
-                  style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+                  style={{ border: "1px solid hsl(var(--dossier-paper-edge))", borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
                 >
-                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-ash uppercase mb-2">
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-ash uppercase mb-2">
                     shadow-sm (baseline)
                   </div>
-                  <div className="font-sans text-sm text-raddo-charcoal">A quiet paper card.</div>
+                  <div className="font-sans text-sm text-dossier-charcoal">A quiet paper card.</div>
                 </div>
                 <div
                   className="dossier-navy-shadow bg-white p-6"
-                  style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+                  style={{ border: "1px solid hsl(var(--dossier-paper-edge))", borderRadius: 8 }}
                 >
-                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-ash uppercase mb-2">
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-ash uppercase mb-2">
                     dossier-navy-shadow
                   </div>
-                  <div className="font-sans text-sm text-raddo-charcoal">
+                  <div className="font-sans text-sm text-dossier-charcoal">
                     Deeper, warmer · used near a navy pane.
                   </div>
                 </div>
@@ -515,10 +515,10 @@ export default function StyleGuide() {
 
             {/* 6 · Mono footer strip */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 06 · mono footer strip
               </div>
-              <div className="bg-raddo-ink-deep px-6 py-4 rounded-sm">
+              <div className="bg-dossier-ink-deep px-6 py-4 rounded-sm">
                 <div className="dossier-mono-footer">
                   <span>chief of business · dossier</span>
                   <span>© 2026 COB Technologies LLC</span>
@@ -528,21 +528,21 @@ export default function StyleGuide() {
 
             {/* 7 · Navy/paper split composition */}
             <div>
-              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+              <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-2">
                 07 · navy/paper split composition
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 rounded-sm overflow-hidden" style={{ minHeight: 260 }}>
                 <div className="dossier-navy-pane p-8">
                   <span className="dossier-brass-chip">cover</span>
-                  <p className="font-display text-raddo-paper mt-6" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
+                  <p className="font-display text-dossier-paper mt-6" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
                     Dark storytelling pane.
                   </p>
                 </div>
-                <div className="bg-raddo-paper p-8" style={{ border: "1px solid hsl(var(--raddo-paper-edge))" }}>
-                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-3">
+                <div className="bg-dossier-paper p-8" style={{ border: "1px solid hsl(var(--dossier-paper-edge))" }}>
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-dossier-brass-deep uppercase mb-3">
                     page
                   </div>
-                  <p className="font-display text-raddo-ink-deep" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
+                  <p className="font-display text-dossier-ink-deep" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
                     Light action surface.
                   </p>
                 </div>
@@ -583,9 +583,9 @@ function MotionPreferenceCard() {
         <div
           className="font-mono text-[10px] tracking-[0.18em] uppercase shrink-0 px-3 py-1 rounded-sm"
           style={{
-            color: isReduced ? "hsl(var(--raddo-brass-deep))" : "hsl(var(--muted-foreground))",
-            border: `1px solid ${isReduced ? "hsl(var(--raddo-brass))" : "hsl(var(--border))"}`,
-            backgroundColor: isReduced ? "hsl(var(--raddo-brass) / 0.12)" : "transparent",
+            color: isReduced ? "hsl(var(--dossier-brass-deep))" : "hsl(var(--muted-foreground))",
+            border: `1px solid ${isReduced ? "hsl(var(--dossier-brass))" : "hsl(var(--border))"}`,
+            backgroundColor: isReduced ? "hsl(var(--dossier-brass) / 0.12)" : "transparent",
           }}
           aria-live="polite"
         >
@@ -604,8 +604,8 @@ function MotionPreferenceCard() {
               onClick={() => setPref(opt.value)}
               className="text-left p-4 rounded-md transition-colors"
               style={{
-                border: `1px solid ${active ? "hsl(var(--raddo-brass))" : "hsl(var(--border))"}`,
-                backgroundColor: active ? "hsl(var(--raddo-brass) / 0.08)" : "transparent",
+                border: `1px solid ${active ? "hsl(var(--dossier-brass))" : "hsl(var(--border))"}`,
+                backgroundColor: active ? "hsl(var(--dossier-brass) / 0.08)" : "transparent",
                 cursor: "pointer",
               }}
             >
@@ -614,7 +614,7 @@ function MotionPreferenceCard() {
                 style={{
                   fontSize: 18,
                   fontWeight: 700,
-                  color: active ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--foreground))",
+                  color: active ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--foreground))",
                 }}
               >
                 {opt.label}
@@ -635,9 +635,9 @@ function Section({ title, subtitle, children }: { title: string; subtitle?: stri
         <div
           aria-hidden
           className="mb-3"
-          style={{ width: 56, height: 1.5, backgroundColor: "hsl(var(--raddo-brass))" }}
+          style={{ width: 56, height: 1.5, backgroundColor: "hsl(var(--dossier-brass))" }}
         />
-        <h2 className="font-display text-raddo-ink-deep m-0" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
+        <h2 className="font-display text-dossier-ink-deep m-0" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.1 }}>
           {title}
         </h2>
         {subtitle && (

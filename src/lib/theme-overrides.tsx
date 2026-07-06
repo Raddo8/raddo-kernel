@@ -13,8 +13,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
  * `0.375rem` for radii, `'Inter', system-ui, sans-serif` for fonts).
  */
 
-const STORAGE_KEY = "raddo-theme-overrides-v1";
-const STYLE_TAG_ID = "raddo-theme-overrides";
+const STORAGE_KEY = "dossier-theme-overrides-v1";
+const STYLE_TAG_ID = "dossier-theme-overrides";
 
 export type ThemeOverrides = Record<string, string>;
 

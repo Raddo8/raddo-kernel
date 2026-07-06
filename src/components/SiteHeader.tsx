@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import raddoLogo from "@/assets/cob-logo.png.asset.json";
+import cobLogo from "@/assets/cob-logo.png.asset.json";
 
 // Customer-facing navigation only.
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -22,7 +22,7 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return (
     <span
       aria-hidden
-      className={`pointer-events-none absolute h-2 w-2 ${map[pos]} border-raddo-brass`}
+      className={`pointer-events-none absolute h-2 w-2 ${map[pos]} border-dossier-brass`}
     />
   );
 }
@@ -83,12 +83,12 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
         <div
           className="relative mx-auto max-w-[1240px]"
           style={{
-            backgroundColor: "hsl(var(--raddo-paper) / 0.92)",
-            border: "1px solid hsl(var(--raddo-paper-edge))",
+            backgroundColor: "hsl(var(--dossier-paper) / 0.92)",
+            border: "1px solid hsl(var(--dossier-paper-edge))",
             borderRadius: 8,
             boxShadow: scrolled
-              ? "0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.18)"
-              : "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+              ? "0 8px 24px -16px hsl(var(--dossier-ink-deep) / 0.18)"
+              : "0 2px 8px -4px hsl(var(--dossier-ink-deep) / 0.08)",
             backdropFilter: "saturate(140%) blur(10px)",
             WebkitBackdropFilter: "saturate(140%) blur(10px)",
             transition: "box-shadow 220ms cubic-bezier(0.22,1,0.36,1)",
@@ -104,10 +104,10 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
             className="flex items-center justify-between font-mono"
             style={{
               padding: "8px 18px",
-              borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+              borderBottom: "1px solid hsl(var(--dossier-paper-edge))",
               fontSize: 9.5,
               letterSpacing: "0.22em",
-              color: "hsl(var(--raddo-ash))",
+              color: "hsl(var(--dossier-ash))",
               textTransform: "uppercase",
             }}
           >
@@ -119,7 +119,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                   width: 5,
                   height: 5,
                   borderRadius: "50%",
-                  backgroundColor: "hsl(var(--raddo-brass))",
+                  backgroundColor: "hsl(var(--dossier-brass))",
                 }}
               />
               <span className="hidden sm:inline">CLASSIFIED · FOR PRINCIPAL</span>
@@ -135,7 +135,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
               aria-label="COB · Home"
             >
               <img
-                src={raddoLogo.url}
+                src={cobLogo.url}
                 alt="COB"
                 className="h-[1.5rem] w-auto sm:h-[2rem]"
                 style={{ objectFit: "contain", transform: "translateY(-4px)" }}
@@ -143,13 +143,13 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
               <span
                 className="font-display font-black text-[13px] sm:text-[16px]"
                 style={{
-                  color: "hsl(var(--raddo-brass))",
+                  color: "hsl(var(--dossier-brass))",
                   letterSpacing: "0.03em",
                   lineHeight: 1,
                 }}
               >
-                <span style={{ color: "hsl(var(--raddo-ink-deep))" }}>COB</span>{" "}
-                <span style={{ color: "hsl(var(--raddo-ash))", fontWeight: 500 }}>
+                <span style={{ color: "hsl(var(--dossier-ink-deep))" }}>COB</span>{" "}
+                <span style={{ color: "hsl(var(--dossier-ash))", fontWeight: 500 }}>
                   · Chief Of Business
                 </span>
               </span>
@@ -160,10 +160,10 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                 <a
                   href={cta.href}
                   onClick={cta.onClick}
-                  className="raddo-cta-brass hidden sm:inline-flex items-center gap-2 font-sans"
+                  className="dossier-cta-brass hidden sm:inline-flex items-center gap-2 font-sans"
                   style={{
-                    backgroundColor: "hsl(var(--raddo-brass))",
-                    color: "hsl(var(--raddo-ink-deep))",
+                    backgroundColor: "hsl(var(--dossier-brass))",
+                    color: "hsl(var(--dossier-ink-deep))",
                     padding: "8px 14px",
                     borderRadius: 4,
                     fontSize: 13,
@@ -185,10 +185,10 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                 aria-expanded={searchOpen}
                 className="grid h-9 w-9 place-items-center rounded transition-colors"
                 style={{
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
-                  color: "hsl(var(--raddo-ink-deep))",
+                  border: "1px solid hsl(var(--dossier-paper-edge))",
+                  color: "hsl(var(--dossier-ink-deep))",
                   backgroundColor: searchOpen
-                    ? "hsl(var(--raddo-brass) / 0.10)"
+                    ? "hsl(var(--dossier-brass) / 0.10)"
                     : "transparent",
                 }}
               >
@@ -206,10 +206,10 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                 aria-controls="site-header-menu"
                 className="grid h-9 w-9 place-items-center rounded transition-colors"
                 style={{
-                  border: "1px solid hsl(var(--raddo-brass))",
-                  color: "hsl(var(--raddo-brass-deep))",
+                  border: "1px solid hsl(var(--dossier-brass))",
+                  color: "hsl(var(--dossier-brass-deep))",
                   backgroundColor: menuOpen
-                    ? "hsl(var(--raddo-brass) / 0.12)"
+                    ? "hsl(var(--dossier-brass) / 0.12)"
                     : "transparent",
                 }}
               >
@@ -227,7 +227,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                 animate={{ height: "auto", opacity: 1 }}
                 exit={reduce ? { height: "auto", opacity: 0 } : { height: 0, opacity: 0 }}
                 transition={{ duration: reduce ? 0 : 0.32, ease: EASE }}
-                style={{ overflow: "hidden", borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+                style={{ overflow: "hidden", borderTop: "1px solid hsl(var(--dossier-paper-edge))" }}
               >
                 <form
                   onSubmit={(e) => {
@@ -235,12 +235,12 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                   }}
                   className="flex items-center gap-3 px-4 py-3 sm:px-6"
                 >
-                  <Search size={16} strokeWidth={1.75} style={{ color: "hsl(var(--raddo-ash))" }} />
+                  <Search size={16} strokeWidth={1.75} style={{ color: "hsl(var(--dossier-ash))" }} />
                   <input
                     ref={searchRef}
                     type="search"
                     placeholder="Search · briefings, sources, decisions"
-                    className="w-full bg-transparent font-sans text-raddo-ink-deep placeholder:text-raddo-ash focus:outline-none"
+                    className="w-full bg-transparent font-sans text-dossier-ink-deep placeholder:text-dossier-ash focus:outline-none"
                     style={{ fontSize: 15, letterSpacing: "0.01em" }}
                   />
                   <span
@@ -248,7 +248,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                     style={{
                       fontSize: 9.5,
                       letterSpacing: "0.22em",
-                      color: "hsl(var(--raddo-ash))",
+                      color: "hsl(var(--dossier-ash))",
                       textTransform: "uppercase",
                     }}
                   >
@@ -269,7 +269,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                 animate={{ height: "auto", opacity: 1 }}
                 exit={reduce ? { height: "auto", opacity: 0 } : { height: 0, opacity: 0 }}
                 transition={{ duration: reduce ? 0 : 0.36, ease: EASE }}
-                style={{ overflow: "hidden", borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+                style={{ overflow: "hidden", borderTop: "1px solid hsl(var(--dossier-paper-edge))" }}
                 aria-label="Primary"
               >
                 <ul className="m-0 list-none p-0">
@@ -279,14 +279,14 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                       <li
                         key={link.href}
                         style={{
-                          borderTop: i === 0 ? "none" : "1px solid hsl(var(--raddo-paper-edge))",
+                          borderTop: i === 0 ? "none" : "1px solid hsl(var(--dossier-paper-edge))",
                         }}
                       >
                         <Link
                           to={link.href}
                           className="group flex items-center justify-between gap-4 px-4 py-3.5 sm:px-6"
                           style={{
-                            color: "hsl(var(--raddo-ink-deep))",
+                            color: "hsl(var(--dossier-ink-deep))",
                           }}
                         >
                           <span
@@ -295,8 +295,8 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                               fontSize: 9.5,
                               letterSpacing: "0.22em",
                               color: active
-                                ? "hsl(var(--raddo-brass-deep))"
-                                : "hsl(var(--raddo-ash))",
+                                ? "hsl(var(--dossier-brass-deep))"
+                                : "hsl(var(--dossier-ash))",
                               textTransform: "uppercase",
                               minWidth: 28,
                             }}
@@ -318,9 +318,9 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                             aria-hidden
                             className="grid h-7 w-7 place-items-center transition-transform group-hover:translate-x-0.5"
                             style={{
-                              border: "1px solid hsl(var(--raddo-brass))",
+                              border: "1px solid hsl(var(--dossier-brass))",
                               borderRadius: 4,
-                              color: "hsl(var(--raddo-brass-deep))",
+                              color: "hsl(var(--dossier-brass-deep))",
                             }}
                           >
                             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">

@@ -90,14 +90,14 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
           setOpen((v) => !v);
         }
       }}
-      className="relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
+      className="relative cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass focus-visible:ring-offset-2"
       style={{
-        backgroundColor: "hsl(var(--raddo-paper))",
-        border: "1px solid hsl(var(--raddo-paper-edge))",
+        backgroundColor: "hsl(var(--dossier-paper))",
+        border: "1px solid hsl(var(--dossier-paper-edge))",
         borderRadius: 8,
         boxShadow: open
-          ? "0 8px 32px -16px hsl(var(--raddo-ink-deep) / 0.18)"
-          : "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+          ? "0 8px 32px -16px hsl(var(--dossier-ink-deep) / 0.18)"
+          : "0 2px 8px -4px hsl(var(--dossier-ink-deep) / 0.08)",
         transition: "box-shadow 220ms cubic-bezier(0.22,1,0.36,1)",
       }}
     >
@@ -112,10 +112,10 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
         className="flex items-center justify-between font-mono"
         style={{
           padding: "14px 24px",
-          borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+          borderBottom: "1px solid hsl(var(--dossier-paper-edge))",
           fontSize: 10,
           letterSpacing: "0.18em",
-          color: "hsl(var(--raddo-ash))",
+          color: "hsl(var(--dossier-ash))",
           textTransform: "uppercase",
         }}
       >
@@ -127,7 +127,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               width: 6,
               height: 6,
               borderRadius: "50%",
-              backgroundColor: "hsl(var(--raddo-brass))",
+              backgroundColor: "hsl(var(--dossier-brass))",
             }}
           />
           CLASSIFIED · FOR PRINCIPAL
@@ -142,7 +142,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
 
           <div className="flex flex-col items-stretch gap-3">
             <h2
-              className="font-display text-raddo-ink-deep m-0 md:whitespace-nowrap"
+              className="font-display text-dossier-ink-deep m-0 md:whitespace-nowrap"
               style={{
                 fontWeight: 800,
                 fontSize: "clamp(22px, 4.2vw, 48px)",
@@ -160,7 +160,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             style={{
               width: 56,
               height: 1.5,
-              backgroundColor: "hsl(var(--raddo-brass))",
+              backgroundColor: "hsl(var(--dossier-brass))",
             }}
           />
 
@@ -171,7 +171,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               style={{
                 fontSize: 10,
                 letterSpacing: "0.22em",
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 textTransform: "uppercase",
               }}
             >
@@ -183,7 +183,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
               style={{
                 fontSize: 10,
                 letterSpacing: "0.22em",
-                color: "hsl(var(--raddo-ash))",
+                color: "hsl(var(--dossier-ash))",
                 textTransform: "uppercase",
               }}
             >
@@ -193,13 +193,13 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 style={{
                   width: 28,
                   height: 28,
-                  border: "1px solid hsl(var(--raddo-brass))",
+                  border: "1px solid hsl(var(--dossier-brass))",
                   borderRadius: 4,
-                  color: "hsl(var(--raddo-brass-deep))",
+                  color: "hsl(var(--dossier-brass-deep))",
                   transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
                   transform: open ? "rotate(180deg)" : "rotate(0deg)",
                   backgroundColor: open
-                    ? "hsl(var(--raddo-brass) / 0.12)"
+                    ? "hsl(var(--dossier-brass) / 0.12)"
                     : "transparent",
                 }}
               >
@@ -214,7 +214,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
           <dl
             className="font-mono grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-3 m-0"
             style={{
-              borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+              borderTop: "1px solid hsl(var(--dossier-paper-edge))",
               padding: "12px 0 4px",
             }}
           >
@@ -229,7 +229,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   style={{
                     fontSize: 9,
                     letterSpacing: "0.22em",
-                    color: "hsl(var(--raddo-ash))",
+                    color: "hsl(var(--dossier-ash))",
                     textTransform: "uppercase",
                   }}
                 >
@@ -240,7 +240,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   style={{
                     fontSize: 13,
                     fontWeight: 500,
-                    color: "hsl(var(--raddo-ink-deep))",
+                    color: "hsl(var(--dossier-ink-deep))",
                     letterSpacing: "0.01em",
                     whiteSpace: "pre-line",
                     lineHeight: 1.3,
@@ -271,8 +271,8 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 className="relative overflow-hidden"
                 style={{
                   borderRadius: 4,
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
-                  backgroundColor: "hsl(var(--raddo-paper))",
+                  border: "1px solid hsl(var(--dossier-paper-edge))",
+                  backgroundColor: "hsl(var(--dossier-paper))",
                 }}
               >
                 <img
@@ -288,7 +288,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   marginTop: 14,
                   fontSize: 13,
                   lineHeight: 1.5,
-                  color: "hsl(var(--raddo-ash))",
+                  color: "hsl(var(--dossier-ash))",
                   letterSpacing: "0.01em",
                 }}
               >
@@ -314,7 +314,7 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
             <div
               style={{
                 padding: "8px 40px 40px",
-                borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+                borderTop: "1px solid hsl(var(--dossier-paper-edge))",
               }}
             >
               <div
@@ -324,13 +324,13 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                   width: 280,
                   maxWidth: "100%",
                   height: 1.5,
-                  backgroundColor: "hsl(var(--raddo-brass))",
+                  backgroundColor: "hsl(var(--dossier-brass))",
                 }}
               />
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
                 COB is a system of{" "}
-                <strong className="text-raddo-ink-deep font-bold">
+                <strong className="text-dossier-ink-deep font-bold">
                   intelligence, strategy, and competence
                 </strong>{" "}
                 built around one person · or one business. It reads what you read,
@@ -342,29 +342,29 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 version of yourself in every room you walk into.
               </p>
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-raddo-ink-deep font-bold">light</strong>.
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-dossier-ink-deep font-bold">light</strong>.
               </p>
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
                 Two things separate COB from any tool you have used before.
               </p>
 
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                <strong className="text-raddo-ink-deep font-bold">It is portable.</strong>{" "}
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                <strong className="text-dossier-ink-deep font-bold">It is portable.</strong>{" "}
                 Not locked to one app, one platform, one provider. It carries
                 everything you teach it across the systems you already use.
               </p>
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
-                <strong className="text-raddo-ink-deep font-bold">It is permanent.</strong>{" "}
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+                <strong className="text-dossier-ink-deep font-bold">It is permanent.</strong>{" "}
                 It does not reset when you change roles, restructure your team, or
                 move on to the next thing. The longer you use it, the more of you it
                 carries.
               </p>
 
-              <p className="font-sans text-raddo-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
+              <p className="font-sans text-dossier-charcoal mb-6" style={{ fontSize: 18, lineHeight: 1.6 }}>
                 Executives without a COB are now competing against executives with
                 one. The gap shows up quietly · in who is prepared when the question
                 lands, who has the draft ready before the meeting, who remembers
@@ -379,20 +379,20 @@ function BriefingDossier({ open, setOpen }: { open: boolean; setOpen: (v: boolea
                 style={{
                   width: 120,
                   height: 1.5,
-                  backgroundColor: "hsl(var(--raddo-brass))",
+                  backgroundColor: "hsl(var(--dossier-brass))",
                 }}
               />
 
               <div style={{ breakInside: "avoid" }}>
                 <p
-                  className="font-display text-raddo-ink-deep mb-4"
+                  className="font-display text-dossier-ink-deep mb-4"
                   style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
                 >
                   The question is no longer whether decision intelligence at this
                   depth becomes the standard for serious operators.
                 </p>
                 <p
-                  className="font-display text-raddo-ink-deep"
+                  className="font-display text-dossier-ink-deep"
                   style={{ fontStyle: "italic", fontSize: 21, lineHeight: 1.45 }}
                 >
                   The question is whether you have one when it does.
@@ -494,14 +494,14 @@ function VaultExhibit({
           toggle();
         }
       }}
-      className="relative h-full flex flex-col cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass focus-visible:ring-offset-2"
+      className="relative h-full flex flex-col cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass focus-visible:ring-offset-2"
       style={{
-        backgroundColor: "hsl(var(--raddo-paper))",
-        border: "1px solid hsl(var(--raddo-paper-edge))",
+        backgroundColor: "hsl(var(--dossier-paper))",
+        border: "1px solid hsl(var(--dossier-paper-edge))",
         borderRadius: 8,
         boxShadow: open
-          ? "0 8px 32px -16px hsl(var(--raddo-ink-deep) / 0.18)"
-          : "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+          ? "0 8px 32px -16px hsl(var(--dossier-ink-deep) / 0.18)"
+          : "0 2px 8px -4px hsl(var(--dossier-ink-deep) / 0.08)",
         transition: "box-shadow 220ms cubic-bezier(0.22,1,0.36,1)",
       }}
     >
@@ -514,10 +514,10 @@ function VaultExhibit({
         className="flex items-center justify-between font-mono"
         style={{
           padding: "14px 24px",
-          borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+          borderBottom: "1px solid hsl(var(--dossier-paper-edge))",
           fontSize: 10,
           letterSpacing: "0.18em",
-          color: "hsl(var(--raddo-ash))",
+          color: "hsl(var(--dossier-ash))",
           textTransform: "uppercase",
         }}
       >
@@ -530,8 +530,8 @@ function VaultExhibit({
           className="relative overflow-hidden"
           style={{
             borderRadius: 4,
-            border: "1px solid hsl(var(--raddo-paper-edge))",
-            backgroundColor: "hsl(var(--raddo-night))",
+            border: "1px solid hsl(var(--dossier-paper-edge))",
+            backgroundColor: "hsl(var(--dossier-night))",
           }}
         >
           <img
@@ -545,7 +545,7 @@ function VaultExhibit({
 
       <div className="px-6 md:px-10 pt-6">
         <p
-          className="font-sans text-raddo-charcoal m-0"
+          className="font-sans text-dossier-charcoal m-0"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
           Once we get access: We build it. Wire it. Calibrate it. Install it. All in two weeks.
@@ -558,11 +558,11 @@ function VaultExhibit({
           style={{
             fontSize: 10,
             letterSpacing: "0.18em",
-            color: "hsl(var(--raddo-ash))",
+            color: "hsl(var(--dossier-ash))",
             textTransform: "uppercase",
           }}
         >
-          <span aria-hidden style={{ width: 28, height: 1.5, backgroundColor: "hsl(var(--raddo-brass))" }} />
+          <span aria-hidden style={{ width: 28, height: 1.5, backgroundColor: "hsl(var(--dossier-brass))" }} />
           <span>Exhibit key</span>
         </div>
         <ul className="m-0 p-0 list-none grid grid-cols-2 gap-x-6">
@@ -570,21 +570,21 @@ function VaultExhibit({
             <li
               key={row.n}
               className="flex items-baseline gap-3 py-2"
-              style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+              style={{ borderTop: "1px solid hsl(var(--dossier-paper-edge))" }}
             >
               <span
                 className="font-mono shrink-0"
                 style={{
                   fontSize: 10,
                   letterSpacing: "0.18em",
-                  color: "hsl(var(--raddo-brass-deep))",
+                  color: "hsl(var(--dossier-brass-deep))",
                   minWidth: 24,
                 }}
               >
                 {row.n}
               </span>
               <span
-                className="font-sans text-raddo-ink-deep"
+                className="font-sans text-dossier-ink-deep"
                 style={{ fontSize: 14, fontWeight: 500, flex: 1 }}
               >
                 {row.label}
@@ -600,7 +600,7 @@ function VaultExhibit({
             style={{
               fontSize: 10,
               letterSpacing: "0.22em",
-              color: "hsl(var(--raddo-brass-deep))",
+              color: "hsl(var(--dossier-brass-deep))",
               textTransform: "uppercase",
             }}
           >
@@ -612,7 +612,7 @@ function VaultExhibit({
             style={{
               fontSize: 10,
               letterSpacing: "0.22em",
-              color: "hsl(var(--raddo-ash))",
+              color: "hsl(var(--dossier-ash))",
               textTransform: "uppercase",
             }}
           >
@@ -622,13 +622,13 @@ function VaultExhibit({
               style={{
                 width: 28,
                 height: 28,
-                border: "1px solid hsl(var(--raddo-brass))",
+                border: "1px solid hsl(var(--dossier-brass))",
                 borderRadius: 4,
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 transition: "transform 220ms cubic-bezier(0.22,1,0.36,1), background-color 220ms",
                 transform: open ? "rotate(180deg)" : "rotate(0deg)",
                 backgroundColor: open
-                  ? "hsl(var(--raddo-brass) / 0.12)"
+                  ? "hsl(var(--dossier-brass) / 0.12)"
                   : "transparent",
               }}
             >
@@ -655,7 +655,7 @@ function VaultExhibit({
               className="md:px-10"
               style={{
                 padding: "20px 24px 28px",
-                borderTop: "1px solid hsl(var(--raddo-paper-edge))",
+                borderTop: "1px solid hsl(var(--dossier-paper-edge))",
               }}
             >
               <div
@@ -664,13 +664,13 @@ function VaultExhibit({
                   fontVariant: "small-caps",
                   fontSize: 11,
                   letterSpacing: "0.22em",
-                  color: "hsl(var(--raddo-brass))",
+                  color: "hsl(var(--dossier-brass))",
                 }}
               >
                 What he takes on
               </div>
               <p
-                className="font-sans text-raddo-charcoal m-0 mb-5"
+                className="font-sans text-dossier-charcoal m-0 mb-5"
                 style={{ fontSize: 14, lineHeight: 1.55 }}
               >
                 Once connected, your COB quietly absorbs the work that fills your week. A partial view of what he picks up:
@@ -683,7 +683,7 @@ function VaultExhibit({
                       style={{
                         fontSize: 10,
                         letterSpacing: "0.18em",
-                        color: "hsl(var(--raddo-brass-deep))",
+                        color: "hsl(var(--dossier-brass-deep))",
                         textTransform: "uppercase",
                       }}
                     >
@@ -693,7 +693,7 @@ function VaultExhibit({
                       {group.items.map((item) => (
                         <li
                           key={item}
-                          className="font-sans text-raddo-ink-deep"
+                          className="font-sans text-dossier-ink-deep"
                           style={{ fontSize: 13, lineHeight: 1.45 }}
                         >
                           {item}
@@ -711,7 +711,7 @@ function VaultExhibit({
                     fontSize: "clamp(28px, 4vw, 44px)",
                     fontWeight: 800,
                     letterSpacing: "0.08em",
-                    color: "hsl(var(--raddo-brass))",
+                    color: "hsl(var(--dossier-brass))",
                   }}
                 >
                   Your move
@@ -719,10 +719,10 @@ function VaultExhibit({
                 <a
                   href="/consult"
                   onClick={(e) => e.stopPropagation()}
-                  className="raddo-cta-brass group inline-flex items-center gap-2 font-sans sm:ml-auto"
+                  className="dossier-cta-brass group inline-flex items-center gap-2 font-sans sm:ml-auto"
                   style={{
-                    backgroundColor: "hsl(var(--raddo-brass))",
-                    color: "hsl(var(--raddo-ink-deep))",
+                    backgroundColor: "hsl(var(--dossier-brass))",
+                    color: "hsl(var(--dossier-ink-deep))",
                     padding: "12px 22px",
                     borderRadius: 4,
                     fontSize: 14,
@@ -749,7 +749,7 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
     position: "absolute",
     width: size,
     height: size,
-    borderColor: "hsl(var(--raddo-brass))",
+    borderColor: "hsl(var(--dossier-brass))",
     borderStyle: "solid",
     borderWidth: 0,
   };
@@ -781,7 +781,7 @@ function ChapterOverline({ n, label }: { n: string; label: string }) {
       style={{
         fontSize: 11,
         letterSpacing: "0.22em",
-        color: "hsl(var(--raddo-brass-deep))",
+        color: "hsl(var(--dossier-brass-deep))",
         textTransform: "uppercase",
         marginBottom: 20,
       }}
@@ -803,7 +803,7 @@ function ChapterClose() {
       style={{
         width: "min(320px, 60%)",
         height: 1,
-        backgroundColor: "hsl(var(--raddo-brass) / 0.4)",
+        backgroundColor: "hsl(var(--dossier-brass) / 0.4)",
       }}
     >
       <span
@@ -815,7 +815,7 @@ function ChapterClose() {
           width: 6,
           height: 6,
           borderRadius: "50%",
-          backgroundColor: "hsl(var(--raddo-brass))",
+          backgroundColor: "hsl(var(--dossier-brass))",
         }}
       />
     </div>
@@ -823,7 +823,7 @@ function ChapterClose() {
 }
 
 
-const INTRO_FLAG = "raddo-hero-intro-played-v2";
+const INTRO_FLAG = "dossier-hero-intro-played-v2";
 
 export function HeroStory() {
   const reduce = useReducedMotion();
@@ -881,6 +881,11 @@ export function HeroStory() {
   const [heroImgLoaded, setHeroImgLoaded] = useState(false);
   const [litanyShown, setLitanyShown] = useState(false);
   const [finaleShown, setFinaleShown] = useState(false);
+  // Five-second read strip · fires ~1.5s after the video starts so the offer
+  // and CTA land inside a first-time visitor's five-second attention window,
+  // independent of the finale (which arrives ~6s in).
+  const [stripShown, setStripShown] = useState(false);
+
   useEffect(() => {
     // If the preloaded image is already cached, mark it loaded on mount.
     const img = new Image();
@@ -945,7 +950,7 @@ export function HeroStory() {
   });
 
   return (
-    <main className="relative w-full bg-raddo-paper text-raddo-charcoal selection:bg-raddo-brass/30">
+    <main className="relative w-full bg-dossier-paper text-dossier-charcoal selection:bg-dossier-brass/30">
       <SeoHead
         path="/hero-story"
         title="COB · Hero Story (staging)"
@@ -956,7 +961,7 @@ export function HeroStory() {
       <div
         aria-hidden
         className="absolute left-0 right-0 top-0 z-0"
-        style={{ height: 60, backgroundColor: "hsl(var(--raddo-ink-deep))" }}
+        style={{ height: 60, backgroundColor: "hsl(var(--dossier-ink-deep))" }}
       />
       {/* Top-of-page video band · sits below the bar, scrolls away with the page */}
       <div
@@ -978,6 +983,7 @@ export function HeroStory() {
             const v = e.currentTarget;
             // Only start timers once the video has actual buffered data ready to play
             if (v.readyState < 2) return;
+            setTimeout(() => setStripShown(true), 1500);
             setTimeout(() => setLitanyShown(true), 2000);
             setTimeout(() => setFinaleShown(true), 6000);
           }}
@@ -985,21 +991,23 @@ export function HeroStory() {
             if (litanyShown) return;
             const v = e.currentTarget;
             if (v.readyState < 3) return;
+            setTimeout(() => setStripShown(true), 1500);
             setTimeout(() => setLitanyShown(true), 2000);
             setTimeout(() => setFinaleShown(true), 6000);
           }}
         />
+
         {/* Soft paper tint so headline contrast holds */}
         <div
           className="absolute inset-0"
-          style={{ backgroundColor: "hsl(var(--raddo-paper) / 0.32)" }}
+          style={{ backgroundColor: "hsl(var(--dossier-paper) / 0.32)" }}
         />
         {/* Hovering headline · litany reveals 2s after video starts, finale 2s after that */}
         <div className="absolute inset-x-0 bottom-[40px] sm:bottom-[60px] md:bottom-[80px] h-1/3 flex flex-col items-stretch justify-end px-4 sm:px-8 md:px-16 pointer-events-none">
           <div
             className="font-display w-full"
             style={{
-              color: "hsl(var(--raddo-ink-deep))",
+              color: "hsl(var(--dossier-ink-deep))",
               fontWeight: 900,
               lineHeight: 1.22,
               letterSpacing: "-0.01em",
@@ -1028,7 +1036,7 @@ export function HeroStory() {
                     transitionDelay: reduce ? "0ms" : litanyShown ? `${i * 400}ms` : "0ms",
                   }}
                 >
-                  YOU <span style={{ color: "hsl(var(--raddo-brass))" }}>{verb}</span> {rest}
+                  YOU <span style={{ color: "hsl(var(--dossier-brass))" }}>{verb}</span> {rest}
                 </p>
               ))}
             </div>
@@ -1048,16 +1056,16 @@ export function HeroStory() {
         <div
           className="absolute inset-x-0 bottom-0 flex justify-center"
           style={{
-            opacity: reduce || finaleShown ? 1 : 0,
+            opacity: reduce || stripShown ? 1 : 0,
             transition: "opacity 700ms cubic-bezier(0.22,1,0.36,1)",
-            transitionDelay: reduce ? "0ms" : "800ms",
           }}
         >
+
           <div className="dossier-navy-pane w-full flex flex-col items-center gap-3 px-4 py-4 sm:px-8 sm:py-5 md:px-16">
             <p
               className="m-0 text-center font-sans"
               style={{
-                color: "hsl(var(--raddo-paper))",
+                color: "hsl(var(--dossier-paper))",
                 fontSize: "clamp(12px, 1.6vw, 17px)",
                 letterSpacing: "0.01em",
                 lineHeight: 1.45,
@@ -1068,10 +1076,10 @@ export function HeroStory() {
             <a
               href="/consult"
               onClick={() => track("consult_cta_click", "/hero-story")}
-              className="raddo-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
+              className="dossier-cta-brass pointer-events-auto inline-flex items-center gap-2 font-sans"
               style={{
-                backgroundColor: "hsl(var(--raddo-brass))",
-                color: "hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-brass))",
+                color: "hsl(var(--dossier-ink-deep))",
                 padding: "12px 22px",
                 borderRadius: 4,
                 fontSize: 14,
@@ -1093,7 +1101,7 @@ export function HeroStory() {
         className="pointer-events-none fixed inset-0 z-0 opacity-[0.04] mix-blend-multiply"
         style={{
           backgroundImage:
-            "radial-gradient(hsl(var(--raddo-charcoal)) 1px, transparent 1px)",
+            "radial-gradient(hsl(var(--dossier-charcoal)) 1px, transparent 1px)",
           backgroundSize: "3px 3px",
         }}
       />
@@ -1119,7 +1127,7 @@ export function HeroStory() {
           <h2
             className="font-display"
             style={{
-              color: "hsl(var(--raddo-ink-deep))",
+              color: "hsl(var(--dossier-ink-deep))",
               fontWeight: 800,
               fontSize: "clamp(2rem, 4.4vw, 3.75rem)",
               lineHeight: 1.08,
@@ -1128,7 +1136,7 @@ export function HeroStory() {
               marginBottom: 32,
             }}
           >
-            <span style={{ color: "hsl(var(--raddo-brass))", display: "block" }}>
+            <span style={{ color: "hsl(var(--dossier-brass))", display: "block" }}>
               Introducing COB.
             </span>
             Not just in your corner.<br />
@@ -1139,10 +1147,10 @@ export function HeroStory() {
           <section className="mx-auto w-full max-w-5xl py-16 lg:py-24">
             <ChapterOverline n="01" label="the corner" />
             <p
-              className="font-sans text-raddo-charcoal"
+              className="font-sans text-dossier-charcoal"
               style={{ fontSize: 18, lineHeight: 1.65, marginBottom: 20 }}
             >
-              Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-raddo-ink-deep font-bold">light</strong>.
+              Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-dossier-ink-deep font-bold">light</strong>.
             </p>
             {/* PLACEHOLDER-CONFIRM-CLAIMS */}
             <p
@@ -1150,7 +1158,7 @@ export function HeroStory() {
               style={{
                 fontSize: 13,
                 lineHeight: 1.5,
-                color: "hsl(var(--raddo-ash))",
+                color: "hsl(var(--dossier-ash))",
                 fontStyle: "italic",
               }}
             >
@@ -1174,9 +1182,9 @@ export function HeroStory() {
             className="pointer-events-none absolute inset-0 -z-10 overflow-hidden"
             style={{
               borderRadius: 8,
-              border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
+              border: "1.5px solid hsl(var(--dossier-brass-deep) / 0.55)",
               boxShadow:
-                "0 1px 0 hsl(var(--raddo-paper-edge)) inset, 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.2)",
+                "0 1px 0 hsl(var(--dossier-paper-edge)) inset, 0 8px 24px -16px hsl(var(--dossier-ink-deep) / 0.2)",
             }}
           >
             {/* Skeleton · paper-toned blur-up while the image decodes */}
@@ -1190,9 +1198,9 @@ export function HeroStory() {
                   className="absolute inset-0"
                   style={{
                     background:
-                      "linear-gradient(110deg, hsl(var(--raddo-paper-edge)) 0%, hsl(var(--raddo-paper)) 40%, hsl(var(--raddo-brass) / 0.08) 55%, hsl(var(--raddo-paper)) 70%, hsl(var(--raddo-paper-edge)) 100%)",
+                      "linear-gradient(110deg, hsl(var(--dossier-paper-edge)) 0%, hsl(var(--dossier-paper)) 40%, hsl(var(--dossier-brass) / 0.08) 55%, hsl(var(--dossier-paper)) 70%, hsl(var(--dossier-paper-edge)) 100%)",
                     backgroundSize: "200% 100%",
-                    animation: "raddo-shimmer 2.4s ease-in-out infinite",
+                    animation: "dossier-shimmer 2.4s ease-in-out infinite",
                     filter: "blur(8px)",
                   }}
                 />
@@ -1219,21 +1227,21 @@ export function HeroStory() {
             <div
               className="absolute inset-0"
               style={{
-                background: "hsl(var(--raddo-paper) / 0.5)",
+                background: "hsl(var(--dossier-paper) / 0.5)",
               }}
             />
             {/* Brass frame corners */}
-            <span className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-brass-deep/60" />
-            <span className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-brass-deep/60" />
-            <span className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-brass-deep/60" />
-            <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
+            <span className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-dossier-brass-deep/60" />
+            <span className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-dossier-brass-deep/60" />
+            <span className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-dossier-brass-deep/60" />
+            <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-dossier-brass-deep/60" />
           </motion.div>
 
           {/* Headline · waits for image, then cascades in (300 / 600 / 900ms after reveal) */}
           <motion.h1
             initial={INITIAL}
             animate={heroImgLoaded ? "show" : "hidden"}
-            className="relative font-display text-raddo-ink-deep px-6 py-10 md:px-10 md:py-14"
+            className="relative font-display text-dossier-ink-deep px-6 py-10 md:px-10 md:py-14"
             style={{
               fontSize: "clamp(35px, 5.76vw, 74px)",
               fontWeight: 800,
@@ -1248,7 +1256,7 @@ export function HeroStory() {
             <motion.span
               className="block italic mt-20 md:mt-28"
               variants={rise(900, 600)}
-              style={{ color: "hsl(var(--raddo-brass))", fontWeight: 800 }}
+              style={{ color: "hsl(var(--dossier-brass))", fontWeight: 800 }}
             >
               Sharpens with
               <br />
@@ -1282,7 +1290,7 @@ export function HeroStory() {
               style={{
                 fontSize: 11,
                 letterSpacing: "0.22em",
-                color: "hsl(var(--raddo-paper) / 0.7)",
+                color: "hsl(var(--dossier-paper) / 0.7)",
                 textTransform: "uppercase",
                 marginBottom: 16,
               }}
@@ -1297,7 +1305,7 @@ export function HeroStory() {
               style={{
                 fontSize: 20,
                 lineHeight: 1.6,
-                color: "hsl(var(--raddo-paper))",
+                color: "hsl(var(--dossier-paper))",
                 marginTop: 20,
                 marginBottom: 0,
               }}
@@ -1319,21 +1327,21 @@ export function HeroStory() {
               <li
                 key={row.n}
                 className="flex items-baseline gap-6 py-5"
-                style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+                style={{ borderTop: "1px solid hsl(var(--dossier-paper-edge))" }}
               >
                 <span
                   className="font-mono shrink-0 tabular-nums"
                   style={{
                     fontSize: 13,
                     letterSpacing: "0.18em",
-                    color: "hsl(var(--raddo-brass-deep))",
+                    color: "hsl(var(--dossier-brass-deep))",
                     minWidth: 36,
                   }}
                 >
                   {row.n}
                 </span>
                 <span
-                  className="font-sans text-raddo-ink-deep"
+                  className="font-sans text-dossier-ink-deep"
                   style={{ fontSize: 18, lineHeight: 1.55, flex: 1 }}
                 >
                   {row.body}
@@ -1341,15 +1349,15 @@ export function HeroStory() {
               </li>
             ))}
           </ul>
-          <div style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }} />
+          <div style={{ borderTop: "1px solid hsl(var(--dossier-paper-edge))" }} />
           <div className="mt-10 flex justify-start">
             <a
               href="/consult"
               onClick={() => track("consult_cta_click", "/hero-story")}
-              className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+              className="dossier-cta-brass group inline-flex items-center gap-2 font-sans"
               style={{
-                backgroundColor: "hsl(var(--raddo-brass))",
-                color: "hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-brass))",
+                color: "hsl(var(--dossier-ink-deep))",
                 padding: "14px 26px",
                 borderRadius: 4,
                 fontSize: 15,
@@ -1373,7 +1381,7 @@ export function HeroStory() {
           className="mt-32 md:mt-40 h-px origin-left"
           style={{
             width: 280,
-            backgroundColor: "hsl(var(--raddo-brass))",
+            backgroundColor: "hsl(var(--dossier-brass))",
             opacity: 0.7,
           }}
         />
@@ -1388,10 +1396,10 @@ export function HeroStory() {
           <a
             href="/consult"
             onClick={() => track("consult_cta_click", "/hero-story")}
-            className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
+            className="dossier-cta-brass group inline-flex items-center gap-3 font-sans"
             style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
+              backgroundColor: "hsl(var(--dossier-brass))",
+              color: "hsl(var(--dossier-ink-deep))",
               padding: "16px 28px",
               borderRadius: "4px",
               fontSize: "15px",
@@ -1404,7 +1412,7 @@ export function HeroStory() {
           </a>
           <a
             href="/capability-brief.html"
-            className="raddo-cta-ghost inline-flex items-center gap-2 font-sans text-raddo-ink-deep"
+            className="dossier-cta-ghost inline-flex items-center gap-2 font-sans text-dossier-ink-deep"
             style={{
               fontSize: "14px",
               fontWeight: 500,
@@ -1412,7 +1420,7 @@ export function HeroStory() {
               padding: "12px 4px",
             }}
           >
-            <span className="border-b border-raddo-brass-deep/40 pb-[2px]">
+            <span className="border-b border-dossier-brass-deep/40 pb-[2px]">
               Read the Executive Brief
             </span>
             <span aria-hidden>→</span>
@@ -1424,12 +1432,12 @@ export function HeroStory() {
           variants={rise(900, 3500)}
           initial={INITIAL}
           animate="show"
-          className="relative mt-40 md:mt-52 overflow-hidden bg-raddo-paper"
+          className="relative mt-40 md:mt-52 overflow-hidden bg-dossier-paper"
           style={{
             borderRadius: 8,
-            border: "1.5px solid hsl(var(--raddo-brass-deep) / 0.55)",
+            border: "1.5px solid hsl(var(--dossier-brass-deep) / 0.55)",
             boxShadow:
-              "0 1px 0 hsl(var(--raddo-paper-edge)) inset, 0 8px 24px -16px hsl(var(--raddo-ink-deep) / 0.25)",
+              "0 1px 0 hsl(var(--dossier-paper-edge)) inset, 0 8px 24px -16px hsl(var(--dossier-ink-deep) / 0.25)",
             aspectRatio: "1100 / 620",
           }}
         >
@@ -1454,13 +1462,13 @@ export function HeroStory() {
             </video>
           )}
           {/* Brass frame corners */}
-          <span aria-hidden className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-brass-deep/60" />
-          <span aria-hidden className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-dossier-brass-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-dossier-brass-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-dossier-brass-deep/60" />
+          <span aria-hidden className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-dossier-brass-deep/60" />
           {/* Caption */}
           <figcaption
-            className="absolute bottom-4 left-4 font-sans uppercase text-raddo-ink-deep/70"
+            className="absolute bottom-4 left-4 font-sans uppercase text-dossier-ink-deep/70"
             style={{ fontSize: "10px", letterSpacing: "0.28em" }}
           >
             PLATE I · The Six-Source Mandala
@@ -1481,7 +1489,7 @@ export function HeroStory() {
               },
             },
           }}
-          className="mt-16 md:mt-20 grid grid-cols-2 gap-y-3 border-y border-raddo-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
+          className="mt-16 md:mt-20 grid grid-cols-2 gap-y-3 border-y border-dossier-brass-deep/15 py-6 md:grid-cols-6 md:gap-y-0"
         >
           {SOURCES.map((src, i) => (
             <motion.div
@@ -1500,13 +1508,13 @@ export function HeroStory() {
               className="flex items-baseline gap-2"
             >
               <span
-                className="font-sans text-raddo-brass tabular-nums"
+                className="font-sans text-dossier-brass tabular-nums"
                 style={{ fontSize: "10px", letterSpacing: "0.18em" }}
               >
                 {String(i + 1).padStart(2, "0")}
               </span>
               <span
-                className="font-sans uppercase text-raddo-charcoal"
+                className="font-sans uppercase text-dossier-charcoal"
                 style={{ fontSize: "11px", letterSpacing: "0.18em", fontWeight: 500 }}
               >
                 {src}
@@ -1520,7 +1528,7 @@ export function HeroStory() {
       <section className="relative z-10 mx-auto w-full max-w-5xl px-6 py-16 sm:px-8 md:px-12 lg:py-24 lg:px-16">
         <ChapterOverline n="04" label="in plain terms" />
         <p
-          className="font-sans text-raddo-charcoal"
+          className="font-sans text-dossier-charcoal"
           style={{ fontSize: 18, lineHeight: 1.7, marginBottom: 32 }}
         >
           COB · Chief of Business · is a private operating intelligence built around one principal or one business. It connects to the systems you already run · email, meetings, documents, calendar, financials, business chat · and holds the full context of your operation so you never carry it alone. Your COB prepares your briefings, drafts in your cadence, tracks every commitment, and remembers every decision, so you arrive prepared in every room. Engagements begin with a twenty-minute consult. From access to installed, calibrated operation takes two weeks. COB serves owners and executives who want their operation carried, their history held, and their edge compounding · built for the chair the day answers to. Begin the consult at chiefofbusiness.ai/consult.
@@ -1528,10 +1536,10 @@ export function HeroStory() {
         <a
           href="/consult"
           onClick={() => track("consult_cta_click", "/hero-story")}
-          className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+          className="dossier-cta-brass group inline-flex items-center gap-2 font-sans"
           style={{
-            backgroundColor: "hsl(var(--raddo-brass))",
-            color: "hsl(var(--raddo-ink-deep))",
+            backgroundColor: "hsl(var(--dossier-brass))",
+            color: "hsl(var(--dossier-ink-deep))",
             padding: "16px 28px",
             borderRadius: 4,
             fontSize: 15,
@@ -1549,22 +1557,22 @@ export function HeroStory() {
 
       <footer
         className="relative z-10 w-full"
-        style={{ backgroundColor: "hsl(var(--raddo-ink-deep))" }}
+        style={{ backgroundColor: "hsl(var(--dossier-ink-deep))" }}
       >
         <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-3 px-6 py-10 sm:px-8 md:flex-row md:items-center md:justify-between md:px-12 lg:px-16">
           <div className="flex items-baseline gap-3">
-            <span className="font-display text-[15px] font-black tracking-[-0.02em] text-raddo-paper">
+            <span className="font-display text-[15px] font-black tracking-[-0.02em] text-dossier-paper">
               COB
             </span>
             <span
-              className="font-sans uppercase text-raddo-paper/70"
+              className="font-sans uppercase text-dossier-paper/70"
               style={{ fontSize: "10px", letterSpacing: "0.28em" }}
             >
               chiefofbusiness.ai
             </span>
           </div>
           <div
-            className="font-sans text-raddo-paper/70"
+            className="font-sans text-dossier-paper/70"
             style={{ fontSize: "11px", letterSpacing: "0.18em" }}
           >
             © 2026 · Built for the chair the day answers to.
@@ -1574,35 +1582,35 @@ export function HeroStory() {
 
 
       <style>{`
-        .raddo-cta-brass {
+        .dossier-cta-brass {
           transition: background-color 220ms cubic-bezier(0.22,1,0.36,1),
                       box-shadow 220ms cubic-bezier(0.22,1,0.36,1),
                       transform 120ms cubic-bezier(0.22,1,0.36,1);
-          box-shadow: 0 1px 0 hsl(var(--raddo-brass-deep) / 0.4) inset,
-                      0 4px 12px -8px hsl(var(--raddo-ink-deep) / 0.3);
+          box-shadow: 0 1px 0 hsl(var(--dossier-brass-deep) / 0.4) inset,
+                      0 4px 12px -8px hsl(var(--dossier-ink-deep) / 0.3);
         }
-        .raddo-cta-brass:hover {
-          background-color: hsl(var(--raddo-brass-deep) / 0.95) !important;
-          color: hsl(var(--raddo-paper)) !important;
+        .dossier-cta-brass:hover {
+          background-color: hsl(var(--dossier-brass-deep) / 0.95) !important;
+          color: hsl(var(--dossier-paper)) !important;
         }
-        .raddo-cta-brass:focus-visible {
-          outline: 2px solid hsl(var(--raddo-ink-deep));
+        .dossier-cta-brass:focus-visible {
+          outline: 2px solid hsl(var(--dossier-ink-deep));
           outline-offset: 3px;
         }
-        .raddo-cta-brass:active {
+        .dossier-cta-brass:active {
           transform: translateY(1px);
         }
-        .raddo-cta-ghost:hover {
-          color: hsl(var(--raddo-brass-deep));
+        .dossier-cta-ghost:hover {
+          color: hsl(var(--dossier-brass-deep));
         }
-        .raddo-cta-ghost:focus-visible {
-          outline: 2px solid hsl(var(--raddo-brass));
+        .dossier-cta-ghost:focus-visible {
+          outline: 2px solid hsl(var(--dossier-brass));
           outline-offset: 3px;
           border-radius: 2px;
         }
         .duration-220 { transition-duration: 220ms; }
         @media (prefers-reduced-motion: reduce) {
-          .raddo-cta-brass, .raddo-cta-ghost { transition: none; }
+          .dossier-cta-brass, .dossier-cta-ghost { transition: none; }
         }
       `}</style>
     </main>

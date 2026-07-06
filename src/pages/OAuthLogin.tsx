@@ -86,20 +86,20 @@ export default function OAuthLogin() {
           style={{
             fontSize: 10,
             letterSpacing: "0.22em",
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontWeight: 700,
           }}
         >
           sign in
         </p>
         <h1
-          className="font-display text-raddo-ink-deep"
+          className="font-display text-dossier-ink-deep"
           style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
         >
           Continue to consent
         </h1>
         <p
-          className="mt-3 font-sans text-raddo-charcoal/85"
+          className="mt-3 font-sans text-dossier-charcoal/85"
           style={{ fontSize: 15, lineHeight: 1.55 }}
         >
           Sign in with your COB account to review the application.
@@ -115,7 +115,7 @@ export default function OAuthLogin() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+              className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
               style={{ fontFamily: "Inter, sans-serif", borderRadius: 4 }}
             />
           </div>
@@ -130,7 +130,7 @@ export default function OAuthLogin() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-white border-raddo-paper-edge text-raddo-ink-deep pr-16"
+                className="bg-white border-dossier-paper-edge text-dossier-ink-deep pr-16"
                 style={{ fontFamily: "Inter, sans-serif", borderRadius: 4 }}
               />
               <button
@@ -138,7 +138,7 @@ export default function OAuthLogin() {
                 onClick={() => setShowPassword((v) => !v)}
                 aria-label={showPassword ? "Hide password" : "Show password"}
                 aria-pressed={showPassword}
-                className="absolute inset-y-0 right-2 my-auto h-7 px-2 flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-raddo-ash hover:text-raddo-ink-deep"
+                className="absolute inset-y-0 right-2 my-auto h-7 px-2 flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
               >
                 {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                 {showPassword ? "Hide" : "Show"}
@@ -151,19 +151,19 @@ export default function OAuthLogin() {
               type="button"
               onClick={onForgotPassword}
               disabled={resetting}
-              className="text-xs uppercase tracking-[0.16em] text-raddo-ash hover:text-raddo-ink-deep disabled:opacity-60"
+              className="text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep disabled:opacity-60"
             >
               {resetting ? "Sending…" : "Forgot password?"}
             </button>
           </div>
 
           {error && (
-            <p role="alert" className="text-sm text-raddo-brass-deep">
+            <p role="alert" className="text-sm text-dossier-brass-deep">
               {error}
             </p>
           )}
           {notice && (
-            <p role="status" className="text-sm text-raddo-ink-deep">
+            <p role="status" className="text-sm text-dossier-ink-deep">
               {notice}
             </p>
           )}
@@ -171,7 +171,7 @@ export default function OAuthLogin() {
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+            className="w-full bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
             style={{ borderRadius: 4, fontWeight: 600 }}
           >
             {submitting ? "Signing in…" : "Sign in"}

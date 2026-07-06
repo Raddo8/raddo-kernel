@@ -16,8 +16,8 @@ import { MotionConfig } from "framer-motion";
 
 export type MotionPref = "system" | "reduce" | "full";
 
-const STORAGE_KEY = "raddo-motion-pref-v1";
-const STYLE_TAG_ID = "raddo-motion-guard";
+const STORAGE_KEY = "dossier-motion-pref-v1";
+const STYLE_TAG_ID = "dossier-motion-guard";
 
 type Ctx = {
   pref: MotionPref;

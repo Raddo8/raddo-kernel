@@ -10,7 +10,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-raddo-paper px-6 py-20">
+    <main className="flex min-h-screen flex-col items-center justify-center bg-dossier-paper px-6 py-20">
       <SeoHead
         path={location.pathname}
         title="Not found · COB"
@@ -19,36 +19,36 @@ const NotFound = () => {
       />
       <div className="w-full max-w-md text-center">
         <p
-          className="font-mono uppercase text-raddo-brass-deep mb-6"
+          className="font-mono uppercase text-dossier-brass-deep mb-6"
           style={{ fontSize: 11, letterSpacing: "0.22em", fontWeight: 700 }}
         >
           file not found · 404
         </p>
         <h1
-          className="font-display text-raddo-ink-deep"
+          className="font-display text-dossier-ink-deep"
           style={{ fontWeight: 800, fontSize: "clamp(2rem, 4vw, 3rem)", lineHeight: 1.1 }}
         >
           This page is not in the{" "}
           <span className="dossier-brass-underline">dossier</span>.
         </h1>
-        <p className="mt-5 text-raddo-charcoal/85" style={{ fontSize: 16, lineHeight: 1.55 }}>
+        <p className="mt-5 text-dossier-charcoal/85" style={{ fontSize: 16, lineHeight: 1.55 }}>
           The link may have been retired, or the address was mistyped.
         </p>
         <div className="mt-10 flex items-center justify-center gap-3">
-          <span className="h-px w-8 bg-raddo-brass/50" />
+          <span className="h-px w-8 bg-dossier-brass/50" />
           <a
             href="/"
-            className="font-mono uppercase text-raddo-ink-deep"
+            className="font-mono uppercase text-dossier-ink-deep"
             style={{
               fontSize: 11,
               letterSpacing: "0.22em",
-              borderBottom: "2px solid hsl(var(--raddo-brass))",
+              borderBottom: "2px solid hsl(var(--dossier-brass))",
               paddingBottom: 2,
             }}
           >
             Return home
           </a>
-          <span className="h-px w-8 bg-raddo-brass/50" />
+          <span className="h-px w-8 bg-dossier-brass/50" />
         </div>
       </div>
     </main>

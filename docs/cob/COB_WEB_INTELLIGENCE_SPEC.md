@@ -197,7 +197,7 @@ These are the high-leverage moments where web access most clearly pays for itsel
 
 ### Pattern A: "Research my company before we talk"
 
-This is the marquee demo moment. A prospect who has been browsing raddo.ai sees LOVIE offer to research their company and feels the specificity COB will bring once deployed.
+This is the marquee demo moment. A prospect who has been browsing chiefofbusiness.ai sees LOVIE offer to research their company and feels the specificity COB will bring once deployed.
 
 **Flow:**
 

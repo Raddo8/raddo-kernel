@@ -4,7 +4,7 @@ import { DossierPageBand } from "@/components/dossier/DossierPageBand";
 
 export default function DebriefThankYou() {
   return (
-    <main className="min-h-screen bg-raddo-paper">
+    <main className="min-h-screen bg-dossier-paper">
       <SeoHead
         path="/debrief/thank-you"
         title="Information request received · COB"
@@ -21,16 +21,16 @@ export default function DebriefThankYou() {
       <section className="mx-auto max-w-3xl px-6 py-16 md:px-10 md:py-20">
         <div
           className="dossier-navy-shadow bg-white p-8 md:p-12"
-          style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+          style={{ border: "1px solid hsl(var(--dossier-paper-edge))", borderRadius: 8 }}
         >
           <p
-            className="font-mono uppercase text-raddo-brass-deep"
+            className="font-mono uppercase text-dossier-brass-deep"
             style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 700 }}
           >
             what happens next
           </p>
           <p
-            className="mt-5 font-sans text-raddo-charcoal"
+            className="mt-5 font-sans text-dossier-charcoal"
             style={{ fontSize: 15, lineHeight: 1.6 }}
           >
             No automated reply. The next message you get will be from a person.
@@ -40,8 +40,8 @@ export default function DebriefThankYou() {
               to="/"
               className="inline-flex items-center gap-2 font-mono uppercase"
               style={{
-                backgroundColor: "hsl(var(--raddo-brass))",
-                color: "hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-brass))",
+                color: "hsl(var(--dossier-ink-deep))",
                 borderRadius: 4,
                 padding: "14px 22px",
                 fontSize: 12,

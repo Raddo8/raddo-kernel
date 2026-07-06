@@ -18,7 +18,7 @@ const AS_SUPABASE_PUBLISHABLE_KEY = "sb_publishable_FuTs2lSpzKLyt-x84L4oIg_YBsyy
 export const asSupabase = createClient(AS_SUPABASE_URL, AS_SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: localStorage,
-    storageKey: "raddo-as-auth",
+    storageKey: "dossier-as-auth",
     persistSession: true,
     autoRefreshToken: true,
   },

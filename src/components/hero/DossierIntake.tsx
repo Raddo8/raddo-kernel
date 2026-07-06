@@ -100,18 +100,18 @@ function GateForm({
   };
 
   const fieldStyle: React.CSSProperties = {
-    backgroundColor: "hsl(var(--raddo-paper))",
-    border: "1px solid hsl(var(--raddo-paper-edge))",
+    backgroundColor: "hsl(var(--dossier-paper))",
+    border: "1px solid hsl(var(--dossier-paper-edge))",
     borderRadius: "4px",
     padding: "10px 12px",
     fontSize: "15px",
     lineHeight: 1.5,
-    color: "hsl(var(--raddo-ink-deep))",
+    color: "hsl(var(--dossier-ink-deep))",
     width: "100%",
     outline: "none",
   };
   const labelStyle: React.CSSProperties = {
-    color: "hsl(var(--raddo-brass-deep))",
+    color: "hsl(var(--dossier-brass-deep))",
     fontSize: "10px",
     letterSpacing: "0.18em",
     fontWeight: 600,
@@ -135,7 +135,7 @@ function GateForm({
         <span
           className="font-sans"
           style={{
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontSize: "10px",
             letterSpacing: "0.18em",
             fontWeight: 600,
@@ -146,7 +146,7 @@ function GateForm({
         <h3
           className="font-display mt-2"
           style={{
-            color: "hsl(var(--raddo-ink-deep))",
+            color: "hsl(var(--dossier-ink-deep))",
             fontSize: "clamp(18px, 1.9vw, 22px)",
             fontWeight: 700,
             lineHeight: 1.3,
@@ -157,7 +157,7 @@ function GateForm({
         </h3>
         <p
           className="font-sans mt-1"
-          style={{ color: "hsl(var(--raddo-ash))", fontSize: "13px", lineHeight: 1.55 }}
+          style={{ color: "hsl(var(--dossier-ash))", fontSize: "13px", lineHeight: 1.55 }}
         >
           Five fields. Used to ground your COB's first read · nothing leaves this page.
         </p>
@@ -173,7 +173,7 @@ function GateForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="First and last"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={120}
             required
@@ -188,7 +188,7 @@ function GateForm({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={200}
             required
@@ -203,7 +203,7 @@ function GateForm({
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder="Where you run point"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={160}
             required
@@ -218,7 +218,7 @@ function GateForm({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="CFO · COO · CEO · Chief of Staff"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={160}
             required
@@ -236,7 +236,7 @@ function GateForm({
           onChange={(e) => setChallenge(e.target.value)}
           placeholder="The thing eating your week · the call you're about to make · the number that won't sit right. One paragraph is plenty."
           rows={4}
-          className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep resize-none"
+          className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep resize-none"
           style={{ ...fieldStyle, minHeight: "110px" }}
           maxLength={2000}
           required
@@ -246,7 +246,7 @@ function GateForm({
       <div className="flex flex-col-reverse items-stretch gap-3 md:flex-row md:items-center md:justify-between">
         <span
           className="font-sans"
-          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
+          style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
         >
           Encrypted in transit · stored only for your COB's read · withdraw anytime.
         </span>
@@ -255,10 +255,10 @@ function GateForm({
             <span
               className="font-sans"
               style={{
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 fontSize: "11px",
                 letterSpacing: "0.04em",
-                borderBottom: "1px solid hsl(var(--raddo-brass-deep))",
+                borderBottom: "1px solid hsl(var(--dossier-brass-deep))",
               }}
             >
               {shown}
@@ -267,11 +267,11 @@ function GateForm({
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
             style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
-              border: "1px solid hsl(var(--raddo-brass-deep))",
+              backgroundColor: "hsl(var(--dossier-brass))",
+              color: "hsl(var(--dossier-ink-deep))",
+              border: "1px solid hsl(var(--dossier-brass-deep))",
               borderRadius: "4px",
               fontSize: "13px",
               fontWeight: 700,
@@ -311,7 +311,7 @@ const TypingDots = () => (
       <motion.span
         key={i}
         className="block h-1.5 w-1.5 rounded-full"
-        style={{ backgroundColor: "hsl(var(--raddo-brass))" }}
+        style={{ backgroundColor: "hsl(var(--dossier-brass))" }}
         animate={{ opacity: [0.25, 1, 0.25] }}
         transition={{ duration: 1.1, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 }}
       />
@@ -334,11 +334,11 @@ function Chip({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+      className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
       style={{
-        backgroundColor: active ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper))",
-        color: active ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-ink-deep))",
-        border: `1px solid ${active ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))"}`,
+        backgroundColor: active ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper))",
+        color: active ? "hsl(var(--dossier-paper))" : "hsl(var(--dossier-ink-deep))",
+        border: `1px solid ${active ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper-edge))"}`,
         borderRadius: "4px",
         padding: "5px 11px",
         fontSize: "12px",
@@ -381,7 +381,7 @@ function ChipStrip({
         <span
           className="font-sans"
           style={{
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontSize: "10px",
             letterSpacing: "0.18em",
             fontWeight: 600,
@@ -395,7 +395,7 @@ function ChipStrip({
             onClick={() => onChange(undefined)}
             className="font-sans focus:outline-none focus-visible:underline"
             style={{
-              color: "hsl(var(--raddo-ash))",
+              color: "hsl(var(--dossier-ash))",
               fontSize: "10px",
               letterSpacing: "0.14em",
             }}
@@ -416,10 +416,10 @@ function ChipStrip({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+          className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
           style={{
-            border: `1px dashed hsl(var(--raddo-brass-deep) / 0.55)`,
-            color: "hsl(var(--raddo-brass-deep))",
+            border: `1px dashed hsl(var(--dossier-brass-deep) / 0.55)`,
+            color: "hsl(var(--dossier-brass-deep))",
             backgroundColor: "transparent",
             borderRadius: "4px",
             padding: "5px 11px",
@@ -443,8 +443,8 @@ function ChipStrip({
             <div
               className="mt-3 p-3"
               style={{
-                backgroundColor: "hsl(var(--raddo-paper))",
-                border: "1px solid hsl(var(--raddo-paper-edge))",
+                backgroundColor: "hsl(var(--dossier-paper))",
+                border: "1px solid hsl(var(--dossier-paper-edge))",
                 borderRadius: "4px",
               }}
             >
@@ -453,18 +453,18 @@ function ChipStrip({
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 placeholder="Filter · type to narrow"
-                className="font-sans w-full bg-transparent outline-none placeholder:text-raddo-ash/70 pb-2 mb-2"
+                className="font-sans w-full bg-transparent outline-none placeholder:text-dossier-ash/70 pb-2 mb-2"
                 style={{
-                  color: "hsl(var(--raddo-ink-deep))",
+                  color: "hsl(var(--dossier-ink-deep))",
                   fontSize: "13px",
-                  borderBottom: "1px solid hsl(var(--raddo-paper-edge))",
+                  borderBottom: "1px solid hsl(var(--dossier-paper-edge))",
                 }}
               />
               <div className="flex flex-wrap gap-1.5 max-h-44 overflow-y-auto">
                 {filtered.length === 0 && (
                   <span
                     className="font-sans"
-                    style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px" }}
+                    style={{ color: "hsl(var(--dossier-ash))", fontSize: "12px" }}
                   >
                     No match. Type your own lens in the composer below.
                   </span>
@@ -505,7 +505,7 @@ function VoiceToggle({ value, onChange }: { value: VoiceId; onChange: (v: VoiceI
         <span
           className="font-sans"
           style={{
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontSize: "10px",
             letterSpacing: "0.18em",
             fontWeight: 600,
@@ -515,7 +515,7 @@ function VoiceToggle({ value, onChange }: { value: VoiceId; onChange: (v: VoiceI
         </span>
         <span
           className="font-sans"
-          style={{ color: "hsl(var(--raddo-ash))", fontSize: "10px", letterSpacing: "0.04em" }}
+          style={{ color: "hsl(var(--dossier-ash))", fontSize: "10px", letterSpacing: "0.04em" }}
         >
           Same brain. Different voice. Toggle anytime.
         </span>
@@ -526,7 +526,7 @@ function VoiceToggle({ value, onChange }: { value: VoiceId; onChange: (v: VoiceI
         onKeyDown={onKey}
         className="inline-flex"
         style={{
-          border: "1px solid hsl(var(--raddo-brass-deep) / 0.6)",
+          border: "1px solid hsl(var(--dossier-brass-deep) / 0.6)",
           borderRadius: "4px",
           overflow: "hidden",
         }}
@@ -541,10 +541,10 @@ function VoiceToggle({ value, onChange }: { value: VoiceId; onChange: (v: VoiceI
               aria-checked={active}
               tabIndex={active ? 0 : -1}
               onClick={() => onChange(v.id)}
-              className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+              className="font-sans transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
               style={{
-                backgroundColor: active ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper))",
-                color: active ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-ink-deep))",
+                backgroundColor: active ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper))",
+                color: active ? "hsl(var(--dossier-paper))" : "hsl(var(--dossier-ink-deep))",
                 padding: "7px 16px",
                 fontSize: "12px",
                 fontWeight: 600,
@@ -552,7 +552,7 @@ function VoiceToggle({ value, onChange }: { value: VoiceId; onChange: (v: VoiceI
                 textTransform: "uppercase",
                 borderRight:
                   v.id !== VOICES[VOICES.length - 1].id
-                    ? "1px solid hsl(var(--raddo-brass-deep) / 0.6)"
+                    ? "1px solid hsl(var(--dossier-brass-deep) / 0.6)"
                     : "none",
               }}
             >
@@ -614,18 +614,18 @@ function DeploymentCtaCard({
   };
 
   const fieldStyle: React.CSSProperties = {
-    backgroundColor: "hsl(var(--raddo-paper))",
-    border: "1px solid hsl(var(--raddo-paper-edge))",
+    backgroundColor: "hsl(var(--dossier-paper))",
+    border: "1px solid hsl(var(--dossier-paper-edge))",
     borderRadius: "4px",
     padding: "9px 11px",
     fontSize: "14px",
     lineHeight: 1.5,
-    color: "hsl(var(--raddo-ink-deep))",
+    color: "hsl(var(--dossier-ink-deep))",
     width: "100%",
     outline: "none",
   };
   const labelStyle: React.CSSProperties = {
-    color: "hsl(var(--raddo-brass-deep))",
+    color: "hsl(var(--dossier-brass-deep))",
     fontSize: "10px",
     letterSpacing: "0.18em",
     fontWeight: 600,
@@ -641,17 +641,17 @@ function DeploymentCtaCard({
       transition={{ duration: 0.42, ease: BRAND_EASE }}
       className="mt-5 p-5"
       style={{
-        backgroundColor: "hsl(var(--raddo-paper))",
-        border: "1px solid hsl(var(--raddo-brass-deep) / 0.6)",
+        backgroundColor: "hsl(var(--dossier-paper))",
+        border: "1px solid hsl(var(--dossier-brass-deep) / 0.6)",
         borderRadius: "4px",
-        boxShadow: "0 4px 12px -8px hsl(var(--raddo-ink-deep) / 0.2)",
+        boxShadow: "0 4px 12px -8px hsl(var(--dossier-ink-deep) / 0.2)",
       }}
       aria-labelledby="deployment-cta-heading"
     >
       <span
         className="font-sans"
         style={{
-          color: "hsl(var(--raddo-brass-deep))",
+          color: "hsl(var(--dossier-brass-deep))",
           fontSize: "10px",
           letterSpacing: "0.18em",
           fontWeight: 600,
@@ -663,7 +663,7 @@ function DeploymentCtaCard({
         id="deployment-cta-heading"
         className="font-display mt-2"
         style={{
-          color: "hsl(var(--raddo-ink-deep))",
+          color: "hsl(var(--dossier-ink-deep))",
           fontSize: "clamp(17px, 1.7vw, 20px)",
           fontWeight: 700,
           lineHeight: 1.3,
@@ -674,7 +674,7 @@ function DeploymentCtaCard({
       </h3>
       <p
         className="font-sans mt-1"
-        style={{ color: "hsl(var(--raddo-ash))", fontSize: "13px", lineHeight: 1.55 }}
+        style={{ color: "hsl(var(--dossier-ash))", fontSize: "13px", lineHeight: 1.55 }}
       >
         Leave your email, your company, and one paragraph about where this lands for you. Someone from the deployment team picks it up · one business day.
       </p>
@@ -689,7 +689,7 @@ function DeploymentCtaCard({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@company.com"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={200}
             required
@@ -704,7 +704,7 @@ function DeploymentCtaCard({
             value={company}
             onChange={(e) => setCompany(e.target.value)}
             placeholder="Where you'd deploy"
-            className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep"
+            className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep"
             style={fieldStyle}
             maxLength={160}
             required
@@ -722,7 +722,7 @@ function DeploymentCtaCard({
           onChange={(e) => setSituation(e.target.value)}
           placeholder="The shape of the operation, the moment you're in, what you'd want deployed COB watching first."
           rows={3}
-          className="font-sans placeholder:text-raddo-ash/60 focus:border-raddo-brass-deep resize-none"
+          className="font-sans placeholder:text-dossier-ash/60 focus:border-dossier-brass-deep resize-none"
           style={{ ...fieldStyle, minHeight: "84px" }}
           maxLength={2000}
           required
@@ -732,7 +732,7 @@ function DeploymentCtaCard({
       <div className="flex flex-col-reverse items-stretch gap-3 md:flex-row md:items-center md:justify-between mt-4">
         <span
           className="font-sans"
-          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
+          style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
         >
           Encrypted in transit · one business day · withdraw anytime.
         </span>
@@ -741,10 +741,10 @@ function DeploymentCtaCard({
             <span
               className="font-sans"
               style={{
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 fontSize: "11px",
                 letterSpacing: "0.04em",
-                borderBottom: "1px solid hsl(var(--raddo-brass-deep))",
+                borderBottom: "1px solid hsl(var(--dossier-brass-deep))",
               }}
             >
               {localError}
@@ -753,11 +753,11 @@ function DeploymentCtaCard({
           <button
             type="submit"
             disabled={submitting}
-            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+            className="inline-flex items-center justify-center px-5 py-2.5 font-sans transition-transform duration-150 active:translate-y-[1px] disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
             style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
-              border: "1px solid hsl(var(--raddo-brass-deep))",
+              backgroundColor: "hsl(var(--dossier-brass))",
+              color: "hsl(var(--dossier-ink-deep))",
+              border: "1px solid hsl(var(--dossier-brass-deep))",
               borderRadius: "4px",
               fontSize: "13px",
               fontWeight: 700,
@@ -896,10 +896,10 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
       <div
         className="relative"
         style={{
-          backgroundColor: "hsl(var(--raddo-paper))",
-          border: "1px solid hsl(var(--raddo-paper-edge))",
+          backgroundColor: "hsl(var(--dossier-paper))",
+          border: "1px solid hsl(var(--dossier-paper-edge))",
           borderRadius: "8px",
-          boxShadow: "0 4px 12px -8px hsl(var(--raddo-ink-deep) / 0.18)",
+          boxShadow: "0 4px 12px -8px hsl(var(--dossier-ink-deep) / 0.18)",
           minHeight: "460px",
         }}
       >
@@ -917,10 +917,10 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
         </svg>
 
         {/* Brass corner brackets */}
-        <span className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-raddo-brass-deep/60" />
-        <span className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-raddo-brass-deep/60" />
-        <span className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-raddo-brass-deep/60" />
-        <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-raddo-brass-deep/60" />
+        <span className="pointer-events-none absolute left-3 top-3 h-3 w-3 border-l border-t border-dossier-brass-deep/60" />
+        <span className="pointer-events-none absolute right-3 top-3 h-3 w-3 border-r border-t border-dossier-brass-deep/60" />
+        <span className="pointer-events-none absolute bottom-3 left-3 h-3 w-3 border-b border-l border-dossier-brass-deep/60" />
+        <span className="pointer-events-none absolute bottom-3 right-3 h-3 w-3 border-b border-r border-dossier-brass-deep/60" />
 
         <div className="relative px-6 pt-7 pb-6 md:px-10 md:pt-9 md:pb-8">
           {/* Header row */}
@@ -928,7 +928,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
             <span
               className="font-sans"
               style={{
-                color: "hsl(var(--raddo-brass-deep))",
+                color: "hsl(var(--dossier-brass-deep))",
                 fontSize: "11px",
                 letterSpacing: "0.18em",
                 fontWeight: 600,
@@ -938,7 +938,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
             </span>
             <span
               className="font-sans tabular-nums"
-              style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
+              style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
             >
               {fmtClock(now)}
             </span>
@@ -949,7 +949,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
             id="dossier-intake-heading"
             className="font-display mt-5"
             style={{
-              color: "hsl(var(--raddo-ink-deep))",
+              color: "hsl(var(--dossier-ink-deep))",
               fontSize: "clamp(22px, 2.4vw, 28px)",
               fontWeight: 700,
               lineHeight: 1.2,
@@ -960,13 +960,13 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
           </h2>
           <p
             className="font-sans mt-2"
-            style={{ color: "hsl(var(--raddo-ash))", fontSize: "13px", lineHeight: 1.55 }}
+            style={{ color: "hsl(var(--dossier-ash))", fontSize: "13px", lineHeight: 1.55 }}
           >
             {INTAKE_HEADER.subtitle}
           </p>
           <div
             className="mt-5 h-px"
-            style={{ width: 64, backgroundColor: "hsl(var(--raddo-brass))", opacity: 0.7 }}
+            style={{ width: 64, backgroundColor: "hsl(var(--dossier-brass))", opacity: 0.7 }}
           />
 
           <AnimatePresence mode="wait" initial={false}>
@@ -1010,19 +1010,19 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                   <span
                     className="font-sans inline-flex items-center gap-2"
                     style={{
-                      border: "1px solid hsl(var(--raddo-brass-deep) / 0.55)",
-                      color: "hsl(var(--raddo-ink-deep))",
+                      border: "1px solid hsl(var(--dossier-brass-deep) / 0.55)",
+                      color: "hsl(var(--dossier-ink-deep))",
                       borderRadius: "999px",
                       padding: "3px 12px",
                       fontSize: "10px",
                       letterSpacing: "0.14em",
-                      backgroundColor: "hsl(var(--raddo-paper))",
+                      backgroundColor: "hsl(var(--dossier-paper))",
                     }}
                   >
-                    <span style={{ color: "hsl(var(--raddo-brass-deep))", fontWeight: 700 }}>
+                    <span style={{ color: "hsl(var(--dossier-brass-deep))", fontWeight: 700 }}>
                       VOICE · {activeVoiceLabel}
                     </span>
-                    <span style={{ color: "hsl(var(--raddo-paper-edge))" }}>·</span>
+                    <span style={{ color: "hsl(var(--dossier-paper-edge))" }}>·</span>
                     <span>
                       LENS · {roleLabel || "—"} · {industryLabel || "—"}
                     </span>
@@ -1044,12 +1044,12 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                         <div key={item.id} className="flex items-center gap-3 my-1" aria-hidden>
                           <span
                             className="block h-px flex-1"
-                            style={{ backgroundColor: "hsl(var(--raddo-brass) / 0.55)" }}
+                            style={{ backgroundColor: "hsl(var(--dossier-brass) / 0.55)" }}
                           />
                           <span
                             className="font-sans"
                             style={{
-                              color: "hsl(var(--raddo-brass-deep))",
+                              color: "hsl(var(--dossier-brass-deep))",
                               fontSize: "10px",
                               letterSpacing: "0.18em",
                               fontWeight: 600,
@@ -1059,7 +1059,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                           </span>
                           <span
                             className="block h-px flex-1"
-                            style={{ backgroundColor: "hsl(var(--raddo-brass) / 0.55)" }}
+                            style={{ backgroundColor: "hsl(var(--dossier-brass) / 0.55)" }}
                           />
                         </div>
                       );
@@ -1081,14 +1081,14 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                           style={{
                             backgroundColor:
                               entry.voice === "michael"
-                                ? "hsl(var(--raddo-brass-deep))"
-                                : "hsl(var(--raddo-brass))",
+                                ? "hsl(var(--dossier-brass-deep))"
+                                : "hsl(var(--dossier-brass))",
                           }}
                         />
                         <div
                           className={entry.voice === "michael" ? "font-sans cob-md" : "font-display cob-md"}
                           style={{
-                            color: "hsl(var(--raddo-ink-deep))",
+                            color: "hsl(var(--dossier-ink-deep))",
                             fontSize: entry.voice === "michael" ? "15px" : "17px",
                             lineHeight: 1.5,
                             fontWeight: entry.voice === "michael" ? 500 : 600,
@@ -1099,7 +1099,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                         </div>
                         <span
                           className="font-sans mt-1 block tabular-nums"
-                          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
+                          style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
                         >
                           <VoiceLabel voice={entry.voice} /> · {fmtClock(new Date(entry.at))}
                         </span>
@@ -1107,10 +1107,10 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                           <span
                             className="font-sans mt-1 inline-block"
                             style={{
-                              color: "hsl(var(--raddo-ash))",
+                              color: "hsl(var(--dossier-ash))",
                               fontSize: "11px",
                               letterSpacing: "0.12em",
-                              borderTop: "1px solid hsl(var(--raddo-brass) / 0.5)",
+                              borderTop: "1px solid hsl(var(--dossier-brass) / 0.5)",
                               paddingTop: "3px",
                               marginTop: "4px",
                             }}
@@ -1131,14 +1131,14 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                           className="font-sans"
                           style={{
                             maxWidth: "78%",
-                            backgroundColor: "hsl(var(--raddo-paper-edge) / 0.55)",
-                            border: "1px solid hsl(var(--raddo-paper-edge))",
-                            color: "hsl(var(--raddo-charcoal))",
+                            backgroundColor: "hsl(var(--dossier-paper-edge) / 0.55)",
+                            border: "1px solid hsl(var(--dossier-paper-edge))",
+                            color: "hsl(var(--dossier-charcoal))",
                             fontSize: "15px",
                             lineHeight: 1.55,
                             padding: "10px 14px",
                             borderRadius: "4px",
-                            boxShadow: "0 2px 6px -4px hsl(var(--raddo-ink-deep) / 0.15)",
+                            boxShadow: "0 2px 6px -4px hsl(var(--dossier-ink-deep) / 0.15)",
                             whiteSpace: "pre-wrap",
                           }}
                         >
@@ -1146,7 +1146,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                         </div>
                         <span
                           className="font-sans mt-1 block tabular-nums"
-                          style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
+                          style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.06em" }}
                         >
                           YOU · {fmtClock(new Date(entry.at))}
                         </span>
@@ -1166,11 +1166,11 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                         <span
                           aria-hidden
                           className="absolute left-0 top-1 bottom-1 w-[3px]"
-                          style={{ backgroundColor: "hsl(var(--raddo-brass) / 0.5)" }}
+                          style={{ backgroundColor: "hsl(var(--dossier-brass) / 0.5)" }}
                         />
                         <span
                           className="font-sans"
-                          style={{ color: "hsl(var(--raddo-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
+                          style={{ color: "hsl(var(--dossier-ash))", fontSize: "12px", letterSpacing: "0.06em" }}
                         >
                           <VoiceLabel voice={voice} /> IS WRITING
                           <TypingDots />
@@ -1197,15 +1197,15 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                     transition={{ duration: 0.42, ease: BRAND_EASE }}
                     className="mt-5 p-4"
                     style={{
-                      backgroundColor: "hsl(var(--raddo-paper))",
-                      border: "1px solid hsl(var(--raddo-brass-deep) / 0.5)",
+                      backgroundColor: "hsl(var(--dossier-paper))",
+                      border: "1px solid hsl(var(--dossier-brass-deep) / 0.5)",
                       borderRadius: "4px",
                     }}
                   >
                     <span
                       className="font-sans block"
                       style={{
-                        color: "hsl(var(--raddo-brass-deep))",
+                        color: "hsl(var(--dossier-brass-deep))",
                         fontSize: "10px",
                         letterSpacing: "0.18em",
                         fontWeight: 600,
@@ -1216,7 +1216,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                     <p
                       className="font-display mt-2"
                       style={{
-                        color: "hsl(var(--raddo-ink-deep))",
+                        color: "hsl(var(--dossier-ink-deep))",
                         fontSize: "16px",
                         lineHeight: 1.45,
                         fontWeight: 600,
@@ -1242,8 +1242,8 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                   <div
                     className="flex items-end gap-3"
                     style={{
-                      backgroundColor: "hsl(var(--raddo-paper))",
-                      border: "1px solid hsl(var(--raddo-paper-edge))",
+                      backgroundColor: "hsl(var(--dossier-paper))",
+                      border: "1px solid hsl(var(--dossier-paper-edge))",
                       borderRadius: "4px",
                       padding: "10px 12px",
                       transition: "border-color 220ms cubic-bezier(0.22, 1, 0.36, 1)",
@@ -1264,9 +1264,9 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                           ? "Ask Michael · Enter to send · Shift+Enter for a new line"
                           : "Ask your COB · Enter to send · Shift+Enter for a new line"
                       }
-                      className="flex-1 resize-none bg-transparent font-sans outline-none placeholder:text-raddo-ash/70 disabled:opacity-50"
+                      className="flex-1 resize-none bg-transparent font-sans outline-none placeholder:text-dossier-ash/70 disabled:opacity-50"
                       style={{
-                        color: "hsl(var(--raddo-ink-deep))",
+                        color: "hsl(var(--dossier-ink-deep))",
                         fontSize: "16px",
                         lineHeight: 1.5,
                         minHeight: "24px",
@@ -1277,10 +1277,10 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                       type="submit"
                       disabled={pending || composerLocked || !draft.trim()}
                       aria-label="Send your message"
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded transition-transform duration-150 active:translate-y-[1px] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded transition-transform duration-150 active:translate-y-[1px] disabled:opacity-40 focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
                       style={{
-                        backgroundColor: "hsl(var(--raddo-brass))",
-                        color: "hsl(var(--raddo-ink-deep))",
+                        backgroundColor: "hsl(var(--dossier-brass))",
+                        color: "hsl(var(--dossier-ink-deep))",
                       }}
                     >
                       <span aria-hidden style={{ fontSize: "16px", fontWeight: 700 }}>
@@ -1291,7 +1291,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                   <div className="flex items-center justify-between mt-2">
                     <span
                       className="font-sans"
-                      style={{ color: "hsl(var(--raddo-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
+                      style={{ color: "hsl(var(--dossier-ash))", fontSize: "11px", letterSpacing: "0.04em" }}
                     >
                       Encrypted in transit · stored only with your consent · withdraw anytime.
                     </span>
@@ -1299,10 +1299,10 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
                       <span
                         className="font-sans"
                         style={{
-                          color: "hsl(var(--raddo-brass-deep))",
+                          color: "hsl(var(--dossier-brass-deep))",
                           fontSize: "11px",
                           letterSpacing: "0.04em",
-                          borderBottom: "1px solid hsl(var(--raddo-brass-deep))",
+                          borderBottom: "1px solid hsl(var(--dossier-brass-deep))",
                         }}
                       >
                         {error}
@@ -1318,7 +1318,7 @@ export default function DossierIntake({ primedLead }: DossierIntakeProps = {}) {
           <span
             aria-hidden
             className="absolute bottom-4 right-5 font-display"
-            style={{ color: "hsl(var(--raddo-brass) / 0.4)", fontSize: "16px" }}
+            style={{ color: "hsl(var(--dossier-brass) / 0.4)", fontSize: "16px" }}
           >
             ❦
           </span>

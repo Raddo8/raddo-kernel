@@ -72,7 +72,7 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
     position: "absolute",
     width: 10,
     height: 10,
-    borderColor: "hsl(var(--raddo-brass))",
+    borderColor: "hsl(var(--dossier-brass))",
     borderStyle: "solid",
     borderWidth: 0,
     pointerEvents: "none",
@@ -93,10 +93,10 @@ function Panel({ children, className = "" }: { children: React.ReactNode; classN
     <section
       className={`relative ${className}`}
       style={{
-        backgroundColor: "hsl(var(--raddo-paper))",
-        border: "1px solid hsl(var(--raddo-paper-edge))",
+        backgroundColor: "hsl(var(--dossier-paper))",
+        border: "1px solid hsl(var(--dossier-paper-edge))",
         borderRadius: 8,
-        boxShadow: "0 2px 8px -4px hsl(var(--raddo-ink-deep) / 0.08)",
+        boxShadow: "0 2px 8px -4px hsl(var(--dossier-ink-deep) / 0.08)",
       }}
     >
       <CornerMark pos="tl" />
@@ -116,7 +116,7 @@ function Overline({ children }: { children: React.ReactNode }) {
         fontSize: 10,
         letterSpacing: "0.18em",
         textTransform: "uppercase",
-        color: "hsl(var(--raddo-ash))",
+        color: "hsl(var(--dossier-ash))",
         display: "flex",
         alignItems: "center",
         gap: 8,
@@ -128,7 +128,7 @@ function Overline({ children }: { children: React.ReactNode }) {
           width: 6,
           height: 6,
           borderRadius: "50%",
-          backgroundColor: "hsl(var(--raddo-brass))",
+          backgroundColor: "hsl(var(--dossier-brass))",
         }}
       />
       {children}
@@ -152,9 +152,9 @@ function Chip({
       className="rounded-full px-3 py-2 text-left text-sm transition-colors duration-150"
       style={{
         border: "1px solid",
-        borderColor: selected ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))",
-        backgroundColor: selected ? "hsl(var(--raddo-ink-deep))" : "white",
-        color: selected ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-charcoal))",
+        borderColor: selected ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper-edge))",
+        backgroundColor: selected ? "hsl(var(--dossier-ink-deep))" : "white",
+        color: selected ? "hsl(var(--dossier-paper))" : "hsl(var(--dossier-charcoal))",
       }}
     >
       {label}
@@ -184,9 +184,9 @@ function ToolChip({
       className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-left text-sm transition-colors duration-150"
       style={{
         border: "1px solid",
-        borderColor: selected ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))",
-        backgroundColor: selected ? "hsl(var(--raddo-ink-deep))" : "white",
-        color: selected ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-charcoal))",
+        borderColor: selected ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper-edge))",
+        backgroundColor: selected ? "hsl(var(--dossier-ink-deep))" : "white",
+        color: selected ? "hsl(var(--dossier-paper))" : "hsl(var(--dossier-charcoal))",
       }}
     >
       <ToolLogo name={tool.name} slug={tool.slug} domain={tool.domain} size={16} />
@@ -200,9 +200,9 @@ function CustomChip({ label, onRemove }: { label: string; onRemove: () => void }
     <span
       className="inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm"
       style={{
-        border: "1px solid hsl(var(--raddo-paper-edge))",
-        backgroundColor: "hsl(var(--raddo-paper))",
-        color: "hsl(var(--raddo-charcoal))",
+        border: "1px solid hsl(var(--dossier-paper-edge))",
+        backgroundColor: "hsl(var(--dossier-paper))",
+        color: "hsl(var(--dossier-charcoal))",
       }}
     >
       <span>{label}</span>
@@ -217,7 +217,7 @@ function CustomChip({ label, onRemove }: { label: string; onRemove: () => void }
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "hsl(var(--raddo-ash))",
+          color: "hsl(var(--dossier-ash))",
           fontSize: 14,
         }}
       >
@@ -266,12 +266,12 @@ function ToolCategoryCard({
     <div
       style={{
         backgroundColor: "white",
-        border: "1px solid hsl(var(--raddo-paper-edge))",
+        border: "1px solid hsl(var(--dossier-paper-edge))",
         borderRadius: 8,
         padding: 20,
       }}
     >
-      <h3 className="font-display text-lg" style={{ color: "hsl(var(--raddo-ink-deep))" }}>
+      <h3 className="font-display text-lg" style={{ color: "hsl(var(--dossier-ink-deep))" }}>
         {category.label}
       </h3>
       <div className="mt-3 flex flex-wrap gap-2">
@@ -307,9 +307,9 @@ function ToolCategoryCard({
               placeholder="Tool name…"
               className="text-sm outline-none"
               style={{
-                border: "1px solid hsl(var(--raddo-paper-edge))",
+                border: "1px solid hsl(var(--dossier-paper-edge))",
                 backgroundColor: "white",
-                color: "hsl(var(--raddo-charcoal))",
+                color: "hsl(var(--dossier-charcoal))",
                 borderRadius: 8,
                 padding: "8px 10px",
                 minWidth: 180,
@@ -322,9 +322,9 @@ function ToolCategoryCard({
               disabled={!otherDraft.trim() || selection.custom.length >= MAX_CUSTOM_PER_CATEGORY}
               className="font-mono text-xs"
               style={{
-                border: "1px solid hsl(var(--raddo-ink-deep))",
-                backgroundColor: "hsl(var(--raddo-ink-deep))",
-                color: "hsl(var(--raddo-paper))",
+                border: "1px solid hsl(var(--dossier-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-ink-deep))",
+                color: "hsl(var(--dossier-paper))",
                 borderRadius: 8,
                 padding: "8px 12px",
                 letterSpacing: "0.1em",
@@ -342,12 +342,12 @@ function ToolCategoryCard({
                 setOtherDraft("");
               }}
               className="text-xs"
-              style={{ color: "hsl(var(--raddo-ash))" }}
+              style={{ color: "hsl(var(--dossier-ash))" }}
             >
               cancel
             </button>
             {selection.custom.length >= MAX_CUSTOM_PER_CATEGORY ? (
-              <span className="text-xs" style={{ color: "hsl(var(--raddo-ash))" }}>
+              <span className="text-xs" style={{ color: "hsl(var(--dossier-ash))" }}>
                 Max {MAX_CUSTOM_PER_CATEGORY} reached
               </span>
             ) : null}
@@ -358,7 +358,7 @@ function ToolCategoryCard({
             onClick={() => setOtherOpen(true)}
             className="text-xs font-mono"
             style={{
-              color: "hsl(var(--raddo-ink))",
+              color: "hsl(var(--dossier-ink))",
               letterSpacing: "0.12em",
               textTransform: "uppercase",
             }}
@@ -388,9 +388,9 @@ function OptionButton({
       className="text-left transition-colors duration-150"
       style={{
         border: "1px solid",
-        borderColor: selected ? "hsl(var(--raddo-ink-deep))" : "hsl(var(--raddo-paper-edge))",
-        backgroundColor: selected ? "hsl(var(--raddo-ink-deep))" : "white",
-        color: selected ? "hsl(var(--raddo-paper))" : "hsl(var(--raddo-charcoal))",
+        borderColor: selected ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-paper-edge))",
+        backgroundColor: selected ? "hsl(var(--dossier-ink-deep))" : "white",
+        color: selected ? "hsl(var(--dossier-paper))" : "hsl(var(--dossier-charcoal))",
         borderRadius: 8,
         padding: "12px 16px",
         fontSize: 14,
@@ -552,7 +552,7 @@ export function DebriefForm() {
   }
 
   return (
-    <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--raddo-paper))" }}>
+    <main className="relative min-h-screen" style={{ backgroundColor: "hsl(var(--dossier-paper))" }}>
       <SeoHead
         path="/debrief"
         title="Request more information · COB"
@@ -586,7 +586,7 @@ export function DebriefForm() {
         className="pointer-events-none fixed inset-0 z-0 opacity-[0.04] mix-blend-multiply"
         style={{
           backgroundImage:
-            "radial-gradient(hsl(var(--raddo-charcoal)) 1px, transparent 1px)",
+            "radial-gradient(hsl(var(--dossier-charcoal)) 1px, transparent 1px)",
           backgroundSize: "3px 3px",
         }}
       />
@@ -613,7 +613,7 @@ export function DebriefForm() {
             <Overline>5 MIN · 4 SECTIONS</Overline>
             <p
               className="mt-5"
-              style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 14, lineHeight: 1.6 }}
+              style={{ color: "hsl(var(--dossier-charcoal))", fontSize: 14, lineHeight: 1.6 }}
             >
               Answer what's useful, skip the rest. Submit when you're ready · we will follow up directly with information tailored to what you shared.
             </p>
@@ -623,9 +623,9 @@ export function DebriefForm() {
                 className="mt-5"
                 role="alert"
                 style={{
-                  border: "1px solid hsl(var(--raddo-brass))",
+                  border: "1px solid hsl(var(--dossier-brass))",
                   backgroundColor: "white",
-                  color: "hsl(var(--raddo-charcoal))",
+                  color: "hsl(var(--dossier-charcoal))",
                   borderRadius: 8,
                   padding: "12px 14px",
                   fontSize: 13,
@@ -640,8 +640,8 @@ export function DebriefForm() {
               disabled={submitting}
               className="mt-6 w-full font-mono transition-colors"
               style={{
-                backgroundColor: "hsl(var(--raddo-brass))",
-                color: "hsl(var(--raddo-ink-deep))",
+                backgroundColor: "hsl(var(--dossier-brass))",
+                color: "hsl(var(--dossier-ink-deep))",
                 borderRadius: 8,
                 padding: "14px 20px",
                 fontSize: 12,
@@ -650,7 +650,7 @@ export function DebriefForm() {
                 fontWeight: 600,
                 opacity: submitting ? 0.6 : 1,
                 cursor: submitting ? "not-allowed" : "pointer",
-                boxShadow: "0 4px 12px -6px hsl(var(--raddo-brass-deep) / 0.4)",
+                boxShadow: "0 4px 12px -6px hsl(var(--dossier-brass-deep) / 0.4)",
               }}
             >
               {submitting ? "Submitting…" : "Request information"}
@@ -664,7 +664,7 @@ export function DebriefForm() {
             <Overline>IDENTITY</Overline>
             <div className="mt-5 grid gap-5 md:grid-cols-2">
               <label className="space-y-2">
-                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--dossier-charcoal))" }}>
                   Email
                 </span>
                 <input
@@ -674,9 +674,9 @@ export function DebriefForm() {
                   onChange={(event) => setEmail(event.target.value)}
                   className="w-full text-sm outline-none transition-colors"
                   style={{
-                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    border: "1px solid hsl(var(--dossier-paper-edge))",
                     backgroundColor: "white",
-                    color: "hsl(var(--raddo-charcoal))",
+                    color: "hsl(var(--dossier-charcoal))",
                     borderRadius: 8,
                     padding: "12px 14px",
                   }}
@@ -684,7 +684,7 @@ export function DebriefForm() {
                 />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--dossier-charcoal))" }}>
                   Name
                 </span>
                 <input
@@ -694,9 +694,9 @@ export function DebriefForm() {
                   onChange={(event) => setName(event.target.value)}
                   className="w-full text-sm outline-none transition-colors"
                   style={{
-                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    border: "1px solid hsl(var(--dossier-paper-edge))",
                     backgroundColor: "white",
-                    color: "hsl(var(--raddo-charcoal))",
+                    color: "hsl(var(--dossier-charcoal))",
                     borderRadius: 8,
                     padding: "12px 14px",
                   }}
@@ -704,7 +704,7 @@ export function DebriefForm() {
                 />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--dossier-charcoal))" }}>
                   Phone
                 </span>
                 <input
@@ -713,9 +713,9 @@ export function DebriefForm() {
                   onChange={(event) => setPhone(event.target.value)}
                   className="w-full text-sm outline-none transition-colors"
                   style={{
-                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    border: "1px solid hsl(var(--dossier-paper-edge))",
                     backgroundColor: "white",
-                    color: "hsl(var(--raddo-charcoal))",
+                    color: "hsl(var(--dossier-charcoal))",
                     borderRadius: 8,
                     padding: "12px 14px",
                   }}
@@ -723,7 +723,7 @@ export function DebriefForm() {
                 />
               </label>
               <label className="space-y-2">
-                <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
+                <span className="text-sm font-medium" style={{ color: "hsl(var(--dossier-charcoal))" }}>
                   Occupation
                 </span>
                 <input
@@ -732,9 +732,9 @@ export function DebriefForm() {
                   onChange={(event) => setOccupation(event.target.value)}
                   className="w-full text-sm outline-none transition-colors"
                   style={{
-                    border: "1px solid hsl(var(--raddo-paper-edge))",
+                    border: "1px solid hsl(var(--dossier-paper-edge))",
                     backgroundColor: "white",
-                    color: "hsl(var(--raddo-charcoal))",
+                    color: "hsl(var(--dossier-charcoal))",
                     borderRadius: 8,
                     padding: "12px 14px",
                   }}
@@ -743,8 +743,8 @@ export function DebriefForm() {
               </label>
             </div>
             <label className="mt-6 block space-y-2">
-              <span className="text-sm font-medium" style={{ color: "hsl(var(--raddo-charcoal))" }}>
-                What's the one thing on your desk right now you'd hand off if you could? <span style={{ color: "hsl(var(--raddo-ash))" }}>(optional)</span>
+              <span className="text-sm font-medium" style={{ color: "hsl(var(--dossier-charcoal))" }}>
+                What's the one thing on your desk right now you'd hand off if you could? <span style={{ color: "hsl(var(--dossier-ash))" }}>(optional)</span>
               </span>
               <textarea
                 value={challenge}
@@ -753,9 +753,9 @@ export function DebriefForm() {
                 maxLength={600}
                 className="w-full text-sm outline-none transition-colors"
                 style={{
-                  border: "1px solid hsl(var(--raddo-paper-edge))",
+                  border: "1px solid hsl(var(--dossier-paper-edge))",
                   backgroundColor: "white",
-                  color: "hsl(var(--raddo-charcoal))",
+                  color: "hsl(var(--dossier-charcoal))",
                   borderRadius: 8,
                   padding: "12px 14px",
                   resize: "vertical",
@@ -769,11 +769,11 @@ export function DebriefForm() {
             <Overline>PART 1 · WHERE YOU ARE TODAY</Overline>
             <h2
               className="mt-3 font-display"
-              style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
+              style={{ color: "hsl(var(--dossier-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
               Pick the words that describe you professionally or your business right now.
             </h2>
-            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
+            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--dossier-ash))" }}>
               Select as many as you want. The good, the bad, and everything in between.
             </p>
             <div className="mt-6 space-y-6">
@@ -781,7 +781,7 @@ export function DebriefForm() {
                 <div key={bucket.category}>
                   <div
                     className="text-[11px] tracking-[0.18em] font-medium"
-                    style={{ color: "hsl(var(--raddo-ash))" }}
+                    style={{ color: "hsl(var(--dossier-ash))" }}
                   >
                     {bucket.label}
                   </div>
@@ -805,7 +805,7 @@ export function DebriefForm() {
                           fontSize: 10,
                           letterSpacing: "0.16em",
                           textTransform: "uppercase",
-                          color: "hsl(var(--raddo-ash))",
+                          color: "hsl(var(--dossier-ash))",
                         }}
                       >
                         In your words · {bucket.label}
@@ -822,9 +822,9 @@ export function DebriefForm() {
                         maxLength={400}
                         className="mt-1 w-full text-sm outline-none transition-colors"
                         style={{
-                          border: "1px solid hsl(var(--raddo-paper-edge))",
+                          border: "1px solid hsl(var(--dossier-paper-edge))",
                           backgroundColor: "white",
-                          color: "hsl(var(--raddo-charcoal))",
+                          color: "hsl(var(--dossier-charcoal))",
                           borderRadius: 8,
                           padding: "10px 12px",
                           resize: "vertical",
@@ -843,11 +843,11 @@ export function DebriefForm() {
             <Overline>PART 2 · WHERE YOU WANT TO BE</Overline>
             <h2
               className="mt-3 font-display"
-              style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
+              style={{ color: "hsl(var(--dossier-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
               Pick the words for how you professionally or your business should feel in 12 months.
             </h2>
-            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
+            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--dossier-ash))" }}>
               Select as many as fit.
             </p>
             <div className="mt-6 space-y-6">
@@ -855,7 +855,7 @@ export function DebriefForm() {
                 <div key={bucket.category}>
                   <div
                     className="text-[11px] tracking-[0.18em] font-medium"
-                    style={{ color: "hsl(var(--raddo-ash))" }}
+                    style={{ color: "hsl(var(--dossier-ash))" }}
                   >
                     {bucket.label}
                   </div>
@@ -881,11 +881,11 @@ export function DebriefForm() {
             <Overline>PART 3 · THE SYSTEMS YOU ALREADY RUN</Overline>
             <h2
               className="mt-3 font-display"
-              style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
+              style={{ color: "hsl(var(--dossier-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
               Which tools does your business actually use?
             </h2>
-            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
+            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--dossier-ash))" }}>
               Tap every tool you use. So we know what your COB needs to plug into.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -937,11 +937,11 @@ export function DebriefForm() {
             <Overline>PART 4 · HOW YOU MAKE DECISIONS</Overline>
             <h2
               className="mt-3 font-display"
-              style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
+              style={{ color: "hsl(var(--dossier-ink-deep))", fontSize: 28, lineHeight: 1.15, fontWeight: 700 }}
             >
               Pick the options that sound like how you work.
             </h2>
-            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--raddo-ash))" }}>
+            <p className="mt-3 max-w-3xl text-sm" style={{ color: "hsl(var(--dossier-ash))" }}>
               For each row, select every option that fits. This tells your COB how to brief you · what to push, what to flag, what to leave alone.
             </p>
             <div className="mt-6 space-y-5">
@@ -952,7 +952,7 @@ export function DebriefForm() {
                     key={row.id}
                     style={{
                       backgroundColor: "white",
-                      border: "1px solid hsl(var(--raddo-paper-edge))",
+                      border: "1px solid hsl(var(--dossier-paper-edge))",
                       borderRadius: 8,
                       padding: 20,
                     }}
@@ -963,14 +963,14 @@ export function DebriefForm() {
                         fontSize: 10,
                         letterSpacing: "0.18em",
                         textTransform: "uppercase",
-                        color: "hsl(var(--raddo-ash))",
+                        color: "hsl(var(--dossier-ash))",
                       }}
                     >
                       Row {String(index + 1).padStart(2, "0")}
                     </p>
                     <p
                       className="mt-2"
-                      style={{ color: "hsl(var(--raddo-ink-deep))", fontSize: 16, fontWeight: 500 }}
+                      style={{ color: "hsl(var(--dossier-ink-deep))", fontSize: 16, fontWeight: 500 }}
                     >
                       {row.prompt}
                     </p>

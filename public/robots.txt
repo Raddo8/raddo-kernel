@@ -18,4 +18,4 @@ Disallow: /respond/
 Disallow: /app/
 Disallow: /builds/
 
-Sitemap: https://raddo.ai/sitemap.xml
+Sitemap: https://chiefofbusiness.ai/sitemap.xml

@@ -24,16 +24,16 @@ export function MeetYourCobLaunch({
       <div
         className="relative p-8 md:p-10"
         style={{
-          backgroundColor: "hsl(var(--raddo-paper))",
-          border: "1px solid hsl(var(--raddo-paper-edge))",
+          backgroundColor: "hsl(var(--dossier-paper))",
+          border: "1px solid hsl(var(--dossier-paper-edge))",
           borderRadius: 8,
-          boxShadow: "0 6px 20px -10px hsl(var(--raddo-ink-deep) / 0.2)",
+          boxShadow: "0 6px 20px -10px hsl(var(--dossier-ink-deep) / 0.2)",
         }}
       >
         <span
           className="font-mono"
           style={{
-            color: "hsl(var(--raddo-brass-deep))",
+            color: "hsl(var(--dossier-brass-deep))",
             fontSize: 10,
             letterSpacing: "0.18em",
             fontWeight: 600,
@@ -46,7 +46,7 @@ export function MeetYourCobLaunch({
           id="meet-cob-launch-heading"
           className="font-display mt-4"
           style={{
-            color: "hsl(var(--raddo-ink-deep))",
+            color: "hsl(var(--dossier-ink-deep))",
             fontSize: "clamp(28px, 3.6vw, 40px)",
             lineHeight: 1.15,
             fontWeight: 800,
@@ -57,7 +57,7 @@ export function MeetYourCobLaunch({
         <p
           className="mt-4 max-w-2xl"
           style={{
-            color: "hsl(var(--raddo-charcoal))",
+            color: "hsl(var(--dossier-charcoal))",
             fontSize: 16,
             lineHeight: 1.6,
           }}
@@ -68,11 +68,11 @@ export function MeetYourCobLaunch({
           <button
             type="button"
             onClick={onLaunch}
-            className="inline-flex items-center justify-center font-mono transition-transform duration-150 active:translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-raddo-brass"
+            className="inline-flex items-center justify-center font-mono transition-transform duration-150 active:translate-y-[1px] focus:outline-none focus-visible:ring-2 focus-visible:ring-dossier-brass"
             style={{
-              backgroundColor: "hsl(var(--raddo-brass))",
-              color: "hsl(var(--raddo-ink-deep))",
-              border: "1px solid hsl(var(--raddo-brass-deep))",
+              backgroundColor: "hsl(var(--dossier-brass))",
+              color: "hsl(var(--dossier-ink-deep))",
+              border: "1px solid hsl(var(--dossier-brass-deep))",
               borderRadius: 4,
               padding: "14px 24px",
               fontSize: 12,
@@ -80,7 +80,7 @@ export function MeetYourCobLaunch({
               textTransform: "uppercase",
               fontWeight: 700,
               minWidth: 220,
-              boxShadow: "0 4px 12px -6px hsl(var(--raddo-brass-deep) / 0.4)",
+              boxShadow: "0 4px 12px -6px hsl(var(--dossier-brass-deep) / 0.4)",
             }}
           >
             Meet your COB

@@ -1,5 +1,5 @@
 # SAMPLE COB — REFERENCE CATALOG v1.0
-**Purpose:** Reference data layer for the raddo.ai Sample COB chat feature.
+**Purpose:** Reference data layer for the chiefofbusiness.ai Sample COB chat feature.
 **Consumer:** LOVIE (the AI powering the sandboxed sample experience).
 **Audience of the chat itself:** Engaged-curious visitor exploring what COB does. Education/exploration stage. Not pilot-conviction stage.
 **Author:** COB - RADDO · 2026-05-21

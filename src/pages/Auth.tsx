@@ -58,14 +58,14 @@ export default function Auth() {
         style={{
           fontSize: 10,
           letterSpacing: "0.22em",
-          color: "hsl(var(--raddo-brass-deep))",
+          color: "hsl(var(--dossier-brass-deep))",
           fontWeight: 700,
         }}
       >
         {isLogin ? "workspace · sign in" : "workspace · create"}
       </p>
       <h1
-        className="font-display text-raddo-ink-deep"
+        className="font-display text-dossier-ink-deep"
         style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
       >
         {isLogin ? "Sign in to your workspace" : "Create your workspace"}
@@ -80,7 +80,7 @@ export default function Auth() {
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-              className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+              className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
               style={{ borderRadius: 4 }}
             />
           </div>
@@ -93,7 +93,7 @@ export default function Auth() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+            className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
             style={{ borderRadius: 4 }}
           />
         </div>
@@ -106,13 +106,13 @@ export default function Auth() {
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
-            className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+            className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
             style={{ borderRadius: 4 }}
           />
         </div>
         <Button
           type="submit"
-          className="w-full bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+          className="w-full bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
           style={{ borderRadius: 4, fontWeight: 600 }}
           disabled={loading}
         >
@@ -120,11 +120,11 @@ export default function Auth() {
         </Button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-raddo-ash">
+      <p className="mt-6 text-center text-sm text-dossier-ash">
         {isLogin ? "No account?" : "Already have an account?"}{" "}
         <button
           onClick={() => setIsLogin(!isLogin)}
-          className="text-raddo-ink-deep underline-offset-4 hover:underline"
+          className="text-dossier-ink-deep underline-offset-4 hover:underline"
         >
           {isLogin ? "Sign up" : "Sign in"}
         </button>

@@ -35,22 +35,22 @@ Only these tokens. No new colors. No tints outside the listed opacities.
 
 | Token | Hex | Role on /dossier |
 |---|---|---|
-| `raddo-paper` | `#FAF8F4` | Page background. Every section. |
-| `raddo-paper-edge` | `#E5E3DE` | Hairlines, table dividers, card borders. |
-| `raddo-ink-deep` | `#042C53` | Headlines, emphasized in-line `<strong>`, key labels. |
-| `raddo-charcoal` | `#2C2C2A` | Body copy. |
-| `raddo-ash` | `#5F5E5A` | Secondary body, captions, sub-deck under H2s. |
-| `raddo-brass` | `#EF9F27` | Hairline accents, middot separators, CTA fill. |
-| `raddo-brass-deep` | `#854F0B` | Overlines, exhibit labels, capability group titles. |
-| `raddo-night` | `#0A0A0C` | Reserved exclusively for the vault-exhibit frame. |
-| `white` | `#FFFFFF` | Figure mat inside `border-raddo-paper-edge` frames only. |
+| `dossier-paper` | `#FAF8F4` | Page background. Every section. |
+| `dossier-paper-edge` | `#E5E3DE` | Hairlines, table dividers, card borders. |
+| `dossier-ink-deep` | `#042C53` | Headlines, emphasized in-line `<strong>`, key labels. |
+| `dossier-charcoal` | `#2C2C2A` | Body copy. |
+| `dossier-ash` | `#5F5E5A` | Secondary body, captions, sub-deck under H2s. |
+| `dossier-brass` | `#EF9F27` | Hairline accents, middot separators, CTA fill. |
+| `dossier-brass-deep` | `#854F0B` | Overlines, exhibit labels, capability group titles. |
+| `dossier-night` | `#0A0A0C` | Reserved exclusively for the vault-exhibit frame. |
+| `white` | `#FFFFFF` | Figure mat inside `border-dossier-paper-edge` frames only. |
 
-Approved opacity uses: `bg-raddo-brass/40` for hairline rules,
-`bg-raddo-paper/90` for the sticky header backdrop. No others.
+Approved opacity uses: `bg-dossier-brass/40` for hairline rules,
+`bg-dossier-paper/90` for the sticky header backdrop. No others.
 
 **Forbidden on /dossier:** any blue that is not `ink-deep` / `ink-soft`,
 any gradient, any shadow heavier than `shadow-sm`, any color introduced from
-outside the RADDO palette.
+outside the dossier palette.
 
 ---
 
@@ -64,14 +64,14 @@ Two families. No third. Ever.
 - **Sizes:**
   - H1 hero · `text-5xl lg:text-7xl`, `leading-[1.05]`
   - Section H2 · `text-4xl lg:text-5xl`, `leading-tight`
-- **Color:** always `text-raddo-ink-deep`.
+- **Color:** always `text-dossier-ink-deep`.
 
 ### Inter (sans / body)
 - **Body paragraphs:** `text-lg lg:text-xl`, `leading-relaxed`,
-  `text-raddo-charcoal`.
+  `text-dossier-charcoal`.
 - **Dense body (vault, capabilities):** `text-base lg:text-lg`.
-- **Sub-deck under H2:** `text-lg text-raddo-ash`.
-- **In-line emphasis:** `<strong className="text-raddo-ink-deep font-bold">`
+- **Sub-deck under H2:** `text-lg text-dossier-ash`.
+- **In-line emphasis:** `<strong className="text-dossier-ink-deep font-bold">`
   for the one or two phrases per page that must land. Bold is rare and earned.
 
 ### JetBrains Mono (system — utility only)
@@ -93,7 +93,7 @@ Pattern: `word <space>·<space> word`.
 
 Brass middot inside mono overlines:
 ```tsx
-dossier 03 <span className="text-raddo-brass">·</span> what is COB
+dossier 03 <span className="text-dossier-brass">·</span> what is COB
 ```
 
 The middot also appears as the **center bead** of every brass hairline.
@@ -106,9 +106,9 @@ The single most repeated motif on /dossier. It is the page's heartbeat.
 
 ```tsx
 <div className="flex items-center gap-2">
-  <span className="h-px flex-1 bg-raddo-brass/40" />
-  <span className="h-1.5 w-1.5 rounded-full bg-raddo-brass" />
-  <span className="h-px flex-1 bg-raddo-brass/40" />
+  <span className="h-px flex-1 bg-dossier-brass/40" />
+  <span className="h-1.5 w-1.5 rounded-full bg-dossier-brass" />
+  <span className="h-px flex-1 bg-dossier-brass/40" />
 </div>
 ```
 
@@ -118,7 +118,7 @@ Rules:
   (`my-10`).
 - Never two hairlines back-to-back. Never a hairline without breathing room
   above and below (minimum `mt-10`/`mb-10`).
-- The bead is always solid `raddo-brass`; the rules are always `brass/40`.
+- The bead is always solid `dossier-brass`; the rules are always `brass/40`.
   No other opacities.
 
 ---
@@ -128,12 +128,12 @@ Rules:
 Every section begins with a mono overline naming the dossier number and label:
 
 ```tsx
-<p className="font-mono text-xs uppercase tracking-[0.22em] text-raddo-brass-deep mb-6">
-  dossier 04 <span className="text-raddo-brass">·</span> engineered differently
+<p className="font-mono text-xs uppercase tracking-[0.22em] text-dossier-brass-deep mb-6">
+  dossier 04 <span className="text-dossier-brass">·</span> engineered differently
 </p>
 ```
 
-- Color: `raddo-brass-deep` (the burnt copper), never `raddo-brass` (the
+- Color: `dossier-brass-deep` (the burnt copper), never `dossier-brass` (the
   bright accent) — bright brass is reserved for the middot itself.
 - `mb-6` to the H2 below. Always.
 - The dossier number is the section's identity. Sections are numbered
@@ -149,7 +149,7 @@ Exhibit labels follow the same construction with a different lede:
 ### The `Page` wrapper (binding contract)
 Every section after the hero uses:
 ```tsx
-<section className="dossier-page bg-raddo-paper text-raddo-charcoal
+<section className="dossier-page bg-dossier-paper text-dossier-charcoal
                     px-6 sm:px-12 lg:px-24 py-16 lg:py-24">
   <div className="mx-auto max-w-5xl">{children}</div>
 </section>
@@ -183,7 +183,7 @@ Two figure treatments, no others:
 
 **Mat frame** (most figures):
 ```tsx
-<figure className="border border-raddo-paper-edge bg-white p-2 shadow-sm">
+<figure className="border border-dossier-paper-edge bg-white p-2 shadow-sm">
   <img className="block w-full h-auto object-cover" />
 </figure>
 ```
@@ -192,11 +192,11 @@ The `bg-white` matte plus `p-2` border creates the museum-card effect.
 
 **Vault frame** (the one exception):
 ```tsx
-<div className="border border-raddo-paper-edge rounded-sm overflow-hidden bg-raddo-night">
+<div className="border border-dossier-paper-edge rounded-sm overflow-hidden bg-dossier-night">
   <img className="block w-full h-auto" />
 </div>
 ```
-`bg-raddo-night` is permitted **only** for the vault exhibit because the
+`bg-dossier-night` is permitted **only** for the vault exhibit because the
 artifact itself is photographed on black. Nowhere else on /dossier.
 
 ### Imagery rules
@@ -222,15 +222,15 @@ The "Engineered differently" page is the dossier's structural showpiece.
 ## 10 · The capability grid (page 3 grammar)
 
 - Grid: `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6`.
-- Group title: mono micro-label in `raddo-brass-deep`.
-- Items: `text-sm font-sans text-raddo-ink-deep`, one per line, no bullets,
+- Group title: mono micro-label in `dossier-brass-deep`.
+- Items: `text-sm font-sans text-dossier-ink-deep`, one per line, no bullets,
   no dashes. List-without-list-markers is the look.
 
 ---
 
 ## 11 · Borders, radii, shadows
 
-- **Border:** `border-raddo-paper-edge` only. 1px. No thicker borders.
+- **Border:** `border-dossier-paper-edge` only. 1px. No thicker borders.
 - **Radius:** `rounded-sm` (2px) on the vault frame only. Everywhere else the
   dossier is **square** — no radius. This is non-negotiable; soft corners
   break the print register.
@@ -270,13 +270,13 @@ Rules:
 
 ```tsx
 <header className="dossier-no-print sticky top-0 z-30
-  border-b border-raddo-paper-edge bg-raddo-paper/90 backdrop-blur">
+  border-b border-dossier-paper-edge bg-dossier-paper/90 backdrop-blur">
 ```
 
 - 8 × 8 `logo3d` mark, then mono wordmark
-  `chief of business · dossier` in `raddo-ink-deep`.
+  `chief of business · dossier` in `dossier-ink-deep`.
 - One CTA only: the brass `Download PDF` button. Brass fill, ink-deep label,
-  `hover:bg-raddo-brass-deep hover:text-raddo-paper`. Never blue. Never
+  `hover:bg-dossier-brass-deep hover:text-dossier-paper`. Never blue. Never
   outlined. Never another CTA on this page.
 
 ---
@@ -325,8 +325,8 @@ Run this before merging any change to `/dossier`:
 - [ ] Every section opens with a mono overline `dossier NN · label`.
 - [ ] Every section closes with a brass hairline.
 - [ ] Every separator in prose is a middot `·`, never `—` or `–`.
-- [ ] H1/H2 are Fraunces `font-bold`, `text-raddo-ink-deep`.
-- [ ] Body is Inter, `text-raddo-charcoal`, `leading-relaxed`.
+- [ ] H1/H2 are Fraunces `font-bold`, `text-dossier-ink-deep`.
+- [ ] Body is Inter, `text-dossier-charcoal`, `leading-relaxed`.
 - [ ] No color outside the §2 palette.
 - [ ] No shadow heavier than `shadow-sm`.
 - [ ] No border radius except `rounded-sm` on the vault frame.
@@ -359,21 +359,21 @@ Utility classes live in `src/index.css` under `@layer components`.
 ### 17.1 The navy pane (element 1)
 ```css
 .dossier-navy-pane {
-  background-color: hsl(var(--raddo-ink-deep));
+  background-color: hsl(var(--dossier-ink-deep));
   background-image:
     radial-gradient(ellipse 60% 55% at 82% 12%,
-      hsl(var(--raddo-brass) / 0.18), transparent 60%),
+      hsl(var(--dossier-brass) / 0.18), transparent 60%),
     radial-gradient(ellipse 55% 55% at 12% 92%,
-      hsl(var(--raddo-ink-soft) / 0.28), transparent 65%),
+      hsl(var(--dossier-ink-soft) / 0.28), transparent 65%),
     linear-gradient(160deg,
       hsl(211 93% 8%) 0%,
-      hsl(var(--raddo-ink-deep)) 55%,
+      hsl(var(--dossier-ink-deep)) 55%,
       hsl(210 82% 22%) 100%);
-  color: hsl(var(--raddo-paper));
+  color: hsl(var(--dossier-paper));
 }
 ```
 Three layers: brass glow top-right, cool-blue lift bottom-left, 160° navy
-gradient. Text on it is always `raddo-paper`.
+gradient. Text on it is always `dossier-paper`.
 
 ### 17.2 The engineering grid (element 2)
 Rendered via `::before` on the pane:
@@ -393,8 +393,8 @@ pane's edges. Blueprint texture, barely-there.
 ### 17.3 The brass chip (element 3)
 ```css
 .dossier-brass-chip {
-  background: hsl(var(--raddo-brass));
-  color: hsl(var(--raddo-ink-deep));
+  background: hsl(var(--dossier-brass));
+  color: hsl(var(--dossier-ink-deep));
   font: 700 11px/1 'JetBrains Mono', monospace;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -408,8 +408,8 @@ brass-deep text overlines from §6; does not replace them.
 ### 17.4 The brass-underline emphasis (element 4)
 ```css
 .dossier-brass-underline {
-  color: hsl(var(--raddo-brass));
-  border-bottom: 2px solid hsl(var(--raddo-brass));
+  color: hsl(var(--dossier-brass));
+  border-bottom: 2px solid hsl(var(--dossier-brass));
   padding-bottom: 2px;
 }
 ```
@@ -418,7 +418,7 @@ brass-deep text overlines from §6; does not replace them.
 ### 17.5 The navy-tinted shadow (element 5)
 ```css
 .dossier-navy-shadow {
-  box-shadow: 0 10px 40px -20px hsl(var(--raddo-ink-deep) / 0.25);
+  box-shadow: 0 10px 40px -20px hsl(var(--dossier-ink-deep) / 0.25);
 }
 ```
 On white cards/figures adjacent to a navy pane. Warmer and deeper than
@@ -447,21 +447,21 @@ panes back-to-back is forbidden.
 ```css
 @media print {
   .dossier-navy-pane {
-    background: hsl(var(--raddo-paper)) !important;
-    color: hsl(var(--raddo-charcoal)) !important;
+    background: hsl(var(--dossier-paper)) !important;
+    color: hsl(var(--dossier-charcoal)) !important;
   }
   .dossier-navy-pane::before { display: none !important; }
   .dossier-navy-pane h1,
-  .dossier-navy-pane h2 { color: hsl(var(--raddo-ink-deep)) !important; }
+  .dossier-navy-pane h2 { color: hsl(var(--dossier-ink-deep)) !important; }
 }
 ```
 Every navy pane flattens to cream with ink-deep text. The grid disappears.
-The mono footer softens to `raddo-ash`. The printed dossier remains
+The mono footer softens to `dossier-ash`. The printed dossier remains
 letterpress-on-paper, one section per Letter page.
 
 ### 17.9 Pre-ship additions to the §16 checklist
 - [ ] At most one full `.dossier-navy-pane` per surface (plus at most one thin band).
 - [ ] Every navy pane carries: brass chip eyebrow, one brass-underlined word in the H1, mono footer strip.
 - [ ] Print preview shows every pane flattened to cream with ink-deep text.
-- [ ] No color introduced outside the §2 palette (navy layers derive from `--raddo-ink-deep` and `--raddo-ink-soft` only).
+- [ ] No color introduced outside the §2 palette (navy layers derive from `--dossier-ink-deep` and `--dossier-ink-soft` only).
 - [ ] `.dossier-navy-shadow` used only on figures/cards adjacent to a pane, never stacked with `shadow-sm`.
