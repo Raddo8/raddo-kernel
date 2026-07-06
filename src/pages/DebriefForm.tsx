@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SeoHead } from "@/components/SeoHead";
+import { DossierPageBand } from "@/components/dossier/DossierPageBand";
 import {
   ASPIRATION_WORDS,
   CATEGORY_LABELS,
@@ -590,45 +591,14 @@ export function DebriefForm() {
         }}
       />
       <div className="relative z-10">
-      {/* Top band · cream paper */}
-      <header className="mx-auto max-w-7xl px-6 pt-10 md:px-10 md:pt-14">
-        <Panel className="px-6 py-10 md:px-10 md:py-14">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-3xl">
-              <Overline>DEBRIEF · 001 · INFORMATION REQUEST</Overline>
-              <h1
-                className="mt-4 font-display"
-                style={{
-                  color: "hsl(var(--raddo-ink-deep))",
-                  fontSize: "clamp(2.25rem, 4.5vw, 3.75rem)",
-                  lineHeight: 1.05,
-                  fontWeight: 800,
-                }}
-              >
-                5 minutes to request more information about your <strong style={{ fontWeight: 900 }}>C</strong>hief <strong style={{ fontWeight: 900 }}>O</strong>f <strong style={{ fontWeight: 900 }}>B</strong>usiness.
-              </h1>
-              <p
-                className="mt-5 max-w-2xl"
-                style={{ color: "hsl(var(--raddo-charcoal))", fontSize: 17, lineHeight: 1.6 }}
-              >
-                Tell us where you are today, where you want to be, the systems you already run, and how you like to work. We use it to prepare a tailored follow-up · no chat, no demo wall. Skip anything that doesn't apply.
-              </p>
-            </div>
-            <Link
-              to="/"
-              className="font-mono"
-              style={{
-                fontSize: 11,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "hsl(var(--raddo-ink))",
-              }}
-            >
-              ← Back home
-            </Link>
-          </div>
-        </Panel>
-      </header>
+      {/* Top band · navy pane cover (§17 dossier bible) */}
+      <DossierPageBand
+        chip="debrief · 001 · information request"
+        headline="Request more information about your Chief of"
+        keyword="Business"
+        headlineTrail="."
+        subhead="Tell us where you are today, where you want to be, the systems you already run, and how you like to work. We use it to prepare a tailored follow-up · no chat, no demo wall. Skip anything that does not apply."
+      />
 
 
 

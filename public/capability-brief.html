@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>COB · Capability Brief · Edition 01 · 2026</title>
-<meta name="description" content="Built for you day one. Sharpens with every action. Yours to wield anywhere. The COB Capability Brief, Edition 01.">
-<meta property="og:title" content="COB · Capability Brief · Edition 01">
+<title>The Executive Brief · Chief of Business · Edition 01 · 2026</title>
+<meta name="description" content="The Executive Brief. Built for you day one. Sharpens with every action. Yours to wield anywhere. Edition 01.">
+<meta property="og:title" content="The Executive Brief · Chief of Business · Edition 01">
 <meta property="og:description" content="Built for you day one. Sharpens with every action. Yours to wield anywhere.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -106,6 +106,73 @@
 
   /* ---------- COVER ---------- */
   .cover { margin-bottom: 96px; }
+
+  /* §17 dossier bible · navy pane cover treatment (COVER = navy, pages = paper). */
+  .cover.navy-pane {
+    position: relative;
+    isolation: isolate;
+    margin: -56px -64px 96px;
+    padding: 72px 64px 64px;
+    color: var(--paper);
+    background-color: var(--ink-deep);
+    background-image:
+      radial-gradient(ellipse 60% 55% at 82% 12%, rgba(239,159,39,0.18), transparent 60%),
+      radial-gradient(ellipse 55% 55% at 12% 92%, rgba(24,95,165,0.28), transparent 65%),
+      linear-gradient(160deg, #021833 0%, var(--ink-deep) 55%, #185FA5 100%);
+  }
+  .cover.navy-pane::before {
+    content: "";
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,0.045) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);
+            mask-image: radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);
+  }
+  .cover.navy-pane > * { position: relative; z-index: 1; }
+  .cover.navy-pane .overline { display: none; }
+  .cover.navy-pane .brass-chip {
+    display: inline-block;
+    background: var(--brass);
+    color: var(--ink-deep);
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 3px;
+    margin-bottom: 28px;
+  }
+  .cover.navy-pane h1 { color: var(--paper); }
+  .cover.navy-pane h1 em {
+    font-style: normal;
+    color: var(--brass);
+    border-bottom: 2px solid var(--brass);
+    padding-bottom: 2px;
+    font-weight: 700;
+  }
+  .cover.navy-pane .lede { color: rgba(250,248,244,0.9); }
+  .cover.navy-pane .lede strong { color: var(--paper); }
+  .cover.navy-pane .mono-footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 48px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  @media print {
+    .cover.navy-pane {
+      background: var(--paper) !important;
+      color: var(--charcoal) !important;
+    }
+    .cover.navy-pane::before { display: none !important; }
+    .cover.navy-pane h1 { color: var(--ink-deep) !important; }
+    .cover.navy-pane .lede { color: var(--charcoal) !important; }
+    .cover.navy-pane .mono-footer { color: var(--ash) !important; }
+  }
+
 
   .overline {
     font-family: var(--sans);
@@ -622,17 +689,17 @@
     </div>
     <div class="stamp">
       <div class="eyebrow">Edition 01 · 2026</div>
-      <div class="title">Capability Brief</div>
+      <div class="title">The Executive Brief</div>
     </div>
   </header>
 
   <!-- COVER -->
-  <section class="cover" aria-labelledby="cover-headline">
-    <div class="overline">Clarity · Origin · Decision.</div>
+  <section class="cover navy-pane" aria-labelledby="cover-headline">
+    <span class="brass-chip">dossier 01 · the executive brief</span>
 
     <h1 id="cover-headline">
       Built for you day one.<br>
-      <em>Sharpens with every action.</em><br>
+      <em>Sharpens</em> with every action.<br>
       Yours to wield anywhere.
     </h1>
 
@@ -640,6 +707,13 @@
       Your COB is a system of <strong>intelligence, strategy, and competence</strong>. Built around you from day one. Connected to your email, calendar, documents, team and data. It learns how you work. It is portable. It carries everything you teach it. The longer you use it, the better it gets at being yours. And it stays yours for decades.
     </p>
 
+    <div class="mono-footer">
+      <span>chief of business · dossier</span>
+      <span>© 2026 COB Technologies LLC</span>
+    </div>
+  </section>
+
+  <section class="cover" aria-label="Executive brief · film and index">
     <div class="hairline" aria-hidden="true"></div>
 
     <figure class="film" aria-label="COB opening film">

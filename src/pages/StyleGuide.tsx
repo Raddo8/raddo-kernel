@@ -429,6 +429,129 @@ export default function StyleGuide() {
           </div>
         </Section>
 
+        {/* Dossier · sanctioned navy-pane elements (§17 of the bible) */}
+        <Section
+          title="Dossier · sanctioned elements"
+          subtitle="The seven visioncre-derived building blocks that carry the property identity. See docs/brand/DOSSIER_BRAND_BIBLE.md §17."
+        >
+          <div className="space-y-8">
+            {/* 1 · The navy pane + 2 · engineering grid */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                01 · navy pane · 02 · engineering grid
+              </div>
+              <div className="dossier-navy-pane relative overflow-hidden p-10 rounded-sm">
+                <span className="dossier-brass-chip">dossier · sample chip</span>
+                <h3
+                  className="font-display text-raddo-paper mt-6"
+                  style={{ fontSize: 32, fontWeight: 800, lineHeight: 1.1 }}
+                >
+                  A layered navy pane with a{" "}
+                  <span className="dossier-brass-underline">brass</span> keyword.
+                </h3>
+                <p className="mt-4 max-w-xl text-raddo-paper/80" style={{ fontSize: 14, lineHeight: 1.6 }}>
+                  160deg gradient, brass glow top-right, cool lift bottom-left, 44px white/4.5% grid
+                  masked at the edges.
+                </p>
+                <div className="dossier-mono-footer mt-10">
+                  <span>chief of business · dossier</span>
+                  <span>© 2026 COB Technologies LLC</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3 · Brass chip */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                03 · brass chip
+              </div>
+              <div className="bg-raddo-ink-deep p-6 rounded-sm">
+                <span className="dossier-brass-chip">dossier 01 · a private document</span>
+              </div>
+            </div>
+
+            {/* 4 · Brass-underline emphasis */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                04 · brass-underline emphasis
+              </div>
+              <p
+                className="font-display text-raddo-ink-deep"
+                style={{ fontSize: 28, fontWeight: 800, lineHeight: 1.15 }}
+              >
+                One key word carries the{" "}
+                <span className="dossier-brass-underline">weight</span>.
+              </p>
+            </div>
+
+            {/* 5 · Navy-tinted shadow */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                05 · navy-tinted shadow
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  className="bg-white p-6"
+                  style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}
+                >
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-ash uppercase mb-2">
+                    shadow-sm (baseline)
+                  </div>
+                  <div className="font-sans text-sm text-raddo-charcoal">A quiet paper card.</div>
+                </div>
+                <div
+                  className="dossier-navy-shadow bg-white p-6"
+                  style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+                >
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-ash uppercase mb-2">
+                    dossier-navy-shadow
+                  </div>
+                  <div className="font-sans text-sm text-raddo-charcoal">
+                    Deeper, warmer · used near a navy pane.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 6 · Mono footer strip */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                06 · mono footer strip
+              </div>
+              <div className="bg-raddo-ink-deep px-6 py-4 rounded-sm">
+                <div className="dossier-mono-footer">
+                  <span>chief of business · dossier</span>
+                  <span>© 2026 COB Technologies LLC</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 7 · Navy/paper split composition */}
+            <div>
+              <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-2">
+                07 · navy/paper split composition
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 rounded-sm overflow-hidden" style={{ minHeight: 260 }}>
+                <div className="dossier-navy-pane p-8">
+                  <span className="dossier-brass-chip">cover</span>
+                  <p className="font-display text-raddo-paper mt-6" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
+                    Dark storytelling pane.
+                  </p>
+                </div>
+                <div className="bg-raddo-paper p-8" style={{ border: "1px solid hsl(var(--raddo-paper-edge))" }}>
+                  <div className="font-mono text-[10px] tracking-[0.22em] text-raddo-brass-deep uppercase mb-3">
+                    page
+                  </div>
+                  <p className="font-display text-raddo-ink-deep" style={{ fontSize: 22, fontWeight: 700, lineHeight: 1.15 }}>
+                    Light action surface.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+
         <footer className="pt-8 pb-16 text-center font-mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
           RADDO · Style Guide · v1
         </footer>

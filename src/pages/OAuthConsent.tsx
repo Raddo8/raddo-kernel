@@ -2,36 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { asSupabase as supabase } from "@/integrations/supabase/as-client";
 import { Button } from "@/components/ui/button";
 import { SeoHead } from "@/components/SeoHead";
+import { DossierSplit } from "@/components/dossier/DossierSplit";
 
 /**
- * OAuth 2.1 consent screen — wired to the Supabase OAuth Server.
- *
- * Flow:
- *   1. Read `authorization_id` from the URL. Supabase's /authorize endpoint
- *      redirects the browser here after the user is authenticated against
- *      the Authorization Server project (rnjqpwmzmbnnaonppfkm).
- *   2. Require an authenticated session — if missing, bounce to /login with
- *      a `redirect` param so the user returns here after sign-in.
- *   3. Call `supabase.auth.oauth.getAuthorizationDetails(authorization_id)`
- *      to fetch the client name, redirect_uri and requested scopes.
- *   4. Render Approve / Deny wired to approveAuthorization /
- *      denyAuthorization. Both return a `redirect_url` we navigate to so the
- *      MCP client (Claude desktop/mobile, Cowork, etc.) receives the code.
- *
- * Note on configuration: hosted Supabase does NOT expose
- * `GOTRUE_OAUTH_SERVER_AUTHORIZATION_PATH` in the dashboard. The consent
- * screen path is set under Authentication → URL Configuration on the AS
- * project (rnjqpwmzmbnnaonppfkm) by adding the absolute URL of this page
- * (`https://chiefofbusiness.ai/oauth/consent`) as the consent screen
- * redirect, then enabling the OAuth Server. Operator runbook lives in
- * `docs/PHASE_2B_DEPLOY.md`.
- *
- * Brand: COB navy (raddo-ink) + amber (raddo-brass) on paper.
+ * OAuth 2.1 consent screen — auth-server wiring unchanged.
+ * Reskinned to the dossier split composition. All flow logic (session gate,
+ * getAuthorizationDetails, approve/deny) is byte-identical to the prior
+ * revision.
  */
-
-// Served from the Lovable CDN · public, cacheable, no AS function dependency.
-const BRAND_ICON_URL =
-  "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png";
 
 type Decision = "approve" | "deny";
 
@@ -114,7 +92,6 @@ export default function OAuthConsent() {
 
         const details = (data || {}) as AuthDetails;
 
-        // Already-consented: AS returns the redirect immediately.
         if (!details.authorization_id && (details.redirect_url || details.redirect_uri)) {
           window.location.assign((details.redirect_url || details.redirect_uri)!);
           return;
@@ -170,154 +147,139 @@ export default function OAuthConsent() {
         description="Review the application requesting access to your COB Council and approve or deny."
         path="/oauth/consent"
       />
-      <main className="min-h-screen bg-raddo-paper text-raddo-charcoal flex items-start justify-center px-6 py-16">
-        <div className="w-full max-w-lg">
-          <div className="flex items-center gap-3 mb-6">
-            <img
-              src={BRAND_ICON_URL}
-              alt="COB"
-              width={40}
-              height={40}
-              className="block"
-              style={{ borderRadius: 4 }}
-            />
-            <span
-              className="text-xs uppercase tracking-[0.22em] text-raddo-ash"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              Clarity · Origin · Decision
-            </span>
-          </div>
+      <DossierSplit
+        wide
+        brand={{
+          chip: "dossier · authorization",
+          headline: "Grant an application",
+          keyword: "consent",
+          headlineTrail: " to convene your COB.",
+          pitch:
+            "You control the scopes. Every approval is recorded. Revoke access at any time from your COB account settings.",
+        }}
+      >
+        <p
+          className="font-mono uppercase mb-3"
+          style={{
+            fontSize: 10,
+            letterSpacing: "0.22em",
+            color: "hsl(var(--raddo-brass-deep))",
+            fontWeight: 700,
+          }}
+        >
+          consent · pending
+        </p>
+        <h1
+          className="font-display text-raddo-ink-deep"
+          style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
+        >
+          Connect to COB · Council
+        </h1>
 
-          <h1
-            className="text-raddo-ink"
-            style={{
-              fontFamily: "Fraunces, serif",
-              fontWeight: 800,
-              fontSize: "2.25rem",
-              lineHeight: 1.15,
-              letterSpacing: "-0.01em",
-            }}
-          >
-            Connect to COB — Council
-          </h1>
-
-          {loading ? (
+        {loading ? (
+          <p className="mt-6 text-sm text-raddo-ash">Loading authorization request…</p>
+        ) : (
+          <>
             <p
-              className="mt-6 text-sm text-raddo-ash"
-              style={{ fontFamily: "Inter, sans-serif" }}
+              className="mt-4 text-base text-raddo-charcoal/85"
+              style={{ lineHeight: 1.55 }}
             >
-              Loading authorization request…
+              <span className="font-medium text-raddo-ink-deep">{label}</span> is requesting
+              permission to convene your COB Council and act on your behalf inside your COB
+              workspace.
             </p>
-          ) : (
-            <>
+
+            <section className="mt-8">
               <p
-                className="mt-4 text-base text-raddo-charcoal/85"
-                style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.55 }}
+                className="font-mono uppercase mb-4"
+                style={{
+                  fontSize: 10,
+                  letterSpacing: "0.22em",
+                  color: "hsl(var(--raddo-brass-deep))",
+                  fontWeight: 700,
+                }}
               >
-                <span className="font-medium text-raddo-ink">{label}</span> is
-                requesting permission to convene your COB Council and act on
-                your behalf inside your COB workspace.
+                exhibit · scopes requested
               </p>
-
-              <section
-                className="mt-8 border border-raddo-paper-edge bg-white/70 p-6"
-                style={{ borderRadius: 8 }}
-              >
-                <h2
-                  className="text-sm uppercase tracking-[0.18em] text-raddo-ash"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  It will be able to
-                </h2>
-                {scopes.length === 0 ? (
-                  <p
-                    className="mt-3 text-sm text-raddo-charcoal/75"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    Confirm your identity. No additional access is requested.
-                  </p>
-                ) : (
-                  <ul className="mt-3 space-y-2">
-                    {scopes.map((s) => (
-                      <li
-                        key={s}
-                        className="flex items-start gap-3 text-[15px] text-raddo-charcoal"
-                        style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.5 }}
+              {scopes.length === 0 ? (
+                <p className="text-sm text-raddo-charcoal/75">
+                  Confirm your identity. No additional access is requested.
+                </p>
+              ) : (
+                <ul className="border-t border-raddo-paper-edge">
+                  {scopes.map((s, i) => (
+                    <li
+                      key={s}
+                      className="flex items-baseline gap-4 border-b border-raddo-paper-edge py-3"
+                    >
+                      <span
+                        className="font-mono text-raddo-brass-deep min-w-[28px]"
+                        style={{
+                          fontSize: 10,
+                          letterSpacing: "0.18em",
+                        }}
                       >
-                        <span
-                          aria-hidden
-                          className="mt-[10px] inline-block h-[6px] w-[6px] bg-raddo-brass"
-                          style={{ borderRadius: 4 }}
-                        />
-                        <span>
-                          <span className="block">{describeScope(s)}</span>
-                          <span className="block text-xs text-raddo-ash mt-0.5 font-mono">
-                            {s}
-                          </span>
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <span className="flex-1">
+                        <span className="block text-[15px] text-raddo-ink-deep font-medium">
+                          {describeScope(s)}
                         </span>
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                        <span className="block mt-0.5 font-mono text-[11px] text-raddo-ash">
+                          {s}
+                        </span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
-                {redirectPreview && (
-                  <p
-                    className="mt-5 pt-4 border-t border-raddo-paper-edge text-xs text-raddo-ash break-all"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    After approval, you will return to{" "}
-                    <span className="font-mono text-raddo-charcoal">
-                      {safeOrigin(redirectPreview)}
-                    </span>
-                    .
-                  </p>
-                )}
-              </section>
-            </>
-          )}
+              {redirectPreview && (
+                <p className="mt-5 text-xs text-raddo-ash break-all">
+                  After approval, you will return to{" "}
+                  <span className="font-mono text-raddo-charcoal">
+                    {safeOrigin(redirectPreview)}
+                  </span>
+                  .
+                </p>
+              )}
+            </section>
+          </>
+        )}
 
-          {error && (
-            <p
-              role="alert"
-              className="mt-6 text-sm text-raddo-brass-deep"
-              style={{ fontFamily: "Inter, sans-serif" }}
-            >
-              {error}
-            </p>
-          )}
-
-          {!loading && authDetails && (
-            <div className="mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
-              <Button
-                variant="outline"
-                disabled={!!submitting}
-                onClick={() => decide("deny")}
-                className="border-raddo-paper-edge text-raddo-charcoal hover:bg-raddo-paper-edge/40"
-                style={{ borderRadius: 8, fontFamily: "Inter, sans-serif" }}
-              >
-                {submitting === "deny" ? "Declining…" : "Deny"}
-              </Button>
-              <Button
-                disabled={!!submitting}
-                onClick={() => decide("approve")}
-                className="bg-raddo-brass text-raddo-night hover:bg-raddo-brass-deep hover:text-raddo-paper"
-                style={{ borderRadius: 8, fontFamily: "Inter, sans-serif", fontWeight: 600 }}
-              >
-                {submitting === "approve" ? "Approving…" : "Approve access"}
-              </Button>
-            </div>
-          )}
-
-          <p
-            className="mt-10 text-xs text-raddo-ash"
-            style={{ fontFamily: "Inter, sans-serif", lineHeight: 1.6 }}
-          >
-            You can revoke this access at any time from your COB account
-            settings. Approving grants only the permissions listed above.
+        {error && (
+          <p role="alert" className="mt-6 text-sm text-raddo-brass-deep">
+            {error}
           </p>
-        </div>
-      </main>
+        )}
+
+        {!loading && authDetails && (
+          <div className="mt-8 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-3">
+            <Button
+              variant="outline"
+              disabled={!!submitting}
+              onClick={() => decide("deny")}
+              className="border-raddo-paper-edge text-raddo-charcoal hover:bg-raddo-paper-edge/40"
+              style={{ borderRadius: 4 }}
+            >
+              {submitting === "deny" ? "Declining…" : "Deny"}
+            </Button>
+            <Button
+              disabled={!!submitting}
+              onClick={() => decide("approve")}
+              className="bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+              style={{ borderRadius: 4, fontWeight: 600 }}
+            >
+              {submitting === "approve" ? "Approving…" : "Approve access"}
+            </Button>
+          </div>
+        )}
+
+        <p className="mt-10 text-xs text-raddo-ash" style={{ lineHeight: 1.6 }}>
+          You can revoke this access at any time from your COB account settings. Approving grants
+          only the permissions listed above.
+        </p>
+      </DossierSplit>
     </>
   );
 }

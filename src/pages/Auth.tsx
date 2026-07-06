@@ -4,7 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { DossierSplit, DossierFieldLabel } from "@/components/dossier/DossierSplit";
 
+/**
+ * /app auth gate. Auth logic (signIn, signUp, navigate) is unchanged from
+ * the prior revision · this pass is a reskin to the dossier split.
+ */
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
@@ -38,52 +43,92 @@ export default function Auth() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background dark">
-      <div className="w-full max-w-sm space-y-6 px-4">
-        <div className="text-center">
-          <h1 className="font-mono font-bold text-3xl tracking-tight text-primary">COB</h1>
-          <p className="text-muted-foreground text-sm mt-2">Agentic CRM Kernel</p>
-        </div>
+    <DossierSplit
+      brand={{
+        chip: "dossier · workspace",
+        headline: "Sign in to your",
+        keyword: "operator",
+        headlineTrail: " workspace.",
+        pitch:
+          "The command surface for your Chief of Business · your queue, your accounts, your policies, all held in one place.",
+      }}
+    >
+      <p
+        className="font-mono uppercase mb-3"
+        style={{
+          fontSize: 10,
+          letterSpacing: "0.22em",
+          color: "hsl(var(--raddo-brass-deep))",
+          fontWeight: 700,
+        }}
+      >
+        {isLogin ? "workspace · sign in" : "workspace · create"}
+      </p>
+      <h1
+        className="font-display text-raddo-ink-deep"
+        style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
+      >
+        {isLogin ? "Sign in to your workspace" : "Create your workspace"}
+      </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
+      <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+        {!isLogin && (
+          <div>
+            <DossierFieldLabel htmlFor="fullName">Full name</DossierFieldLabel>
             <Input
-              placeholder="Full name"
+              id="fullName"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
+              className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+              style={{ borderRadius: 4 }}
             />
-          )}
+          </div>
+        )}
+        <div>
+          <DossierFieldLabel htmlFor="auth-email">Email</DossierFieldLabel>
           <Input
+            id="auth-email"
             type="email"
-            placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+            style={{ borderRadius: 4 }}
           />
+        </div>
+        <div>
+          <DossierFieldLabel htmlFor="auth-password">Password</DossierFieldLabel>
           <Input
+            id="auth-password"
             type="password"
-            placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             minLength={6}
+            className="bg-white border-raddo-paper-edge text-raddo-ink-deep"
+            style={{ borderRadius: 4 }}
           />
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "..." : isLogin ? "Sign in" : "Create account"}
-          </Button>
-        </form>
+        </div>
+        <Button
+          type="submit"
+          className="w-full bg-raddo-brass text-raddo-ink-deep hover:bg-raddo-brass-deep hover:text-raddo-paper"
+          style={{ borderRadius: 4, fontWeight: 600 }}
+          disabled={loading}
+        >
+          {loading ? "…" : isLogin ? "Sign in" : "Create account"}
+        </Button>
+      </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          {isLogin ? "No account?" : "Already have an account?"}{" "}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary underline-offset-4 hover:underline"
-          >
-            {isLogin ? "Sign up" : "Sign in"}
-          </button>
-        </p>
-      </div>
-    </div>
+      <p className="mt-6 text-center text-sm text-raddo-ash">
+        {isLogin ? "No account?" : "Already have an account?"}{" "}
+        <button
+          onClick={() => setIsLogin(!isLogin)}
+          className="text-raddo-ink-deep underline-offset-4 hover:underline"
+        >
+          {isLogin ? "Sign up" : "Sign in"}
+        </button>
+      </p>
+    </DossierSplit>
   );
 }

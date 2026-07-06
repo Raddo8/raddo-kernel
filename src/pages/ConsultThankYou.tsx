@@ -1,31 +1,56 @@
 import { Link } from "react-router-dom";
 import { SeoHead } from "@/components/SeoHead";
+import { DossierPageBand } from "@/components/dossier/DossierPageBand";
 
 export default function ConsultThankYou() {
   return (
-    <main className="flex min-h-screen items-center bg-raddo-paper px-6 py-12">
+    <main className="min-h-screen bg-raddo-paper">
       <SeoHead
         path="/consult/thank-you"
         title="Consult received · COB"
         description="Your consult is in. Expect a response within 2 business days."
         robots="noindex,follow"
       />
-      <section className="mx-auto max-w-3xl rounded-[36px] border border-raddo-paper-edge bg-white p-8 shadow-[0_30px_80px_rgba(12,68,124,0.08)] md:p-12">
-        <p className="font-mono text-xs uppercase tracking-[0.18em] text-raddo-ash">Submission received</p>
-        <h1 className="mt-4 font-display text-4xl leading-tight text-raddo-charcoal md:text-5xl">
-          Thanks · we've got your answers.
-        </h1>
-        <p className="mt-5 max-w-2xl text-base leading-8 text-raddo-ash">
-          You'll hear back within 2 business days with a specific reply on what your COB would look like and what the next step would be.
-        </p>
-        <div className="mt-8 border-t border-raddo-paper-edge pt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full bg-raddo-ink px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-raddo-ink-deep"
+      <DossierPageBand
+        chip="consult · received"
+        headline="Thanks · we have your"
+        keyword="answers"
+        headlineTrail="."
+        subhead="You will hear back within 2 business days with a specific reply on what your COB would look like and what the next step would be."
+      />
+      <section className="mx-auto max-w-3xl px-6 py-16 md:px-10 md:py-20">
+        <div
+          className="dossier-navy-shadow bg-white p-8 md:p-12"
+          style={{ border: "1px solid hsl(var(--raddo-paper-edge))", borderRadius: 8 }}
+        >
+          <p
+            className="font-mono uppercase text-raddo-brass-deep"
+            style={{ fontSize: 10, letterSpacing: "0.22em", fontWeight: 700 }}
           >
-            Back to chiefofbusiness.ai
-            <span aria-hidden="true">→</span>
-          </Link>
+            what happens next
+          </p>
+          <ul className="mt-5 space-y-3 font-sans text-raddo-charcoal" style={{ fontSize: 15, lineHeight: 1.6 }}>
+            <li>· A person reads what you sent · no automated reply.</li>
+            <li>· We prepare a tailored response scoped to your operation.</li>
+            <li>· You get one message with the specific next step.</li>
+          </ul>
+          <div className="mt-10">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 font-mono uppercase"
+              style={{
+                backgroundColor: "hsl(var(--raddo-brass))",
+                color: "hsl(var(--raddo-ink-deep))",
+                borderRadius: 4,
+                padding: "14px 22px",
+                fontSize: 12,
+                letterSpacing: "0.18em",
+                fontWeight: 700,
+              }}
+            >
+              Return home <span aria-hidden>→</span>
+            </Link>
+          </div>
         </div>
       </section>
     </main>
