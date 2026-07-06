@@ -769,6 +769,60 @@ function CornerMark({ pos }: { pos: "tl" | "tr" | "bl" | "br" }) {
   return <span aria-hidden style={style} />;
 }
 
+/**
+ * Chapter overline · mono, brass-deep, 0.22em tracking. Opens every major
+ * hero-story chapter so the whole page reads as one bound executive document.
+ * Uses "chapter" (not "dossier") to keep /hero-story distinct from /dossier.
+ */
+function ChapterOverline({ n, label }: { n: string; label: string }) {
+  return (
+    <div
+      className="font-mono"
+      style={{
+        fontSize: 11,
+        letterSpacing: "0.22em",
+        color: "hsl(var(--raddo-brass-deep))",
+        textTransform: "uppercase",
+        marginBottom: 20,
+      }}
+    >
+      chapter {n} · {label}
+    </div>
+  );
+}
+
+/**
+ * Chapter close · brass hairline with a solid center bead, per the bible
+ * (§5-6). Signals the end of a bound page-section.
+ */
+function ChapterClose() {
+  return (
+    <div
+      aria-hidden
+      className="relative mx-auto mt-16 md:mt-20"
+      style={{
+        width: "min(320px, 60%)",
+        height: 1,
+        backgroundColor: "hsl(var(--raddo-brass) / 0.4)",
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          backgroundColor: "hsl(var(--raddo-brass))",
+        }}
+      />
+    </div>
+  );
+}
+
+
 const INTRO_FLAG = "raddo-hero-intro-played-v2";
 
 export function HeroStory() {
@@ -1080,7 +1134,33 @@ export function HeroStory() {
             Not just in your corner.<br />
             Building your corner.
           </h2>
+
+          {/* ====== B1 · CHAPTER 01 · THE CORNER ====== */}
+          <section className="mx-auto w-full max-w-5xl py-16 lg:py-24">
+            <ChapterOverline n="01" label="the corner" />
+            <p
+              className="font-sans text-raddo-charcoal"
+              style={{ fontSize: 18, lineHeight: 1.65, marginBottom: 20 }}
+            >
+              Most executives carry their operation in their head · board prep that displaces sleep, numbers they can't quite recall at the meeting, context that walks out the door when a senior leader leaves, decisions made three quarters ago that nobody can find. Your COB holds it instead. Risks surfaced before they hit you. The difficult email drafted in your cadence. The numbers behind every line waiting the moment you ask. What you decided three years ago, the moment the question returns. You walk in <strong className="text-raddo-ink-deep font-bold">light</strong>.
+            </p>
+            {/* PLACEHOLDER-CONFIRM-CLAIMS */}
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 13,
+                lineHeight: 1.5,
+                color: "hsl(var(--raddo-ash))",
+                fontStyle: "italic",
+              }}
+            >
+              In deployment across capital management, ministry operations, and wealth advisory. Every engagement bespoke. Every dossier prepared for one reader.
+            </p>
+            <ChapterClose />
+          </section>
+
           <BriefingComposition />
+
         </motion.div>
 
         {/* Headline with Six-Source Mandala backdrop · middle */}
@@ -1191,10 +1271,99 @@ export function HeroStory() {
           <IntroducingCob />
         </motion.div>
 
+        {/* ====== B2 · CHAPTER 02 · THE COMPOUNDING GAP · navy pane band ====== */}
+        <div
+          className="dossier-navy-pane relative left-1/2 right-1/2 -translate-x-1/2 mt-32 md:mt-40"
+          style={{ width: "100vw", maxWidth: "100vw" }}
+        >
+          <div className="mx-auto w-full max-w-5xl px-6 py-16 sm:px-8 md:px-12 lg:py-24 lg:px-16">
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-paper) / 0.7)",
+                textTransform: "uppercase",
+                marginBottom: 16,
+              }}
+            >
+              chapter 02 · the compounding gap
+            </div>
+            <span className="dossier-brass-chip" style={{ marginBottom: 20, display: "inline-block" }}>
+              the gap
+            </span>
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 20,
+                lineHeight: 1.6,
+                color: "hsl(var(--raddo-paper))",
+                marginTop: 20,
+                marginBottom: 0,
+              }}
+            >
+              Executives without a COB are now competing against executives with one. The gap shows up quietly · in who is prepared when the question lands, who has the draft ready before the meeting, who remembers what was decided three quarters ago when it matters again, who carries the full operation with them instead of behind them. The disadvantage is small at first. <span className="dossier-brass-underline">It compounds.</span>
+            </p>
+          </div>
+        </div>
 
+        {/* ====== B3 · CHAPTER 03 · THE PROTOCOL ====== */}
+        <section className="mx-auto w-full max-w-5xl py-16 lg:py-24">
+          <ChapterOverline n="03" label="the protocol" />
+          <ul className="m-0 p-0 list-none">
+            {[
+              { n: "01", body: "Sit the consult. Twenty minutes. You talk. We listen." },
+              { n: "02", body: "Grant access. We build it. Wire it. Calibrate it. Install it. Two weeks · done for you." },
+              { n: "03", body: "Walk in light. Briefed, prepared, compounding from day one." },
+            ].map((row) => (
+              <li
+                key={row.n}
+                className="flex items-baseline gap-6 py-5"
+                style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+              >
+                <span
+                  className="font-mono shrink-0 tabular-nums"
+                  style={{
+                    fontSize: 13,
+                    letterSpacing: "0.18em",
+                    color: "hsl(var(--raddo-brass-deep))",
+                    minWidth: 36,
+                  }}
+                >
+                  {row.n}
+                </span>
+                <span
+                  className="font-sans text-raddo-ink-deep"
+                  style={{ fontSize: 18, lineHeight: 1.55, flex: 1 }}
+                >
+                  {row.body}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }} />
+          <div className="mt-10 flex justify-start">
+            <a
+              href="/consult"
+              onClick={() => track("consult_cta_click", "/hero-story")}
+              className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+              style={{
+                backgroundColor: "hsl(var(--raddo-brass))",
+                color: "hsl(var(--raddo-ink-deep))",
+                padding: "14px 26px",
+                borderRadius: 4,
+                fontSize: 15,
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+              }}
+            >
+              <span>Begin the consult</span>
+              <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
+            </a>
+          </div>
+          <ChapterClose />
+        </section>
 
-
-        {/* Chat intake removed on /hero-story · staging protagonist swap */}
 
         {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
@@ -1347,8 +1516,37 @@ export function HeroStory() {
         </motion.div>
       </section>
 
+      {/* ====== B4 · CHAPTER 04 · IN PLAIN TERMS · closing plate ====== */}
+      <section className="relative z-10 mx-auto w-full max-w-5xl px-6 py-16 sm:px-8 md:px-12 lg:py-24 lg:px-16">
+        <ChapterOverline n="04" label="in plain terms" />
+        <p
+          className="font-sans text-raddo-charcoal"
+          style={{ fontSize: 18, lineHeight: 1.7, marginBottom: 32 }}
+        >
+          COB · Chief of Business · is a private operating intelligence built around one principal or one business. It connects to the systems you already run · email, meetings, documents, calendar, financials, business chat · and holds the full context of your operation so you never carry it alone. Your COB prepares your briefings, drafts in your cadence, tracks every commitment, and remembers every decision, so you arrive prepared in every room. Engagements begin with a twenty-minute consult. From access to installed, calibrated operation takes two weeks. COB serves owners and executives who want their operation carried, their history held, and their edge compounding · built for the chair the day answers to. Begin the consult at chiefofbusiness.ai/consult.
+        </p>
+        <a
+          href="/consult"
+          onClick={() => track("consult_cta_click", "/hero-story")}
+          className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+          style={{
+            backgroundColor: "hsl(var(--raddo-brass))",
+            color: "hsl(var(--raddo-ink-deep))",
+            padding: "16px 28px",
+            borderRadius: 4,
+            fontSize: 15,
+            fontWeight: 600,
+            letterSpacing: "0.01em",
+          }}
+        >
+          <span>Begin the consult</span>
+          <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
+        </a>
+        <ChapterClose />
+      </section>
 
       {/* ====== FOOTER ====== */}
+
       <footer
         className="relative z-10 w-full"
         style={{ backgroundColor: "hsl(var(--raddo-ink-deep))" }}
