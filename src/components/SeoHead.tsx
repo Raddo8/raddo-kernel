@@ -10,6 +10,8 @@ type SeoHeadProps = {
   path: string;
   /** Robots directive. Omit for default (index,follow). */
   robots?: "noindex,follow" | "noindex,nofollow";
+  /** Shorthand · emits `noindex, nofollow` when true. */
+  noindex?: boolean;
   ogImage?: string;
 };
 
@@ -18,15 +20,17 @@ export function SeoHead({
   description,
   path,
   robots,
+  noindex,
   ogImage = DEFAULT_OG_IMAGE,
 }: SeoHeadProps) {
   const url = `${SITE_ORIGIN}${path}`;
+  const robotsValue = noindex ? "noindex, nofollow" : robots;
   return (
     <Helmet>
       <title>{title}</title>
       <meta name="description" content={description} />
       <link rel="canonical" href={url} />
-      {robots ? <meta name="robots" content={robots} /> : null}
+      {robotsValue ? <meta name="robots" content={robotsValue} /> : null}
 
       <meta property="og:title" content={title} />
       <meta property="og:description" content={description} />
