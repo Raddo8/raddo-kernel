@@ -881,6 +881,11 @@ export function HeroStory() {
   const [heroImgLoaded, setHeroImgLoaded] = useState(false);
   const [litanyShown, setLitanyShown] = useState(false);
   const [finaleShown, setFinaleShown] = useState(false);
+  // Five-second read strip · fires ~1.5s after the video starts so the offer
+  // and CTA land inside a first-time visitor's five-second attention window,
+  // independent of the finale (which arrives ~6s in).
+  const [stripShown, setStripShown] = useState(false);
+
   useEffect(() => {
     // If the preloaded image is already cached, mark it loaded on mount.
     const img = new Image();
