@@ -1182,6 +1182,7 @@ export function Hero() {
         >
           <a
             href="/consult"
+            onClick={() => track("consult_cta_click", "/")}
             className="raddo-cta-brass group inline-flex items-center gap-3 font-sans"
             style={{
               backgroundColor: "hsl(var(--raddo-brass))",
