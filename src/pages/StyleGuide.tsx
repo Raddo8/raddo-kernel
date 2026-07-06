@@ -216,8 +216,8 @@ export default function StyleGuide() {
     <main className="min-h-screen bg-background text-foreground">
       <SeoHead
         path="/style-guide"
-        title="Style guide · RADDO (internal)"
-        description="Internal RADDO design system reference."
+        title="Style guide · Dossier (internal)"
+        description="Internal Dossier design system reference."
         robots="noindex,nofollow"
       />
       {/* Header bar */}
@@ -225,7 +225,7 @@ export default function StyleGuide() {
         <div className="max-w-[1280px] mx-auto px-8 py-6 flex items-center justify-between">
           <div>
             <div className="font-mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-              RADDO · Brand & component reference
+              Dossier · brand & component reference
             </div>
             <h1 className="font-display text-dossier-ink-deep mt-1" style={{ fontSize: 36, fontWeight: 800, lineHeight: 1.05 }}>
               Style Guide
@@ -277,7 +277,7 @@ export default function StyleGuide() {
         </section>
 
         {/* Palette */}
-        <Section title="Brand palette" subtitle="The locked RADDO ten · paper, ink, brass.">
+        <Section title="Brand palette" subtitle="The locked dossier ten · paper, ink, brass.">
           <div className="rounded-md border border-border bg-card divide-y divide-border">
             {PALETTE.map((d) => (
               <div key={d.token} className="px-5">
@@ -553,7 +553,7 @@ export default function StyleGuide() {
 
 
         <footer className="pt-8 pb-16 text-center font-mono text-[10px] tracking-[0.22em] text-muted-foreground uppercase">
-          RADDO · Style Guide · v1
+          Dossier · style guide · v1
         </footer>
       </div>
     </main>
@@ -656,9 +656,13 @@ const FEATURES: { group: string; items: { label: string; route?: string }[] }[] 
     group: "Public surfaces",
     items: [
       { label: "Hero · landing", route: "/" },
+      { label: "Hero story · staging", route: "/hero-story" },
+      { label: "Dossier · print document", route: "/dossier" },
+      { label: "Consult · intake", route: "/consult" },
+      { label: "Capability brief · static", route: "/capability-brief.html" },
       { label: "Style guide · this page", route: "/style-guide" },
       { label: "Respond · single-use token page", route: "/respond/:token" },
-      { label: "Sign in", route: "/auth" },
+      { label: "Sign in", route: "/login" },
       { label: "Not found · 404 fallback" },
     ],
   },
