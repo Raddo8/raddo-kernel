@@ -795,6 +795,10 @@ export function HeroStory() {
     try { window.sessionStorage.setItem(INTRO_FLAG, "1"); } catch { /* ignore */ }
   }, [introPlayed]);
 
+  useEffect(() => {
+    track("page_view", "/hero-story");
+  }, []);
+
   const [now, setNow] = useState(() =>
     new Date().toLocaleString("en-US", {
       month: "long",
