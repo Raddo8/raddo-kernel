@@ -72,7 +72,7 @@ export default {
           blue: "hsl(var(--status-blue))",
           "blue-foreground": "hsl(var(--status-blue-foreground))",
         },
-        raddo: {
+        dossier: {
           ink: "hsl(var(--dossier-ink))",
           "ink-deep": "hsl(var(--dossier-ink-deep))",
           "ink-soft": "hsl(var(--dossier-ink-soft))",
@@ -84,6 +84,7 @@ export default {
           charcoal: "hsl(var(--dossier-charcoal))",
           night: "hsl(var(--dossier-night))",
         },
+
       },
       borderRadius: {
         lg: "var(--radius)",
