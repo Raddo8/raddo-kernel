@@ -1,4 +1,4 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Building2,
   FileText,
@@ -16,16 +16,29 @@ import {
   Plug,
   HeartPulse,
   BarChart3,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useLabels } from "@/lib/labels-context";
+import { useWorkspace } from "@/lib/workspace-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function AppSidebar() {
   const labels = useLabels();
   const location = useLocation();
+  const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const { workspace, workspaces, userEmail, userRole, switchWorkspace } = useWorkspace();
 
   const navItems = [
     { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
@@ -43,6 +56,14 @@ export default function AppSidebar() {
     { to: "/app/scheduler-health", label: "Health", icon: HeartPulse },
     { to: "/app/billing", label: "Usage", icon: BarChart3 },
   ];
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/app");
+  };
+
+  const initials = (userEmail ?? "?").slice(0, 2).toUpperCase();
+
   return (
     <aside
       className={cn(
@@ -64,7 +85,36 @@ export default function AppSidebar() {
         </button>
       </div>
 
-      <nav className="flex-1 py-2 space-y-0.5">
+      {/* Workspace switcher */}
+      {!collapsed && (
+        <div className="px-3 py-3 border-b border-sidebar-border">
+          <DropdownMenu>
+            <DropdownMenuTrigger className="w-full flex items-center gap-2 px-2 py-2 text-left text-sm rounded border border-sidebar-border bg-sidebar hover:bg-sidebar-accent hover:text-sidebar-accent-foreground text-sidebar-foreground transition-colors">
+              <Building2 size={14} className="shrink-0" />
+              <span className="flex-1 truncate font-mono text-xs">
+                {workspace?.name ?? "No workspace"}
+              </span>
+              <ChevronsUpDown size={12} className="shrink-0 opacity-60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel className="text-xs font-mono uppercase tracking-wider opacity-70">
+                Workspaces
+              </DropdownMenuLabel>
+              {workspaces.length === 0 && (
+                <DropdownMenuItem disabled>No memberships</DropdownMenuItem>
+              )}
+              {workspaces.map((w) => (
+                <DropdownMenuItem key={w.id} onClick={() => switchWorkspace(w.id)}>
+                  <span className="flex-1 truncate">{w.name}</span>
+                  {workspace?.id === w.id && <Check size={14} className="ml-2" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+
+      <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
         {navItems.map(({ to, label, icon: Icon, end }) => {
           const active = end ? location.pathname === to : location.pathname.startsWith(to);
           return (
@@ -85,13 +135,41 @@ export default function AppSidebar() {
         })}
       </nav>
 
-      <button
-        onClick={() => supabase.auth.signOut()}
-        className="flex items-center gap-3 px-4 py-3 text-sm text-sidebar-foreground hover:bg-sidebar-accent border-t border-sidebar-border transition-colors"
-      >
-        <LogOut size={18} />
-        {!collapsed && <span>Sign out</span>}
-      </button>
+      {/* Account chrome */}
+      <div className="border-t border-sidebar-border">
+        <DropdownMenu>
+          <DropdownMenuTrigger className="w-full flex items-center gap-3 px-4 py-3 text-sm text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
+            <div className="w-7 h-7 rounded-full bg-sidebar-primary/20 text-sidebar-primary flex items-center justify-center text-xs font-mono shrink-0">
+              {initials}
+            </div>
+            {!collapsed && (
+              <div className="flex-1 min-w-0 text-left">
+                <div className="truncate text-xs font-mono">{userEmail ?? "…"}</div>
+                {userRole && (
+                  <div className="truncate text-[10px] uppercase tracking-wider opacity-60">
+                    {userRole}
+                  </div>
+                )}
+              </div>
+            )}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" className="w-56">
+            <DropdownMenuLabel className="text-xs">
+              <div className="font-mono truncate">{userEmail}</div>
+              {workspace && (
+                <div className="opacity-60 font-normal truncate mt-0.5">
+                  {workspace.name}
+                </div>
+              )}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              <LogOut size={14} className="mr-2" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </aside>
   );
 }
