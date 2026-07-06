@@ -2,7 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Search, Menu, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import raddoLogo from "@/assets/cob-logo.png.asset.json";
+import cobLogo from "@/assets/cob-logo.png.asset.json";
 
 // Customer-facing navigation only.
 const NAV_LINKS: { label: string; href: string }[] = [
@@ -135,7 +135,7 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
               aria-label="COB · Home"
             >
               <img
-                src={raddoLogo.url}
+                src={cobLogo.url}
                 alt="COB"
                 className="h-[1.5rem] w-auto sm:h-[2rem]"
                 style={{ objectFit: "contain", transform: "translateY(-4px)" }}
