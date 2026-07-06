@@ -1271,10 +1271,99 @@ export function HeroStory() {
           <IntroducingCob />
         </motion.div>
 
+        {/* ====== B2 · CHAPTER 02 · THE COMPOUNDING GAP · navy pane band ====== */}
+        <div
+          className="dossier-navy-pane relative left-1/2 right-1/2 -translate-x-1/2 mt-32 md:mt-40"
+          style={{ width: "100vw", maxWidth: "100vw" }}
+        >
+          <div className="mx-auto w-full max-w-5xl px-6 py-16 sm:px-8 md:px-12 lg:py-24 lg:px-16">
+            <div
+              className="font-mono"
+              style={{
+                fontSize: 11,
+                letterSpacing: "0.22em",
+                color: "hsl(var(--raddo-paper) / 0.7)",
+                textTransform: "uppercase",
+                marginBottom: 16,
+              }}
+            >
+              chapter 02 · the compounding gap
+            </div>
+            <span className="dossier-brass-chip" style={{ marginBottom: 20, display: "inline-block" }}>
+              the gap
+            </span>
+            <p
+              className="font-sans"
+              style={{
+                fontSize: 20,
+                lineHeight: 1.6,
+                color: "hsl(var(--raddo-paper))",
+                marginTop: 20,
+                marginBottom: 0,
+              }}
+            >
+              Executives without a COB are now competing against executives with one. The gap shows up quietly · in who is prepared when the question lands, who has the draft ready before the meeting, who remembers what was decided three quarters ago when it matters again, who carries the full operation with them instead of behind them. The disadvantage is small at first. <span className="dossier-brass-underline">It compounds.</span>
+            </p>
+          </div>
+        </div>
 
+        {/* ====== B3 · CHAPTER 03 · THE PROTOCOL ====== */}
+        <section className="mx-auto w-full max-w-5xl py-16 lg:py-24">
+          <ChapterOverline n="03" label="the protocol" />
+          <ul className="m-0 p-0 list-none">
+            {[
+              { n: "01", body: "Sit the consult. Twenty minutes. You talk. We listen." },
+              { n: "02", body: "Grant access. We build it. Wire it. Calibrate it. Install it. Two weeks · done for you." },
+              { n: "03", body: "Walk in light. Briefed, prepared, compounding from day one." },
+            ].map((row) => (
+              <li
+                key={row.n}
+                className="flex items-baseline gap-6 py-5"
+                style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }}
+              >
+                <span
+                  className="font-mono shrink-0 tabular-nums"
+                  style={{
+                    fontSize: 13,
+                    letterSpacing: "0.18em",
+                    color: "hsl(var(--raddo-brass-deep))",
+                    minWidth: 36,
+                  }}
+                >
+                  {row.n}
+                </span>
+                <span
+                  className="font-sans text-raddo-ink-deep"
+                  style={{ fontSize: 18, lineHeight: 1.55, flex: 1 }}
+                >
+                  {row.body}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div style={{ borderTop: "1px solid hsl(var(--raddo-paper-edge))" }} />
+          <div className="mt-10 flex justify-start">
+            <a
+              href="/consult"
+              onClick={() => track("consult_cta_click", "/hero-story")}
+              className="raddo-cta-brass group inline-flex items-center gap-2 font-sans"
+              style={{
+                backgroundColor: "hsl(var(--raddo-brass))",
+                color: "hsl(var(--raddo-ink-deep))",
+                padding: "14px 26px",
+                borderRadius: 4,
+                fontSize: 15,
+                fontWeight: 600,
+                letterSpacing: "0.01em",
+              }}
+            >
+              <span>Begin the consult</span>
+              <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-[3px]">→</span>
+            </a>
+          </div>
+          <ChapterClose />
+        </section>
 
-
-        {/* Chat intake removed on /hero-story · staging protagonist swap */}
 
         {/* Asymmetric brass hairline · 3000ms */}
         <motion.div
