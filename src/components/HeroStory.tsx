@@ -1363,3 +1363,5 @@ export function HeroStory() {
     </main>
   );
 }
+
+export default HeroStory;
