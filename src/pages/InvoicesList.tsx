@@ -110,10 +110,11 @@ export default function InvoicesList() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Sweep overdue on mount.
+  // Sweep overdue on mount + probe Stripe status.
   useEffect(() => {
     if (!workspace?.id) return;
     sweepOverdue(workspace.id).catch(() => {});
+    checkPaymentsStatus().then(setPaymentsStatus).catch(() => setPaymentsStatus(null));
   }, [workspace?.id]);
 
   const filtered = useMemo(() => rows.filter((r) => {
