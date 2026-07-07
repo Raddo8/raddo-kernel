@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Mail } from "lucide-react";
+import DoNotContactBanner from "@/components/DoNotContactBanner";
 
 interface Props { itemId: string; itemMetadata?: any; accountId?: string | null; }
 
@@ -14,6 +15,7 @@ export default function DossierPanel({ itemId, itemMetadata, accountId }: Props)
   const [notes, setNotes] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [primaryContact, setPrimaryContact] = useState<{ name: string; email: string | null; phone: string | null; role: string | null } | null>(null);
+  const [accountDnc, setAccountDnc] = useState<{ flag: boolean; reason?: string | null }>({ flag: false });
 
   useEffect(() => {
     let active = true;
@@ -40,7 +42,7 @@ export default function DossierPanel({ itemId, itemMetadata, accountId }: Props)
   // Live-read the primary contact so the Outreach Kit recipient reflects any
   // edit made elsewhere (contacts table is the single source of truth).
   useEffect(() => {
-    if (!accountId) { setPrimaryContact(null); return; }
+    if (!accountId) { setPrimaryContact(null); setAccountDnc({ flag: false }); return; }
     let active = true;
     supabase
       .from("contacts")
@@ -50,6 +52,16 @@ export default function DossierPanel({ itemId, itemMetadata, accountId }: Props)
       .limit(1)
       .maybeSingle()
       .then(({ data }) => { if (active) setPrimaryContact(data as any); });
+    supabase
+      .from("accounts")
+      .select("metadata")
+      .eq("id", accountId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active) return;
+        const md = ((data as any)?.metadata || {}) as any;
+        setAccountDnc({ flag: md.do_not_contact === true, reason: md.do_not_contact_reason || null });
+      });
     return () => { active = false; };
   }, [accountId]);
 
