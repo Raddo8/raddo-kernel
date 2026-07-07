@@ -61,7 +61,15 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
       supabase.from("timeline_events").select("id, summary, body, raw_json, occurred_at, channel, direction").eq("item_id", pursuitId).order("occurred_at", { ascending: false }).limit(50),
     ]);
     setContacts((cts as any) || []);
-    setSchedules(rev || []);
+    setSchedules((rev || []) as Schedule[]);
+    if (rev && rev.length > 0) {
+      const ids = (rev as any[]).map(r => r.id);
+      const { data: ovs } = await (supabase as any)
+        .from("revenue_occurrence_overrides").select("*").in("schedule_id", ids);
+      setOverrides((ovs || []) as OccurrenceOverride[]);
+    } else {
+      setOverrides([]);
+    }
     setTimeline(tl || []);
     const byLayer: Record<string, any> = {};
     for (const row of tl || []) {
