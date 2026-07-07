@@ -2,20 +2,23 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
-import StatusBadge from "@/components/StatusBadge";
 import TimelineStream from "@/components/TimelineStream";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SignalsPanel from "@/components/SignalsPanel";
-import { Plus, User, Trash2 } from "lucide-react";
+import { Plus, User, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useLabels } from "@/lib/labels-context";
+import { useWorkspace } from "@/lib/workspace-context";
+import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
+import AccountEditDialog from "@/components/dialogs/AccountEditDialog";
 
 export default function AccountDetail() {
   const labels = useLabels();
   const { id } = useParams();
+  const { userEmail } = useWorkspace();
   const [account, setAccount] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
@@ -25,30 +28,33 @@ export default function AccountDetail() {
   const [cEmail, setCEmail] = useState("");
   const [cPhone, setCPhone] = useState("");
   const [cRole, setCRole] = useState("");
+  const [editContact, setEditContact] = useState<ContactRow | null>(null);
+  const [editContactOpen, setEditContactOpen] = useState(false);
+  const [editAccountOpen, setEditAccountOpen] = useState(false);
+
+  const refresh = () => {
+    if (!id) return;
+    supabase.from("accounts").select("*").eq("id", id).maybeSingle()
+      .then(({ data }) => setAccount(data));
+    refreshContacts();
+  };
 
   useEffect(() => {
-    setNotFound(false);
-    setAccount(null);
-    setContacts([]);
-    setItems([]);
+    setNotFound(false); setAccount(null); setContacts([]); setItems([]);
     if (!id) return;
-
     let active = true;
-
     supabase.from("accounts").select("*").eq("id", id).maybeSingle()
       .then(({ data, error }) => {
         if (!active) return;
         if (error) { toast.error("Failed to load account"); return; }
         if (!data) { setNotFound(true); return; }
         setAccount(data);
-
         supabase.from("contacts").select("*").eq("account_id", id).order("created_at")
-          .then(({ data, error }) => { if (!active || error) return; setContacts(data || []); });
+          .then(({ data }) => { if (!active) return; setContacts(data || []); });
         supabase.from("items").select("*, item_states(name, label, color), policies(name)")
           .eq("account_id", id).order("created_at", { ascending: false })
-          .then(({ data, error }) => { if (!active || error) return; setItems(data || []); });
+          .then(({ data }) => { if (!active) return; setItems(data || []); });
       });
-
     return () => { active = false; };
   }, [id]);
 
@@ -63,11 +69,8 @@ export default function AccountDetail() {
   const addContact = async () => {
     if (!id || !canAddContact) return;
     const { error } = await supabase.from("contacts").insert({
-      account_id: id,
-      name: cName.trim(),
-      email: cEmail.trim() || null,
-      phone: cPhone.trim() || null,
-      role: cRole.trim() || null,
+      account_id: id, name: cName.trim(),
+      email: cEmail.trim() || null, phone: cPhone.trim() || null, role: cRole.trim() || null,
     });
     if (error) { toast.error(error.message); return; }
     setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setContactOpen(false);
@@ -75,24 +78,17 @@ export default function AccountDetail() {
     toast.success("Contact added");
   };
 
-  const deleteContact = async (contactId: string) => {
-    if (!window.confirm("Delete this contact?")) return;
-    const { error } = await supabase.from("contacts").delete().eq("id", contactId);
-    if (error) { toast.error(error.message); return; }
-    refreshContacts();
-    toast.success("Contact deleted");
+  const handleDeleteContact = async (c: ContactRow) => {
+    if (!window.confirm(`Delete "${c.name}"?`)) return;
+    if (await deleteContactWithAudit(c, userEmail)) refreshContacts();
   };
 
   if (notFound) {
     return (
       <div className="p-6 space-y-3">
         <h2 className="text-lg font-semibold">Account not found</h2>
-        <p className="text-sm text-muted-foreground">
-          This account does not exist or you do not have access.
-        </p>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/accounts">Back to accounts</Link>
-        </Button>
+        <p className="text-sm text-muted-foreground">This account does not exist or you do not have access.</p>
+        <Button variant="outline" size="sm" asChild><Link to="/accounts">Back to accounts</Link></Button>
       </div>
     );
   }
@@ -103,10 +99,14 @@ export default function AccountDetail() {
     <div>
       <PageHeader
         title={account.name}
-        subtitle={`${account.type} · ${account.status}`}
+        subtitle={`${account.type} · ${account.status}${account.metadata?.utm_slug ? ` · /${account.metadata.utm_slug}` : ""}`}
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => setEditAccountOpen(true)}>
+            <Pencil size={14} className="mr-1" /> Edit
+          </Button>
+        }
       />
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
-        {/* Left: contacts & items */}
         <div className="lg:col-span-1 divide-y divide-border">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
@@ -141,12 +141,12 @@ export default function AccountDetail() {
                       {c.email && <span className="text-xs text-muted-foreground ml-1">· {c.email}</span>}
                       {c.phone && <span className="text-xs text-muted-foreground ml-1">· {c.phone}</span>}
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => deleteContact(c.id)}
-                    >
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => { setEditContact(c); setEditContactOpen(true); }}>
+                      <Pencil size={12} />
+                    </Button>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handleDeleteContact(c)}>
                       <Trash2 size={12} />
                     </Button>
                   </div>
@@ -182,7 +182,6 @@ export default function AccountDetail() {
           </div>
         </div>
 
-        {/* Right: timeline / signals tabs */}
         <div className="lg:col-span-2">
           <Tabs defaultValue="timeline" className="w-full">
             <div className="px-4 pt-3 border-b border-border">
@@ -200,6 +199,20 @@ export default function AccountDetail() {
           </Tabs>
         </div>
       </div>
+      <ContactEditDialog
+        contact={editContact}
+        open={editContactOpen}
+        onOpenChange={setEditContactOpen}
+        onSaved={refreshContacts}
+        actorEmail={userEmail}
+      />
+      <AccountEditDialog
+        account={account}
+        open={editAccountOpen}
+        onOpenChange={setEditAccountOpen}
+        onSaved={refresh}
+        actorEmail={userEmail}
+      />
     </div>
   );
 }

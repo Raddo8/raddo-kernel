@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
+import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
+import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
 interface Pursuit {
@@ -19,14 +21,13 @@ interface Pursuit {
 
 const TERMINAL_STATES = new Set(["lost", "parked"]);
 
-interface RevRow { item_id: string | null; kind: string; amount_usd: number | string; cadence: string; status: string; }
-
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
+  const { settings } = useWorkspaceSettings(workspace?.id);
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
-  const [revByItem, setRevByItem] = useState<Record<string, RevRow[]>>({});
+  const [schedulesByItem, setSchedulesByItem] = useState<Record<string, Schedule[]>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -44,7 +45,6 @@ export default function PursuitBoard() {
     const list = (it || []) as any as Pursuit[];
     setPursuits(list);
 
-    // Gather utm slugs & fetch signals in one round-trip
     const slugs = Array.from(new Set(
       list.map(p => p.accounts?.metadata?.utm_slug).filter(Boolean)
     )) as string[];
@@ -66,17 +66,16 @@ export default function PursuitBoard() {
       setSignalsBySlug({});
     }
 
-    // Fetch revenue schedules for rollup
     const { data: rev } = await (supabase as any)
       .from("revenue_schedules")
-      .select("item_id, kind, amount_usd, cadence, status")
+      .select("id, workspace_id, account_id, item_id, kind, amount_usd, cadence, status, description, start_date, end_date, next_due, metadata")
       .eq("workspace_id", workspace.id);
-    const revMap: Record<string, RevRow[]> = {};
+    const revMap: Record<string, Schedule[]> = {};
     for (const r of rev || []) {
       if (!r.item_id) continue;
-      (revMap[r.item_id] ||= []).push(r as RevRow);
+      (revMap[r.item_id] ||= []).push(r as any);
     }
-    setRevByItem(revMap);
+    setSchedulesByItem(revMap);
 
     setLoading(false);
   }, [workspace]);
@@ -99,15 +98,10 @@ export default function PursuitBoard() {
     if (!pursuit || pursuit.state_id === stateId) return;
     const target = states.find(s => s.id === stateId);
 
-    // Optimistic update
     setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: stateId } : p));
 
     const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
-    if (error) {
-      toast.error(error.message);
-      load();
-      return;
-    }
+    if (error) { toast.error(error.message); load(); return; }
     await writeTimelineEvent({
       accountId: pursuit.account_id,
       itemId: id,
@@ -116,7 +110,6 @@ export default function PursuitBoard() {
       summary: `State changed to ${target?.label || "unknown"}`,
     });
 
-    // Playbook hook: pursuit → agreement fires an internal task.
     const targetName = (target?.name || target?.label || "").toLowerCase();
     if (/agreement/.test(targetName)) {
       try {
@@ -129,48 +122,45 @@ export default function PursuitBoard() {
           payloadJson: { task: "stand_up_revenue", note: "Stand up revenue schedule + Stripe links for this pursuit." },
           idempotencyKey: `stand_up_revenue:${id}`,
         });
-      } catch (err) {
-        console.warn("queue stand_up_revenue task failed", err);
-      }
+      } catch (err) { console.warn("queue stand_up_revenue task failed", err); }
     }
-
     toast.success("Moved");
   };
 
-  const rollup = useMemo(() => {
-    const per: Record<string, { oneTime: number; monthly: number }> = {};
-    for (const p of pursuits) {
-      const rows = revByItem[p.id] || [];
-      const bucket = per[p.state_id] ||= { oneTime: 0, monthly: 0 };
-      for (const r of rows) {
-        if (r.status === "cancelled") continue;
-        const v = typeof r.amount_usd === "string" ? parseFloat(r.amount_usd) : r.amount_usd;
-        if (!Number.isFinite(v)) continue;
-        if (r.kind === "one_time") bucket.oneTime += v;
-        else if (r.kind === "subscription") bucket.monthly += v;
-      }
-    }
-    return per;
-  }, [pursuits, revByItem]);
+  const stateNameById = useMemo(() => {
+    const m: Record<string, string> = {};
+    for (const s of states) m[s.id] = s.name;
+    return m;
+  }, [states]);
 
-  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
-  const rollupLine = states
+  const rollup = useMemo(() => pipelineRollup({
+    pursuits: pursuits.map(p => ({ id: p.id, state_id: p.state_id, state_name: stateNameById[p.state_id], metadata: p.metadata })),
+    schedulesByItem,
+    stageProbabilityByStateName: (name) => stageProbability(settings, name),
+    stateNameById: (id) => stateNameById[id] ?? null,
+  }), [pursuits, schedulesByItem, stateNameById, settings]);
+
+  const rollupLines = states
     .filter(s => rollup[s.id] && (rollup[s.id].oneTime > 0 || rollup[s.id].monthly > 0))
     .map(s => {
       const r = rollup[s.id];
-      const parts: string[] = [];
-      if (r.oneTime > 0) parts.push(`${fmt(r.oneTime)} one-time`);
-      if (r.monthly > 0) parts.push(`${fmt(r.monthly)}/mo`);
-      return `${s.label}: ${parts.join(" + ")}`;
-    })
-    .join(" · ");
+      const raw: string[] = [];
+      if (r.oneTime > 0) raw.push(`${fmtUsd(r.oneTime)} one-time`);
+      if (r.monthly > 0) raw.push(`${fmtUsd(r.monthly)}/mo`);
+      const weighted: string[] = [];
+      if (r.weightedOneTime > 0) weighted.push(`${fmtUsd(r.weightedOneTime)}`);
+      if (r.weightedMonthly > 0) weighted.push(`${fmtUsd(r.weightedMonthly)}/mo`);
+      const suffix = r.fromFallback ? " · seed" : "";
+      const weightedText = weighted.length ? ` → weighted ${weighted.join(" + ")}` : "";
+      return `${s.label}: ${raw.join(" + ")}${weightedText}${suffix}`;
+    });
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader title="Pursuit Board" subtitle="Drag pursuits between states" />
-      {rollupLine && (
+      {rollupLines.length > 0 && (
         <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
-          Pipeline · {rollupLine}
+          Pipeline · {rollupLines.join(" · ")}
         </div>
       )}
       {loading ? (
