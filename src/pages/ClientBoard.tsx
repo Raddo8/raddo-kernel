@@ -33,7 +33,7 @@ export default function ClientBoard() {
     const [{ data: st }, { data: it }] = await Promise.all([
       supabase.from("item_states").select("*").eq("workspace_id", workspace.id).order("sort_order"),
       supabase.from("items")
-        .select("id, title, state_id, account_id, updated_at, metadata, accounts(id, name, metadata)")
+        .select("id, title, state_id, account_id, updated_at, metadata, accounts(id, name, metadata), item_states(name)")
         .eq("workspace_id", workspace.id)
         .eq("type", "client_ops"),
     ]);
@@ -83,6 +83,19 @@ export default function ClientBoard() {
     } else {
       setMrrByAccount({});
       setSignalsByAccount({});
+    }
+
+    // Onboarding progress for accounts currently in client_onboarding state.
+    const onboardingAccountIds = list
+      .filter(i => (i.item_states as any)?.name === "client_onboarding")
+      .map(i => i.account_id);
+    if (onboardingAccountIds.length > 0) {
+      const cl = await loadChecklistForAccounts(onboardingAccountIds);
+      const pctMap: Record<string, number> = {};
+      for (const [aid, rows] of Object.entries(cl)) pctMap[aid] = progress(rows).pct;
+      setOnboardingPctByAccount(pctMap);
+    } else {
+      setOnboardingPctByAccount({});
     }
     setLoading(false);
   }, [workspace]);
