@@ -59,9 +59,37 @@ export default function AccountDetail() {
         supabase.from("items").select("*, item_states(name, label, color), policies(name)")
           .eq("account_id", id).order("created_at", { ascending: false })
           .then(({ data }) => { if (!active) return; setItems(data || []); });
+        (supabase as any).from("revenue_schedules").select("*").eq("account_id", id)
+          .then(({ data }: any) => { if (!active) return; setSchedules((data || []) as Schedule[]); });
+        (supabase as any).from("revenue_occurrence_overrides").select("*")
+          .in("schedule_id",
+            // Two-step: fetch overrides scoped by schedules loaded above once they arrive.
+            // Kept simple: over-fetch by workspace via the schedule join filter below.
+            []
+          );
       });
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (schedules.length === 0) { setOverrides([]); return; }
+    const ids = schedules.map(s => s.id);
+    (supabase as any).from("revenue_occurrence_overrides").select("*").in("schedule_id", ids)
+      .then(({ data }: any) => setOverrides((data || []) as OccurrenceOverride[]));
+  }, [schedules]);
+
+  const overrideIdx = useMemo(() => indexOverrides(overrides), [overrides]);
+  const next3 = useMemo(() => {
+    const from = new Date();
+    const to = addMonths(from, 12);
+    const out: { s: Schedule; date: Date; amount: number; override: any }[] = [];
+    for (const s of schedules) {
+      for (const o of expandOccurrences(s, from, to, overrideIdx[s.id] || [])) {
+        out.push({ s, date: o.date, amount: o.amount, override: o.override });
+      }
+    }
+    return out.sort((a, z) => a.date.getTime() - z.date.getTime()).slice(0, 6);
+  }, [schedules, overrideIdx]);
 
   const refreshContacts = () => {
     if (!id) return;
