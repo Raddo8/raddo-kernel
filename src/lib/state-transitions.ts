@@ -10,6 +10,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
 import { queueWorkOrder, orderTypeLabel, type WorkOrderType } from "@/lib/work-orders";
+import { seedChecklist } from "@/lib/onboarding";
+import {
+  resolveMode, type AutopilotMatrix, type AutopilotMode,
+} from "@/lib/autopilot-matrix";
 
 
 /** State names that require a decision-maker contact with an email. */
@@ -50,8 +54,9 @@ export const NEXT_STATE_ACTION: Record<string, {
 };
 
 /**
- * Which work order type autopilot queues when a pursuit ENTERS a given state.
- * Autopilot never advances state — it only pre-queues intelligence work.
+ * Which work order type autopilot pre-queues when a pursuit ENTERS a given state.
+ * Only queues the order if the effective autopilot matrix for that order type is
+ * AUTO or ASSIST. AUTO also permits auto-applying the returned state move.
  */
 export const AUTOPILOT_ON_ENTER: Record<string, import("./work-orders").WorkOrderType> = {
   qualified:   "deepdive",
@@ -194,6 +199,25 @@ export async function changeItemState(args: ChangeStateArgs): Promise<ChangeStat
       });
     }
 
+    if (target.name === "onboarding" && workspaceId) {
+      // Materialize the client_ops presence for onboarding and seed the kernel checklist.
+      const opsId = await ensureClientOpsItem({
+        workspaceId,
+        accountId: args.item.account_id,
+        sourcePursuitId: args.item.id,
+        sourceTitle: (current as any)?.title,
+      });
+      try { await seedChecklist(workspaceId, args.item.account_id); } catch (e) { console.warn("seedChecklist failed", e); }
+      // Default kernel phase = agreement_access.
+      if (opsId) {
+        const { data: opsItem } = await supabase.from("items").select("metadata").eq("id", opsId).maybeSingle();
+        const meta = ((opsItem as any)?.metadata || {}) as any;
+        if (!meta.kernel_phase) {
+          await supabase.from("items").update({ metadata: { ...meta, kernel_phase: "agreement_access" } }).eq("id", opsId);
+        }
+      }
+    }
+
     if (target.name === "client" && workspaceId) {
       await ensureClientOpsItem({
         workspaceId,
@@ -333,9 +357,9 @@ export async function moveClientOpsState(args: {
 }
 
 /**
- * Autopilot preference for a given pursuit.
- * Item override wins (`auto` / `manual` / `inherit` in item.metadata.autopilot);
- * else falls back to workspace-level `settings.autopilot === true`.
+ * Legacy boolean autopilot preference (kept for backwards compatibility).
+ * True if the pursuit's effective matrix has ANY mode ≠ manual for its
+ * on-enter order type. New code prefers `resolveMode` from autopilot-matrix.
  */
 export function resolveAutopilot(args: {
   itemMetadata?: any;
@@ -348,20 +372,31 @@ export function resolveAutopilot(args: {
 }
 
 /**
- * Called after a successful state change. If autopilot is on AND the newly-entered
- * state has an intelligence work-order mapping AND no active order of that type
- * exists, queue one (created_by=autopilot) and write a timeline event.
+ * Called after a successful state change. Uses the per-state autopilot matrix
+ * (workspace default merged with per-pursuit override) to decide whether to
+ * pre-queue the intelligence order tied to the newly-entered state.
+ *
+ * Modes: auto|assist → queue; manual → skip. Sends are never queued here
+ * because AUTOPILOT_ON_ENTER never maps to prepare_send at the send stage.
  */
 export async function maybeQueueAutopilotOrder(args: {
   item: { id: string; account_id: string; workspace_id: string; metadata?: any };
   newStateName: string;
-  workspaceAutopilot: boolean;
-}): Promise<{ queued: boolean; orderType?: WorkOrderType }> {
-  if (!resolveAutopilot({ itemMetadata: args.item.metadata, workspaceAutopilot: args.workspaceAutopilot })) {
-    return { queued: false };
-  }
+  workspaceMatrix?: AutopilotMatrix | null;
+  /** Legacy fallback when matrix not passed — treated as ON if true. */
+  workspaceAutopilot?: boolean;
+}): Promise<{ queued: boolean; orderType?: WorkOrderType; mode?: AutopilotMode }> {
   const orderType = AUTOPILOT_ON_ENTER[args.newStateName];
   if (!orderType) return { queued: false };
+
+  const itemMatrix = (args.item.metadata?.autopilot_matrix || null) as AutopilotMatrix | null;
+  const mode = resolveMode(orderType, args.workspaceMatrix ?? null, itemMatrix);
+
+  // If neither matrix nor legacy flag suggests any automation, skip.
+  const legacyOn = args.workspaceAutopilot === true;
+  const modeAllows = mode === "auto" || mode === "assist";
+  if (!modeAllows && !(legacyOn && mode !== "manual")) return { queued: false, orderType, mode };
+
   const res = await queueWorkOrder({
     workspaceId: args.item.workspace_id,
     itemId: args.item.id,
@@ -375,11 +410,12 @@ export async function maybeQueueAutopilotOrder(args: {
         itemId: args.item.id,
         direction: "system",
         channel: "system",
-        summary: `Autopilot queued work order · ${orderTypeLabel(orderType)}`,
-        rawJson: { source: "autopilot", order_type: orderType, work_order_id: res.workOrder?.id },
+        summary: `Autopilot queued work order · ${orderTypeLabel(orderType)} · ${mode}`,
+        rawJson: { source: "autopilot", order_type: orderType, mode, work_order_id: res.workOrder?.id },
       });
     } catch (e) { console.warn("autopilot timeline write failed", e); }
-    return { queued: true, orderType };
+    return { queued: true, orderType, mode };
   }
-  return { queued: false, orderType };
+  return { queued: false, orderType, mode };
 }
+

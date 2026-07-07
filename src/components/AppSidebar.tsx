@@ -22,6 +22,8 @@ import {
   ChevronsUpDown,
   DollarSign,
   BellRing,
+  Boxes,
+  Hammer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -61,6 +63,8 @@ export default function AppSidebar() {
     ...(isBd ? [
       { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
       { to: "/app/clients", label: "Client Board", icon: Users },
+      { to: "/app/onboarding/kernel", label: "Kernel Build", icon: Boxes },
+      { to: "/app/onboarding/builds", label: "Project Builds", icon: Hammer },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
       { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
