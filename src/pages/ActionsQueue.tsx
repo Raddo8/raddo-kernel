@@ -10,9 +10,12 @@ import { Zap, Play, Check } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { executeAction } from "@/lib/execute-action";
+import Worklist from "@/pages/Worklist";
 
 export default function ActionsQueue() {
   const { workspace, userId } = useWorkspace();
+  // BD workspace uses the humanized Worklist at this route.
+  if ((workspace as any)?.slug === "cob-hq-bd") return <Worklist />;
   const [actions, setActions] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
