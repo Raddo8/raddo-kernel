@@ -5,14 +5,15 @@ import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Users, Plus } from "lucide-react";
+import { Users, Plus, Pencil, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 
 export default function ContactsList() {
-  const { workspace } = useWorkspace();
+  const { workspace, userEmail } = useWorkspace();
   const [contacts, setContacts] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,8 @@ export default function ContactsList() {
   const [cPhone, setCPhone] = useState("");
   const [cRole, setCRole] = useState("");
   const [cAccountId, setCAccountId] = useState("");
+  const [editContact, setEditContact] = useState<ContactRow | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchContacts = async () => {
     if (!workspace) return;
@@ -44,10 +47,7 @@ export default function ContactsList() {
     setAccounts(data || []);
   };
 
-  useEffect(() => {
-    fetchContacts();
-    fetchAccounts();
-  }, [workspace]);
+  useEffect(() => { fetchContacts(); fetchAccounts(); }, [workspace]);
 
   const canAdd = cName.trim() && cAccountId && (cEmail.trim() || cPhone.trim());
 
@@ -65,6 +65,11 @@ export default function ContactsList() {
     setOpen(false);
     fetchContacts();
     toast.success("Contact added");
+  };
+
+  const handleDelete = async (c: ContactRow) => {
+    if (!window.confirm(`Delete contact "${c.name}"?`)) return;
+    if (await deleteContactWithAudit(c, userEmail)) fetchContacts();
   };
 
   return (
@@ -106,22 +111,36 @@ export default function ContactsList() {
       ) : (
         <div className="divide-y divide-border">
           {contacts.map((c) => (
-            <Link
+            <div
               key={c.id}
-              to={`/accounts/${c.account_id}`}
-              className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors"
+              className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group"
             >
-              <div>
+              <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
                 <span className="font-medium text-sm">{c.name}</span>
                 {c.role && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.role})</span>}
                 {c.email && <span className="text-xs text-muted-foreground ml-2">· {c.email}</span>}
                 {c.phone && <span className="text-xs text-muted-foreground ml-2">· {c.phone}</span>}
+              </Link>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground font-mono">{(c as any).accounts?.name}</span>
+                <Button variant="ghost" size="sm" onClick={() => { setEditContact(c); setEditOpen(true); }}>
+                  <Pencil size={12} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(c)}>
+                  <Trash2 size={12} />
+                </Button>
               </div>
-              <span className="text-xs text-muted-foreground font-mono">{(c as any).accounts?.name}</span>
-            </Link>
+            </div>
           ))}
         </div>
       )}
+      <ContactEditDialog
+        contact={editContact}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={fetchContacts}
+        actorEmail={userEmail}
+      />
     </div>
   );
 }

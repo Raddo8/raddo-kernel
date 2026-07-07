@@ -10,18 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
+import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
 import { evaluatePlaybook } from "@/lib/evaluate-playbook";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { useLabels } from "@/lib/labels-context";
+import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
 
 export default function ItemDetail() {
   const labels = useLabels();
   const { id } = useParams();
-  const { workspace, userId } = useWorkspace();
+  const { workspace, userId, userEmail } = useWorkspace();
   const [item, setItem] = useState<any>(null);
   const [actions, setActions] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export default function ItemDetail() {
   const [selectedAction, setSelectedAction] = useState<any | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
@@ -158,6 +160,11 @@ export default function ItemDetail() {
       <PageHeader
         title={item.title}
         subtitle={`${item.type}${item.accounts?.name ? ` · ${item.accounts.name}` : ""} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : `No ${labels.itemLower} amount`}`}
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil size={14} className="mr-1" /> Edit details
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
@@ -268,6 +275,13 @@ export default function ItemDetail() {
         </div>
       </div>
       <ActionInspectorDrawer action={selectedAction} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <PursuitEditDialog
+        item={item}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={() => id && fetchItem(id)}
+        actorEmail={userEmail}
+      />
     </div>
   );
 }
