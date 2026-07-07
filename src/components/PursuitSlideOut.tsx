@@ -14,7 +14,8 @@ import {
 } from "@/lib/state-transitions";
 import ContactEditDialog, { type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import DoNotContactBanner from "@/components/DoNotContactBanner";
-import { fmtUsd } from "@/lib/revenue-math";
+import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
+import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 
 interface Props {
   pursuitId: string | null;
@@ -28,7 +29,8 @@ interface Props {
 export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states, onChanged, actorEmail }: Props) {
   const [item, setItem] = useState<any>(null);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [overrides, setOverrides] = useState<OccurrenceOverride[]>([]);
   const [signals, setSignals] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [layers, setLayers] = useState<Record<string, any>>({});
@@ -40,6 +42,9 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   const [addEmail, setAddEmail] = useState("");
   const [addTitle, setAddTitle] = useState("");
   const [addDm, setAddDm] = useState(false);
+  const [occEdit, setOccEdit] = useState<{
+    schedule: Schedule; baseDate: Date; amount: number; date: Date; existing: OccurrenceOverride | null;
+  } | null>(null);
 
   const load = async () => {
     if (!pursuitId) return;
@@ -56,7 +61,15 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
       supabase.from("timeline_events").select("id, summary, body, raw_json, occurred_at, channel, direction").eq("item_id", pursuitId).order("occurred_at", { ascending: false }).limit(50),
     ]);
     setContacts((cts as any) || []);
-    setSchedules(rev || []);
+    setSchedules((rev || []) as Schedule[]);
+    if (rev && rev.length > 0) {
+      const ids = (rev as any[]).map(r => r.id);
+      const { data: ovs } = await (supabase as any)
+        .from("revenue_occurrence_overrides").select("*").in("schedule_id", ids);
+      setOverrides((ovs || []) as OccurrenceOverride[]);
+    } else {
+      setOverrides([]);
+    }
     setTimeline(tl || []);
     const byLayer: Record<string, any> = {};
     for (const row of tl || []) {
@@ -307,13 +320,40 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
               {schedules.length === 0 ? (
                 <div className="text-xs text-muted-foreground">No schedules linked.</div>
               ) : (
-                <div className="space-y-1">
-                  {schedules.map(s => (
-                    <div key={s.id} className="text-[11px] font-mono flex justify-between border border-border rounded px-2 py-1">
-                      <span className="truncate">{s.description || s.kind}</span>
-                      <span>{fmtUsd(Number(s.amount_usd || 0))}{s.cadence === "monthly" ? "/mo" : ""}</span>
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  {schedules.map(s => {
+                    const idx = indexOverrides(overrides);
+                    const from = new Date();
+                    const to = new Date(); to.setMonth(to.getMonth() + 6);
+                    const occs = expandOccurrences(s, from, to, idx[s.id] || []).slice(0, 3);
+                    return (
+                      <div key={s.id} className="border border-border rounded p-2 space-y-1">
+                        <div className="text-[11px] font-mono flex justify-between">
+                          <span className="truncate">{s.description || s.kind}</span>
+                          <span>{fmtUsd(Number(s.amount_usd || 0))}{s.cadence === "monthly" ? "/mo" : ""}</span>
+                        </div>
+                        {occs.length > 0 && (
+                          <div className="space-y-0.5">
+                            {occs.map((o, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setOccEdit({
+                                  schedule: s, baseDate: o.baseDate, amount: o.amount, date: o.date, existing: o.override,
+                                })}
+                                className="w-full text-left text-[10px] font-mono text-muted-foreground flex justify-between hover:text-dossier-brass"
+                              >
+                                <span>
+                                  {format(o.date, "MMM d")}
+                                  {o.override && <span className="text-dossier-brass"> · {o.override.override_kind}</span>}
+                                </span>
+                                <span>{fmtUsd(o.amount)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -333,6 +373,18 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
           onOpenChange={setEditContactOpen}
           onSaved={load}
           actorEmail={actorEmail}
+        />
+        <OccurrenceEditorDialog
+          open={!!occEdit}
+          onOpenChange={(v) => { if (!v) setOccEdit(null); }}
+          onSaved={load}
+          schedule={occEdit?.schedule ?? null}
+          baseDate={occEdit?.baseDate ?? null}
+          currentAmount={occEdit?.amount ?? 0}
+          currentDate={occEdit?.date ?? null}
+          existingOverride={occEdit?.existing ?? null}
+          actorEmail={actorEmail}
+          workspaceId={occEdit?.schedule?.workspace_id ?? ""}
         />
       </SheetContent>
     </Sheet>

@@ -1,7 +1,11 @@
-import { useMemo, useState, useRef, useEffect } from "react";
+import { useMemo, useState, useRef } from "react";
 import { format } from "date-fns";
-import { Schedule, amt, fmtUsd, scheduleInstances, COMMITTED_STATUSES, EXPECTED_STATUSES } from "@/lib/revenue-math";
+import {
+  Schedule, amt, fmtUsd, expandOccurrences, COMMITTED_STATUSES, EXPECTED_STATUSES,
+  type OccurrenceOverride, type OverrideIndex,
+} from "@/lib/revenue-math";
 import { assignColors } from "@/lib/account-colors";
+import { Pencil } from "lucide-react";
 
 export type BandBy = "account" | "stage" | "status";
 
@@ -18,69 +22,63 @@ interface Props {
   schedules: Schedule[];
   band: BandBy;
   showForecast: boolean;
-  /** Resolve pursuit item_id → state name (for stage band + weighted forecast). */
   itemStateName: (itemId: string | null) => string;
-  /** Resolve pursuit item_id → stage probability 0..1 (for forecast weighting). */
   itemStageProb: (itemId: string | null) => number;
-  /** Resolve account_id → display name. */
   accountName: (id: string) => string;
-  /** Segment click → filter ledger. */
   onSegmentClick?: (payload: { seriesKey: string; seriesLabel: string; bucket: RibbonBucket }) => void;
+  onOccurrenceEdit?: (payload: {
+    schedule: Schedule; baseDate: Date; amount: number; date: Date; override: OccurrenceOverride | null;
+  }) => void;
+  overridesByScheduleId?: OverrideIndex;
+}
+
+interface OccEntry {
+  s: Schedule; v: number; baseDate: Date; date: Date; override: OccurrenceOverride | null;
 }
 
 interface Segment {
-  key: string;         // series key (account_id | state_name | status_kind)
-  label: string;       // human label
+  key: string;
+  label: string;
   value: number;
-  schedules: { s: Schedule; v: number }[];
+  entries: OccEntry[];
 }
 
-interface BucketAgg {
-  bucket: RibbonBucket;
-  segments: Segment[];  // in stable sort order (by size desc, ties by key)
-  total: number;
-}
-
-/* ---------- Aggregation ---------- */
+interface BucketAgg { bucket: RibbonBucket; segments: Segment[]; total: number; }
 
 function aggregate(props: Props): BucketAgg[] {
-  const { buckets, schedules, band, showForecast, itemStateName, itemStageProb, accountName } = props;
+  const { buckets, schedules, band, showForecast, itemStateName, itemStageProb, accountName, overridesByScheduleId = {} } = props;
   return buckets.map(b => {
     const bySeries = new Map<string, Segment>();
-    const push = (key: string, label: string, value: number, s: Schedule) => {
+    const push = (key: string, label: string, value: number, entry: OccEntry) => {
       if (value <= 0) return;
       let seg = bySeries.get(key);
-      if (!seg) { seg = { key, label, value: 0, schedules: [] }; bySeries.set(key, seg); }
+      if (!seg) { seg = { key, label, value: 0, entries: [] }; bySeries.set(key, seg); }
       seg.value += value;
-      seg.schedules.push({ s, v: value });
+      seg.entries.push(entry);
     };
 
     for (const s of schedules) {
       if (s.status === "cancelled") continue;
-      const hits = scheduleInstances(s, b.start, b.end);
-      if (hits.length === 0) continue;
-      const v = amt(s);
-      const isCommitted = COMMITTED_STATUSES.includes(s.status);
-      const isExpected = EXPECTED_STATUSES.includes(s.status);
-
-      for (const _ of hits) {
+      const occs = expandOccurrences(s, b.start, b.end, overridesByScheduleId[s.id] || []);
+      for (const o of occs) {
+        const isCommitted = o.committed;
+        const isExpected = o.expected;
+        const entry: OccEntry = { s, v: o.amount, baseDate: o.baseDate, date: o.date, override: o.override };
         if (band === "account") {
           if (!isCommitted && !isExpected) continue;
-          const key = s.account_id;
-          push(key, accountName(key) || "—", v, s);
+          push(s.account_id, accountName(s.account_id) || "—", o.amount, entry);
         } else if (band === "stage") {
           if (!isCommitted && !isExpected) continue;
           const stage = s.item_id ? (itemStateName(s.item_id) || "unlinked") : "unlinked";
-          push(stage, stage.replace(/_/g, " "), v, s);
+          push(stage, stage.replace(/_/g, " "), o.amount, entry);
         } else {
-          // status band
-          if (isCommitted) push("committed", "Committed", v, s);
+          if (isCommitted) push("committed", "Committed", o.amount, entry);
           else if (isExpected) {
-            push("expected", "Expected", v, s);
+            push("expected", "Expected", o.amount, entry);
             if (showForecast) {
               const p = itemStageProb(s.item_id);
-              const weighted = v * p;
-              if (weighted > 0) push("forecast", "Forecast (weighted)", weighted, s);
+              const weighted = o.amount * p;
+              if (weighted > 0) push("forecast", "Forecast (weighted)", weighted, { ...entry, v: weighted });
             }
           }
         }
@@ -93,18 +91,15 @@ function aggregate(props: Props): BucketAgg[] {
   });
 }
 
-/* ---------- Chart ---------- */
-
-const H = 320;             // chart height
+const H = 320;
 const PAD_T = 24;
 const PAD_B = 44;
-const COL_W = 56;          // column body width
-const GAP = 64;            // gap between columns (ribbon zone)
+const COL_W = 56;
+const GAP = 64;
 
 export default function RibbonChart(props: Props) {
   const aggs = useMemo(() => aggregate(props), [props]);
 
-  // All series keys across all buckets (stable palette)
   const seriesKeys = useMemo(() => {
     const s = new Set<string>();
     for (const a of aggs) for (const seg of a.segments) s.add(seg.key);
@@ -121,7 +116,6 @@ export default function RibbonChart(props: Props) {
   const width = aggs.length * COL_W + Math.max(0, aggs.length - 1) * GAP + 32;
   const colX = (i: number) => 16 + i * (COL_W + GAP);
 
-  // Build per-bucket segment rectangles with cumulative y (stack from bottom)
   const built = useMemo(() => aggs.map(a => {
     let cumulative = 0;
     const rects = a.segments.map(seg => {
@@ -133,10 +127,8 @@ export default function RibbonChart(props: Props) {
     return { agg: a, rects };
   }), [aggs, maxTotal]);
 
-  // Ribbon paths: for each consecutive pair, for each series present in both,
-  // connect the segment bands with a smooth cubic bezier (top+bottom edges).
   const ribbons = useMemo(() => {
-    const out: { d: string; color: string; key: string; label: string; left: number; right: number }[] = [];
+    const out: { d: string; color: string; key: string }[] = [];
     for (let i = 0; i < built.length - 1; i++) {
       const L = built[i]; const R = built[i + 1];
       const xL = colX(i) + COL_W;
@@ -152,35 +144,20 @@ export default function RibbonChart(props: Props) {
           `C ${xL + dx} ${lr.yTop} ${xR - dx} ${rr.yTop} ${xR} ${rr.yTop} ` +
           `L ${xR} ${rr.yBottom} ` +
           `C ${xR - dx} ${rr.yBottom} ${xL + dx} ${lr.yBottom} ${xL} ${lr.yBottom} Z`;
-        out.push({ d: path, color: colorFor(key), key: `${i}-${key}`, label: lr.seg.label, left: lr.seg.value, right: rr.seg.value });
+        out.push({ d: path, color: colorFor(key), key: `${i}-${key}` });
       }
     }
     return out;
   }, [built]);
 
-  const [hover, setHover] = useState<{ x: number; y: number; content: React.ReactNode } | null>(null);
+  const [pinned, setPinned] = useState<{ seg: Segment; bucket: RibbonBucket; x: number; y: number } | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
 
-  const onSegHover = (e: React.MouseEvent, seg: Segment, bucket: RibbonBucket) => {
+  const onSegClick = (e: React.MouseEvent, seg: Segment, bucket: RibbonBucket) => {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect) return;
-    setHover({
-      x: e.clientX - rect.left + 12,
-      y: e.clientY - rect.top + 12,
-      content: (
-        <div className="text-xs font-mono">
-          <div className="font-medium">{seg.label}</div>
-          <div className="text-muted-foreground">{bucket.label} · {bucket.sub}</div>
-          <div className="mt-1">{fmtUsd(seg.value)} · {((seg.value / (aggs.find(a => a.bucket.key === bucket.key)?.total || 1)) * 100).toFixed(0)}%</div>
-          <div className="mt-1 text-[10px] text-muted-foreground">
-            {seg.schedules.slice(0, 5).map(({ s, v }, i) => (
-              <div key={i}>{s.description} · {fmtUsd(v)} · <span className="uppercase">{s.status}</span></div>
-            ))}
-            {seg.schedules.length > 5 && <div>+{seg.schedules.length - 5} more</div>}
-          </div>
-        </div>
-      ),
-    });
+    setPinned({ seg, bucket, x: e.clientX - rect.left + 12, y: e.clientY - rect.top + 12 });
+    props.onSegmentClick?.({ seriesKey: seg.key, seriesLabel: seg.label, bucket });
   };
 
   if (aggs.length === 0) return null;
@@ -188,27 +165,13 @@ export default function RibbonChart(props: Props) {
   return (
     <div className="relative border border-border rounded bg-muted/10">
       <div className="overflow-x-auto">
-        <svg
-          ref={svgRef}
-          width={width}
-          height={H}
-          className="block"
-          onMouseLeave={() => setHover(null)}
-        >
-          {/* Ribbons behind columns */}
-          <g style={{ mixBlendMode: "normal" }}>
+        <svg ref={svgRef} width={width} height={H} className="block">
+          <g>
             {ribbons.map(r => (
-              <path
-                key={r.key}
-                d={r.d}
-                fill={r.color}
-                fillOpacity={0.28}
-                stroke="none"
-              />
+              <path key={r.key} d={r.d} fill={r.color} fillOpacity={0.28} stroke="none" />
             ))}
           </g>
 
-          {/* Stacked columns */}
           {built.map(({ agg, rects }, i) => {
             const x = colX(i);
             return (
@@ -220,8 +183,7 @@ export default function RibbonChart(props: Props) {
                   return (
                     <g key={seg.key}
                        className="cursor-pointer"
-                       onMouseMove={(e) => onSegHover(e, seg, agg.bucket)}
-                       onClick={() => props.onSegmentClick?.({ seriesKey: seg.key, seriesLabel: seg.label, bucket: agg.bucket })}
+                       onClick={(e) => onSegClick(e, seg, agg.bucket)}
                     >
                       <rect
                         x={x} y={yTop} width={COL_W} height={h}
@@ -243,18 +205,11 @@ export default function RibbonChart(props: Props) {
                     </g>
                   );
                 })}
-                {/* Total on top */}
-                <text
-                  x={x + COL_W / 2}
-                  y={PAD_T + yFor(agg.total) - 6}
-                  textAnchor="middle"
-                  fontSize={10}
-                  fontFamily="ui-monospace, monospace"
-                  fill="hsl(var(--foreground))"
-                >
+                <text x={x + COL_W / 2} y={PAD_T + yFor(agg.total) - 6}
+                      textAnchor="middle" fontSize={10} fontFamily="ui-monospace, monospace"
+                      fill="hsl(var(--foreground))">
                   {agg.total > 0 ? fmtUsd(agg.total) : ""}
                 </text>
-                {/* X-axis label */}
                 <text x={x + COL_W / 2} y={H - PAD_B + 16} textAnchor="middle"
                       fontSize={10} fontFamily="ui-monospace, monospace"
                       fill="hsl(var(--muted-foreground))">{agg.bucket.label}</text>
@@ -265,13 +220,11 @@ export default function RibbonChart(props: Props) {
             );
           })}
 
-          {/* Baseline */}
           <line x1={0} x2={width} y1={PAD_T + innerH} y2={PAD_T + innerH}
                 stroke="hsl(var(--border))" strokeWidth={1} />
         </svg>
       </div>
 
-      {/* Legend */}
       <div className="flex flex-wrap gap-x-3 gap-y-1 px-3 py-2 border-t border-border text-[10px] font-mono">
         {seriesKeys.map(k => {
           const label = built.flatMap(b => b.rects).find(r => r.seg.key === k)?.seg.label || k;
@@ -284,12 +237,41 @@ export default function RibbonChart(props: Props) {
         })}
       </div>
 
-      {hover && (
+      {pinned && (
         <div
-          className="absolute z-10 pointer-events-none bg-popover border border-border rounded shadow-lg p-2 max-w-xs"
-          style={{ left: hover.x, top: hover.y }}
+          className="absolute z-20 bg-popover border border-border rounded shadow-lg p-2 max-w-xs text-xs font-mono"
+          style={{ left: pinned.x, top: pinned.y }}
         >
-          {hover.content}
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="font-medium">{pinned.seg.label}</span>
+            <button className="text-[10px] text-muted-foreground hover:text-foreground"
+                    onClick={() => setPinned(null)}>close</button>
+          </div>
+          <div className="text-[10px] text-muted-foreground">{pinned.bucket.label} · {pinned.bucket.sub}</div>
+          <div className="mt-1">{fmtUsd(pinned.seg.value)}</div>
+          <div className="mt-1 space-y-1 max-h-64 overflow-y-auto">
+            {pinned.seg.entries.map((e, i) => (
+              <div key={i} className="flex items-center gap-2 border-t border-border/60 pt-1">
+                <span className="flex-1 truncate">
+                  <span className="text-foreground">{e.s.description}</span>
+                  <span className="text-muted-foreground"> · {format(e.date, "MMM d")}</span>
+                  {e.override && <span className="ml-1 text-dossier-brass">· override</span>}
+                </span>
+                <span>{fmtUsd(e.v)}</span>
+                {props.onOccurrenceEdit && (
+                  <button
+                    className="text-muted-foreground hover:text-dossier-brass"
+                    title="Edit this month"
+                    onClick={() => props.onOccurrenceEdit?.({
+                      schedule: e.s, baseDate: e.baseDate, amount: e.v, date: e.date, override: e.override,
+                    })}
+                  >
+                    <Pencil size={11} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

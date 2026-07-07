@@ -12,12 +12,14 @@ import { DollarSign, ExternalLink, Link2, RefreshCw, Plus, Pencil, X, Settings, 
 import { toast } from "sonner";
 import { format, addMonths, isSameMonth, isSameDay, parseISO } from "date-fns";
 import RevenueScheduleDialog, { softCancelSchedule } from "@/components/dialogs/RevenueScheduleDialog";
+import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
 import { useTableSort, sortIndicator } from "@/lib/table-sort";
 import {
   Schedule, Status, amt, fmtUsd, monthColumns, weekColumns, bucketize,
   fiscalQuarterOf, shiftFiscalQuarter, scheduleInstances,
+  indexOverrides, type OccurrenceOverride, type OverrideIndex,
 } from "@/lib/revenue-math";
 import { useWorkspaceSettings, DEFAULT_STAGE_PROBABILITIES, stageProbability } from "@/lib/workspace-settings";
 import RibbonChart, { BandBy } from "@/components/revenue/RibbonChart";
@@ -59,6 +61,14 @@ export default function RevenueDesk() {
   const [qOffset, setQOffset] = useState(0);
   const [customFrom, setCustomFrom] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customTo, setCustomTo] = useState(format(addMonths(new Date(), 1), "yyyy-MM-dd"));
+  const [overrides, setOverrides] = useState<OccurrenceOverride[]>([]);
+  const overridesByScheduleId: OverrideIndex = useMemo(() => indexOverrides(overrides), [overrides]);
+  const [occEdit, setOccEdit] = useState<{
+    schedule: Schedule; baseDate: Date; amount: number; date: Date; existing: OccurrenceOverride | null;
+  } | null>(null);
+  const openOccEdit = useCallback((payload: { schedule: Schedule; baseDate: Date; amount: number; date: Date; override: OccurrenceOverride | null }) => {
+    setOccEdit({ schedule: payload.schedule, baseDate: payload.baseDate, amount: payload.amount, date: payload.date, existing: payload.override });
+  }, []);
 
   // Primary visual switcher · Ribbon is the new default.
   type Primary = "ribbon" | "cards" | "ledger";
@@ -80,7 +90,7 @@ export default function RevenueDesk() {
   const load = useCallback(async () => {
     if (!workspace) return;
     setLoading(true);
-    const [{ data: schedules }, { data: accs }, { data: purs }, { data: states }] = await Promise.all([
+    const [{ data: schedules }, { data: accs }, { data: purs }, { data: states }, { data: ovs }] = await Promise.all([
       (supabase as any).from("revenue_schedules")
         .select("*, accounts(id, name)")
         .eq("workspace_id", workspace.id)
@@ -88,10 +98,14 @@ export default function RevenueDesk() {
       supabase.from("accounts").select("id, name").eq("workspace_id", workspace.id).order("name"),
       supabase.from("items").select("id, title, account_id, state_id").eq("workspace_id", workspace.id).eq("type", "pursuit"),
       supabase.from("item_states").select("id, name").eq("workspace_id", workspace.id),
+      (supabase as any).from("revenue_occurrence_overrides")
+        .select("*")
+        .eq("workspace_id", workspace.id),
     ]);
     setRows((schedules ?? []) as any);
     setAccounts((accs ?? []) as any);
     setPursuits((purs ?? []) as any);
+    setOverrides((ovs ?? []) as any);
     const nameMap: Record<string, string> = {};
     for (const s of states || []) nameMap[(s as any).id] = (s as any).name;
     setStateNameById(nameMap);
@@ -136,23 +150,23 @@ export default function RevenueDesk() {
     if (view === "quarter") {
       const cols = weekColumns(activeQStart, 13);
       return cols.map((c, i) => {
-        const b = bucketize(rows, { start: c.start, end: c.end }, stageProbForItem);
+        const b = bucketize(rows, { start: c.start, end: c.end }, stageProbForItem, overridesByScheduleId);
         return { key: `w${i}`, label: c.label, sub: format(c.start, "MMM d"), start: c.start, end: c.end, ...b };
       });
     }
     if (view === "month") {
       const cols = monthColumns(now, 6);
       return cols.map((c, i) => {
-        const b = bucketize(rows, { start: c.start, end: c.end }, stageProbForItem);
+        const b = bucketize(rows, { start: c.start, end: c.end }, stageProbForItem, overridesByScheduleId);
         return { key: `m${i}`, label: format(c.start, "MMM"), sub: format(c.start, "yyyy"), start: c.start, end: c.end, ...b };
       });
     }
     // custom
     const from = parseISO(customFrom);
     const to = parseISO(customTo);
-    const b = bucketize(rows, { start: from, end: to }, stageProbForItem);
+    const b = bucketize(rows, { start: from, end: to }, stageProbForItem, overridesByScheduleId);
     return [{ key: "custom", label: format(from, "MMM d"), sub: `→ ${format(to, "MMM d")}`, start: from, end: to, ...b }];
-  }, [view, rows, activeQStart, customFrom, customTo, stageProbForItem]);
+  }, [view, rows, activeQStart, customFrom, customTo, stageProbForItem, overridesByScheduleId]);
 
   const totals = useMemo(() => {
     const t = { committed: 0, expected: 0, forecast: 0 };
@@ -213,9 +227,9 @@ export default function RevenueDesk() {
         if (segFilter.seriesKey === "committed" && !isCommitted) return false;
         if ((segFilter.seriesKey === "expected" || segFilter.seriesKey === "forecast") && !isExpected) return false;
       }
-      return scheduleInstances(r, segFilter.start, segFilter.end).length > 0;
+      return scheduleInstances(r, segFilter.start, segFilter.end, overridesByScheduleId[r.id] || []).length > 0;
     });
-  }, [rows, segFilter, pursuits, stateNameById]);
+  }, [rows, segFilter, pursuits, stateNameById, overridesByScheduleId]);
 
 
   return (
@@ -336,6 +350,7 @@ export default function RevenueDesk() {
               schedules={rows}
               band={band}
               showForecast={showForecast}
+              overridesByScheduleId={overridesByScheduleId}
               itemStateName={(id) => {
                 const p = id ? pursuits.find(x => x.id === id) : null;
                 return p ? (stateNameById[p.state_id] || "unlinked") : "unlinked";
@@ -344,6 +359,7 @@ export default function RevenueDesk() {
               accountName={(id) => accounts.find(a => a.id === id)?.name || "—"}
               onSegmentClick={({ seriesKey, seriesLabel, bucket }) =>
                 setSegFilter({ seriesKey, seriesLabel, band, start: bucket.start, end: bucket.end })}
+              onOccurrenceEdit={openOccEdit}
             />
           )}
 
@@ -373,11 +389,17 @@ export default function RevenueDesk() {
                       )}
                     </div>
                     <div className="mt-2 space-y-0.5">
-                      {b.rows.slice(0, 4).map(({ schedule: s, when }) => (
-                        <div key={s.id + when.toISOString()} className="text-[10px] font-mono text-muted-foreground truncate">
-                          {s.accounts?.name?.split(" ")[0] ?? "—"} · {fmtUsd(amt(s))}
+                      {b.rows.slice(0, 4).map(({ schedule: s, when, amount, override, baseDate }) => (
+                        <button
+                          key={s.id + when.toISOString()}
+                          onClick={() => openOccEdit({ schedule: s, baseDate, amount, date: when, override })}
+                          className="w-full text-left text-[10px] font-mono text-muted-foreground truncate hover:text-dossier-brass"
+                          title="Edit this month"
+                        >
+                          {s.accounts?.name?.split(" ")[0] ?? "—"} · {fmtUsd(amount)}
                           {s.kind === "subscription" && "/mo"}
-                        </div>
+                          {override && <span className="text-dossier-brass"> ·</span>}
+                        </button>
                       ))}
                       {b.rows.length > 4 && (
                         <div className="text-[10px] font-mono text-muted-foreground">+{b.rows.length - 4} more</div>
@@ -410,14 +432,37 @@ export default function RevenueDesk() {
             </div>
           )}
 
-          {/* Segment filter chip */}
+          {/* Segment filter chip + per-occurrence editor list */}
           {segFilter && (
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-muted-foreground">Ledger filtered:</span>
-              <span className="px-2 py-0.5 border border-dossier-brass/40 rounded text-dossier-brass">
-                {segFilter.band} · {segFilter.seriesLabel} · {format(segFilter.start, "MMM d")} → {format(segFilter.end, "MMM d")}
-              </span>
-              <Button size="sm" variant="ghost" onClick={() => setSegFilter(null)}>clear</Button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <span className="text-muted-foreground">Ledger filtered:</span>
+                <span className="px-2 py-0.5 border border-dossier-brass/40 rounded text-dossier-brass">
+                  {segFilter.band} · {segFilter.seriesLabel} · {format(segFilter.start, "MMM d")} → {format(segFilter.end, "MMM d")}
+                </span>
+                <Button size="sm" variant="ghost" onClick={() => setSegFilter(null)}>clear</Button>
+              </div>
+              <div className="border border-border rounded bg-muted/10 divide-y divide-border">
+                {ledgerRows.flatMap(r => {
+                  const occs = bucketize([r], { start: segFilter.start, end: segFilter.end }, stageProbForItem, overridesByScheduleId).rows;
+                  return occs.map(o => (
+                    <div key={r.id + o.when.toISOString()} className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono">
+                      <span className="text-muted-foreground w-24 shrink-0">{format(o.when, "MMM d")}</span>
+                      <span className="flex-1 truncate">
+                        <Link to={`/app/accounts/${r.account_id}`} className="hover:text-dossier-brass">{r.accounts?.name ?? "—"}</Link>
+                        <span className="mx-1 text-muted-foreground">·</span>
+                        {r.description}
+                        {o.override && <span className="ml-1 text-dossier-brass">· override ({o.override.override_kind})</span>}
+                      </span>
+                      <span className="w-20 text-right">{fmtUsd(o.amount)}{r.cadence === "monthly" ? "/mo" : ""}</span>
+                      <Button size="sm" variant="ghost" className="h-6"
+                              onClick={() => openOccEdit({ schedule: r, baseDate: o.baseDate, amount: o.amount, date: o.when, override: o.override })}>
+                        <Pencil size={11} />
+                      </Button>
+                    </div>
+                  ));
+                })}
+              </div>
             </div>
           )}
 
@@ -429,6 +474,7 @@ export default function RevenueDesk() {
             stripeConnected={stripeConnected}
             stripeAction={stripeAction}
             busyId={busyId}
+            pursuits={pursuits}
           />
         </div>
       )}
@@ -444,6 +490,20 @@ export default function RevenueDesk() {
         schedule={editSchedule}
         accounts={accounts}
         pursuits={pursuits}
+      />
+
+      {/* Per-occurrence override editor */}
+      <OccurrenceEditorDialog
+        open={!!occEdit}
+        onOpenChange={(v) => { if (!v) setOccEdit(null); }}
+        onSaved={load}
+        schedule={occEdit?.schedule ?? null}
+        baseDate={occEdit?.baseDate ?? null}
+        currentAmount={occEdit?.amount ?? 0}
+        currentDate={occEdit?.date ?? null}
+        existingOverride={occEdit?.existing ?? null}
+        actorEmail={userEmail}
+        workspaceId={workspace?.id || ""}
       />
 
       {/* Settings dialog */}
@@ -539,7 +599,7 @@ function SettingsDialog({
 /* ---------- Sortable/filterable ledger table ---------- */
 
 function LedgerTable({
-  rows, onEdit, onCancel, stripeConnected, stripeAction, busyId,
+  rows, onEdit, onCancel, stripeConnected, stripeAction, busyId, pursuits,
 }: {
   rows: Schedule[];
   onEdit: (s: Schedule) => void;
@@ -547,6 +607,7 @@ function LedgerTable({
   stripeConnected: boolean | null;
   stripeAction: (s: Schedule, action: "create_payment_link" | "create_subscription") => void;
   busyId: string | null;
+  pursuits: { id: string; title: string; account_id: string; state_id: string }[];
 }) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
@@ -638,7 +699,19 @@ function LedgerTable({
                     {r.accounts?.name ?? "—"}
                   </Link>
                 </td>
-                <td className="px-3 py-2">{r.description}</td>
+                <td className="px-3 py-2">
+                  <div className="flex flex-col gap-0.5">
+                    <span>{r.description}</span>
+                    {r.item_id && (() => {
+                      const p = pursuits.find(x => x.id === r.item_id);
+                      return p ? (
+                        <Link to={`/app/items/${p.id}`} className="text-[10px] text-muted-foreground hover:text-dossier-brass truncate max-w-[24ch]">
+                          ↳ {p.title}
+                        </Link>
+                      ) : null;
+                    })()}
+                  </div>
+                </td>
                 <td className="px-3 py-2 text-muted-foreground">{r.kind === "one_time" ? "one-time" : "sub"}</td>
                 <td className="px-3 py-2 text-right">{fmtUsd(amt(r))}{r.cadence === "monthly" ? "/mo" : ""}</td>
                 <td className="px-3 py-2 text-muted-foreground">{r.next_due ?? "—"}</td>

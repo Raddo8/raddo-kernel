@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SignalsPanel from "@/components/SignalsPanel";
-import { Plus, User, Trash2, Pencil } from "lucide-react";
+import { Plus, User, Trash2, Pencil, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useLabels } from "@/lib/labels-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import AccountEditDialog from "@/components/dialogs/AccountEditDialog";
+import { expandOccurrences, fmtUsd, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
+import { format, addMonths } from "date-fns";
 
 export default function AccountDetail() {
   const labels = useLabels();
@@ -22,6 +24,8 @@ export default function AccountDetail() {
   const [account, setAccount] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [overrides, setOverrides] = useState<OccurrenceOverride[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [cName, setCName] = useState("");
@@ -55,9 +59,37 @@ export default function AccountDetail() {
         supabase.from("items").select("*, item_states(name, label, color), policies(name)")
           .eq("account_id", id).order("created_at", { ascending: false })
           .then(({ data }) => { if (!active) return; setItems(data || []); });
+        (supabase as any).from("revenue_schedules").select("*").eq("account_id", id)
+          .then(({ data }: any) => { if (!active) return; setSchedules((data || []) as Schedule[]); });
+        (supabase as any).from("revenue_occurrence_overrides").select("*")
+          .in("schedule_id",
+            // Two-step: fetch overrides scoped by schedules loaded above once they arrive.
+            // Kept simple: over-fetch by workspace via the schedule join filter below.
+            []
+          );
       });
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (schedules.length === 0) { setOverrides([]); return; }
+    const ids = schedules.map(s => s.id);
+    (supabase as any).from("revenue_occurrence_overrides").select("*").in("schedule_id", ids)
+      .then(({ data }: any) => setOverrides((data || []) as OccurrenceOverride[]));
+  }, [schedules]);
+
+  const overrideIdx = useMemo(() => indexOverrides(overrides), [overrides]);
+  const next3 = useMemo(() => {
+    const from = new Date();
+    const to = addMonths(from, 12);
+    const out: { s: Schedule; date: Date; amount: number; override: any }[] = [];
+    for (const s of schedules) {
+      for (const o of expandOccurrences(s, from, to, overrideIdx[s.id] || [])) {
+        out.push({ s, date: o.date, amount: o.amount, override: o.override });
+      }
+    }
+    return out.sort((a, z) => a.date.getTime() - z.date.getTime()).slice(0, 6);
+  }, [schedules, overrideIdx]);
 
   const refreshContacts = () => {
     if (!id) return;
@@ -162,6 +194,46 @@ export default function AccountDetail() {
               </div>
             )}
           </div>
+
+          <div className="p-4">
+            <h3 className="text-sm font-semibold font-mono mb-3 flex items-center gap-1">
+              <DollarSign size={14} /> REVENUE
+            </h3>
+            {schedules.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No revenue schedules yet.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  {schedules.map(s => (
+                    <div key={s.id} className="text-[11px] font-mono flex justify-between border border-border rounded px-2 py-1">
+                      <span className="truncate">
+                        <Link to="/app/revenue" className="hover:text-dossier-brass">{s.description || s.kind}</Link>
+                        <span className="text-muted-foreground"> · {s.status}</span>
+                      </span>
+                      <span>{fmtUsd(Number(s.amount_usd) || 0)}{s.cadence === "monthly" ? "/mo" : ""}</span>
+                    </div>
+                  ))}
+                </div>
+                {next3.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Next occurrences</div>
+                    <div className="space-y-0.5">
+                      {next3.map((o, i) => (
+                        <div key={i} className="text-[11px] font-mono text-muted-foreground flex justify-between">
+                          <span>{format(o.date, "MMM d yyyy")} · {o.s.description}</span>
+                          <span>
+                            {fmtUsd(o.amount)}
+                            {o.override && <span className="text-dossier-brass"> ·</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
 
           <div className="p-4">
             <h3 className="text-sm font-semibold font-mono mb-3">{labels.itemsUpper}</h3>

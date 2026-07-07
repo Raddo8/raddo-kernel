@@ -117,6 +117,8 @@ export default function RevenueScheduleDialog({
         subject: "revenue schedule updated",
         actorEmail: actorEmail ?? null,
         changes: [
+          { field: "account_id", before: schedule.account_id, after: payload.account_id },
+          { field: "item_id", before: schedule.item_id, after: payload.item_id },
           { field: "description", before: schedule.description, after: payload.description },
           { field: "amount_usd", before: schedule.amount_usd, after: payload.amount_usd },
           { field: "kind", before: schedule.kind, after: payload.kind },
@@ -168,23 +170,24 @@ export default function RevenueScheduleDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>{editing ? "Edit revenue schedule" : "Add revenue schedule"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          {!editing && (
-            <>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger><SelectValue placeholder="Select account" /></SelectTrigger>
-                <SelectContent>
-                  {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={itemId || "__none__"} onValueChange={(v) => setItemId(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Link to pursuit (optional)" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">— none —</SelectItem>
-                  {filteredPursuits.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </>
-          )}
+          {/* Re-link: account + pursuit selectors, editable in both create and edit modes.
+              Changing on edit audits the move. */}
+          <div className="space-y-2 border border-border rounded p-2 bg-muted/20">
+            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Linked to</div>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger><SelectValue placeholder="Select account (required)" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={itemId || "__none__"} onValueChange={(v) => setItemId(v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Link to pursuit (optional)" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— none —</SelectItem>
+                {filteredPursuits.map(p => <SelectItem key={p.id} value={p.id}>{p.title}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
           <Input placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} />
           <div className="grid grid-cols-2 gap-2">
             <Input type="number" placeholder="Amount (USD)" value={amount} onChange={e => setAmount(e.target.value)} />
