@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useWorkspace } from "@/lib/workspace-context";
 import { seedCaseyPack } from "@/lib/seed-casey";
 import { supabase } from "@/integrations/supabase/client";
