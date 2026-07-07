@@ -71,7 +71,7 @@ export async function changeItemState(args: ChangeStateArgs): Promise<ChangeStat
   const target = args.states.find(s => s.id === args.targetStateId);
   if (!target) return { ok: false, error: "Unknown state" };
   const gate = await assertQualifiedGate(args.item.account_id, target.name);
-  if (!gate.ok) return { ok: false, error: gate.reason };
+  if (!gate.ok) return { ok: false, error: (gate as GateFail).reason };
   const { error } = await supabase.from("items").update({ state_id: target.id }).eq("id", args.item.id);
   if (error) return { ok: false, error: error.message };
   await writeTimelineEvent({
