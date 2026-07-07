@@ -250,6 +250,10 @@ export default function PursuitBoard() {
                     const slug = p.accounts?.metadata?.utm_slug;
                     const heat = slug ? signalHeat(signalsBySlug[slug] || []) : "cold";
                     const days = differenceInDays(new Date(), new Date(p.updated_at));
+                    const stateName = stateNameById[p.state_id];
+                    const followUp = stateName === "case_open" ? md.follow_up_date as string | undefined : undefined;
+                    const resurface = followUp ? new Date(followUp) <= new Date() : false;
+                    const dnc = p.accounts?.metadata?.do_not_contact === true;
                     return (
                       <button
                         key={p.id}
@@ -258,7 +262,7 @@ export default function PursuitBoard() {
                         onDragStart={() => setDragId(p.id)}
                         onDragEnd={() => setDragId(null)}
                         onClick={() => setOpenPursuitId(p.id)}
-                        className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
+                        className={`w-full text-left block bg-background border rounded p-3 transition-colors cursor-grab active:cursor-grabbing ${resurface ? "border-dossier-brass ring-1 ring-dossier-brass/40" : "border-border hover:border-dossier-brass/50"}`}
                       >
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">{accountName}</div>
                         <div className="text-sm font-medium mt-0.5 line-clamp-2">{p.title}</div>
@@ -274,6 +278,12 @@ export default function PursuitBoard() {
                           <span className="px-1.5 py-0.5 border border-border rounded text-muted-foreground">{days}d</span>
                           <HeatBadge heat={heat} />
                           {md.subdomain_slug && <span className="px-1.5 py-0.5 border border-border rounded text-muted-foreground">/{md.subdomain_slug}</span>}
+                          {followUp && (
+                            <span className={`px-1.5 py-0.5 border rounded ${resurface ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground"}`}>
+                              revisit · {followUp}
+                            </span>
+                          )}
+                          {dnc && <span className="px-1.5 py-0.5 border border-destructive/60 text-destructive rounded">DNC</span>}
                         </div>
                       </button>
                     );
