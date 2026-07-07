@@ -237,13 +237,27 @@ export default function PursuitBoard() {
         title="Pursuit Board"
         subtitle="Drag pursuits between states"
         actions={
-          <ViewMenu toggles={[
-            { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
-            { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
-            { label: "Show primary contact", value: showContact,  onChange: setShowContact },
-          ]} />
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
+              <span>Autopilot</span>
+              <Switch
+                checked={workspaceAutopilot}
+                onCheckedChange={async (v) => {
+                  await saveSettings({ autopilot: v } as any);
+                  toast.success(`Autopilot ${v ? "ON" : "OFF"} · workspace default`);
+                }}
+              />
+              <span className={workspaceAutopilot ? "text-dossier-brass" : ""}>{workspaceAutopilot ? "on" : "off"}</span>
+            </label>
+            <ViewMenu toggles={[
+              { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
+              { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
+              { label: "Show primary contact", value: showContact,  onChange: setShowContact },
+            ]} />
+          </div>
         }
       />
+
       {rollupLines.length > 0 && (showRaw || showWeighted) && (
         <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
           Pipeline · {rollupLines.join(" · ")}
