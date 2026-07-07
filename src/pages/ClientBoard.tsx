@@ -8,11 +8,13 @@ import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { fmtUsd } from "@/lib/revenue-math";
 import { changeItemState } from "@/lib/state-transitions";
+import { loadChecklistForAccounts, progress } from "@/lib/onboarding";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface ClientItem {
   id: string; title: string; state_id: string; account_id: string; updated_at: string;
   metadata: any; accounts?: { id: string; name: string; metadata: any } | null;
+  item_states?: { name: string } | null;
 }
 
 export default function ClientBoard() {
@@ -21,6 +23,7 @@ export default function ClientBoard() {
   const [items, setItems] = useState<ClientItem[]>([]);
   const [mrrByAccount, setMrrByAccount] = useState<Record<string, number>>({});
   const [signalsByAccount, setSignalsByAccount] = useState<Record<string, number>>({});
+  const [onboardingPctByAccount, setOnboardingPctByAccount] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
 
