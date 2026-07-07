@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import TimelineStream from "@/components/TimelineStream";
+import FilesPanel from "@/components/FilesPanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -267,11 +268,21 @@ export default function AccountDetail() {
             <div className="px-4 pt-3 border-b border-border">
               <TabsList>
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="timeline" className="m-0">
               <TimelineStream accountId={id!} />
+            </TabsContent>
+            <TabsContent value="files" className="m-0 p-4">
+              {account && (
+                <FilesPanel
+                  workspaceId={account.workspace_id}
+                  accountId={account.id}
+                  actorEmail={userEmail}
+                />
+              )}
             </TabsContent>
             <TabsContent value="signals" className="m-0">
               <SignalsPanel utmSlug={account?.metadata?.utm_slug ?? null} />

@@ -5,7 +5,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
 const WORKSPACE_ID = "b0c00b00-0000-4000-8000-000000000001";
-const ALLOWED_ACTIONS = new Set(["list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task"]);
+const ALLOWED_ACTIONS = new Set([
+  "list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task",
+  "upload_file", "create_approval_request", "list_approval_requests",
+]);
 const ALLOWED_LAYERS = new Set(["L1", "L2", "L3", "L4", "L5"]);
 const GATED_STATES = new Set([
   "qualified", "deepdive", "asset_built", "meeting_set",
@@ -241,6 +244,91 @@ Deno.serve(async (req: Request) => {
       } as any).select("id").single();
       if (error) return json(500, { error: error.message });
       return json(200, { ok: true, action_id: (a as any).id });
+    }
+
+    if (action === "upload_file") {
+      // Register metadata for a file COB uploaded via the Storage API directly.
+      // Body: { pursuit_id? , account_id?, storage_path, file_name, kind, size_bytes }
+      const storage_path = String(body?.storage_path || "");
+      const file_name = String(body?.file_name || "");
+      const kind = String(body?.kind || "other");
+      const size_bytes = Number(body?.size_bytes || 0);
+      if (!storage_path || !file_name) return json(400, { error: "storage_path_and_file_name_required" });
+      if (!["deck","site","email_draft","agreement","other"].includes(kind)) return json(400, { error: "invalid_kind" });
+
+      let itemId: string | null = null;
+      let accountId: string | null = body?.account_id ? String(body.account_id) : null;
+      if (body?.pursuit_id) {
+        const { data: it } = await supabase.from("items")
+          .select("id, account_id, workspace_id")
+          .eq("id", String(body.pursuit_id)).eq("workspace_id", WORKSPACE_ID).maybeSingle();
+        if (!it) return json(404, { error: "not_found" });
+        itemId = (it as any).id;
+        accountId = (it as any).account_id;
+      }
+      if (!accountId) return json(400, { error: "account_id_or_pursuit_id_required" });
+
+      const { data: acct } = await supabase.from("accounts")
+        .select("id, workspace_id").eq("id", accountId).eq("workspace_id", WORKSPACE_ID).maybeSingle();
+      if (!acct) return json(404, { error: "account_not_found" });
+
+      const { data: rf, error } = await supabase.from("record_files").insert({
+        workspace_id: WORKSPACE_ID,
+        account_id: accountId,
+        item_id: itemId,
+        file_name,
+        storage_path,
+        kind,
+        size_bytes,
+      } as any).select("id").single();
+      if (error) return json(500, { error: error.message });
+
+      await supabase.from("timeline_events").insert({
+        account_id: accountId,
+        item_id: itemId,
+        direction: "system",
+        channel: "system",
+        summary: `File uploaded · ${file_name} (via COB)`,
+        raw_json: { source: "cob-operator", kind, size: size_bytes, record_file_id: (rf as any).id },
+        occurred_at: new Date().toISOString(),
+      });
+      return json(200, { ok: true, record_file_id: (rf as any).id });
+    }
+
+    if (action === "create_approval_request") {
+      const id = String(body?.pursuit_id || "");
+      const kind = String(body?.kind || "");
+      const payload = body?.payload && typeof body.payload === "object" ? body.payload : {};
+      if (!id || !kind) return json(400, { error: "pursuit_id_and_kind_required" });
+      if (!["state_move","send_email","other"].includes(kind)) return json(400, { error: "invalid_kind" });
+
+      const { data: item } = await supabase.from("items")
+        .select("id, workspace_id").eq("id", id).eq("workspace_id", WORKSPACE_ID).maybeSingle();
+      if (!item) return json(404, { error: "not_found" });
+
+      const { data: ar, error } = await supabase.from("approval_requests").insert({
+        workspace_id: WORKSPACE_ID,
+        item_id: id,
+        kind,
+        payload,
+        note: typeof body?.note === "string" ? body.note.slice(0, 1000) : null,
+      } as any).select("id").single();
+      if (error) return json(500, { error: error.message });
+      return json(200, { ok: true, approval_id: (ar as any).id });
+    }
+
+    if (action === "list_approval_requests") {
+      const status = body?.status ? String(body.status) : "pending";
+      if (!["pending","approved","rejected","all"].includes(status)) return json(400, { error: "invalid_status" });
+      let q = supabase.from("approval_requests")
+        .select("id, item_id, kind, payload, status, note, created_at, decided_at")
+        .eq("workspace_id", WORKSPACE_ID)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (status !== "all") q = q.eq("status", status);
+      const { data, error } = await q;
+      if (error) return json(500, { error: error.message });
+      return json(200, { approvals: data || [] });
     }
 
     return json(400, { error: "unhandled_action" });

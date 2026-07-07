@@ -43,5 +43,25 @@ Creates an `internal_task` action with `status=approved` for the worklist.
 { "action": "queue_task", "pursuit_id": "<uuid>", "task": "follow_up", "note": "check back after demo" }
 ```
 
+## upload_file
+Registers metadata for a file COB placed in Storage bucket `record-files` (path convention `{workspace_id}/{account_id}/{uuid}-{filename}`). Requires either `pursuit_id` or `account_id`. Writes a timeline event.
+```json
+{ "action": "upload_file", "pursuit_id": "<uuid>", "storage_path": "b0c0…/acct…/uuid-deck.pdf", "file_name": "Whitebox deck.pdf", "kind": "deck", "size_bytes": 148213 }
+```
+`kind` must be one of `deck · site · email_draft · agreement · other`.
+
+## create_approval_request
+Queues a pending approval visible on `/app/approvals`.
+```json
+{ "action": "create_approval_request", "pursuit_id": "<uuid>", "kind": "state_move", "payload": { "from_state": "asset_built", "to_state": "build_shown" }, "note": "ready for review" }
+```
+`kind` must be one of `state_move · send_email · other`. For `send_email`, payload commonly carries `{ email_subject, recipient, draft_ref }`.
+
+## list_approval_requests
+```json
+{ "action": "list_approval_requests", "status": "pending" }
+```
+`status` is one of `pending · approved · rejected · all` (default `pending`).
+
 ## Errors
 `401 unauthorized` · `403 workspace_locked` · `400 unknown_action | invalid_json | *_required | invalid_layer | unknown_state` · `404 not_found` · `429 rate_limited` · `500 internal_error`

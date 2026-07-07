@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import TimelineStream from "@/components/TimelineStream";
+import FilesPanel from "@/components/FilesPanel";
 import DossierPanel from "@/components/DossierPanel";
 import SignalsPanel from "@/components/SignalsPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -322,6 +323,7 @@ export default function ItemDetail() {
               <TabsList>
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="dossier">Dossier</TabsTrigger>
+                <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
               </TabsList>
             </div>
@@ -330,6 +332,14 @@ export default function ItemDetail() {
             </TabsContent>
             <TabsContent value="dossier" className="m-0">
               <DossierPanel itemId={id!} itemMetadata={item.metadata} accountId={item.account_id ?? item.accounts?.id ?? null} />
+            </TabsContent>
+            <TabsContent value="files" className="m-0 p-4">
+              <FilesPanel
+                workspaceId={item.workspace_id}
+                accountId={item.account_id ?? item.accounts?.id}
+                itemId={item.id}
+                actorEmail={userEmail}
+              />
             </TabsContent>
             <TabsContent value="signals" className="m-0">
               <SignalsPanel utmSlug={item.accounts?.metadata?.utm_slug ?? null} />
