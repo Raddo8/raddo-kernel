@@ -239,9 +239,11 @@ export default function ItemDetail() {
                   <div key={c.id} className="flex items-start gap-2 text-sm group">
                     <User size={14} className="text-muted-foreground shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap">
                         <span className="truncate">{c.name}</span>
                         {i === 0 && <span className="text-[9px] font-mono text-dossier-brass">· primary</span>}
+                        {c.is_decision_maker && <span className="text-[9px] font-mono px-1 py-0 rounded border border-dossier-brass/60 text-dossier-brass">DM</span>}
+                        {c.email_verified && <span className="text-[9px] font-mono px-1 py-0 rounded border border-status-green/60 text-status-green">✓</span>}
                       </div>
                       {c.role && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.role}</div>}
                       {c.email && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.email}</div>}
