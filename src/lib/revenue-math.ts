@@ -183,6 +183,7 @@ export function expandOccurrences(
   overrides: OccurrenceOverride[] = [],
 ): Occurrence[] {
   if (s.status === "cancelled") return [];
+  if (s.counted === false) return [];
   const overrideByMonth = new Map<string, OccurrenceOverride>();
   for (const o of overrides) overrideByMonth.set(o.occurrence_month.slice(0, 10), o);
 
