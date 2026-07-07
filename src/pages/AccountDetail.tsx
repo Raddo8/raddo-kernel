@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
@@ -8,12 +8,14 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SignalsPanel from "@/components/SignalsPanel";
-import { Plus, User, Trash2, Pencil } from "lucide-react";
+import { Plus, User, Trash2, Pencil, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 import { useLabels } from "@/lib/labels-context";
 import { useWorkspace } from "@/lib/workspace-context";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import AccountEditDialog from "@/components/dialogs/AccountEditDialog";
+import { expandOccurrences, fmtUsd, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
+import { format, addMonths } from "date-fns";
 
 export default function AccountDetail() {
   const labels = useLabels();
