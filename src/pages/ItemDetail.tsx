@@ -160,6 +160,11 @@ export default function ItemDetail() {
       <PageHeader
         title={item.title}
         subtitle={`${item.type}${item.accounts?.name ? ` · ${item.accounts.name}` : ""} · ${item.amount ? "$" + Number(item.amount).toLocaleString() : `No ${labels.itemLower} amount`}`}
+        actions={
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil size={14} className="mr-1" /> Edit details
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
@@ -270,6 +275,13 @@ export default function ItemDetail() {
         </div>
       </div>
       <ActionInspectorDrawer action={selectedAction} open={drawerOpen} onOpenChange={setDrawerOpen} />
+      <PursuitEditDialog
+        item={item}
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        onSaved={() => id && fetchItem(id)}
+        actorEmail={userEmail}
+      />
     </div>
   );
 }
