@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, User } from "lucide-react";
 import { HeatBadge, signalHeat } from "@/components/SignalsPanel";
 import { toast } from "sonner";
 import { writeTimelineEvent } from "@/lib/timeline-events";
@@ -12,6 +12,8 @@ import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
 import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
 import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
+import ViewMenu from "@/components/ViewMenu";
+import { useViewPref } from "@/lib/view-prefs";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
 interface Pursuit {
@@ -28,8 +30,12 @@ export default function PursuitBoard() {
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
   const [schedulesByItem, setSchedulesByItem] = useState<Record<string, Schedule[]>>({});
+  const [primaryContactByAccount, setPrimaryContactByAccount] = useState<Record<string, { name: string; email: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [showRaw,      setShowRaw]      = useViewPref("board.showRaw",      true);
+  const [showWeighted, setShowWeighted] = useViewPref("board.showWeighted", false);
+  const [showContact,  setShowContact]  = useViewPref("board.showContact",  true);
 
   const load = useCallback(async () => {
     if (!workspace) return;
@@ -76,6 +82,23 @@ export default function PursuitBoard() {
       (revMap[r.item_id] ||= []).push(r as any);
     }
     setSchedulesByItem(revMap);
+
+    // Primary contact per account (oldest by created_at wins, matching AccountDetail ordering)
+    const accountIds = Array.from(new Set(list.map(p => p.account_id)));
+    if (accountIds.length > 0) {
+      const { data: cts } = await supabase
+        .from("contacts")
+        .select("account_id, name, email, created_at")
+        .in("account_id", accountIds)
+        .order("created_at", { ascending: true });
+      const pMap: Record<string, { name: string; email: string | null }> = {};
+      for (const c of cts || []) {
+        if (!pMap[(c as any).account_id]) pMap[(c as any).account_id] = { name: (c as any).name, email: (c as any).email };
+      }
+      setPrimaryContactByAccount(pMap);
+    } else {
+      setPrimaryContactByAccount({});
+    }
 
     setLoading(false);
   }, [workspace]);
@@ -151,14 +174,28 @@ export default function PursuitBoard() {
       if (r.weightedOneTime > 0) weighted.push(`${fmtUsd(r.weightedOneTime)}`);
       if (r.weightedMonthly > 0) weighted.push(`${fmtUsd(r.weightedMonthly)}/mo`);
       const suffix = r.fromFallback ? " · seed" : "";
-      const weightedText = weighted.length ? ` → weighted ${weighted.join(" + ")}` : "";
-      return `${s.label}: ${raw.join(" + ")}${weightedText}${suffix}`;
-    });
+      const rawText = showRaw ? raw.join(" + ") : "";
+      const weightedText = showWeighted && weighted.length ? `${showRaw ? " → " : ""}weighted ${weighted.join(" + ")}` : "";
+      const body = `${rawText}${weightedText}${suffix}`.trim();
+      if (!body) return null;
+      return `${s.label}: ${body}`;
+    })
+    .filter(Boolean) as string[];
 
   return (
     <div className="flex flex-col h-full">
-      <PageHeader title="Pursuit Board" subtitle="Drag pursuits between states" />
-      {rollupLines.length > 0 && (
+      <PageHeader
+        title="Pursuit Board"
+        subtitle="Drag pursuits between states"
+        actions={
+          <ViewMenu toggles={[
+            { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
+            { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
+            { label: "Show primary contact", value: showContact,  onChange: setShowContact },
+          ]} />
+        }
+      />
+      {rollupLines.length > 0 && (showRaw || showWeighted) && (
         <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
           Pipeline · {rollupLines.join(" · ")}
         </div>
@@ -200,6 +237,12 @@ export default function PursuitBoard() {
                       >
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">{accountName}</div>
                         <div className="text-sm font-medium mt-0.5 line-clamp-2">{p.title}</div>
+                        {showContact && primaryContactByAccount[p.account_id] && (
+                          <div className="mt-1 flex items-center gap-1 text-[10px] font-mono text-muted-foreground truncate">
+                            <User size={10} />
+                            <span className="truncate">{primaryContactByAccount[p.account_id].name}</span>
+                          </div>
+                        )}
                         <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
                           {md.score != null && <span className="px-1.5 py-0.5 border border-border rounded">score {md.score}</span>}
                           {md.cohort && <span className="px-1.5 py-0.5 border border-border rounded truncate max-w-[14ch]">{md.cohort}</span>}

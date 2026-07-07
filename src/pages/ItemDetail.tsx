@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
+import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare, Pencil, User, Trash2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
@@ -18,6 +18,7 @@ import { evaluatePlaybook } from "@/lib/evaluate-playbook";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { useLabels } from "@/lib/labels-context";
 import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
+import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 
 export default function ItemDetail() {
   const labels = useLabels();
@@ -32,6 +33,25 @@ export default function ItemDetail() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
+  const [editContact, setEditContact] = useState<ContactRow | null>(null);
+  const [editContactOpen, setEditContactOpen] = useState(false);
+
+  const fetchContacts = async (accountId: string) => {
+    const { data } = await supabase
+      .from("contacts")
+      .select("id, account_id, name, email, phone, role")
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: true });
+    setContacts((data as any) || []);
+  };
+
+  const handleDeleteContact = async (c: ContactRow) => {
+    if (!window.confirm(`Delete contact "${c.name}"?`)) return;
+    if (await deleteContactWithAudit(c, userEmail) && item?.account_id) {
+      fetchContacts(item.account_id);
+    }
+  };
 
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
@@ -47,6 +67,7 @@ export default function ItemDetail() {
     setNotFound(false);
     setItem(data);
     if (data.item_states) setSelectedState(data.item_states.id);
+    if (data.account_id) fetchContacts(data.account_id);
   };
 
   const fetchActions = async (itemId: string) => {
@@ -200,6 +221,47 @@ export default function ItemDetail() {
               <span className="text-xs text-muted-foreground">No policy assigned</span>
             )}
           </div>
+
+          {/* Contacts · live from contacts table; edits propagate everywhere */}
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold font-mono">CONTACTS ({contacts.length})</h3>
+              {item.account_id && (
+                <Link to={`/app/accounts/${item.account_id}`} className="text-[10px] font-mono text-muted-foreground hover:text-dossier-brass">
+                  <Plus size={12} className="inline mr-0.5" /> add
+                </Link>
+              )}
+            </div>
+            {contacts.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No contacts on this account</p>
+            ) : (
+              <div className="space-y-1.5">
+                {contacts.map((c, i) => (
+                  <div key={c.id} className="flex items-start gap-2 text-sm group">
+                    <User size={14} className="text-muted-foreground shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1">
+                        <span className="truncate">{c.name}</span>
+                        {i === 0 && <span className="text-[9px] font-mono text-dossier-brass">· primary</span>}
+                      </div>
+                      {c.role && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.role}</div>}
+                      {c.email && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.email}</div>}
+                      {c.phone && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.phone}</div>}
+                    </div>
+                    <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => { setEditContact(c); setEditContactOpen(true); }}>
+                        <Pencil size={10} />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={() => handleDeleteContact(c)}>
+                        <Trash2 size={10} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
 
           {/* Action buttons: all route through queueAction() */}
           <div className="p-4">

@@ -12,6 +12,9 @@ import { DollarSign, ExternalLink, Link2, RefreshCw, Plus, Pencil, X, Settings, 
 import { toast } from "sonner";
 import { format, addMonths, isSameMonth, isSameDay, parseISO } from "date-fns";
 import RevenueScheduleDialog, { softCancelSchedule } from "@/components/dialogs/RevenueScheduleDialog";
+import ViewMenu from "@/components/ViewMenu";
+import { useViewPref } from "@/lib/view-prefs";
+import { useTableSort, sortIndicator } from "@/lib/table-sort";
 import {
   Schedule, Status, amt, fmtUsd, monthColumns, weekColumns, bucketize,
   fiscalQuarterOf, shiftFiscalQuarter, scheduleInstances,
@@ -50,12 +53,17 @@ export default function RevenueDesk() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("quarter");
   const [qOffset, setQOffset] = useState(0);
   const [customFrom, setCustomFrom] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customTo, setCustomTo] = useState(format(addMonths(new Date(), 1), "yyyy-MM-dd"));
+
+  // View preferences · forecast overlays are OPT-IN.
+  const [showCommitted, setShowCommitted] = useViewPref("revenue.showCommitted", true);
+  const [showExpected,  setShowExpected]  = useViewPref("revenue.showExpected",  true);
+  const [showForecast,  setShowForecast]  = useViewPref("revenue.showForecast",  false);
+  const [showByStage,   setShowByStage]   = useViewPref("revenue.showByStage",   false);
 
   const load = useCallback(async () => {
     if (!workspace) return;
@@ -184,9 +192,15 @@ export default function RevenueDesk() {
         subtitle="Expected money in · engagement revenue (separate from platform usage)"
         actions={
           <div className="flex items-center gap-1">
-            <Button size="sm" variant="ghost" onClick={() => { setEditSchedule(null); setAddOpen(true); }}>
+            <Button size="sm" variant="ghost" onClick={() => { setEditSchedule(null); setDialogOpen(true); }}>
               <Plus size={14} className="mr-1" /> Add
             </Button>
+            <ViewMenu toggles={[
+              { label: "Show committed",       value: showCommitted, onChange: setShowCommitted },
+              { label: "Show expected",        value: showExpected,  onChange: setShowExpected },
+              { label: "Show forecast",        value: showForecast,  onChange: setShowForecast },
+              { label: "Show cash by stage",   value: showByStage,   onChange: setShowByStage },
+            ]} />
             <Button size="sm" variant="ghost" onClick={() => setSettingsOpen(true)}>
               <Settings size={14} className="mr-1" /> Settings
             </Button>
@@ -249,11 +263,11 @@ export default function RevenueDesk() {
               </div>
             )}
             <div className="ml-auto text-xs font-mono text-muted-foreground">
-              <span className="text-status-green">committed {fmtUsd(totals.committed)}</span>
-              <span className="mx-1">·</span>
-              <span className="text-dossier-brass">expected {fmtUsd(totals.expected)}</span>
-              <span className="mx-1">·</span>
-              <span>forecast {fmtUsd(totals.forecast)}</span>
+              {showCommitted && <span className="text-status-green">committed {fmtUsd(totals.committed)}</span>}
+              {showCommitted && showExpected && <span className="mx-1">·</span>}
+              {showExpected && <span className="text-dossier-brass">expected {fmtUsd(totals.expected)}</span>}
+              {(showCommitted || showExpected) && showForecast && <span className="mx-1">·</span>}
+              {showForecast && <span>forecast {fmtUsd(totals.forecast)}</span>}
             </div>
           </div>
 
@@ -271,15 +285,17 @@ export default function RevenueDesk() {
                     <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{b.label}</div>
                     <div className="text-[10px] font-mono text-muted-foreground">{b.sub}</div>
                     <div className="mt-1 space-y-0.5">
-                      <div className="text-xs font-mono text-status-green">{fmtUsd(b.committed)}</div>
-                      <div className="text-xs font-mono text-dossier-brass">{fmtUsd(b.expected)}</div>
-                      <div
-                        className="text-xs font-mono text-foreground"
-                        title="forecast = committed + (expected × stage probability)"
-                        style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent 0 4px, hsl(var(--muted-foreground) / .1) 4px 5px)" }}
-                      >
-                        {fmtUsd(b.forecast)}
-                      </div>
+                      {showCommitted && <div className="text-xs font-mono text-status-green">{fmtUsd(b.committed)}</div>}
+                      {showExpected && <div className="text-xs font-mono text-dossier-brass">{fmtUsd(b.expected)}</div>}
+                      {showForecast && (
+                        <div
+                          className="text-xs font-mono text-foreground"
+                          title="forecast = committed + (expected × stage probability)"
+                          style={{ backgroundImage: "repeating-linear-gradient(45deg, transparent 0 4px, hsl(var(--muted-foreground) / .1) 4px 5px)" }}
+                        >
+                          {fmtUsd(b.forecast)}
+                        </div>
+                      )}
                     </div>
                     <div className="mt-2 space-y-0.5">
                       {b.rows.slice(0, 4).map(({ schedule: s, when }) => (
@@ -299,7 +315,7 @@ export default function RevenueDesk() {
           </div>
 
           {/* Cash flow by stage mini chart */}
-          {byStage.length > 0 && (
+          {showByStage && byStage.length > 0 && (
             <div>
               <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Cash flow by stage</div>
               <div className="border border-border rounded p-3 bg-muted/10 space-y-1.5">
@@ -319,104 +335,27 @@ export default function RevenueDesk() {
             </div>
           )}
 
-          {/* Ledger */}
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Ledger</div>
-            {rows.length === 0 ? (
-              <EmptyState icon={DollarSign} title="No revenue tracked" description="Add an expected fee to get started." />
-            ) : (
-              <div className="border border-border rounded overflow-x-auto">
-                <table className="w-full text-xs font-mono">
-                  <thead className="bg-muted/40 text-muted-foreground">
-                    <tr>
-                      <th className="text-left px-3 py-2">Account</th>
-                      <th className="text-left px-3 py-2">Description</th>
-                      <th className="text-left px-3 py-2">Kind</th>
-                      <th className="text-right px-3 py-2">Amount</th>
-                      <th className="text-left px-3 py-2">Next due</th>
-                      <th className="text-left px-3 py-2">Status</th>
-                      <th className="text-left px-3 py-2">Stripe</th>
-                      <th className="text-right px-3 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {rows.map(r => (
-                      <tr key={r.id} className="hover:bg-muted/20">
-                        <td className="px-3 py-2">
-                          <Link to={`/app/accounts/${r.account_id}`} className="hover:text-dossier-brass">
-                            {r.accounts?.name ?? "—"}
-                          </Link>
-                        </td>
-                        <td className="px-3 py-2">{r.description}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{r.kind === "one_time" ? "one-time" : "sub"}</td>
-                        <td className="px-3 py-2 text-right">{fmtUsd(amt(r))}{r.cadence === "monthly" ? "/mo" : ""}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{r.next_due ?? "—"}</td>
-                        <td className="px-3 py-2">
-                          <span className={`px-1.5 py-0.5 border rounded ${statusTone(r.status)}`}>
-                            {r.status.replace(/_/g, " ")}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2">
-                          {r.stripe_payment_link ? (
-                            <a href={r.stripe_payment_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-dossier-brass hover:underline">
-                              <Link2 size={12} /> link
-                            </a>
-                          ) : r.stripe_subscription_id ? (
-                            <span className="text-status-green">sub {r.stripe_subscription_id.slice(-6)}</span>
-                          ) : r.stripe_price_id ? (
-                            <span className="text-muted-foreground">price ready</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-right whitespace-nowrap">
-                          <Button size="sm" variant="ghost" onClick={() => openEdit(r)} title="Edit">
-                            <Pencil size={12} />
-                          </Button>
-                          {r.status !== "cancelled" && (
-                            <Button size="sm" variant="ghost" onClick={() => cancelSchedule(r)} title="Cancel (soft delete)">
-                              <X size={12} />
-                            </Button>
-                          )}
-                          {stripeConnected && !r.stripe_price_id && r.kind === "one_time" && (
-                            <Button size="sm" variant="ghost" disabled={busyId === r.id} onClick={() => stripeAction(r, "create_payment_link")}>
-                              <ExternalLink size={12} className="mr-1" /> Link
-                            </Button>
-                          )}
-                          {stripeConnected && !r.stripe_subscription_id && r.kind === "subscription" && (
-                            <Button size="sm" variant="ghost" disabled={busyId === r.id} onClick={() => stripeAction(r, "create_subscription")}>
-                              <ExternalLink size={12} className="mr-1" /> Sub
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          {/* Ledger · sortable + filterable, persisted per surface */}
+          <LedgerTable
+            rows={rows}
+            onEdit={openEdit}
+            onCancel={cancelSchedule}
+            stripeConnected={stripeConnected}
+            stripeAction={stripeAction}
+            busyId={busyId}
+          />
         </div>
       )}
 
-      {/* Edit / add dialog */}
+      {/* Single dialog · schedule=null → INSERT, schedule=row → UPDATE by id.
+          Consolidated to eliminate any ambiguity that produced duplicate rows. */}
       <RevenueScheduleDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditSchedule(null); }}
         onSaved={load}
         workspaceId={workspace?.id || ""}
         actorEmail={userEmail}
         schedule={editSchedule}
-        accounts={accounts}
-        pursuits={pursuits}
-      />
-      <RevenueScheduleDialog
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        onSaved={load}
-        workspaceId={workspace?.id || ""}
-        actorEmail={userEmail}
-        schedule={null}
         accounts={accounts}
         pursuits={pursuits}
       />
@@ -508,5 +447,158 @@ function SettingsDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ---------- Sortable/filterable ledger table ---------- */
+
+function LedgerTable({
+  rows, onEdit, onCancel, stripeConnected, stripeAction, busyId,
+}: {
+  rows: Schedule[];
+  onEdit: (s: Schedule) => void;
+  onCancel: (s: Schedule) => void;
+  stripeConnected: boolean | null;
+  stripeAction: (s: Schedule, action: "create_payment_link" | "create_subscription") => void;
+  busyId: string | null;
+}) {
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [kindFilter, setKindFilter] = useState<string>("all");
+
+  const filtered = useMemo(() => rows.filter(r =>
+    (statusFilter === "all" || r.status === statusFilter) &&
+    (kindFilter === "all" || r.kind === kindFilter)
+  ), [rows, statusFilter, kindFilter]);
+
+  const { sort, toggle, filter, setFilter, sorted } = useTableSort(filtered, {
+    storageKey: "revenue.ledger",
+    defaultSort: { key: "next_due", dir: "asc" },
+    getters: {
+      account:     (r) => r.accounts?.name ?? "",
+      description: (r) => r.description,
+      kind:        (r) => r.kind,
+      amount:      (r) => Number(r.amount_usd),
+      next_due:    (r) => r.next_due ?? "",
+      status:      (r) => r.status,
+    },
+    filterFn: (r, needle) =>
+      (r.accounts?.name ?? "").toLowerCase().includes(needle) ||
+      (r.description ?? "").toLowerCase().includes(needle),
+  });
+
+  const H = ({ k, label, align = "left" }: { k: string; label: string; align?: "left"|"right" }) => (
+    <th className={`px-3 py-2 select-none cursor-pointer hover:text-foreground text-${align}`} onClick={() => toggle(k)}>
+      {label} <span className="text-muted-foreground/60">{sortIndicator(sort.key === k, sort.dir)}</span>
+    </th>
+  );
+
+  if (rows.length === 0) {
+    return (
+      <div>
+        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2">Ledger</div>
+        <EmptyState icon={DollarSign} title="No revenue tracked" description="Add an expected fee to get started." />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mr-2">Ledger</div>
+        <Input
+          placeholder="Filter account or description…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="h-7 w-64 text-xs font-mono"
+        />
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-7 w-40 text-xs font-mono"><SelectValue placeholder="Status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">all statuses</SelectItem>
+            {["expected","agreement_pending","invoiced","active","paid","overdue","cancelled"].map(s => (
+              <SelectItem key={s} value={s}>{s.replace(/_/g," ")}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={kindFilter} onValueChange={setKindFilter}>
+          <SelectTrigger className="h-7 w-32 text-xs font-mono"><SelectValue placeholder="Kind" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">all kinds</SelectItem>
+            <SelectItem value="one_time">one-time</SelectItem>
+            <SelectItem value="subscription">subscription</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="ml-auto text-[10px] font-mono text-muted-foreground">{sorted.length} row(s)</span>
+      </div>
+      <div className="border border-border rounded overflow-x-auto">
+        <table className="w-full text-xs font-mono">
+          <thead className="bg-muted/40 text-muted-foreground">
+            <tr>
+              <H k="account" label="Account" />
+              <H k="description" label="Description" />
+              <H k="kind" label="Kind" />
+              <H k="amount" label="Amount" align="right" />
+              <H k="next_due" label="Next due" />
+              <H k="status" label="Status" />
+              <th className="text-left px-3 py-2">Stripe</th>
+              <th className="text-right px-3 py-2"></th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {sorted.map(r => (
+              <tr key={r.id} className="hover:bg-muted/20">
+                <td className="px-3 py-2">
+                  <Link to={`/app/accounts/${r.account_id}`} className="hover:text-dossier-brass">
+                    {r.accounts?.name ?? "—"}
+                  </Link>
+                </td>
+                <td className="px-3 py-2">{r.description}</td>
+                <td className="px-3 py-2 text-muted-foreground">{r.kind === "one_time" ? "one-time" : "sub"}</td>
+                <td className="px-3 py-2 text-right">{fmtUsd(amt(r))}{r.cadence === "monthly" ? "/mo" : ""}</td>
+                <td className="px-3 py-2 text-muted-foreground">{r.next_due ?? "—"}</td>
+                <td className="px-3 py-2">
+                  <span className={`px-1.5 py-0.5 border rounded ${statusTone(r.status)}`}>
+                    {r.status.replace(/_/g, " ")}
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  {r.stripe_payment_link ? (
+                    <a href={r.stripe_payment_link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-dossier-brass hover:underline">
+                      <Link2 size={12} /> link
+                    </a>
+                  ) : r.stripe_subscription_id ? (
+                    <span className="text-status-green">sub {r.stripe_subscription_id.slice(-6)}</span>
+                  ) : r.stripe_price_id ? (
+                    <span className="text-muted-foreground">price ready</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <Button size="sm" variant="ghost" onClick={() => onEdit(r)} title="Edit">
+                    <Pencil size={12} />
+                  </Button>
+                  {r.status !== "cancelled" && (
+                    <Button size="sm" variant="ghost" onClick={() => onCancel(r)} title="Cancel (soft delete)">
+                      <X size={12} />
+                    </Button>
+                  )}
+                  {stripeConnected && !r.stripe_price_id && r.kind === "one_time" && (
+                    <Button size="sm" variant="ghost" disabled={busyId === r.id} onClick={() => stripeAction(r, "create_payment_link")}>
+                      <ExternalLink size={12} className="mr-1" /> Link
+                    </Button>
+                  )}
+                  {stripeConnected && !r.stripe_subscription_id && r.kind === "subscription" && (
+                    <Button size="sm" variant="ghost" disabled={busyId === r.id} onClick={() => stripeAction(r, "create_subscription")}>
+                      <ExternalLink size={12} className="mr-1" /> Sub
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }

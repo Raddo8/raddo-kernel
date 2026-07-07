@@ -60,6 +60,12 @@ export default function RevenueScheduleDialog({
 
   const save = async () => {
     if (!canSave) return;
+    // Insert-vs-update invariant: branch STRICTLY on presence of schedule.id.
+    // If the dialog was opened in edit mode, we must UPDATE by id — never insert.
+    if (editing && !schedule?.id) {
+      toast.error("Edit target lost. Reopen the row to edit.");
+      return;
+    }
     setSaving(true);
     const payload: any = {
       workspace_id: workspaceId,
