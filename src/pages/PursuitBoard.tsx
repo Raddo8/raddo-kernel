@@ -293,7 +293,9 @@ export default function PursuitBoard() {
                     const followUp = stateName === "case_open" ? md.follow_up_date as string | undefined : undefined;
                     const resurface = followUp ? new Date(followUp) <= new Date() : false;
                     const dnc = p.accounts?.metadata?.do_not_contact === true;
+                    const wos = workOrdersByItem[p.id] || [];
                     return (
+
                       <button
                         key={p.id}
                         type="button"
