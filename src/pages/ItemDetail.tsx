@@ -111,26 +111,24 @@ export default function ItemDetail() {
 
   const changeState = async (stateId: string) => {
     if (!id || !item || !workspace) return;
+    const prev = selectedState;
     setSelectedState(stateId);
-    const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-
-    const state = states.find(s => s.id === stateId);
-
-    // Centralized timeline write (constraint 2)
-    await writeTimelineEvent({
-      accountId: item.account_id || item.accounts?.id,
-      itemId: id,
-      direction: "system",
-      channel: "system",
-      summary: `State changed to ${state?.label || "unknown"}`,
+    const res = await changeItemState({
+      item: { id, account_id: item.account_id || item.accounts?.id },
+      targetStateId: stateId,
+      states,
     });
+    if (!res.ok) {
+      setSelectedState(prev);
+      toast.error(res.error || "Move blocked");
+      return;
+    }
 
     // Evaluate playbook via extracted module
     await evaluatePlaybook({
       itemId: id,
       stateId,
-      stateName: state?.name || "",
+      stateName: res.state?.name || "",
       itemType: item.type,
       workspaceId: workspace.id,
       actorUserId: userId ?? undefined,
