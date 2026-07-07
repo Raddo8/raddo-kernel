@@ -153,8 +153,10 @@ function ContactsTable({
     getters: {
       name:    (c) => c.name ?? "",
       email:   (c) => c.email ?? "",
-      role:    (c) => c.role ?? "",
+      role:    (c) => c.title ?? c.role ?? "",
       account: (c) => c.accounts?.name ?? "",
+      dm:      (c) => c.is_decision_maker ? 1 : 0,
+      verified:(c) => c.email_verified ? 1 : 0,
     },
     filterFn: (c, needle) =>
       (c.name ?? "").toLowerCase().includes(needle) ||
@@ -172,8 +174,10 @@ function ContactsTable({
         <Input placeholder="Filter name, email, account…" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-7 w-72 text-xs font-mono" />
         <div className="ml-auto flex items-center gap-4">
           <H k="name" label="Name" />
-          <H k="role" label="Role" />
+          <H k="role" label="Title" />
           <H k="email" label="Email" />
+          <H k="dm" label="DM" />
+          <H k="verified" label="Verified" />
           <H k="account" label="Account" />
         </div>
       </div>
@@ -182,7 +186,9 @@ function ContactsTable({
           <div key={c.id} className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group">
             <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
               <span className="font-medium text-sm">{c.name}</span>
-              {c.role && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.role})</span>}
+              {c.is_decision_maker && <span className="ml-2 text-[9px] font-mono px-1 py-0 rounded border border-dossier-brass/60 text-dossier-brass">DM</span>}
+              {c.email_verified && <span className="ml-1 text-[9px] font-mono px-1 py-0 rounded border border-status-green/60 text-status-green">✓</span>}
+              {(c.title || c.role) && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.title || c.role})</span>}
               {c.email && <span className="text-xs text-muted-foreground ml-2">· {c.email}</span>}
               {c.phone && <span className="text-xs text-muted-foreground ml-2">· {c.phone}</span>}
             </Link>
