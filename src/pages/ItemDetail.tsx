@@ -10,18 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare } from "lucide-react";
+import { Mail, Shield, ArrowRight, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
 import { evaluatePlaybook } from "@/lib/evaluate-playbook";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { useLabels } from "@/lib/labels-context";
+import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
 
 export default function ItemDetail() {
   const labels = useLabels();
   const { id } = useParams();
-  const { workspace, userId } = useWorkspace();
+  const { workspace, userId, userEmail } = useWorkspace();
   const [item, setItem] = useState<any>(null);
   const [actions, setActions] = useState<any[]>([]);
   const [states, setStates] = useState<any[]>([]);
@@ -30,6 +31,7 @@ export default function ItemDetail() {
   const [selectedAction, setSelectedAction] = useState<any | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [presentOptionsTemplateId, setPresentOptionsTemplateId] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
