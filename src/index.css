@@ -184,3 +184,16 @@
   .dossier-navy-pane h1,
   .dossier-navy-pane h2 { color: hsl(var(--dossier-ink-deep)) !important; }
 }
+
+/* Invoice document · print contract. Only the .invoice-doc surface prints. */
+@media print {
+  body * { visibility: hidden !important; }
+  .invoice-doc, .invoice-doc * { visibility: visible !important; }
+  .invoice-doc {
+    position: absolute !important;
+    left: 0; top: 0;
+    margin: 0 !important;
+    box-shadow: none !important;
+  }
+  @page { size: Letter; margin: 0; }
+}
