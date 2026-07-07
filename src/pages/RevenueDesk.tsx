@@ -247,18 +247,43 @@ export default function RevenueDesk() {
             </div>
           </div>
 
-          {/* Calendar controls */}
+          {/* Primary view + calendar controls */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex border border-border rounded overflow-hidden text-xs font-mono">
-              {(["quarter","month","custom"] as ViewMode[]).map(v => (
+              {(["ribbon","cards","ledger"] as const).map(m => (
                 <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-3 py-1 ${view === v ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
-                >{v === "quarter" ? "Quarter (13 wks)" : v}</button>
+                  key={m}
+                  onClick={() => setPrimaryMode(m)}
+                  className={`px-3 py-1 ${primaryMode === m ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
+                >{m === "ledger" ? "Ledger-only" : m.charAt(0).toUpperCase() + m.slice(1)}</button>
               ))}
             </div>
-            {view === "quarter" && (
+            {primaryMode !== "ledger" && (
+              <div className="inline-flex border border-border rounded overflow-hidden text-xs font-mono">
+                {(["quarter","month","custom"] as ViewMode[]).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`px-3 py-1 ${view === v ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
+                  >{v === "quarter" ? "Quarter (13 wks)" : v}</button>
+                ))}
+              </div>
+            )}
+            {primaryMode === "ribbon" && (
+              <div className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground">
+                <span>Band by</span>
+                <div className="inline-flex border border-border rounded overflow-hidden">
+                  {(["account","stage","status"] as BandBy[]).map(b => (
+                    <button
+                      key={b}
+                      onClick={() => setBand(b)}
+                      className={`px-2 py-1 ${band === b ? "bg-muted text-foreground" : "hover:bg-muted/50"}`}
+                    >{b}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {primaryMode !== "ledger" && view === "quarter" && (
               <div className="inline-flex items-center gap-1 text-xs font-mono">
                 <Button size="sm" variant="ghost" onClick={() => shiftQ(-1)}><ChevronLeft size={14} /></Button>
                 <span className="px-2">{activeQMeta.qLabel}</span>
@@ -267,7 +292,7 @@ export default function RevenueDesk() {
                 <span className="ml-2 text-muted-foreground">FY starts {format(new Date(2000, fiscalMonth - 1, 1), "MMMM")}</span>
               </div>
             )}
-            {view === "custom" && (
+            {primaryMode !== "ledger" && view === "custom" && (
               <div className="inline-flex items-center gap-2 text-xs font-mono">
                 <Input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} className="w-40" />
                 <span>→</span>
@@ -283,16 +308,33 @@ export default function RevenueDesk() {
             </div>
           </div>
 
-          {/* Calendar grid */}
-          <div className={view === "custom" ? "" : "overflow-x-auto"}>
-            <div className={
-              view === "quarter" ? "grid grid-cols-13 gap-1 min-w-max" :
-              view === "month" ? "grid grid-cols-6 gap-2" :
-              "grid grid-cols-1 gap-2"
-            } style={view === "quarter" ? { gridTemplateColumns: "repeat(13, minmax(120px, 1fr))" } : undefined}>
-              {buckets.map(b => {
-                const forecastOnly = Math.max(0, b.forecast - b.committed);
-                return (
+          {/* PRIMARY VISUAL · Ribbon chart (default) */}
+          {primaryMode === "ribbon" && (
+            <RibbonChart
+              buckets={buckets.map(b => ({ key: b.key, label: b.label, sub: b.sub, start: b.start, end: b.end }))}
+              schedules={rows}
+              band={band}
+              showForecast={showForecast}
+              itemStateName={(id) => {
+                const p = id ? pursuits.find(x => x.id === id) : null;
+                return p ? (stateNameById[p.state_id] || "unlinked") : "unlinked";
+              }}
+              itemStageProb={(id) => stageProbForItem(id) / 100}
+              accountName={(id) => accounts.find(a => a.id === id)?.name || "—"}
+              onSegmentClick={({ seriesKey, seriesLabel, bucket }) =>
+                setSegFilter({ seriesKey, seriesLabel, band, start: bucket.start, end: bucket.end })}
+            />
+          )}
+
+          {/* Calendar grid · Cards mode */}
+          {primaryMode === "cards" && (
+            <div className={view === "custom" ? "" : "overflow-x-auto"}>
+              <div className={
+                view === "quarter" ? "grid grid-cols-13 gap-1 min-w-max" :
+                view === "month" ? "grid grid-cols-6 gap-2" :
+                "grid grid-cols-1 gap-2"
+              } style={view === "quarter" ? { gridTemplateColumns: "repeat(13, minmax(120px, 1fr))" } : undefined}>
+                {buckets.map(b => (
                   <div key={b.key} className="border border-border rounded p-2 bg-muted/10 min-h-[140px]">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{b.label}</div>
                     <div className="text-[10px] font-mono text-muted-foreground">{b.sub}</div>
@@ -321,10 +363,10 @@ export default function RevenueDesk() {
                       )}
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Cash flow by stage mini chart */}
           {showByStage && byStage.length > 0 && (
@@ -347,9 +389,41 @@ export default function RevenueDesk() {
             </div>
           )}
 
+          {/* Segment filter chip */}
+          {segFilter && (
+            <div className="flex items-center gap-2 text-xs font-mono">
+              <span className="text-muted-foreground">Ledger filtered:</span>
+              <span className="px-2 py-0.5 border border-dossier-brass/40 rounded text-dossier-brass">
+                {segFilter.band} · {segFilter.seriesLabel} · {format(segFilter.start, "MMM d")} → {format(segFilter.end, "MMM d")}
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => setSegFilter(null)}>clear</Button>
+            </div>
+          )}
+
           {/* Ledger · sortable + filterable, persisted per surface */}
           <LedgerTable
-            rows={rows}
+            rows={useMemo(() => {
+              if (!segFilter) return rows;
+              return rows.filter(r => {
+                if (r.status === "cancelled") return false;
+                // series match
+                if (segFilter.band === "account" && r.account_id !== segFilter.seriesKey) return false;
+                if (segFilter.band === "stage") {
+                  const p = r.item_id ? pursuits.find(x => x.id === r.item_id) : null;
+                  const stage = p ? (stateNameById[p.state_id] || "unlinked") : "unlinked";
+                  if (stage !== segFilter.seriesKey) return false;
+                }
+                if (segFilter.band === "status") {
+                  const isCommitted = ["active","invoiced","paid"].includes(r.status);
+                  const isExpected = ["expected","agreement_pending"].includes(r.status);
+                  if (segFilter.seriesKey === "committed" && !isCommitted) return false;
+                  if (segFilter.seriesKey === "expected" && !isExpected) return false;
+                  if (segFilter.seriesKey === "forecast" && !isExpected) return false;
+                }
+                // window match
+                return scheduleInstances(r, segFilter.start, segFilter.end).length > 0;
+              });
+            }, [rows, segFilter, pursuits, stateNameById])}
             onEdit={openEdit}
             onCancel={cancelSchedule}
             stripeConnected={stripeConnected}
