@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
 import { evaluatePlaybook } from "@/lib/evaluate-playbook";
-import { writeTimelineEvent } from "@/lib/timeline-events";
+
 import { useLabels } from "@/lib/labels-context";
 import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
