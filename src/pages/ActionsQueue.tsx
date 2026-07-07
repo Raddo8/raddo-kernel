@@ -13,9 +13,14 @@ import { executeAction } from "@/lib/execute-action";
 import Worklist from "@/pages/Worklist";
 
 export default function ActionsQueue() {
-  const { workspace, userId } = useWorkspace();
+  const { workspace } = useWorkspace();
   // BD workspace uses the humanized Worklist at this route.
   if ((workspace as any)?.slug === "cob-hq-bd") return <Worklist />;
+  return <ActionsQueueInner />;
+}
+
+function ActionsQueueInner() {
+  const { workspace, userId } = useWorkspace();
   const [actions, setActions] = useState<any[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
