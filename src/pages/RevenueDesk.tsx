@@ -371,6 +371,19 @@ export default function RevenueDesk() {
             />
           )}
 
+          {/* Monthly summary strip · shown while a fiscal weekly quarter is active */}
+          {primaryMode !== "ledger" && view === "quarter" && (
+            <MonthStrip
+              quarterStart={activeQStart}
+              schedules={rows}
+              overridesByScheduleId={overridesByScheduleId}
+              stageProbForItem={stageProbForItem}
+            />
+          )}
+
+          {/* --- unchanged below --- */}
+          {false && (
+
           {/* Calendar grid · Cards mode */}
           {primaryMode === "cards" && (
             <div className={view === "custom" ? "" : "overflow-x-auto"}>
