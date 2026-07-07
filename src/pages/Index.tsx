@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 import { useWorkspace } from "@/lib/workspace-context";
 import { seedCaseyPack } from "@/lib/seed-casey";
 import { supabase } from "@/integrations/supabase/client";
@@ -73,6 +74,9 @@ export default function Index() {
       </div>
     );
   }
+
+  // BD workspace lands on the pursuit board.
+  if ((workspace as any)?.slug === "cob-hq-bd") return <Navigate to="/app/board" replace />;
 
   return (
     <div>

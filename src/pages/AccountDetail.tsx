@@ -7,6 +7,8 @@ import TimelineStream from "@/components/TimelineStream";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SignalsPanel from "@/components/SignalsPanel";
 import { Plus, User, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useLabels } from "@/lib/labels-context";
@@ -180,12 +182,22 @@ export default function AccountDetail() {
           </div>
         </div>
 
-        {/* Right: timeline */}
+        {/* Right: timeline / signals tabs */}
         <div className="lg:col-span-2">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-sm font-semibold font-mono">TIMELINE</h3>
-          </div>
-          <TimelineStream accountId={id!} />
+          <Tabs defaultValue="timeline" className="w-full">
+            <div className="px-4 pt-3 border-b border-border">
+              <TabsList>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="signals">Signals</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="timeline" className="m-0">
+              <TimelineStream accountId={id!} />
+            </TabsContent>
+            <TabsContent value="signals" className="m-0">
+              <SignalsPanel utmSlug={account?.metadata?.utm_slug ?? null} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

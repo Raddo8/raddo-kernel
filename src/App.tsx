@@ -11,6 +11,8 @@ import AccountDetail from "@/pages/AccountDetail";
 import ItemsList from "@/pages/ItemsList";
 import ItemDetail from "@/pages/ItemDetail";
 import ActionsQueue from "@/pages/ActionsQueue";
+import Worklist from "@/pages/Worklist";
+import PursuitBoard from "@/pages/PursuitBoard";
 import TimelinePage from "@/pages/TimelinePage";
 import PoliciesList from "@/pages/PoliciesList";
 import PolicyDetail from "@/pages/PolicyDetail";
@@ -103,6 +105,8 @@ const App = () => (
             <Route path="accounts/:id" element={<AccountDetail />} />
             <Route path="items" element={<ItemsList />} />
             <Route path="items/:id" element={<ItemDetail />} />
+            <Route path="board" element={<PursuitBoard />} />
+            <Route path="worklist" element={<Worklist />} />
             <Route path="actions" element={<ActionsQueue />} />
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="policies" element={<PoliciesList />} />

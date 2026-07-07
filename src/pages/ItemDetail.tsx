@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import PageHeader from "@/components/PageHeader";
 import StatusBadge from "@/components/StatusBadge";
 import TimelineStream from "@/components/TimelineStream";
+import DossierPanel from "@/components/DossierPanel";
+import SignalsPanel from "@/components/SignalsPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ActionInspectorDrawer from "@/components/ActionInspectorDrawer";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,7 +34,7 @@ export default function ItemDetail() {
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
       .from("items")
-      .select("*, accounts(id, name), item_states(id, name, label, color), policies(id, name)")
+      .select("*, accounts(id, name, metadata), item_states(id, name, label, color), policies(id, name)")
       .eq("id", itemId)
       .maybeSingle();
     if (error || !data) {
@@ -242,12 +245,26 @@ export default function ItemDetail() {
           </div>
         </div>
 
-        {/* Right: Timeline */}
+        {/* Right: Timeline / Dossier / Signals tabs */}
         <div className="lg:col-span-2">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-sm font-semibold font-mono">TIMELINE</h3>
-          </div>
-          <TimelineStream itemId={id!} />
+          <Tabs defaultValue="timeline" className="w-full">
+            <div className="px-4 pt-3 border-b border-border">
+              <TabsList>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                <TabsTrigger value="dossier">Dossier</TabsTrigger>
+                <TabsTrigger value="signals">Signals</TabsTrigger>
+              </TabsList>
+            </div>
+            <TabsContent value="timeline" className="m-0">
+              <TimelineStream itemId={id!} />
+            </TabsContent>
+            <TabsContent value="dossier" className="m-0">
+              <DossierPanel itemId={id!} itemMetadata={item.metadata} />
+            </TabsContent>
+            <TabsContent value="signals" className="m-0">
+              <SignalsPanel utmSlug={item.accounts?.metadata?.utm_slug ?? null} />
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
       <ActionInspectorDrawer action={selectedAction} open={drawerOpen} onOpenChange={setDrawerOpen} />

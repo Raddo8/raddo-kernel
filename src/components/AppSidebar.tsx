@@ -8,6 +8,8 @@ import {
   BookOpen,
   ListFilter,
   LayoutTemplate,
+  LayoutGrid,
+  CheckSquare,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -40,8 +42,13 @@ export default function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { workspace, workspaces, userEmail, userRole, switchWorkspace } = useWorkspace();
 
+  const isBd = (workspace as any)?.slug === "cob-hq-bd";
   const navItems = [
     { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
+    ...(isBd ? [
+      { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
+      { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
+    ] : []),
     { to: "/app/accounts", label: labels.accounts, icon: Building2 },
     { to: "/app/contacts", label: "Contacts", icon: Users },
     { to: "/app/items", label: labels.items, icon: FileText },
