@@ -99,7 +99,14 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
     } else {
       setSignals([]);
     }
+
+    const { data: wos } = await (supabase as any).from("work_orders")
+      .select("*").eq("item_id", pursuitId)
+      .in("status", ["queued", "claimed", "in_progress"])
+      .order("created_at", { ascending: false });
+    setWorkOrders((wos || []) as WorkOrder[]);
   };
+
 
   useEffect(() => { if (open && pursuitId) load(); }, [open, pursuitId]);
 
