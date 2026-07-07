@@ -143,7 +143,9 @@ export default function AccountDetail() {
                     <User size={14} className="text-muted-foreground shrink-0" />
                     <div className="flex-1 min-w-0">
                       <span>{c.name}</span>
-                      {c.role && <span className="text-xs text-muted-foreground font-mono ml-1">({c.role})</span>}
+                      {c.is_decision_maker && <span className="ml-1 text-[9px] font-mono px-1 py-0 rounded border border-dossier-brass/60 text-dossier-brass">DM</span>}
+                      {c.email_verified && <span className="ml-1 text-[9px] font-mono px-1 py-0 rounded border border-status-green/60 text-status-green">✓</span>}
+                      {(c.title || c.role) && <span className="text-xs text-muted-foreground font-mono ml-1">({c.title || c.role})</span>}
                       {c.email && <span className="text-xs text-muted-foreground ml-1">· {c.email}</span>}
                       {c.phone && <span className="text-xs text-muted-foreground ml-1">· {c.phone}</span>}
                     </div>
