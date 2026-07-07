@@ -792,10 +792,6 @@ function IssueEmailDialog({
     </Dialog>
   );
 }
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 /* ---------------- Settings form ---------------- */
 
