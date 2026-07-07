@@ -22,6 +22,8 @@ import {
   ChevronsUpDown,
   DollarSign,
   BellRing,
+  Boxes,
+  Hammer,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -61,6 +63,8 @@ export default function AppSidebar() {
     ...(isBd ? [
       { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
       { to: "/app/clients", label: "Client Board", icon: Users },
+      { to: "/app/onboarding/kernel", label: "Kernel Build", icon: Boxes },
+      { to: "/app/onboarding/builds", label: "Project Builds", icon: Hammer },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
       { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
@@ -138,30 +142,37 @@ export default function AppSidebar() {
       )}
 
       <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, label, icon: Icon, end, badge }) => {
+        {navItems.map(({ to, label, icon: Icon, end, badge }, idx) => {
           const active = end ? location.pathname === to : location.pathname.startsWith(to);
+          const showOnboardingLabel = !collapsed && to === "/app/onboarding/kernel";
           return (
-            <NavLink
-              key={to}
-              to={to}
-              className={cn(
-                "flex items-center gap-3 px-4 py-2 text-sm transition-colors relative",
-                active
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground border-r-2 border-sidebar-primary"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            <div key={to}>
+              {showOnboardingLabel && (
+                <div className="px-4 pt-3 pb-1 text-[9px] font-mono uppercase tracking-wider text-sidebar-foreground/50">
+                  Onboarding
+                </div>
               )}
-            >
-              <Icon size={18} />
-              {!collapsed && <span className="flex-1">{label}</span>}
-              {badge != null && badge > 0 && (
-                <span className={cn(
-                  "text-[10px] font-mono min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 bg-dossier-brass text-background",
-                  collapsed && "absolute top-1 right-1"
-                )}>
-                  {badge > 99 ? "99+" : badge}
-                </span>
-              )}
-            </NavLink>
+              <NavLink
+                to={to}
+                className={cn(
+                  "flex items-center gap-3 px-4 py-2 text-sm transition-colors relative",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground border-r-2 border-sidebar-primary"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <Icon size={18} />
+                {!collapsed && <span className="flex-1">{label}</span>}
+                {badge != null && badge > 0 && (
+                  <span className={cn(
+                    "text-[10px] font-mono min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 bg-dossier-brass text-background",
+                    collapsed && "absolute top-1 right-1"
+                  )}>
+                    {badge > 99 ? "99+" : badge}
+                  </span>
+                )}
+              </NavLink>
+            </div>
           );
         })}
       </nav>

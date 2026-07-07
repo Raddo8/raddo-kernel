@@ -8,11 +8,13 @@ import { toast } from "sonner";
 import { differenceInDays } from "date-fns";
 import { fmtUsd } from "@/lib/revenue-math";
 import { changeItemState } from "@/lib/state-transitions";
+import { loadChecklistForAccounts, progress } from "@/lib/onboarding";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface ClientItem {
   id: string; title: string; state_id: string; account_id: string; updated_at: string;
   metadata: any; accounts?: { id: string; name: string; metadata: any } | null;
+  item_states?: { name: string } | null;
 }
 
 export default function ClientBoard() {
@@ -21,6 +23,7 @@ export default function ClientBoard() {
   const [items, setItems] = useState<ClientItem[]>([]);
   const [mrrByAccount, setMrrByAccount] = useState<Record<string, number>>({});
   const [signalsByAccount, setSignalsByAccount] = useState<Record<string, number>>({});
+  const [onboardingPctByAccount, setOnboardingPctByAccount] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -30,7 +33,7 @@ export default function ClientBoard() {
     const [{ data: st }, { data: it }] = await Promise.all([
       supabase.from("item_states").select("*").eq("workspace_id", workspace.id).order("sort_order"),
       supabase.from("items")
-        .select("id, title, state_id, account_id, updated_at, metadata, accounts(id, name, metadata)")
+        .select("id, title, state_id, account_id, updated_at, metadata, accounts(id, name, metadata), item_states(name)")
         .eq("workspace_id", workspace.id)
         .eq("type", "client_ops"),
     ]);
@@ -80,6 +83,19 @@ export default function ClientBoard() {
     } else {
       setMrrByAccount({});
       setSignalsByAccount({});
+    }
+
+    // Onboarding progress for accounts currently in client_onboarding state.
+    const onboardingAccountIds = list
+      .filter(i => (i.item_states as any)?.name === "client_onboarding")
+      .map(i => i.account_id);
+    if (onboardingAccountIds.length > 0) {
+      const cl = await loadChecklistForAccounts(onboardingAccountIds);
+      const pctMap: Record<string, number> = {};
+      for (const [aid, rows] of Object.entries(cl)) pctMap[aid] = progress(rows).pct;
+      setOnboardingPctByAccount(pctMap);
+    } else {
+      setOnboardingPctByAccount({});
     }
     setLoading(false);
   }, [workspace]);
@@ -152,6 +168,8 @@ export default function ClientBoard() {
                     const days = differenceInDays(new Date(), new Date(p.updated_at));
                     const dnc = md.do_not_contact === true;
                     const fleet = md.fleet_status as string | undefined;
+                    const onboardingPct = (p.item_states as any)?.name === "client_onboarding"
+                      ? onboardingPctByAccount[p.account_id] : undefined;
                     return (
                       <div
                         key={p.id}
@@ -161,6 +179,14 @@ export default function ClientBoard() {
                         className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="text-sm font-medium truncate">{p.accounts?.name || "—"}</div>
+                        {onboardingPct != null && (
+                          <div className="mt-1.5">
+                            <div className="h-1 bg-muted rounded overflow-hidden">
+                              <div className="h-full bg-dossier-brass" style={{ width: `${onboardingPct}%` }} />
+                            </div>
+                            <div className="text-[10px] font-mono text-muted-foreground mt-0.5">onboarding · {onboardingPct}%</div>
+                          </div>
+                        )}
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
                           {mrr > 0 && <span className="px-1.5 py-0.5 border border-dossier-brass/40 text-dossier-brass rounded">{fmtUsd(mrr)}/mo</span>}
                           {signalCt > 0 && <span className="px-1.5 py-0.5 border border-border rounded">{signalCt} signals · 7d</span>}

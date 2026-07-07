@@ -15,7 +15,9 @@ export type WorkOrderType =
   | "build_asset"
   | "prepare_send"
   | "draft_nudge"
-  | "revisit";
+  | "revisit"
+  | "kernel_step"
+  | "project_build";
 
 export type WorkOrderStatus =
   | "queued" | "claimed" | "in_progress" | "done" | "failed" | "cancelled";
@@ -98,5 +100,7 @@ export function orderTypeLabel(t: WorkOrderType): string {
     case "prepare_send": return "prepare send";
     case "draft_nudge": return "draft nudge";
     case "revisit": return "revisit";
+    case "kernel_step": return "kernel step";
+    case "project_build": return "project build";
   }
 }

@@ -843,6 +843,63 @@ export type Database = {
         }
         Relationships: []
       }
+      onboarding_checklist: {
+        Row: {
+          account_id: string
+          created_at: string
+          done: boolean
+          done_at: string | null
+          id: string
+          label: string
+          note: string | null
+          phase: string
+          sort_order: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: string
+          label: string
+          note?: string | null
+          phase: string
+          sort_order?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          done?: boolean
+          done_at?: string | null
+          id?: string
+          label?: string
+          note?: string | null
+          phase?: string
+          sort_order?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_checklist_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "onboarding_checklist_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playbook_steps: {
         Row: {
           action_type: string
@@ -1090,6 +1147,70 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_builds: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          id: string
+          kind: string
+          metadata: Json
+          revenue_schedule_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          revenue_schedule_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          revenue_schedule_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_builds_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_builds_revenue_schedule_id_fkey"
+            columns: ["revenue_schedule_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_schedules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_builds_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       rate_limits: {
         Row: {

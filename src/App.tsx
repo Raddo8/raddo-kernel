@@ -27,6 +27,8 @@ import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import RevenueDesk from "@/pages/RevenueDesk";
 import ClientBoard from "@/pages/ClientBoard";
+import KernelBoard from "@/pages/KernelBoard";
+import ProjectBuildsBoard from "@/pages/ProjectBuildsBoard";
 import ApprovalsQueue from "@/pages/ApprovalsQueue";
 import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
@@ -126,6 +128,8 @@ const App = () => (
             <Route path="revenue" element={<RevenueDesk />} />
             <Route path="clients" element={<ClientBoard />} />
             <Route path="approvals" element={<ApprovalsQueue />} />
+            <Route path="onboarding/kernel" element={<KernelBoard />} />
+            <Route path="onboarding/builds" element={<ProjectBuildsBoard />} />
             <Route path="builds" element={<BuildsAdmin />} />
           </Route>
           {/* Legacy product paths → redirect into /app/* */}

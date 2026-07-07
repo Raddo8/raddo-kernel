@@ -106,3 +106,23 @@ Response: `{ ok: true, work_order_id, registered_files: [...], approval_id }`. A
 
 ## Autopilot
 Autopilot is a per-workspace setting (`workspaces.settings.autopilot: true|false`) with a per-pursuit override in `items.metadata.autopilot` (`auto | manual | inherit`). When effective autopilot is ON, entering a state whose next intelligence step maps in `AUTOPILOT_ON_ENTER` auto-creates the corresponding work order with `created_by=autopilot`. Autopilot only queues work — it never skips approvals.
+
+## Order types (extended)
+Now includes `kernel_step` and `project_build` for onboarding-phase work the engine can claim just like BD work.
+
+## Per-state autopilot matrix
+Workspace default lives at `workspaces.settings.autopilot_matrix` as a map of `order_type → auto | assist | manual`. Per-pursuit overrides live at `items.metadata.autopilot_matrix`.
+
+Effective resolution (highest wins): item override → workspace default → hardcoded default (deepdive=auto · build_asset=assist · prepare_send=assist · qualify_enrichment=auto · draft_nudge=auto · revisit=assist).
+
+Behavior:
+- `auto` — `complete_work_order` with `approval.kind=state_move` applies the state change directly (respecting the qualified gate) instead of creating an approval; response includes `auto_applied_state`.
+- `assist` — same auto-queue on state entry, but completion always creates an approval.
+- `manual` — no auto-queue; completion always creates an approval.
+
+`send_email` completions ALWAYS create an approval regardless of mode. Sends are never auto.
+
+## Onboarding surface
+Two boards in the app:
+- `/app/onboarding/kernel` — kernel build board, one card per onboarding client, columns = kernel phases (`agreement_access` → `live`). Kernel phase stored at `items.metadata.kernel_phase` on the client_ops item; checklist rows in `onboarding_checklist`. Reaching `live` flips the client_ops state to `client_active`.
+- `/app/onboarding/builds` — project builds board, one card per `project_builds` row. Optional link to a `revenue_schedules` milestone. Moving to `deployed` on a linked expected schedule queues an internal `invoice_milestone` task.

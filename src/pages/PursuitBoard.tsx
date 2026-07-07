@@ -17,6 +17,8 @@ import { activeWorkOrdersByItem, orderTypeLabel, type WorkOrder } from "@/lib/wo
 import PursuitSlideOut from "@/components/PursuitSlideOut";
 import DispositionDialog from "@/components/dialogs/DispositionDialog";
 import { Switch } from "@/components/ui/switch";
+import AutopilotMatrixPopover from "@/components/AutopilotMatrixPopover";
+import { type AutopilotMatrix } from "@/lib/autopilot-matrix";
 
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
@@ -32,6 +34,7 @@ export default function PursuitBoard() {
   const { workspace } = useWorkspace();
   const { settings, save: saveSettings } = useWorkspaceSettings(workspace?.id);
   const workspaceAutopilot = (settings as any)?.autopilot === true;
+  const workspaceMatrix: AutopilotMatrix = ((settings as any)?.autopilot_matrix || {}) as AutopilotMatrix;
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
@@ -171,9 +174,10 @@ export default function PursuitBoard() {
         const ap = await maybeQueueAutopilotOrder({
           item: { id: pursuitId, account_id: pursuit.account_id, workspace_id: workspace.id, metadata: pursuit.metadata },
           newStateName: res.state.name,
+          workspaceMatrix,
           workspaceAutopilot,
         });
-        if (ap.queued && ap.orderType) toast.info(`Autopilot queued · ${orderTypeLabel(ap.orderType)}`);
+        if (ap.queued && ap.orderType) toast.info(`Autopilot queued · ${orderTypeLabel(ap.orderType)} · ${ap.mode}`);
       } catch (e) { console.warn("autopilot queue failed", e); }
     }
 
@@ -237,8 +241,8 @@ export default function PursuitBoard() {
         title="Pursuit Board"
         subtitle="Drag pursuits between states"
         actions={
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
               <span>Autopilot</span>
               <Switch
                 checked={workspaceAutopilot}
@@ -249,6 +253,13 @@ export default function PursuitBoard() {
               />
               <span className={workspaceAutopilot ? "text-dossier-brass" : ""}>{workspaceAutopilot ? "on" : "off"}</span>
             </label>
+            <AutopilotMatrixPopover
+              scope="workspace"
+              workspaceMatrix={workspaceMatrix}
+              onChange={async (next) => {
+                await saveSettings({ autopilot_matrix: next } as any);
+              }}
+            />
             <ViewMenu toggles={[
               { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
               { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
