@@ -223,6 +223,10 @@ export default function RevenueScheduleDialog({
               {STATUSES.map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
             </SelectContent>
           </Select>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={invoiceSeparately} onChange={e => setInvoiceSeparately(e.target.checked)} />
+            Invoice separately (not combined with other schedules on this account)
+          </label>
           <Button onClick={save} className="w-full" disabled={!canSave || saving}>
             {editing ? "Save changes" : "Add schedule"}
           </Button>
