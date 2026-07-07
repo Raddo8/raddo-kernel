@@ -595,6 +595,7 @@ export type Database = {
       }
       item_states: {
         Row: {
+          category: string
           color: string | null
           created_at: string
           id: string
@@ -604,6 +605,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          category?: string
           color?: string | null
           created_at?: string
           id?: string
@@ -613,6 +615,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          category?: string
           color?: string | null
           created_at?: string
           id?: string

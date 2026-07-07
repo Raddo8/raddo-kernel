@@ -13,6 +13,7 @@ import {
   accountHasDecisionMakerEmail,
 } from "@/lib/state-transitions";
 import ContactEditDialog, { type ContactRow } from "@/components/dialogs/ContactEditDialog";
+import DoNotContactBanner from "@/components/DoNotContactBanner";
 import { fmtUsd } from "@/lib/revenue-math";
 
 interface Props {
@@ -153,6 +154,11 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                   <Plus size={12} className="mr-1" /> add
                 </Button>
               </div>
+              {item.accounts?.metadata?.do_not_contact === true && (
+                <div className="mb-2">
+                  <DoNotContactBanner reason={item.accounts?.metadata?.do_not_contact_reason || null} />
+                </div>
+              )}
               {needsDmBanner && (
                 <div className="mb-2 flex items-start gap-2 border border-destructive/50 bg-destructive/10 text-destructive rounded p-2 text-xs">
                   <AlertTriangle size={14} className="shrink-0 mt-0.5" />

@@ -7,8 +7,33 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { writeAuditEvent } from "@/lib/audit";
 import type { Schedule } from "@/lib/revenue-math";
+import { moveClientOpsState } from "@/lib/state-transitions";
 
 const STATUSES = ["expected","agreement_pending","invoiced","active","paid","overdue","cancelled"];
+
+/** Reflect revenue-schedule status changes into the client_ops kanban. */
+async function reflectClientOpsFromStatus(args: {
+  workspaceId: string; accountId: string;
+  prevStatus?: string | null; nextStatus: string;
+}) {
+  if (args.prevStatus === args.nextStatus) return;
+  if (args.nextStatus === "overdue") {
+    await moveClientOpsState({
+      workspaceId: args.workspaceId,
+      accountId: args.accountId,
+      targetStateName: "client_payment",
+      reason: "Revenue schedule marked overdue",
+    });
+  } else if ((args.prevStatus === "overdue") &&
+             (args.nextStatus === "active" || args.nextStatus === "paid" || args.nextStatus === "invoiced")) {
+    await moveClientOpsState({
+      workspaceId: args.workspaceId,
+      accountId: args.accountId,
+      targetStateName: "client_active",
+      reason: `Revenue schedule resolved · ${args.nextStatus}`,
+    });
+  }
+}
 
 interface Props {
   open: boolean;
@@ -102,6 +127,10 @@ export default function RevenueScheduleDialog({
           { field: "status", before: schedule.status, after: payload.status },
         ],
       });
+      await reflectClientOpsFromStatus({
+        workspaceId, accountId: schedule.account_id,
+        prevStatus: schedule.status, nextStatus: status,
+      });
     } else {
       const { data, error } = await (supabase as any)
         .from("revenue_schedules")
@@ -120,6 +149,10 @@ export default function RevenueScheduleDialog({
           { field: "amount_usd", before: null, after: payload.amount_usd },
           { field: "kind", before: null, after: payload.kind },
         ],
+      });
+      await reflectClientOpsFromStatus({
+        workspaceId, accountId,
+        prevStatus: null, nextStatus: status,
       });
     }
     setSaving(false);

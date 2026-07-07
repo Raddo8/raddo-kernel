@@ -14,14 +14,16 @@ import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
 import { changeItemState } from "@/lib/state-transitions";
 import PursuitSlideOut from "@/components/PursuitSlideOut";
+import DispositionDialog from "@/components/dialogs/DispositionDialog";
 
-interface State { id: string; name: string; label: string; color: string; sort_order: number; }
+interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface Pursuit {
   id: string; title: string; state_id: string; account_id: string; updated_at: string;
   metadata: any; accounts?: { id: string; name: string; metadata: any } | null;
 }
 
-const TERMINAL_STATES = new Set(["lost", "parked"]);
+const TERMINAL_STATES = new Set(["case_closed"]);
+const DISPOSITION_NAMES = new Set(["case_open", "case_closed"]);
 
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
@@ -34,6 +36,7 @@ export default function PursuitBoard() {
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
+  const [pendingDisposition, setPendingDisposition] = useState<{ pursuitId: string; targetStateId: string; kind: "case_open" | "case_closed" } | null>(null);
   const [showRaw,      setShowRaw]      = useViewPref("board.showRaw",      true);
   const [showWeighted, setShowWeighted] = useViewPref("board.showWeighted", false);
   const [showContact,  setShowContact]  = useViewPref("board.showContact",  true);
@@ -48,7 +51,9 @@ export default function PursuitBoard() {
         .eq("workspace_id", workspace.id)
         .eq("type", "pursuit"),
     ]);
-    setStates((st || []) as any);
+    // Only the pursuit ladder appears on this board. client_ops states live on /app/clients.
+    const pursuitStates = ((st || []) as any[]).filter(s => (s as any).category !== "client_ops");
+    setStates(pursuitStates as any);
     const list = (it || []) as any as Pursuit[];
     setPursuits(list);
 
@@ -114,25 +119,22 @@ export default function PursuitBoard() {
       .map(s => ({ state: s, items: grouped[s.id] || [] }));
   }, [states, pursuits]);
 
-  const onDrop = async (e: React.DragEvent, stateId: string) => {
-    e.preventDefault();
-    const id = dragId; setDragId(null);
-    if (!id) return;
-    const pursuit = pursuits.find(p => p.id === id);
-    if (!pursuit || pursuit.state_id === stateId) return;
-    const target = states.find(s => s.id === stateId);
+  const applyStateChange = async (pursuitId: string, targetStateId: string, disposition?: { followUpDate?: string; reason: string }) => {
+    const pursuit = pursuits.find(p => p.id === pursuitId);
+    if (!pursuit) return;
+    const target = states.find(s => s.id === targetStateId);
     const prevStateId = pursuit.state_id;
 
-    setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: stateId } : p));
+    setPursuits(prev => prev.map(p => p.id === pursuitId ? { ...p, state_id: targetStateId } : p));
 
     const res = await changeItemState({
-      item: { id, account_id: pursuit.account_id },
-      targetStateId: stateId,
+      item: { id: pursuitId, account_id: pursuit.account_id, workspace_id: workspace?.id },
+      targetStateId,
       states,
+      disposition,
     });
     if (!res.ok) {
-      // Revert optimistic move + surface reason.
-      setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: prevStateId } : p));
+      setPursuits(prev => prev.map(p => p.id === pursuitId ? { ...p, state_id: prevStateId } : p));
       toast.error(res.error || "Move blocked");
       return;
     }
@@ -141,17 +143,35 @@ export default function PursuitBoard() {
     if (/agreement/.test(targetName)) {
       try {
         await queueAction({
-          itemId: id,
+          itemId: pursuitId,
           type: "internal_task",
           channel: "system",
           source: "system",
           triggerState: target?.name,
           payloadJson: { task: "stand_up_revenue", note: "Stand up revenue schedule + Stripe links for this pursuit." },
-          idempotencyKey: `stand_up_revenue:${id}`,
+          idempotencyKey: `stand_up_revenue:${pursuitId}`,
         });
       } catch (err) { console.warn("queue stand_up_revenue task failed", err); }
     }
     toast.success("Moved");
+    // Refresh so client_ops parallel item creation is reflected everywhere.
+    if (target?.name === "client") load();
+  };
+
+  const onDrop = async (e: React.DragEvent, stateId: string) => {
+    e.preventDefault();
+    const id = dragId; setDragId(null);
+    if (!id) return;
+    const pursuit = pursuits.find(p => p.id === id);
+    if (!pursuit || pursuit.state_id === stateId) return;
+    const target = states.find(s => s.id === stateId);
+    if (!target) return;
+    // Disposition states require a dialog (date + reason for case_open, reason for case_closed).
+    if (target.name === "case_open" || target.name === "case_closed") {
+      setPendingDisposition({ pursuitId: id, targetStateId: stateId, kind: target.name });
+      return;
+    }
+    await applyStateChange(id, stateId);
   };
 
   const stateNameById = useMemo(() => {
@@ -230,6 +250,10 @@ export default function PursuitBoard() {
                     const slug = p.accounts?.metadata?.utm_slug;
                     const heat = slug ? signalHeat(signalsBySlug[slug] || []) : "cold";
                     const days = differenceInDays(new Date(), new Date(p.updated_at));
+                    const stateName = stateNameById[p.state_id];
+                    const followUp = stateName === "case_open" ? md.follow_up_date as string | undefined : undefined;
+                    const resurface = followUp ? new Date(followUp) <= new Date() : false;
+                    const dnc = p.accounts?.metadata?.do_not_contact === true;
                     return (
                       <button
                         key={p.id}
@@ -238,7 +262,7 @@ export default function PursuitBoard() {
                         onDragStart={() => setDragId(p.id)}
                         onDragEnd={() => setDragId(null)}
                         onClick={() => setOpenPursuitId(p.id)}
-                        className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
+                        className={`w-full text-left block bg-background border rounded p-3 transition-colors cursor-grab active:cursor-grabbing ${resurface ? "border-dossier-brass ring-1 ring-dossier-brass/40" : "border-border hover:border-dossier-brass/50"}`}
                       >
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">{accountName}</div>
                         <div className="text-sm font-medium mt-0.5 line-clamp-2">{p.title}</div>
@@ -254,6 +278,12 @@ export default function PursuitBoard() {
                           <span className="px-1.5 py-0.5 border border-border rounded text-muted-foreground">{days}d</span>
                           <HeatBadge heat={heat} />
                           {md.subdomain_slug && <span className="px-1.5 py-0.5 border border-border rounded text-muted-foreground">/{md.subdomain_slug}</span>}
+                          {followUp && (
+                            <span className={`px-1.5 py-0.5 border rounded ${resurface ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground"}`}>
+                              revisit · {followUp}
+                            </span>
+                          )}
+                          {dnc && <span className="px-1.5 py-0.5 border border-destructive/60 text-destructive rounded">DNC</span>}
                         </div>
                       </button>
                     );
@@ -272,6 +302,18 @@ export default function PursuitBoard() {
         states={states}
         onChanged={load}
       />
+      {pendingDisposition && (
+        <DispositionDialog
+          open={!!pendingDisposition}
+          onOpenChange={(v) => { if (!v) setPendingDisposition(null); }}
+          disposition={pendingDisposition.kind}
+          onConfirm={async (args) => {
+            const { pursuitId, targetStateId } = pendingDisposition;
+            setPendingDisposition(null);
+            await applyStateChange(pursuitId, targetStateId, args);
+          }}
+        />
+      )}
     </div>
   );
 }
