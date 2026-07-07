@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfDay } from "date-fns";
+import { format, startOfDay } from "date-fns";
 
 interface Props { utmSlug?: string | null; }
 
