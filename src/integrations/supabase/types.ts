@@ -1049,6 +1049,56 @@ export type Database = {
         }
         Relationships: []
       }
+      revenue_occurrence_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          new_amount_usd: number | null
+          new_date: string | null
+          note: string | null
+          occurrence_month: string
+          override_kind: string
+          schedule_id: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_amount_usd?: number | null
+          new_date?: string | null
+          note?: string | null
+          occurrence_month: string
+          override_kind: string
+          schedule_id: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_amount_usd?: number | null
+          new_date?: string | null
+          note?: string | null
+          occurrence_month?: string
+          override_kind?: string
+          schedule_id?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_occurrence_overrides_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "revenue_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       revenue_schedules: {
         Row: {
           account_id: string
