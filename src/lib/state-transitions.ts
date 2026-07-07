@@ -19,11 +19,26 @@ export const GATED_STATES = new Set([
 /** Disposition state names on the pursuit ladder. */
 export const DISPOSITION_STATES = new Set(["case_open", "case_closed"]);
 
-/** Concrete next-state action per current state (pursuit ladder). */
-export const NEXT_STATE_ACTION: Record<string, { target: string; label: string }> = {
-  signal:      { target: "qualified",   label: "Qualify (requires dossier + decision-maker email)" },
-  qualified:   { target: "deepdive",    label: "Start deep dive" },
-  deepdive:    { target: "asset_built", label: "Mark asset built" },
+/**
+ * Concrete next-state action per current state (pursuit ladder).
+ *
+ * `intelligence: true` means the action requires research / synthesis / draft work
+ * that the app MUST NOT perform. Clicking creates a work_order (see src/lib/work-orders.ts)
+ * and the STATE DOES NOT CHANGE. The engine completes the work and returns via an
+ * approval_request (UX05) to advance the state.
+ *
+ * `intelligence` absent means the action records reality that the operator observed —
+ * state changes directly.
+ */
+export const NEXT_STATE_ACTION: Record<string, {
+  target: string;
+  label: string;
+  intelligence?: true;
+  orderType?: import("./work-orders").WorkOrderType;
+}> = {
+  signal:      { target: "qualified",   label: "Qualify (requires dossier + decision-maker email)", intelligence: true, orderType: "qualify_enrichment" },
+  qualified:   { target: "deepdive",    label: "Start deep dive",                    intelligence: true, orderType: "deepdive" },
+  deepdive:    { target: "asset_built", label: "Build asset",                        intelligence: true, orderType: "build_asset" },
   asset_built: { target: "build_shown", label: "Mark contacted · build sent" },
   build_shown: { target: "meeting_set", label: "Log meeting set" },
   meeting_set: { target: "proposal",    label: "Move to proposal" },
@@ -31,6 +46,17 @@ export const NEXT_STATE_ACTION: Record<string, { target: string; label: string }
   agreement:   { target: "onboarding",  label: "Start onboarding" },
   onboarding:  { target: "client",      label: "Mark client" },
 };
+
+/**
+ * Which work order type autopilot queues when a pursuit ENTERS a given state.
+ * Autopilot never advances state — it only pre-queues intelligence work.
+ */
+export const AUTOPILOT_ON_ENTER: Record<string, import("./work-orders").WorkOrderType> = {
+  qualified:   "deepdive",
+  deepdive:    "build_asset",
+  asset_built: "prepare_send",
+};
+
 
 export interface GateOk { ok: true }
 export interface GateFail { ok: false; reason: string }
