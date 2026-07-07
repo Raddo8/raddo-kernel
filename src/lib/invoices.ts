@@ -18,6 +18,17 @@ import {
   type OccurrenceOverride, type Schedule,
 } from "@/lib/revenue-math";
 
+/**
+ * Parse a YYYY-MM string as the first-of-month in LOCAL time.
+ * Never construct `new Date("YYYY-MM-01T00:00:00Z")` for month pickers —
+ * UTC midnight resolves to the previous month for any zone west of UTC,
+ * which is what caused the June→May "Period" offset bug.
+ */
+export function parseMonthInputLocal(monthStr: string): Date {
+  const [yyyy, mm] = monthStr.split("-").map((v) => parseInt(v, 10));
+  return new Date(yyyy, (mm || 1) - 1, 1);
+}
+
 export type InvoiceStatus =
   | "draft" | "auto_draft" | "issued" | "sent" | "paid" | "overdue" | "void";
 export type PaidVia = "stripe" | "bank" | "manual";
@@ -143,8 +154,18 @@ export async function generateDraftsForMonth(params: {
   billingPeriod: Date;
   accountIdFilter?: string;    // if provided, only that account
   actorEmail?: string | null;
-}): Promise<{ created: number; skipped: number }> {
-  const monthKey = format(startOfMonth(params.billingPeriod), "yyyy-MM-dd");
+}): Promise<{
+  created: number;
+  skipped: number;
+  details: { invoice_number: string; account_id: string; billing_period: string; due_date: string; total: number }[];
+}> {
+  // OFFSET-FIX: derive the selected month strictly in LOCAL time.
+  // If the caller passes any Date that lands on the 1st (any zone), startOfMonth
+  // in local time yields the intended first-of-month, so the derived monthKey and
+  // occurrence-window [monthStart, monthEnd] are the SAME month the user picked.
+  const monthStart = startOfMonth(params.billingPeriod);
+  const monthEnd = endOfMonth(params.billingPeriod);
+  const monthKey = format(monthStart, "yyyy-MM-dd");
 
   // Load schedules for this workspace (optionally filtered by account).
   let sq: any = (supabase as any).from("revenue_schedules")
@@ -183,10 +204,10 @@ export async function generateDraftsForMonth(params: {
   const { accountsCombined, separate } = groupSchedules((schedules || []) as Schedule[]);
 
   let created = 0, skipped = 0;
+  const details: { invoice_number: string; account_id: string; billing_period: string; due_date: string; total: number }[] = [];
 
   // Combined per-account invoices
   for (const [accountId, accSchedules] of accountsCombined.entries()) {
-    // Skip account if it already has any combined invoice (not a single-line separate)
     const existingCombined = (existingByAccount.get(accountId) || []).find(
       (inv) => (inv.line_items || []).length !== 1
         || !((inv.line_items || [])[0]?.schedule_id
@@ -197,19 +218,22 @@ export async function generateDraftsForMonth(params: {
     const { lines, subtotal } = buildLineItems({
       schedules: accSchedules,
       overrides: (overrides || []) as OccurrenceOverride[],
-      billingPeriod: params.billingPeriod,
+      billingPeriod: monthStart,
     });
     if (lines.length === 0) continue;
 
     const mode = modeByAccount.get(accountId) ?? "manual";
-    await insertInvoice({
+    const dueDate = earliestOccurrenceOrFallback(lines, monthEnd);
+    const inv = await insertInvoice({
       workspaceId: params.workspaceId,
       accountId,
       billingPeriod: monthKey,
+      dueDate,
       lines, subtotal, mode,
       actorEmail: params.actorEmail ?? null,
     });
     created++;
+    if (inv) details.push({ invoice_number: inv.invoice_number, account_id: accountId, billing_period: monthKey, due_date: dueDate, total: subtotal });
   }
 
   // Separate schedules → one invoice each per period
@@ -218,28 +242,39 @@ export async function generateDraftsForMonth(params: {
     const { lines, subtotal } = buildLineItems({
       schedules: [s],
       overrides: (overrides || []) as OccurrenceOverride[],
-      billingPeriod: params.billingPeriod,
+      billingPeriod: monthStart,
     });
     if (lines.length === 0) continue;
     const mode = modeByAccount.get(s.account_id) ?? "manual";
-    await insertInvoice({
+    const dueDate = earliestOccurrenceOrFallback(lines, monthEnd);
+    const inv = await insertInvoice({
       workspaceId: params.workspaceId,
       accountId: s.account_id,
       billingPeriod: monthKey,
+      dueDate,
       lines, subtotal, mode,
       actorEmail: params.actorEmail ?? null,
       notes: `Invoiced separately · ${s.description}`,
     });
     created++;
+    if (inv) details.push({ invoice_number: inv.invoice_number, account_id: s.account_id, billing_period: monthKey, due_date: dueDate, total: subtotal });
   }
 
-  return { created, skipped };
+  return { created, skipped, details };
+}
+
+function earliestOccurrenceOrFallback(lines: InvoiceLineItem[], monthEnd: Date): string {
+  const dates = lines.map((l) => l.occurrence_date).filter(Boolean).sort();
+  if (dates.length > 0) return dates[0];
+  return format(monthEnd, "yyyy-MM-dd");
 }
 
 async function insertInvoice(args: {
   workspaceId: string;
   accountId: string;
   billingPeriod: string;
+  /** Due date computed from the occurrence itself (not issue+net). */
+  dueDate: string;
   lines: InvoiceLineItem[];
   subtotal: number;
   mode: BillingMode;
@@ -248,14 +283,13 @@ async function insertInvoice(args: {
 }) {
   const number = await nextInvoiceNumber(args.workspaceId);
   const issue = new Date();
-  const due = addDays(issue, DEFAULT_NET_DAYS);
   const status: InvoiceStatus = args.mode === "auto_draft" ? "auto_draft" : "draft";
   const { data, error } = await (supabase as any).from("invoices").insert({
     workspace_id: args.workspaceId,
     account_id: args.accountId,
     invoice_number: number,
     issue_date: format(issue, "yyyy-MM-dd"),
-    due_date: format(due, "yyyy-MM-dd"),
+    due_date: args.dueDate,
     billing_period: args.billingPeriod,
     billing_mode: args.mode,
     line_items: args.lines,
@@ -271,9 +305,48 @@ async function insertInvoice(args: {
     direction: "system",
     channel: "system",
     summary: `Invoice ${data?.invoice_number} drafted (${status.replace("_", " ")})`,
-    rawJson: { invoice_id: data?.id, billing_period: args.billingPeriod, subtotal: args.subtotal, mode: args.mode },
+    rawJson: { invoice_id: data?.id, billing_period: args.billingPeriod, due_date: args.dueDate, subtotal: args.subtotal, mode: args.mode },
   });
-  return data;
+  return data as { id: string; invoice_number: string } | null;
+}
+
+/** Update editable fields on an invoice. Financials locked once paid/void; dates always editable. */
+export async function updateInvoiceEditable(params: {
+  invoice: Invoice;
+  patch: {
+    issue_date?: string;
+    due_date?: string;
+    billing_period?: string;
+    notes?: string | null;
+    line_items?: InvoiceLineItem[];
+  };
+  actorEmail?: string | null;
+}): Promise<boolean> {
+  const locked = params.invoice.status === "paid" || params.invoice.status === "void";
+  const patch: any = {};
+  if (params.patch.issue_date !== undefined) patch.issue_date = params.patch.issue_date;
+  if (params.patch.due_date !== undefined) patch.due_date = params.patch.due_date;
+  if (!locked) {
+    if (params.patch.billing_period !== undefined) patch.billing_period = params.patch.billing_period;
+    if (params.patch.notes !== undefined) patch.notes = params.patch.notes;
+    if (params.patch.line_items !== undefined) {
+      patch.line_items = params.patch.line_items;
+      const sub = params.patch.line_items.reduce((n, l) => n + Number(l.amount_usd || 0), 0);
+      patch.subtotal = sub;
+      patch.total = sub;
+    }
+  }
+  if (Object.keys(patch).length === 0) return true;
+  const { error } = await (supabase as any).from("invoices").update(patch).eq("id", params.invoice.id);
+  if (error) return false;
+  await writeTimelineEvent({
+    accountId: params.invoice.account_id,
+    direction: "system",
+    channel: "system",
+    summary: `Invoice ${params.invoice.invoice_number} edited`,
+    rawJson: { invoice_id: params.invoice.id, patch, actor: params.actorEmail ?? null },
+  });
+  return true;
 }
 
 /** Mark an invoice paid (manual · bank · or explicit stripe backfill). */
@@ -364,4 +437,70 @@ export async function sweepOverdue(workspaceId: string): Promise<number> {
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "";
   try { return format(parseISO(iso), "MMM d, yyyy"); } catch { return iso; }
+}
+
+export function fmtMoneyPlain(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(n);
+}
+
+/**
+ * Build a draft outbound "here is your invoice" email. Nothing is sent — the UI
+ * offers copy + mailto so the operator addresses it themselves.
+ */
+export function buildIssueEmailDraft(params: {
+  invoice: Invoice;
+  accountName: string;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  remittance?: string | null;
+  workspaceName?: string | null;
+}): { to: string; subject: string; body: string } {
+  const inv = params.invoice;
+  const periodLabel = (() => {
+    try { return format(parseISO(inv.billing_period), "MMMM yyyy"); } catch { return inv.billing_period; }
+  })();
+  const dueLabel = fmtDate(inv.due_date);
+  const total = Number(inv.total ?? inv.subtotal ?? 0);
+  const greetName = params.contactName?.trim() || "there";
+  const lines: string[] = [];
+  lines.push(`Hi ${greetName},`);
+  lines.push("");
+  lines.push(`Please find invoice ${inv.invoice_number} for ${params.accountName} attached below.`);
+  lines.push("");
+  lines.push(`Invoice number: ${inv.invoice_number}`);
+  lines.push(`Billing period: ${periodLabel}`);
+  lines.push(`Amount due:     ${fmtMoneyPlain(total)}`);
+  lines.push(`Due date:       ${dueLabel}`);
+  lines.push("");
+  if (inv.stripe_payment_link) {
+    lines.push(`Pay online: ${inv.stripe_payment_link}`);
+    lines.push("");
+  }
+  const remit = (params.remittance || "").trim();
+  if (remit) {
+    lines.push("Remittance instructions:");
+    lines.push(remit);
+    lines.push("");
+  }
+  if (inv.notes) {
+    lines.push(`Notes: ${inv.notes}`);
+    lines.push("");
+  }
+  lines.push("Any questions, just reply to this email.");
+  lines.push("");
+  lines.push("Thank you,");
+  lines.push(params.workspaceName?.trim() || "COB · Chief of Business");
+
+  return {
+    to: params.contactEmail?.trim() || "",
+    subject: `Invoice ${inv.invoice_number} · ${params.accountName} · ${periodLabel}`,
+    body: lines.join("\n"),
+  };
+}
+
+export function mailtoUrl(draft: { to: string; subject: string; body: string }): string {
+  const q = new URLSearchParams({ subject: draft.subject, body: draft.body });
+  return `mailto:${encodeURIComponent(draft.to)}?${q.toString()}`;
 }

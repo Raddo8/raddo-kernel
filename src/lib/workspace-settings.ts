@@ -14,13 +14,23 @@ export const DEFAULT_STAGE_PROBABILITIES: StageProbabilities = {
   onboarding: 100,
 };
 
+export interface InvoicingSettings {
+  /** Starting invoice sequence number (padded to 5 digits, e.g. 1110 → 01110). */
+  starting_number?: number;
+  /** Free-form remittance / wiring instructions rendered on invoices + issue emails. */
+  remittance?: string;
+}
+
 export interface WorkspaceSettings {
   fiscal_year_start?: number;            // 1..12 (month)
   stage_probabilities?: StageProbabilities;
   vertical_pack?: string;
   purpose?: string;
+  invoicing?: InvoicingSettings;
   [k: string]: unknown;
 }
+
+export const DEFAULT_INVOICE_STARTING_NUMBER = 1110;
 
 export function stageProbability(
   settings: WorkspaceSettings | null | undefined,

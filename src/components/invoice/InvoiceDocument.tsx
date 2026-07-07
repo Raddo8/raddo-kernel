@@ -17,35 +17,30 @@ interface Props {
   account: { id: string; name: string; billing_mode?: "manual" | "auto_draft" } | null;
   contact?: { name: string | null; email: string | null } | null;
   workspace?: { name?: string | null } | null;
+  /** Free-form remittance / wiring instructions from workspace settings. */
+  remittance?: string | null;
 }
 
 function fmtD(iso: string): string {
   try { return format(parseISO(iso), "MMMM d, yyyy"); } catch { return iso; }
 }
 
-function remitCopy(mode: "manual" | "auto_draft", link: string | null | undefined): { title: string; body: string } {
-  if (mode === "auto_draft") {
-    return {
-      title: "Remittance",
-      body: "This invoice is collected automatically via your subscription on file. No action needed.",
-    };
-  }
-  if (link) {
-    return {
-      title: "Payment",
-      body: `Pay online at ${link}\n\nOr remit by bank transfer to the account on file. Reference the invoice number in the memo line.`,
-    };
-  }
-  return {
-    title: "Payment",
-    body: "Remit by bank transfer to the account on file. Reference the invoice number in the memo line. Contact billing@chiefofbusiness.ai for wire instructions.",
-  };
+function remitTitle(mode: "manual" | "auto_draft"): string {
+  return mode === "auto_draft" ? "Remittance" : "Payment";
 }
 
-export default function InvoiceDocument({ invoice, account, contact }: Props) {
+function remitFallback(mode: "manual" | "auto_draft"): string {
+  if (mode === "auto_draft") {
+    return "This invoice is collected automatically via your subscription on file. No action needed.";
+  }
+  return "Bank remittance details will be provided separately. Reference the invoice number in the memo line.";
+}
+
+export default function InvoiceDocument({ invoice, account, contact, remittance }: Props) {
   const lines = (invoice.line_items || []) as InvoiceLineItem[];
   const total = Number(invoice.total ?? invoice.subtotal ?? 0);
-  const remit = remitCopy(invoice.billing_mode, invoice.stripe_payment_link);
+  const remitBody = (remittance?.trim() || remitFallback(invoice.billing_mode));
+  const payLink = invoice.stripe_payment_link || null;
   const periodLabel = (() => {
     try { return format(parseISO(invoice.billing_period), "MMMM yyyy"); } catch { return invoice.billing_period; }
   })();
@@ -178,16 +173,30 @@ export default function InvoiceDocument({ invoice, account, contact }: Props) {
         </div>
       </section>
 
+      {/* Pay online */}
+      {payLink && (
+        <section style={{ marginTop: 24, fontSize: 11, lineHeight: 1.5 }}>
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+            letterSpacing: "0.16em", textTransform: "uppercase",
+            color: "#5F5E5A", marginBottom: 6,
+          }}>Pay online</div>
+          <a href={payLink} style={{ color: "#042C53", textDecoration: "underline" }}>
+            {payLink}
+          </a>
+        </section>
+      )}
+
       {/* Terms / remit */}
-      <section style={{ marginTop: 32, fontSize: 11, lineHeight: 1.5 }}>
+      <section style={{ marginTop: 24, fontSize: 11, lineHeight: 1.5 }}>
         <div style={{
           fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
           letterSpacing: "0.16em", textTransform: "uppercase",
           color: "#5F5E5A", marginBottom: 6,
         }}>
-          {remit.title}
+          {remitTitle(invoice.billing_mode)}
         </div>
-        <div style={{ whiteSpace: "pre-wrap", color: "#2C2C2A" }}>{remit.body}</div>
+        <div style={{ whiteSpace: "pre-wrap", color: "#2C2C2A" }}>{remitBody}</div>
         {invoice.notes && (
           <div style={{ marginTop: 12, color: "#2C2C2A" }}>
             <div style={{
@@ -197,10 +206,11 @@ export default function InvoiceDocument({ invoice, account, contact }: Props) {
             }}>
               Notes
             </div>
-            {invoice.notes}
+            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.notes}</div>
           </div>
         )}
       </section>
+
 
       {/* Footer */}
       <footer style={{
