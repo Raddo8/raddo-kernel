@@ -109,30 +109,11 @@ export default function ContactsList() {
       ) : contacts.length === 0 ? (
         <EmptyState icon={Users} title="No contacts" description="Add contacts to your accounts." />
       ) : (
-        <div className="divide-y divide-border">
-          {contacts.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group"
-            >
-              <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
-                <span className="font-medium text-sm">{c.name}</span>
-                {c.role && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.role})</span>}
-                {c.email && <span className="text-xs text-muted-foreground ml-2">· {c.email}</span>}
-                {c.phone && <span className="text-xs text-muted-foreground ml-2">· {c.phone}</span>}
-              </Link>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono">{(c as any).accounts?.name}</span>
-                <Button variant="ghost" size="sm" onClick={() => { setEditContact(c); setEditOpen(true); }}>
-                  <Pencil size={12} />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(c)}>
-                  <Trash2 size={12} />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ContactsTable
+          contacts={contacts}
+          onEdit={(c) => { setEditContact(c); setEditOpen(true); }}
+          onDelete={handleDelete}
+        />
       )}
       <ContactEditDialog
         contact={editContact}
