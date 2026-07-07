@@ -168,6 +168,11 @@ export default function PursuitBoard() {
   return (
     <div className="flex flex-col h-full">
       <PageHeader title="Pursuit Board" subtitle="Drag pursuits between states" />
+      {rollupLine && (
+        <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
+          Pipeline · {rollupLine}
+        </div>
+      )}
       {loading ? (
         <div className="p-6 text-sm text-muted-foreground">Loading…</div>
       ) : columns.length === 0 ? (
