@@ -12,7 +12,14 @@ const ALLOWED_ACTIONS = new Set([
 ]);
 const ALLOWED_ORDER_TYPES = new Set([
   "qualify_enrichment","deepdive","build_asset","prepare_send","draft_nudge","revisit",
+  "kernel_step","project_build",
 ]);
+
+const DEFAULT_AUTOPILOT_MATRIX: Record<string, "auto" | "assist" | "manual"> = {
+  qualify_enrichment: "auto", deepdive: "auto", build_asset: "assist",
+  prepare_send: "assist", draft_nudge: "auto", revisit: "assist",
+  kernel_step: "manual", project_build: "manual",
+};
 
 const ALLOWED_LAYERS = new Set(["L1", "L2", "L3", "L4", "L5"]);
 const GATED_STATES = new Set([
