@@ -1626,6 +1626,69 @@ export type Database = {
           },
         ]
       }
+      work_orders: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          item_id: string
+          order_type: string
+          params: Json
+          result_note: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_id: string
+          order_type: string
+          params?: Json
+          result_note?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_id?: string
+          order_type?: string
+          params?: Json
+          result_note?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_orders_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workspace_billing: {
         Row: {
           created_at: string
