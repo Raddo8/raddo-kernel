@@ -12,9 +12,12 @@ import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
 import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
 import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
-import { changeItemState } from "@/lib/state-transitions";
+import { changeItemState, maybeQueueAutopilotOrder } from "@/lib/state-transitions";
+import { activeWorkOrdersByItem, orderTypeLabel, type WorkOrder } from "@/lib/work-orders";
 import PursuitSlideOut from "@/components/PursuitSlideOut";
 import DispositionDialog from "@/components/dialogs/DispositionDialog";
+import { Switch } from "@/components/ui/switch";
+
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface Pursuit {
