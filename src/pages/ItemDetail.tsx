@@ -41,7 +41,7 @@ export default function ItemDetail() {
   const fetchContacts = async (accountId: string) => {
     const { data } = await supabase
       .from("contacts")
-      .select("id, account_id, name, email, phone, role")
+      .select("id, account_id, name, email, phone, role, title, is_decision_maker, email_verified")
       .eq("account_id", accountId)
       .order("created_at", { ascending: true });
     setContacts((data as any) || []);
