@@ -237,7 +237,7 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                   </span>
                 ))}
               </div>
-              <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono">
+              <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono flex-wrap">
                 <span className="text-muted-foreground uppercase tracking-wider">Autopilot</span>
                 {(["inherit","auto","manual"] as const).map(m => (
                   <button key={m}
@@ -245,9 +245,20 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                     className={`px-1.5 py-0.5 rounded border ${itemAutopilot === m ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground hover:border-dossier-brass/40"}`}
                   >{m}</button>
                 ))}
-                <span className="text-muted-foreground">
-                  · effective {autopilotOn ? "ON" : "OFF"}
-                </span>
+                <span className="text-muted-foreground">· effective {autopilotOn ? "ON" : "OFF"}</span>
+                <AutopilotMatrixPopover
+                  scope="item"
+                  workspaceMatrix={workspaceMatrix}
+                  itemMatrix={itemMatrix}
+                  triggerLabel="matrix"
+                  onChange={async (next) => {
+                    if (!item) return;
+                    const meta = { ...(item.metadata || {}), autopilot_matrix: next };
+                    const { error } = await supabase.from("items").update({ metadata: meta }).eq("id", item.id);
+                    if (error) { toast.error(error.message); return; }
+                    setItem({ ...item, metadata: meta });
+                  }}
+                />
               </div>
 
             </SheetHeader>
