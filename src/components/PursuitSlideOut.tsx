@@ -14,7 +14,8 @@ import {
 } from "@/lib/state-transitions";
 import ContactEditDialog, { type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import DoNotContactBanner from "@/components/DoNotContactBanner";
-import { fmtUsd } from "@/lib/revenue-math";
+import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
+import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 
 interface Props {
   pursuitId: string | null;
