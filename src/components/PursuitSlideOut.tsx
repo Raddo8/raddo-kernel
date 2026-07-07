@@ -29,7 +29,8 @@ interface Props {
 export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states, onChanged, actorEmail }: Props) {
   const [item, setItem] = useState<any>(null);
   const [contacts, setContacts] = useState<ContactRow[]>([]);
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [overrides, setOverrides] = useState<OccurrenceOverride[]>([]);
   const [signals, setSignals] = useState<any[]>([]);
   const [timeline, setTimeline] = useState<any[]>([]);
   const [layers, setLayers] = useState<Record<string, any>>({});
@@ -41,6 +42,9 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   const [addEmail, setAddEmail] = useState("");
   const [addTitle, setAddTitle] = useState("");
   const [addDm, setAddDm] = useState(false);
+  const [occEdit, setOccEdit] = useState<{
+    schedule: Schedule; baseDate: Date; amount: number; date: Date; existing: OccurrenceOverride | null;
+  } | null>(null);
 
   const load = async () => {
     if (!pursuitId) return;
