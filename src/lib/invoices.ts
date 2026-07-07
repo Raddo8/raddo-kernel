@@ -154,8 +154,18 @@ export async function generateDraftsForMonth(params: {
   billingPeriod: Date;
   accountIdFilter?: string;    // if provided, only that account
   actorEmail?: string | null;
-}): Promise<{ created: number; skipped: number }> {
-  const monthKey = format(startOfMonth(params.billingPeriod), "yyyy-MM-dd");
+}): Promise<{
+  created: number;
+  skipped: number;
+  details: { invoice_number: string; account_id: string; billing_period: string; due_date: string; total: number }[];
+}> {
+  // OFFSET-FIX: derive the selected month strictly in LOCAL time.
+  // If the caller passes any Date that lands on the 1st (any zone), startOfMonth
+  // in local time yields the intended first-of-month, so the derived monthKey and
+  // occurrence-window [monthStart, monthEnd] are the SAME month the user picked.
+  const monthStart = startOfMonth(params.billingPeriod);
+  const monthEnd = endOfMonth(params.billingPeriod);
+  const monthKey = format(monthStart, "yyyy-MM-dd");
 
   // Load schedules for this workspace (optionally filtered by account).
   let sq: any = (supabase as any).from("revenue_schedules")
@@ -194,10 +204,10 @@ export async function generateDraftsForMonth(params: {
   const { accountsCombined, separate } = groupSchedules((schedules || []) as Schedule[]);
 
   let created = 0, skipped = 0;
+  const details: { invoice_number: string; account_id: string; billing_period: string; due_date: string; total: number }[] = [];
 
   // Combined per-account invoices
   for (const [accountId, accSchedules] of accountsCombined.entries()) {
-    // Skip account if it already has any combined invoice (not a single-line separate)
     const existingCombined = (existingByAccount.get(accountId) || []).find(
       (inv) => (inv.line_items || []).length !== 1
         || !((inv.line_items || [])[0]?.schedule_id
@@ -208,19 +218,22 @@ export async function generateDraftsForMonth(params: {
     const { lines, subtotal } = buildLineItems({
       schedules: accSchedules,
       overrides: (overrides || []) as OccurrenceOverride[],
-      billingPeriod: params.billingPeriod,
+      billingPeriod: monthStart,
     });
     if (lines.length === 0) continue;
 
     const mode = modeByAccount.get(accountId) ?? "manual";
-    await insertInvoice({
+    const dueDate = earliestOccurrenceOrFallback(lines, monthEnd);
+    const inv = await insertInvoice({
       workspaceId: params.workspaceId,
       accountId,
       billingPeriod: monthKey,
+      dueDate,
       lines, subtotal, mode,
       actorEmail: params.actorEmail ?? null,
     });
     created++;
+    if (inv) details.push({ invoice_number: inv.invoice_number, account_id: accountId, billing_period: monthKey, due_date: dueDate, total: subtotal });
   }
 
   // Separate schedules → one invoice each per period
@@ -229,22 +242,31 @@ export async function generateDraftsForMonth(params: {
     const { lines, subtotal } = buildLineItems({
       schedules: [s],
       overrides: (overrides || []) as OccurrenceOverride[],
-      billingPeriod: params.billingPeriod,
+      billingPeriod: monthStart,
     });
     if (lines.length === 0) continue;
     const mode = modeByAccount.get(s.account_id) ?? "manual";
-    await insertInvoice({
+    const dueDate = earliestOccurrenceOrFallback(lines, monthEnd);
+    const inv = await insertInvoice({
       workspaceId: params.workspaceId,
       accountId: s.account_id,
       billingPeriod: monthKey,
+      dueDate,
       lines, subtotal, mode,
       actorEmail: params.actorEmail ?? null,
       notes: `Invoiced separately · ${s.description}`,
     });
     created++;
+    if (inv) details.push({ invoice_number: inv.invoice_number, account_id: s.account_id, billing_period: monthKey, due_date: dueDate, total: subtotal });
   }
 
-  return { created, skipped };
+  return { created, skipped, details };
+}
+
+function earliestOccurrenceOrFallback(lines: InvoiceLineItem[], monthEnd: Date): string {
+  const dates = lines.map((l) => l.occurrence_date).filter(Boolean).sort();
+  if (dates.length > 0) return dates[0];
+  return format(monthEnd, "yyyy-MM-dd");
 }
 
 async function insertInvoice(args: {
