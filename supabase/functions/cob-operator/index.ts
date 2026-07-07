@@ -336,7 +336,112 @@ Deno.serve(async (req: Request) => {
       return json(200, { approvals: data || [] });
     }
 
+    if (action === "list_work_orders") {
+      const status = body?.status ? String(body.status) : "queued";
+      const validStatuses = ["queued","claimed","in_progress","done","failed","cancelled","active","all"];
+      if (!validStatuses.includes(status)) return json(400, { error: "invalid_status" });
+      let q = supabase.from("work_orders")
+        .select("id, item_id, order_type, params, status, created_by, claimed_by, claimed_at, completed_at, result_note, created_at")
+        .eq("workspace_id", WORKSPACE_ID)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (status === "active") q = q.in("status", ["queued","claimed","in_progress"]);
+      else if (status !== "all") q = q.eq("status", status);
+      const { data, error } = await q;
+      if (error) return json(500, { error: error.message });
+      return json(200, { work_orders: data || [] });
+    }
+
+    if (action === "claim_work_order") {
+      const id = String(body?.work_order_id || "");
+      const claimedBy = String(body?.claimed_by || "cob-engine").slice(0, 128);
+      if (!id) return json(400, { error: "work_order_id_required" });
+      // Atomic claim · only succeeds if still queued.
+      const { data, error } = await supabase.from("work_orders")
+        .update({ status: "claimed", claimed_by: claimedBy, claimed_at: new Date().toISOString() })
+        .eq("id", id).eq("workspace_id", WORKSPACE_ID).eq("status", "queued")
+        .select("id, item_id, order_type, params").maybeSingle();
+      if (error) return json(500, { error: error.message });
+      if (!data) return json(409, { error: "not_claimable" });
+      return json(200, { ok: true, work_order: data });
+    }
+
+    if (action === "complete_work_order") {
+      const id = String(body?.work_order_id || "");
+      const outcome = String(body?.outcome || "done");
+      const resultNote = typeof body?.result_note === "string" ? body.result_note.slice(0, 4000) : null;
+      if (!id) return json(400, { error: "work_order_id_required" });
+      if (!["done","failed","cancelled"].includes(outcome)) return json(400, { error: "invalid_outcome" });
+
+      const { data: wo } = await supabase.from("work_orders")
+        .select("id, item_id, order_type, workspace_id, status")
+        .eq("id", id).eq("workspace_id", WORKSPACE_ID).maybeSingle();
+      if (!wo) return json(404, { error: "not_found" });
+
+      const { error: uErr } = await supabase.from("work_orders")
+        .update({ status: outcome, completed_at: new Date().toISOString(), result_note: resultNote })
+        .eq("id", id);
+      if (uErr) return json(500, { error: uErr.message });
+
+      // Optional file registrations · same shape as upload_file's inputs.
+      const registered_files: string[] = [];
+      if (Array.isArray(body?.files)) {
+        for (const f of body.files) {
+          const storage_path = String(f?.storage_path || "");
+          const file_name = String(f?.file_name || "");
+          const kind = String(f?.kind || "other");
+          const size_bytes = Number(f?.size_bytes || 0);
+          if (!storage_path || !file_name) continue;
+          if (!["deck","site","email_draft","agreement","other"].includes(kind)) continue;
+          const { data: it } = await supabase.from("items")
+            .select("id, account_id").eq("id", (wo as any).item_id).maybeSingle();
+          if (!it) continue;
+          const { data: rf } = await supabase.from("record_files").insert({
+            workspace_id: WORKSPACE_ID,
+            account_id: (it as any).account_id,
+            item_id: (wo as any).item_id,
+            file_name, storage_path, kind, size_bytes,
+          } as any).select("id").single();
+          if (rf) registered_files.push((rf as any).id);
+        }
+      }
+
+      // Optional approval_request creation (typical for state advancement after work).
+      let approval_id: string | null = null;
+      if (body?.approval && typeof body.approval === "object") {
+        const kind = String(body.approval.kind || "");
+        if (!["state_move","send_email","other"].includes(kind)) return json(400, { error: "invalid_approval_kind" });
+        const payload = body.approval.payload && typeof body.approval.payload === "object" ? body.approval.payload : {};
+        const { data: ar } = await supabase.from("approval_requests").insert({
+          workspace_id: WORKSPACE_ID,
+          item_id: (wo as any).item_id,
+          kind, payload,
+          note: typeof body.approval.note === "string" ? body.approval.note.slice(0, 1000) : null,
+        } as any).select("id").single();
+        approval_id = (ar as any)?.id ?? null;
+      }
+
+      // Timeline event · always.
+      const { data: it2 } = await supabase.from("items")
+        .select("account_id").eq("id", (wo as any).item_id).maybeSingle();
+      if (it2) {
+        await supabase.from("timeline_events").insert({
+          account_id: (it2 as any).account_id,
+          item_id: (wo as any).item_id,
+          direction: "system",
+          channel: "system",
+          summary: `Work order ${outcome} · ${(wo as any).order_type}`,
+          body: resultNote,
+          raw_json: { source: "cob-operator", work_order_id: id, outcome, files: registered_files, approval_id },
+          occurred_at: new Date().toISOString(),
+        });
+      }
+
+      return json(200, { ok: true, work_order_id: id, registered_files, approval_id });
+    }
+
     return json(400, { error: "unhandled_action" });
+
   } catch (e) {
     console.error("[cob-operator] error", e);
     return json(500, { error: "internal_error" });
