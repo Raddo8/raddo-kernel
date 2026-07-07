@@ -130,6 +130,7 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   const scheduleTotal = useMemo(() => {
     let one = 0, mo = 0;
     for (const s of schedules) {
+      if ((s as any).counted === false) continue;
       if (s.cadence === "monthly") mo += Number(s.amount_usd || 0);
       else one += Number(s.amount_usd || 0);
     }
