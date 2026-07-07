@@ -5,9 +5,9 @@ import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Button } from "@/components/ui/button";
-import { CheckSquare, Check, X, ExternalLink } from "lucide-react";
+import { CheckSquare, Check, X, ExternalLink, DollarSign } from "lucide-react";
 import { toast } from "sonner";
-import { differenceInDays } from "date-fns";
+import { differenceInDays, differenceInCalendarDays } from "date-fns";
 
 interface TaskRow {
   id: string; type: string; status: string; payload_json: any; created_at: string;
@@ -17,9 +17,16 @@ interface TaskRow {
 
 const CONTEXTUAL_TASKS = new Set(["follow_up", "re_angle", "revive"]);
 
+interface DueRow {
+  id: string; description: string; amount_usd: number | string; kind: string; cadence: string;
+  next_due: string; status: string; account_id: string; item_id: string | null;
+  accounts?: { name: string } | null;
+}
+
 export default function Worklist() {
   const { workspace } = useWorkspace();
   const [tasks, setTasks] = useState<TaskRow[]>([]);
+  const [dueSoon, setDueSoon] = useState<DueRow[]>([]);
   const [contextByItem, setContextByItem] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +69,18 @@ export default function Worklist() {
     } else {
       setContextByItem({});
     }
+
+    // Revenue schedules due within 7 days (or already overdue).
+    const cutoff = new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10);
+    const { data: rev } = await (supabase as any)
+      .from("revenue_schedules")
+      .select("id, description, amount_usd, kind, cadence, next_due, status, account_id, item_id, accounts(name)")
+      .eq("workspace_id", workspace.id)
+      .not("next_due", "is", null)
+      .lte("next_due", cutoff)
+      .not("status", "in", "(paid,cancelled)");
+    setDueSoon((rev || []) as any);
+
     setLoading(false);
   }, [workspace]);
 
