@@ -119,25 +119,22 @@ export default function PursuitBoard() {
       .map(s => ({ state: s, items: grouped[s.id] || [] }));
   }, [states, pursuits]);
 
-  const onDrop = async (e: React.DragEvent, stateId: string) => {
-    e.preventDefault();
-    const id = dragId; setDragId(null);
-    if (!id) return;
-    const pursuit = pursuits.find(p => p.id === id);
-    if (!pursuit || pursuit.state_id === stateId) return;
-    const target = states.find(s => s.id === stateId);
+  const applyStateChange = async (pursuitId: string, targetStateId: string, disposition?: { followUpDate?: string; reason: string }) => {
+    const pursuit = pursuits.find(p => p.id === pursuitId);
+    if (!pursuit) return;
+    const target = states.find(s => s.id === targetStateId);
     const prevStateId = pursuit.state_id;
 
-    setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: stateId } : p));
+    setPursuits(prev => prev.map(p => p.id === pursuitId ? { ...p, state_id: targetStateId } : p));
 
     const res = await changeItemState({
-      item: { id, account_id: pursuit.account_id },
-      targetStateId: stateId,
+      item: { id: pursuitId, account_id: pursuit.account_id, workspace_id: workspace?.id },
+      targetStateId,
       states,
+      disposition,
     });
     if (!res.ok) {
-      // Revert optimistic move + surface reason.
-      setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: prevStateId } : p));
+      setPursuits(prev => prev.map(p => p.id === pursuitId ? { ...p, state_id: prevStateId } : p));
       toast.error(res.error || "Move blocked");
       return;
     }
@@ -146,17 +143,35 @@ export default function PursuitBoard() {
     if (/agreement/.test(targetName)) {
       try {
         await queueAction({
-          itemId: id,
+          itemId: pursuitId,
           type: "internal_task",
           channel: "system",
           source: "system",
           triggerState: target?.name,
           payloadJson: { task: "stand_up_revenue", note: "Stand up revenue schedule + Stripe links for this pursuit." },
-          idempotencyKey: `stand_up_revenue:${id}`,
+          idempotencyKey: `stand_up_revenue:${pursuitId}`,
         });
       } catch (err) { console.warn("queue stand_up_revenue task failed", err); }
     }
     toast.success("Moved");
+    // Refresh so client_ops parallel item creation is reflected everywhere.
+    if (target?.name === "client") load();
+  };
+
+  const onDrop = async (e: React.DragEvent, stateId: string) => {
+    e.preventDefault();
+    const id = dragId; setDragId(null);
+    if (!id) return;
+    const pursuit = pursuits.find(p => p.id === id);
+    if (!pursuit || pursuit.state_id === stateId) return;
+    const target = states.find(s => s.id === stateId);
+    if (!target) return;
+    // Disposition states require a dialog (date + reason for case_open, reason for case_closed).
+    if (target.name === "case_open" || target.name === "case_closed") {
+      setPendingDisposition({ pursuitId: id, targetStateId: stateId, kind: target.name });
+      return;
+    }
+    await applyStateChange(id, stateId);
   };
 
   const stateNameById = useMemo(() => {
