@@ -25,6 +25,7 @@ import ConnectorsList from "@/pages/ConnectorsList";
 import SuppressionList from "@/pages/SuppressionList";
 import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
+import RevenueDesk from "@/pages/RevenueDesk";
 import Index from "@/pages/Index";
 import { Hero } from "@/components/Hero";
 import HeroStory from "@/components/HeroStory";
@@ -120,6 +121,7 @@ const App = () => (
             <Route path="suppression" element={<SuppressionList />} />
             <Route path="scheduler-health" element={<SchedulerHealth />} />
             <Route path="billing" element={<BillingUsage />} />
+            <Route path="revenue" element={<RevenueDesk />} />
             <Route path="builds" element={<BuildsAdmin />} />
           </Route>
           {/* Legacy product paths → redirect into /app/* */}
