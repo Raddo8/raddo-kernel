@@ -115,8 +115,55 @@ export default function PursuitBoard() {
       channel: "system",
       summary: `State changed to ${target?.label || "unknown"}`,
     });
+
+    // Playbook hook: pursuit → agreement fires an internal task.
+    const targetName = (target?.name || target?.label || "").toLowerCase();
+    if (/agreement/.test(targetName)) {
+      try {
+        await queueAction({
+          itemId: id,
+          type: "internal_task",
+          channel: "system",
+          source: "system",
+          triggerState: target?.name,
+          payloadJson: { task: "stand_up_revenue", note: "Stand up revenue schedule + Stripe links for this pursuit." },
+          idempotencyKey: `stand_up_revenue:${id}`,
+        });
+      } catch (err) {
+        console.warn("queue stand_up_revenue task failed", err);
+      }
+    }
+
     toast.success("Moved");
   };
+
+  const rollup = useMemo(() => {
+    const per: Record<string, { oneTime: number; monthly: number }> = {};
+    for (const p of pursuits) {
+      const rows = revByItem[p.id] || [];
+      const bucket = per[p.state_id] ||= { oneTime: 0, monthly: 0 };
+      for (const r of rows) {
+        if (r.status === "cancelled") continue;
+        const v = typeof r.amount_usd === "string" ? parseFloat(r.amount_usd) : r.amount_usd;
+        if (!Number.isFinite(v)) continue;
+        if (r.kind === "one_time") bucket.oneTime += v;
+        else if (r.kind === "subscription") bucket.monthly += v;
+      }
+    }
+    return per;
+  }, [pursuits, revByItem]);
+
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  const rollupLine = states
+    .filter(s => rollup[s.id] && (rollup[s.id].oneTime > 0 || rollup[s.id].monthly > 0))
+    .map(s => {
+      const r = rollup[s.id];
+      const parts: string[] = [];
+      if (r.oneTime > 0) parts.push(`${fmt(r.oneTime)} one-time`);
+      if (r.monthly > 0) parts.push(`${fmt(r.monthly)}/mo`);
+      return `${s.label}: ${parts.join(" + ")}`;
+    })
+    .join(" · ");
 
   return (
     <div className="flex flex-col h-full">
