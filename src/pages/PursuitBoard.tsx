@@ -8,6 +8,7 @@ import { LayoutGrid } from "lucide-react";
 import { HeatBadge, signalHeat } from "@/components/SignalsPanel";
 import { toast } from "sonner";
 import { writeTimelineEvent } from "@/lib/timeline-events";
+import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
@@ -18,11 +19,14 @@ interface Pursuit {
 
 const TERMINAL_STATES = new Set(["lost", "parked"]);
 
+interface RevRow { item_id: string | null; kind: string; amount_usd: number | string; cadence: string; status: string; }
+
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
+  const [revByItem, setRevByItem] = useState<Record<string, RevRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -61,6 +65,19 @@ export default function PursuitBoard() {
     } else {
       setSignalsBySlug({});
     }
+
+    // Fetch revenue schedules for rollup
+    const { data: rev } = await (supabase as any)
+      .from("revenue_schedules")
+      .select("item_id, kind, amount_usd, cadence, status")
+      .eq("workspace_id", workspace.id);
+    const revMap: Record<string, RevRow[]> = {};
+    for (const r of rev || []) {
+      if (!r.item_id) continue;
+      (revMap[r.item_id] ||= []).push(r as RevRow);
+    }
+    setRevByItem(revMap);
+
     setLoading(false);
   }, [workspace]);
 
@@ -98,12 +115,64 @@ export default function PursuitBoard() {
       channel: "system",
       summary: `State changed to ${target?.label || "unknown"}`,
     });
+
+    // Playbook hook: pursuit → agreement fires an internal task.
+    const targetName = (target?.name || target?.label || "").toLowerCase();
+    if (/agreement/.test(targetName)) {
+      try {
+        await queueAction({
+          itemId: id,
+          type: "internal_task",
+          channel: "system",
+          source: "system",
+          triggerState: target?.name,
+          payloadJson: { task: "stand_up_revenue", note: "Stand up revenue schedule + Stripe links for this pursuit." },
+          idempotencyKey: `stand_up_revenue:${id}`,
+        });
+      } catch (err) {
+        console.warn("queue stand_up_revenue task failed", err);
+      }
+    }
+
     toast.success("Moved");
   };
+
+  const rollup = useMemo(() => {
+    const per: Record<string, { oneTime: number; monthly: number }> = {};
+    for (const p of pursuits) {
+      const rows = revByItem[p.id] || [];
+      const bucket = per[p.state_id] ||= { oneTime: 0, monthly: 0 };
+      for (const r of rows) {
+        if (r.status === "cancelled") continue;
+        const v = typeof r.amount_usd === "string" ? parseFloat(r.amount_usd) : r.amount_usd;
+        if (!Number.isFinite(v)) continue;
+        if (r.kind === "one_time") bucket.oneTime += v;
+        else if (r.kind === "subscription") bucket.monthly += v;
+      }
+    }
+    return per;
+  }, [pursuits, revByItem]);
+
+  const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+  const rollupLine = states
+    .filter(s => rollup[s.id] && (rollup[s.id].oneTime > 0 || rollup[s.id].monthly > 0))
+    .map(s => {
+      const r = rollup[s.id];
+      const parts: string[] = [];
+      if (r.oneTime > 0) parts.push(`${fmt(r.oneTime)} one-time`);
+      if (r.monthly > 0) parts.push(`${fmt(r.monthly)}/mo`);
+      return `${s.label}: ${parts.join(" + ")}`;
+    })
+    .join(" · ");
 
   return (
     <div className="flex flex-col h-full">
       <PageHeader title="Pursuit Board" subtitle="Drag pursuits between states" />
+      {rollupLine && (
+        <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
+          Pipeline · {rollupLine}
+        </div>
+      )}
       {loading ? (
         <div className="p-6 text-sm text-muted-foreground">Loading…</div>
       ) : columns.length === 0 ? (

@@ -20,6 +20,7 @@ import {
   BarChart3,
   Check,
   ChevronsUpDown,
+  DollarSign,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -48,6 +49,7 @@ export default function AppSidebar() {
     ...(isBd ? [
       { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
+      { to: "/app/revenue", label: "Revenue", icon: DollarSign },
     ] : []),
     { to: "/app/accounts", label: labels.accounts, icon: Building2 },
     { to: "/app/contacts", label: "Contacts", icon: Users },
