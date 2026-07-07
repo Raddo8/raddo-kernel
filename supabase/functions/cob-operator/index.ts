@@ -480,12 +480,12 @@ Deno.serve(async (req: Request) => {
           channel: "system",
           summary: `Work order ${outcome} · ${(wo as any).order_type}`,
           body: resultNote,
-          raw_json: { source: "cob-operator", work_order_id: id, outcome, files: registered_files, approval_id },
+          raw_json: { source: "cob-operator", work_order_id: id, outcome, files: registered_files, approval_id, auto_applied_state },
           occurred_at: new Date().toISOString(),
         });
       }
 
-      return json(200, { ok: true, work_order_id: id, registered_files, approval_id });
+      return json(200, { ok: true, work_order_id: id, registered_files, approval_id, auto_applied_state });
     }
 
     return json(400, { error: "unhandled_action" });
