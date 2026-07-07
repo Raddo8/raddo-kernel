@@ -43,10 +43,11 @@ export default function ClientBoard() {
     if (accountIds.length > 0) {
       const { data: rev } = await (supabase as any)
         .from("revenue_schedules")
-        .select("account_id, amount_usd, cadence, status")
+        .select("account_id, amount_usd, cadence, status, counted")
         .in("account_id", accountIds);
       const map: Record<string, number> = {};
       for (const r of rev || []) {
+        if (r.counted === false) continue;
         if (r.cadence === "monthly" && (r.status === "active" || r.status === "invoiced" || r.status === "paid")) {
           map[r.account_id] = (map[r.account_id] || 0) + Number(r.amount_usd || 0);
         }
