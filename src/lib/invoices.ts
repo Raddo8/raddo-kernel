@@ -18,6 +18,17 @@ import {
   type OccurrenceOverride, type Schedule,
 } from "@/lib/revenue-math";
 
+/**
+ * Parse a YYYY-MM string as the first-of-month in LOCAL time.
+ * Never construct `new Date("YYYY-MM-01T00:00:00Z")` for month pickers —
+ * UTC midnight resolves to the previous month for any zone west of UTC,
+ * which is what caused the June→May "Period" offset bug.
+ */
+export function parseMonthInputLocal(monthStr: string): Date {
+  const [yyyy, mm] = monthStr.split("-").map((v) => parseInt(v, 10));
+  return new Date(yyyy, (mm || 1) - 1, 1);
+}
+
 export type InvoiceStatus =
   | "draft" | "auto_draft" | "issued" | "sent" | "paid" | "overdue" | "void";
 export type PaidVia = "stripe" | "bank" | "manual";
