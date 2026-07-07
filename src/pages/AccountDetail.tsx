@@ -27,7 +27,8 @@ export default function AccountDetail() {
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
   const [cPhone, setCPhone] = useState("");
-  const [cRole, setCRole] = useState("");
+  const [cTitle, setCTitle] = useState("");
+  const [cDm, setCDm] = useState(false);
   const [editContact, setEditContact] = useState<ContactRow | null>(null);
   const [editContactOpen, setEditContactOpen] = useState(false);
   const [editAccountOpen, setEditAccountOpen] = useState(false);
