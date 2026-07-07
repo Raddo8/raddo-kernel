@@ -62,11 +62,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (iErr || !inv) return jsonResponse({ error: "invoice not found" }, 404);
 
-    const { data: isMember } = await supabase.rpc("is_workspace_member", {
+    const { data: isMemberInv } = await supabase.rpc("is_workspace_member", {
       _user_id: user.id,
       _workspace_id: inv.workspace_id,
     });
-    if (!isMember) return jsonResponse({ error: "forbidden" }, 403);
+    if (!isMemberInv) return jsonResponse({ error: "forbidden" }, 403);
 
     if (inv.status === "paid" || inv.status === "void") {
       return jsonResponse({ error: `invoice is ${inv.status}` }, 400);
