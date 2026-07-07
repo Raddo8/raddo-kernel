@@ -236,6 +236,66 @@ export type Database = {
           },
         ]
       }
+      approval_requests: {
+        Row: {
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          item_id: string
+          kind: string
+          note: string | null
+          payload: Json
+          requested_by: string | null
+          status: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          item_id: string
+          kind: string
+          note?: string | null
+          payload?: Json
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          item_id?: string
+          kind?: string
+          note?: string | null
+          payload?: Json
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       build_views: {
         Row: {
           build_id: string
@@ -1048,6 +1108,77 @@ export type Database = {
           window_start?: string
         }
         Relationships: []
+      }
+      record_files: {
+        Row: {
+          account_id: string
+          created_at: string
+          file_name: string
+          id: string
+          item_id: string | null
+          kind: string
+          size_bytes: number
+          storage_path: string
+          superseded_by: string | null
+          uploaded_by: string | null
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          file_name: string
+          id?: string
+          item_id?: string | null
+          kind?: string
+          size_bytes?: number
+          storage_path: string
+          superseded_by?: string | null
+          uploaded_by?: string | null
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          file_name?: string
+          id?: string
+          item_id?: string | null
+          kind?: string
+          size_bytes?: number
+          storage_path?: string
+          superseded_by?: string | null
+          uploaded_by?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "record_files_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_files_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_files_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "record_files"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "record_files_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       revenue_occurrence_overrides: {
         Row: {
