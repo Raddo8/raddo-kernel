@@ -48,6 +48,7 @@ export default function AppSidebar() {
     { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
     ...(isBd ? [
       { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
+      { to: "/app/clients", label: "Client Board", icon: Users },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
     ] : []),
