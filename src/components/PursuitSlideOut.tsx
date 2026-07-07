@@ -374,6 +374,18 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
           onSaved={load}
           actorEmail={actorEmail}
         />
+        <OccurrenceEditorDialog
+          open={!!occEdit}
+          onOpenChange={(v) => { if (!v) setOccEdit(null); }}
+          onSaved={load}
+          schedule={occEdit?.schedule ?? null}
+          baseDate={occEdit?.baseDate ?? null}
+          currentAmount={occEdit?.amount ?? 0}
+          currentDate={occEdit?.date ?? null}
+          existingOverride={occEdit?.existing ?? null}
+          actorEmail={actorEmail}
+          workspaceId={occEdit?.schedule?.workspace_id ?? ""}
+        />
       </SheetContent>
     </Sheet>
   );
