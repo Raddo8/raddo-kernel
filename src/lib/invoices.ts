@@ -273,6 +273,8 @@ async function insertInvoice(args: {
   workspaceId: string;
   accountId: string;
   billingPeriod: string;
+  /** Due date computed from the occurrence itself (not issue+net). */
+  dueDate: string;
   lines: InvoiceLineItem[];
   subtotal: number;
   mode: BillingMode;
@@ -281,14 +283,13 @@ async function insertInvoice(args: {
 }) {
   const number = await nextInvoiceNumber(args.workspaceId);
   const issue = new Date();
-  const due = addDays(issue, DEFAULT_NET_DAYS);
   const status: InvoiceStatus = args.mode === "auto_draft" ? "auto_draft" : "draft";
   const { data, error } = await (supabase as any).from("invoices").insert({
     workspace_id: args.workspaceId,
     account_id: args.accountId,
     invoice_number: number,
     issue_date: format(issue, "yyyy-MM-dd"),
-    due_date: format(due, "yyyy-MM-dd"),
+    due_date: args.dueDate,
     billing_period: args.billingPeriod,
     billing_mode: args.mode,
     line_items: args.lines,
@@ -304,9 +305,48 @@ async function insertInvoice(args: {
     direction: "system",
     channel: "system",
     summary: `Invoice ${data?.invoice_number} drafted (${status.replace("_", " ")})`,
-    rawJson: { invoice_id: data?.id, billing_period: args.billingPeriod, subtotal: args.subtotal, mode: args.mode },
+    rawJson: { invoice_id: data?.id, billing_period: args.billingPeriod, due_date: args.dueDate, subtotal: args.subtotal, mode: args.mode },
   });
-  return data;
+  return data as { id: string; invoice_number: string } | null;
+}
+
+/** Update editable fields on an invoice. Financials locked once paid/void; dates always editable. */
+export async function updateInvoiceEditable(params: {
+  invoice: Invoice;
+  patch: {
+    issue_date?: string;
+    due_date?: string;
+    billing_period?: string;
+    notes?: string | null;
+    line_items?: InvoiceLineItem[];
+  };
+  actorEmail?: string | null;
+}): Promise<boolean> {
+  const locked = params.invoice.status === "paid" || params.invoice.status === "void";
+  const patch: any = {};
+  if (params.patch.issue_date !== undefined) patch.issue_date = params.patch.issue_date;
+  if (params.patch.due_date !== undefined) patch.due_date = params.patch.due_date;
+  if (!locked) {
+    if (params.patch.billing_period !== undefined) patch.billing_period = params.patch.billing_period;
+    if (params.patch.notes !== undefined) patch.notes = params.patch.notes;
+    if (params.patch.line_items !== undefined) {
+      patch.line_items = params.patch.line_items;
+      const sub = params.patch.line_items.reduce((n, l) => n + Number(l.amount_usd || 0), 0);
+      patch.subtotal = sub;
+      patch.total = sub;
+    }
+  }
+  if (Object.keys(patch).length === 0) return true;
+  const { error } = await (supabase as any).from("invoices").update(patch).eq("id", params.invoice.id);
+  if (error) return false;
+  await writeTimelineEvent({
+    accountId: params.invoice.account_id,
+    direction: "system",
+    channel: "system",
+    summary: `Invoice ${params.invoice.invoice_number} edited`,
+    rawJson: { invoice_id: params.invoice.id, patch, actor: params.actorEmail ?? null },
+  });
+  return true;
 }
 
 /** Mark an invoice paid (manual · bank · or explicit stripe backfill). */
