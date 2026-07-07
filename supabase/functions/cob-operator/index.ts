@@ -8,7 +8,12 @@ const WORKSPACE_ID = "b0c00b00-0000-4000-8000-000000000001";
 const ALLOWED_ACTIONS = new Set([
   "list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task",
   "upload_file", "create_approval_request", "list_approval_requests",
+  "list_work_orders", "claim_work_order", "complete_work_order",
 ]);
+const ALLOWED_ORDER_TYPES = new Set([
+  "qualify_enrichment","deepdive","build_asset","prepare_send","draft_nudge","revisit",
+]);
+
 const ALLOWED_LAYERS = new Set(["L1", "L2", "L3", "L4", "L5"]);
 const GATED_STATES = new Set([
   "qualified", "deepdive", "asset_built", "meeting_set",
