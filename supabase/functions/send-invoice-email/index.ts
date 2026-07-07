@@ -15,8 +15,8 @@ const BRASS = "#EF9F27";
 const ASH = "#5F5E5A";
 const CHARCOAL = "#2C2C2A";
 
-const FROM_ADDRESS = "billing@chiefofbusiness.ai";
-const FROM_DISPLAY = "COB Billing";
+const FROM_ADDRESS = "cob@chiefofbusiness.ai";
+const FROM_DISPLAY = "COB · Chief of Business";
 
 const BodySchema = z.object({
   invoice_id: z.string().uuid(),
