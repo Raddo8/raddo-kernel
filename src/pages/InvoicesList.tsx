@@ -315,9 +315,9 @@ export default function InvoicesList() {
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
-                        {(inv.status === "draft" || inv.status === "auto_draft") && (
-                          <Button size="sm" variant="outline" onClick={() => setIssueDialog(inv)}>
-                            <Send className="w-3 h-3 mr-1" /> Issue
+                        {inv.status !== "paid" && inv.status !== "void" && (
+                          <Button size="sm" variant="outline" onClick={() => setIssueDialog(inv)} title="Send · payment link">
+                            <Send className="w-3 h-3 mr-1" /> Send
                           </Button>
                         )}
                         {inv.status !== "paid" && inv.status !== "void" && (
