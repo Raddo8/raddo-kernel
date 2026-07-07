@@ -8,6 +8,7 @@ import { LayoutGrid } from "lucide-react";
 import { HeatBadge, signalHeat } from "@/components/SignalsPanel";
 import { toast } from "sonner";
 import { writeTimelineEvent } from "@/lib/timeline-events";
+import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
