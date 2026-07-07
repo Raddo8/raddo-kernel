@@ -62,9 +62,12 @@ export default function ContactsList() {
       email: cEmail.trim() || null,
       phone: cPhone.trim() || null,
       role: cRole.trim() || null,
-    });
+      title: cRole.trim() || null,
+      is_decision_maker: cDm,
+      email_verified: cVerified,
+    } as any);
     if (error) { toast.error(error.message); return; }
-    setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setCAccountId("");
+    setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setCAccountId(""); setCDm(false); setCVerified(false);
     setOpen(false);
     fetchContacts();
     toast.success("Contact added");
