@@ -464,39 +464,59 @@ export function buildIssueEmailDraft(params: {
   const dueLabel = fmtDate(inv.due_date);
   const total = Number(inv.total ?? inv.subtotal ?? 0);
   const greetName = params.contactName?.trim() || "there";
-  const lines: string[] = [];
-  lines.push(`Hi ${greetName},`);
-  lines.push("");
-  lines.push(`Please find invoice ${inv.invoice_number} for ${params.accountName} attached below.`);
-  lines.push("");
-  lines.push(`Invoice number: ${inv.invoice_number}`);
-  lines.push(`Billing period: ${periodLabel}`);
-  lines.push(`Amount due:     ${fmtMoneyPlain(total)}`);
-  lines.push(`Due date:       ${dueLabel}`);
-  lines.push("");
-  if (inv.stripe_payment_link) {
-    lines.push(`Pay online: ${inv.stripe_payment_link}`);
-    lines.push("");
-  }
+  const signOff = params.workspaceName?.trim() || "COB Technologies LLC";
+
+  const sections: string[] = [];
+
+  // Greeting + one-line intent
+  sections.push(
+    `Hi ${greetName},\n\n` +
+    `Invoice ${inv.invoice_number} for ${params.accountName} is ready. ` +
+    `Details are below.`
+  );
+
+  // Invoice details block — one label per line, no fake column padding
+  sections.push(
+    `Invoice details\n` +
+    `Invoice number: ${inv.invoice_number}\n` +
+    `Billing period: ${periodLabel}\n` +
+    `Amount due: ${fmtMoneyPlain(total)}\n` +
+    `Due date: ${dueLabel}`
+  );
+
+  // Remittance / wiring — each line stands on its own
   const remit = (params.remittance || "").trim();
   if (remit) {
-    lines.push("Remittance instructions:");
-    lines.push(remit);
-    lines.push("");
+    sections.push(`Remittance / wiring instructions\n${remit}`);
   }
+
+  // Pay online — clearly separated
+  if (inv.stripe_payment_link) {
+    sections.push(`Pay online\n${inv.stripe_payment_link}`);
+  }
+
+  // Notes (optional)
   if (inv.notes) {
-    lines.push(`Notes: ${inv.notes}`);
-    lines.push("");
+    sections.push(`Notes\n${inv.notes}`);
   }
-  lines.push("Any questions, just reply to this email.");
-  lines.push("");
-  lines.push("Thank you,");
-  lines.push(params.workspaceName?.trim() || "COB · Chief of Business");
+
+  // Close
+  sections.push(
+    `Any questions, just reply to this email.\n\n` +
+    `Thank you,\n${signOff}`
+  );
+
+  // Join with blank lines between sections; trim trailing whitespace per line
+  const body = sections
+    .join("\n\n")
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+$/g, ""))
+    .join("\n");
 
   return {
     to: params.contactEmail?.trim() || "",
     subject: `Invoice ${inv.invoice_number} · ${params.accountName} · ${periodLabel}`,
-    body: lines.join("\n"),
+    body,
   };
 }
 
