@@ -39,7 +39,7 @@ export default function AccountEditDialog({
     setSaving(true);
     const nextMeta = { ...(account.metadata || {}), utm_slug: utmSlug.trim() || undefined };
     if (!utmSlug.trim()) delete (nextMeta as any).utm_slug;
-    const patch = { name: name.trim(), type, status, metadata: nextMeta };
+    const patch = { name: name.trim(), type, status, metadata: nextMeta, billing_mode: billingMode };
     const { error } = await supabase.from("accounts").update(patch).eq("id", account.id);
     if (error) { toast.error(error.message); setSaving(false); return; }
     await writeAuditEvent({
@@ -51,6 +51,7 @@ export default function AccountEditDialog({
         { field: "type", before: account.type, after: patch.type },
         { field: "status", before: account.status, after: patch.status },
         { field: "utm_slug", before: account.metadata?.utm_slug ?? null, after: nextMeta.utm_slug ?? null },
+        { field: "billing_mode", before: account.billing_mode ?? "manual", after: billingMode },
       ],
     });
     setSaving(false);
