@@ -164,10 +164,24 @@ export default function PursuitBoard() {
         });
       } catch (err) { console.warn("queue stand_up_revenue task failed", err); }
     }
+
+    // Autopilot: pre-queue the intelligence work order tied to the newly-entered state.
+    if (workspace?.id && res.state?.name) {
+      try {
+        const ap = await maybeQueueAutopilotOrder({
+          item: { id: pursuitId, account_id: pursuit.account_id, workspace_id: workspace.id, metadata: pursuit.metadata },
+          newStateName: res.state.name,
+          workspaceAutopilot,
+        });
+        if (ap.queued && ap.orderType) toast.info(`Autopilot queued · ${orderTypeLabel(ap.orderType)}`);
+      } catch (e) { console.warn("autopilot queue failed", e); }
+    }
+
     toast.success("Moved");
-    // Refresh so client_ops parallel item creation is reflected everywhere.
-    if (target?.name === "client") load();
+    // Refresh so client_ops mirror + WO chips reflect everywhere.
+    load();
   };
+
 
   const onDrop = async (e: React.DragEvent, stateId: string) => {
     e.preventDefault();
