@@ -120,16 +120,66 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
 
   const primaryTitle = primary?.title ?? primary?.role ?? null;
 
+  const activeOrderForNext = nextAction?.orderType
+    ? workOrders.find(w => w.order_type === nextAction.orderType)
+    : null;
+
   const doAdvance = async () => {
-    if (!item || !targetStateRow) return;
+    if (!item || !nextAction) return;
+
+    // Intelligence transition: create a work order for the engine · do NOT change state.
+    if (nextAction.intelligence && nextAction.orderType) {
+      // Enforce the qualified-gate precondition even before queuing intelligence work
+      // for the "signal → qualified" transition (dossier + DM email).
+      if (nextAction.target === "qualified" && !dmWithEmail) {
+        toast.error("Add a decision-maker contact with an email before queuing qualification.");
+        return;
+      }
+      setBusy(true);
+      const res = await queueWorkOrder({
+        workspaceId: item.workspace_id,
+        itemId: item.id,
+        orderType: nextAction.orderType,
+        createdBy: "manual",
+      });
+      setBusy(false);
+      if (res.error) { toast.error(res.error); return; }
+      toast.success(res.created
+        ? `Queued for COB · ${orderTypeLabel(nextAction.orderType)}`
+        : `Already queued · ${orderTypeLabel(nextAction.orderType)}`);
+      await load();
+      onChanged();
+      return;
+    }
+
+    // Factual transition: advance state directly.
+    if (!targetStateRow) return;
     setBusy(true);
     const res = await changeItemState({ item, targetStateId: targetStateRow.id, states });
+    if (res.ok) {
+      // Autopilot: pre-queue the intelligence order for the newly-entered state.
+      await maybeQueueAutopilotOrder({
+        item: { id: item.id, account_id: item.account_id, workspace_id: item.workspace_id, metadata: item.metadata },
+        newStateName: res.state?.name || "",
+        workspaceAutopilot,
+      });
+    }
     setBusy(false);
     if (!res.ok) { toast.error(res.error || "Blocked"); return; }
     toast.success(`Moved to ${res.state?.label}`);
     await load();
     onChanged();
   };
+
+  const setItemAutopilot = async (mode: "auto" | "manual" | "inherit") => {
+    if (!item) return;
+    const meta = { ...(item.metadata || {}), autopilot: mode };
+    const { error } = await supabase.from("items").update({ metadata: meta }).eq("id", item.id);
+    if (error) { toast.error(error.message); return; }
+    setItem({ ...item, metadata: meta });
+    toast.success(`Pursuit autopilot · ${mode}`);
+  };
+
 
   const addContact = async () => {
     if (!item || !addName.trim() || !addEmail.trim()) return;
