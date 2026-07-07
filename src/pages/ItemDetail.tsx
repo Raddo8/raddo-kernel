@@ -19,6 +19,7 @@ import { writeTimelineEvent } from "@/lib/timeline-events";
 import { useLabels } from "@/lib/labels-context";
 import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
+import { changeItemState } from "@/lib/state-transitions";
 
 export default function ItemDetail() {
   const labels = useLabels();
