@@ -23,6 +23,8 @@ export default function ContactsList() {
   const [cEmail, setCEmail] = useState("");
   const [cPhone, setCPhone] = useState("");
   const [cRole, setCRole] = useState("");
+  const [cDm, setCDm] = useState(false);
+  const [cVerified, setCVerified] = useState(false);
   const [cAccountId, setCAccountId] = useState("");
   const [editContact, setEditContact] = useState<ContactRow | null>(null);
   const [editOpen, setEditOpen] = useState(false);
