@@ -524,3 +524,89 @@ export function mailtoUrl(draft: { to: string; subject: string; body: string }):
   const q = new URLSearchParams({ subject: draft.subject, body: draft.body });
   return `mailto:${encodeURIComponent(draft.to)}?${q.toString()}`;
 }
+
+/* ---------------- Stripe payment link (hybrid rail) ---------------- */
+
+export interface PaymentsStatus {
+  stripe_connected: boolean;
+  stripe_test_mode: boolean | null;
+}
+
+export async function checkPaymentsStatus(): Promise<PaymentsStatus> {
+  try {
+    const { data, error } = await supabase.functions.invoke("stripe-payments-admin", {
+      body: { action: "status" },
+    });
+    if (error) return { stripe_connected: false, stripe_test_mode: null };
+    return {
+      stripe_connected: Boolean((data as any)?.connected),
+      stripe_test_mode: (data as any)?.test_mode ?? null,
+    };
+  } catch {
+    return { stripe_connected: false, stripe_test_mode: null };
+  }
+}
+
+/** Create a Stripe Payment Link tied to this invoice. Idempotent — reuses an existing link. */
+export async function createInvoicePaymentLink(invoiceId: string): Promise<{ url: string } | { error: string }> {
+  const { data, error } = await supabase.functions.invoke("stripe-payments-admin", {
+    body: { action: "create_invoice_payment_link", invoice_id: invoiceId },
+  });
+  if (error) {
+    // supabase-js swallows the body on non-2xx; try to read it.
+    const anyErr = error as any;
+    const details = anyErr?.context ? await anyErr.context.text().catch(() => "") : "";
+    return { error: details || anyErr.message || "Failed to create payment link" };
+  }
+  if ((data as any)?.error) return { error: (data as any).error };
+  const url = (data as any)?.url as string | undefined;
+  if (!url) return { error: "No URL returned" };
+  return { url };
+}
+
+/* ---------------- Branded email send (Resend) ---------------- */
+
+export interface SendInvoiceEmailResult {
+  ok: boolean;
+  messageId?: string | null;
+  to?: string;
+  error?: string;
+  detail?: string;
+}
+
+export async function sendInvoiceEmail(params: {
+  invoiceId: string;
+  to?: string;
+  subject?: string;
+  message?: string;
+}): Promise<SendInvoiceEmailResult> {
+  const { data, error } = await supabase.functions.invoke("send-invoice-email", {
+    body: {
+      invoice_id: params.invoiceId,
+      to: params.to?.trim() || undefined,
+      subject: params.subject?.trim() || undefined,
+      message: params.message?.trim() || undefined,
+      confirmed: true,
+    },
+  });
+  if (error) {
+    const anyErr = error as any;
+    const bodyText = anyErr?.context ? await anyErr.context.text().catch(() => "") : "";
+    let parsed: any = {};
+    try { parsed = bodyText ? JSON.parse(bodyText) : {}; } catch { /* raw text */ }
+    return {
+      ok: false,
+      error: parsed?.error || anyErr.message || "send_failed",
+      detail: parsed?.detail || bodyText || undefined,
+    };
+  }
+  if ((data as any)?.success === false) {
+    return { ok: false, error: (data as any).error, detail: (data as any).detail };
+  }
+  return {
+    ok: true,
+    messageId: (data as any)?.messageId ?? null,
+    to: (data as any)?.to,
+  };
+}
+
