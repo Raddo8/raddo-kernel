@@ -16,6 +16,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import AccountEditDialog from "@/components/dialogs/AccountEditDialog";
 import AccountOnboardingTab from "@/components/AccountOnboardingTab";
+import CompanyProfilePanel from "@/components/CompanyProfilePanel";
 import { expandOccurrences, fmtUsd, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
 import { format, addMonths } from "date-fns";
 
