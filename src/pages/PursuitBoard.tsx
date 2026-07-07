@@ -14,14 +14,16 @@ import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
 import { changeItemState } from "@/lib/state-transitions";
 import PursuitSlideOut from "@/components/PursuitSlideOut";
+import DispositionDialog from "@/components/dialogs/DispositionDialog";
 
-interface State { id: string; name: string; label: string; color: string; sort_order: number; }
+interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface Pursuit {
   id: string; title: string; state_id: string; account_id: string; updated_at: string;
   metadata: any; accounts?: { id: string; name: string; metadata: any } | null;
 }
 
-const TERMINAL_STATES = new Set(["lost", "parked"]);
+const TERMINAL_STATES = new Set(["case_closed"]);
+const DISPOSITION_NAMES = new Set(["case_open", "case_closed"]);
 
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
@@ -34,6 +36,7 @@ export default function PursuitBoard() {
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
   const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
+  const [pendingDisposition, setPendingDisposition] = useState<{ pursuitId: string; targetStateId: string; kind: "case_open" | "case_closed" } | null>(null);
   const [showRaw,      setShowRaw]      = useViewPref("board.showRaw",      true);
   const [showWeighted, setShowWeighted] = useViewPref("board.showWeighted", false);
   const [showContact,  setShowContact]  = useViewPref("board.showContact",  true);
