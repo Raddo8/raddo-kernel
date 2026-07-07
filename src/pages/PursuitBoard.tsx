@@ -19,11 +19,14 @@ interface Pursuit {
 
 const TERMINAL_STATES = new Set(["lost", "parked"]);
 
+interface RevRow { item_id: string | null; kind: string; amount_usd: number | string; cadence: string; status: string; }
+
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
+  const [revByItem, setRevByItem] = useState<Record<string, RevRow[]>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
 
@@ -62,6 +65,19 @@ export default function PursuitBoard() {
     } else {
       setSignalsBySlug({});
     }
+
+    // Fetch revenue schedules for rollup
+    const { data: rev } = await (supabase as any)
+      .from("revenue_schedules")
+      .select("item_id, kind, amount_usd, cadence, status")
+      .eq("workspace_id", workspace.id);
+    const revMap: Record<string, RevRow[]> = {};
+    for (const r of rev || []) {
+      if (!r.item_id) continue;
+      (revMap[r.item_id] ||= []).push(r as RevRow);
+    }
+    setRevByItem(revMap);
+
     setLoading(false);
   }, [workspace]);
 
