@@ -13,6 +13,7 @@ const SENDER_REGISTRY = {
   "jake@chiefofbusiness.ai": "Jake Burkett",
   "phillip@chiefofbusiness.ai": "Phillip Cates",
   "raddo@chiefofbusiness.ai": "Raddo",
+  "billing@chiefofbusiness.ai": "COB Billing",
 } as const;
 
 type AllowedSender = keyof typeof SENDER_REGISTRY;
