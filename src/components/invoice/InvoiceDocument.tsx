@@ -173,16 +173,30 @@ export default function InvoiceDocument({ invoice, account, contact, remittance 
         </div>
       </section>
 
+      {/* Pay online */}
+      {payLink && (
+        <section style={{ marginTop: 24, fontSize: 11, lineHeight: 1.5 }}>
+          <div style={{
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
+            letterSpacing: "0.16em", textTransform: "uppercase",
+            color: "#5F5E5A", marginBottom: 6,
+          }}>Pay online</div>
+          <a href={payLink} style={{ color: "#042C53", textDecoration: "underline" }}>
+            {payLink}
+          </a>
+        </section>
+      )}
+
       {/* Terms / remit */}
-      <section style={{ marginTop: 32, fontSize: 11, lineHeight: 1.5 }}>
+      <section style={{ marginTop: 24, fontSize: 11, lineHeight: 1.5 }}>
         <div style={{
           fontFamily: "'JetBrains Mono', monospace", fontSize: 9,
           letterSpacing: "0.16em", textTransform: "uppercase",
           color: "#5F5E5A", marginBottom: 6,
         }}>
-          {remit.title}
+          {remitTitle(invoice.billing_mode)}
         </div>
-        <div style={{ whiteSpace: "pre-wrap", color: "#2C2C2A" }}>{remit.body}</div>
+        <div style={{ whiteSpace: "pre-wrap", color: "#2C2C2A" }}>{remitBody}</div>
         {invoice.notes && (
           <div style={{ marginTop: 12, color: "#2C2C2A" }}>
             <div style={{
@@ -192,10 +206,11 @@ export default function InvoiceDocument({ invoice, account, contact, remittance 
             }}>
               Notes
             </div>
-            {invoice.notes}
+            <div style={{ whiteSpace: "pre-wrap" }}>{invoice.notes}</div>
           </div>
         )}
       </section>
+
 
       {/* Footer */}
       <footer style={{
