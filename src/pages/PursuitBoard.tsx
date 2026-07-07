@@ -302,6 +302,18 @@ export default function PursuitBoard() {
         states={states}
         onChanged={load}
       />
+      {pendingDisposition && (
+        <DispositionDialog
+          open={!!pendingDisposition}
+          onOpenChange={(v) => { if (!v) setPendingDisposition(null); }}
+          disposition={pendingDisposition.kind}
+          onConfirm={async (args) => {
+            const { pursuitId, targetStateId } = pendingDisposition;
+            setPendingDisposition(null);
+            await applyStateChange(pursuitId, targetStateId, args);
+          }}
+        />
+      )}
     </div>
   );
 }
