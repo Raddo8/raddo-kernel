@@ -1,5 +1,8 @@
 # COB Operator API
 
+> **Architectural principle (binding).** The app is the control surface; COB is the engine.
+> The app NEVER performs or simulates intelligence work (research, deep dives, deck / site generation, email drafting, enrichment). For state transitions that require such work, the app creates **work orders** that the external COB engine executes; results return via `record_files` and `approval_requests`. The app must never mark intelligence work "done" on its own — state advances only when the engine completes the order and its approval is granted through the standard approvals queue.
+
 Single edge function: `cob-operator`. All requests are `POST` with JSON body and a required header `X-COB-Operator-Key` whose value is the project secret `COB_OPERATOR_KEY`.
 
 **Scope lock:** every endpoint is hard-scoped to workspace `b0c00b00-0000-4000-8000-000000000001` (COB HQ · BD). Any explicit `workspace_id` in the body that does not match is rejected with `403`.
@@ -7,6 +10,7 @@ Single edge function: `cob-operator`. All requests are `POST` with JSON body and
 **Rate limit:** 60 requests · minute · IP.
 
 Body shape: `{ "action": "<name>", ...args }`
+
 
 ## list_pursuits
 Returns board snapshot with signals heat.
