@@ -112,8 +112,13 @@ export default function PursuitBoard() {
       setPrimaryContactByAccount({});
     }
 
+    // Active work orders per item · powers the "Queued for COB" chips.
+    const woMap = await activeWorkOrdersByItem(list.map(p => p.id));
+    setWorkOrdersByItem(woMap);
+
     setLoading(false);
   }, [workspace]);
+
 
   useEffect(() => { load(); }, [load]);
 
