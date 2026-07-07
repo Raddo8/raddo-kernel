@@ -26,6 +26,7 @@ import SuppressionList from "@/pages/SuppressionList";
 import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import RevenueDesk from "@/pages/RevenueDesk";
+import InvoicesList from "@/pages/InvoicesList";
 import ClientBoard from "@/pages/ClientBoard";
 import KernelBoard from "@/pages/KernelBoard";
 import ProjectBuildsBoard from "@/pages/ProjectBuildsBoard";
@@ -126,6 +127,7 @@ const App = () => (
             <Route path="scheduler-health" element={<SchedulerHealth />} />
             <Route path="billing" element={<BillingUsage />} />
             <Route path="revenue" element={<RevenueDesk />} />
+            <Route path="invoices" element={<InvoicesList />} />
             <Route path="clients" element={<ClientBoard />} />
             <Route path="approvals" element={<ApprovalsQueue />} />
             <Route path="onboarding/kernel" element={<KernelBoard />} />

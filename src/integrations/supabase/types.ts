@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       accounts: {
         Row: {
+          billing_mode: string
           created_at: string
           id: string
           metadata: Json | null
@@ -27,6 +28,7 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          billing_mode?: string
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -38,6 +40,7 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          billing_mode?: string
           created_at?: string
           id?: string
           metadata?: Json | null
@@ -652,6 +655,122 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      invoice_number_sequences: {
+        Row: {
+          last_number: number
+          workspace_id: string
+          year: number
+        }
+        Insert: {
+          last_number?: number
+          workspace_id: string
+          year: number
+        }
+        Update: {
+          last_number?: number
+          workspace_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_number_sequences_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          account_id: string
+          billing_mode: string
+          billing_period: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          id: string
+          invoice_number: string
+          issue_date: string
+          line_items: Json
+          notes: string | null
+          paid_at: string | null
+          paid_note: string | null
+          paid_via: string | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_link: string | null
+          subtotal: number
+          total: number
+          updated_at: string
+          void_reason: string | null
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          billing_mode?: string
+          billing_period: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          id?: string
+          invoice_number: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          paid_at?: string | null
+          paid_note?: string | null
+          paid_via?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_link?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          billing_mode?: string
+          billing_period?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          line_items?: Json
+          notes?: string | null
+          paid_at?: string | null
+          paid_note?: string | null
+          paid_via?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_link?: string | null
+          subtotal?: number
+          total?: number
+          updated_at?: string
+          void_reason?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       item_states: {
         Row: {
@@ -1361,6 +1480,7 @@ export type Database = {
           description: string
           end_date: string | null
           id: string
+          invoice_separately: boolean
           item_id: string | null
           kind: string
           metadata: Json
@@ -1384,6 +1504,7 @@ export type Database = {
           description: string
           end_date?: string | null
           id?: string
+          invoice_separately?: boolean
           item_id?: string | null
           kind: string
           metadata?: Json
@@ -1407,6 +1528,7 @@ export type Database = {
           description?: string
           end_date?: string | null
           id?: string
+          invoice_separately?: boolean
           item_id?: string | null
           kind?: string
           metadata?: Json
@@ -1932,6 +2054,7 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean

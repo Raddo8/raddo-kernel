@@ -60,6 +60,7 @@ export default function RevenueScheduleDialog({
   const [end, setEnd] = useState("");
   const [next, setNext] = useState("");
   const [status, setStatus] = useState<string>("expected");
+  const [invoiceSeparately, setInvoiceSeparately] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -74,10 +75,12 @@ export default function RevenueScheduleDialog({
       setEnd(schedule.end_date ?? "");
       setNext(schedule.next_due ?? "");
       setStatus(schedule.status);
+      setInvoiceSeparately(Boolean((schedule as any).invoice_separately));
     } else {
       setAccountId(""); setItemId(""); setKind("one_time"); setCadence("once");
       setDescription(""); setAmount(""); setStart(""); setEnd(""); setNext("");
       setStatus("expected");
+      setInvoiceSeparately(false);
     }
   }, [schedule?.id, open]);
 
@@ -104,6 +107,7 @@ export default function RevenueScheduleDialog({
       end_date: end || null,
       next_due: next || null,
       status,
+      invoice_separately: invoiceSeparately,
     };
     if (editing && schedule) {
       const { error } = await (supabase as any)
@@ -219,6 +223,10 @@ export default function RevenueScheduleDialog({
               {STATUSES.map(s => <SelectItem key={s} value={s}>{s.replace(/_/g, " ")}</SelectItem>)}
             </SelectContent>
           </Select>
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={invoiceSeparately} onChange={e => setInvoiceSeparately(e.target.checked)} />
+            Invoice separately (not combined with other schedules on this account)
+          </label>
           <Button onClick={save} className="w-full" disabled={!canSave || saving}>
             {editing ? "Save changes" : "Add schedule"}
           </Button>

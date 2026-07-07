@@ -24,6 +24,7 @@ import {
   BellRing,
   Boxes,
   Hammer,
+  Receipt,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -68,6 +69,7 @@ export default function AppSidebar() {
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
       { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
+      { to: "/app/invoices", label: "Invoices", icon: Receipt },
     ] : []),
     { to: "/app/accounts", label: labels.accounts, icon: Building2 },
     { to: "/app/contacts", label: "Contacts", icon: Users },

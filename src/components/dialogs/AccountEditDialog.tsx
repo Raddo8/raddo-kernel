@@ -20,6 +20,7 @@ export default function AccountEditDialog({
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
   const [utmSlug, setUtmSlug] = useState("");
+  const [billingMode, setBillingMode] = useState<"manual"|"auto_draft">("manual");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function AccountEditDialog({
     setType(account.type ?? "prospect");
     setStatus(account.status ?? "active");
     setUtmSlug(account.metadata?.utm_slug ?? "");
+    setBillingMode((account.billing_mode as any) ?? "manual");
   }, [account?.id, open]);
 
   if (!account) return null;
@@ -37,7 +39,7 @@ export default function AccountEditDialog({
     setSaving(true);
     const nextMeta = { ...(account.metadata || {}), utm_slug: utmSlug.trim() || undefined };
     if (!utmSlug.trim()) delete (nextMeta as any).utm_slug;
-    const patch = { name: name.trim(), type, status, metadata: nextMeta };
+    const patch = { name: name.trim(), type, status, metadata: nextMeta, billing_mode: billingMode };
     const { error } = await supabase.from("accounts").update(patch).eq("id", account.id);
     if (error) { toast.error(error.message); setSaving(false); return; }
     await writeAuditEvent({
@@ -49,6 +51,7 @@ export default function AccountEditDialog({
         { field: "type", before: account.type, after: patch.type },
         { field: "status", before: account.status, after: patch.status },
         { field: "utm_slug", before: account.metadata?.utm_slug ?? null, after: nextMeta.utm_slug ?? null },
+        { field: "billing_mode", before: account.billing_mode ?? "manual", after: billingMode },
       ],
     });
     setSaving(false);
@@ -82,6 +85,18 @@ export default function AccountEditDialog({
             </Select>
           </div>
           <Input placeholder="UTM slug (e.g. pinnacle)" value={utmSlug} onChange={e => setUtmSlug(e.target.value)} />
+          <div>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground block mb-1">
+              Billing mode
+            </label>
+            <Select value={billingMode} onValueChange={(v) => setBillingMode(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">manual · we issue and chase invoices</SelectItem>
+                <SelectItem value="auto_draft">auto-draft · Stripe subscription collects automatically</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={save} className="w-full" disabled={!name.trim() || saving}>Save</Button>
         </div>
       </DialogContent>
