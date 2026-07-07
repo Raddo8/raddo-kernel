@@ -1028,6 +1028,97 @@ export type Database = {
         }
         Relationships: []
       }
+      revenue_schedules: {
+        Row: {
+          account_id: string
+          amount_usd: number
+          cadence: string
+          created_at: string
+          description: string
+          end_date: string | null
+          id: string
+          item_id: string | null
+          kind: string
+          metadata: Json
+          next_due: string | null
+          start_date: string | null
+          status: string
+          stripe_invoice_id: string | null
+          stripe_payment_link: string | null
+          stripe_price_id: string | null
+          stripe_product_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          account_id: string
+          amount_usd: number
+          cadence: string
+          created_at?: string
+          description: string
+          end_date?: string | null
+          id?: string
+          item_id?: string | null
+          kind: string
+          metadata?: Json
+          next_due?: string | null
+          start_date?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_link?: string | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          account_id?: string
+          amount_usd?: number
+          cadence?: string
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          id?: string
+          item_id?: string | null
+          kind?: string
+          metadata?: Json
+          next_due?: string | null
+          start_date?: string | null
+          status?: string
+          stripe_invoice_id?: string | null
+          stripe_payment_link?: string | null
+          stripe_price_id?: string | null
+          stripe_product_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_schedules_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_schedules_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_schedules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           account_id: string | null
