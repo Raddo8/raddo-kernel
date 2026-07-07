@@ -113,14 +113,40 @@ export default function Worklist() {
     byPursuit.get(key)!.rows.push(t);
   }
 
+  const fmtUsd = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
+
   return (
     <div>
       <PageHeader title="Worklist" subtitle="Open internal tasks grouped by pursuit" />
+      {dueSoon.length > 0 && (
+        <div className="border-b border-border p-4 bg-muted/10">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1">
+            <DollarSign size={12} /> Revenue due within 7 days
+          </div>
+          <div className="space-y-1">
+            {dueSoon.map(r => {
+              const days = differenceInCalendarDays(new Date(r.next_due), new Date());
+              const overdue = r.status === "overdue" || days < 0;
+              return (
+                <Link
+                  key={r.id}
+                  to="/app/revenue"
+                  className={`flex items-center gap-2 text-xs font-mono px-2 py-1 rounded border ${overdue ? "border-status-red/40 text-status-red" : "border-border hover:border-dossier-brass/40"}`}
+                >
+                  <span className="truncate flex-1">{r.accounts?.name ?? "—"} · {r.description}</span>
+                  <span>{fmtUsd(Number(r.amount_usd))}{r.cadence === "monthly" ? "/mo" : ""}</span>
+                  <span className="text-muted-foreground">· due {r.next_due} ({overdue ? `${Math.abs(days)}d late` : `${days}d`})</span>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {loading ? (
         <div className="p-6 text-sm text-muted-foreground">Loading…</div>
-      ) : byPursuit.size === 0 ? (
+      ) : byPursuit.size === 0 && dueSoon.length === 0 ? (
         <EmptyState icon={CheckSquare} title="Inbox zero" description="No open internal tasks." />
-      ) : (
+      ) : byPursuit.size === 0 ? null : (
         <div className="divide-y divide-border">
           {Array.from(byPursuit.values()).map(group => (
             <div key={group.itemId} className="p-4">
