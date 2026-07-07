@@ -193,6 +193,30 @@ export default function KernelBoard() {
                     {openItem.accounts?.name}
                   </Link>
                 </SheetTitle>
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-mono">
+                  <span className="text-muted-foreground uppercase tracking-wider">Designation:</span>
+                  {(["standard","regulated"] as const).map(d => {
+                    const active = ((openItem.metadata?.designation as string) || "standard") === d;
+                    return (
+                      <button key={d} type="button"
+                        onClick={async () => {
+                          const meta = { ...(openItem.metadata || {}), designation: d };
+                          await supabase.from("items").update({ metadata: meta }).eq("id", openItem.id);
+                          load();
+                        }}
+                        className={cn("px-1.5 py-0.5 rounded border uppercase tracking-wider",
+                          active ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground hover:border-dossier-brass/40")}>
+                        {d}
+                      </button>
+                    );
+                  })}
+                  {openItem.metadata?.designation === "regulated" && (
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground">no customer-NPI</span>
+                  )}
+                  {openItem.metadata?.pre_signature && (
+                    <span className="px-1.5 py-0.5 rounded border border-border text-muted-foreground">pre-signature</span>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-1.5 text-[10px] font-mono">
                   {KERNEL_PHASES.map(p => {
                     const active = (openItem.metadata?.kernel_phase || PHASE_KEYS[0]) === p.key;
