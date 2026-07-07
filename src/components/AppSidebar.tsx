@@ -21,9 +21,11 @@ import {
   Check,
   ChevronsUpDown,
   DollarSign,
+  BellRing,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { pendingApprovalCount } from "@/lib/approvals";
 import { cn } from "@/lib/utils";
 import { useLabels } from "@/lib/labels-context";
 import { useWorkspace } from "@/lib/workspace-context";
@@ -42,14 +44,25 @@ export default function AppSidebar() {
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
   const { workspace, workspaces, userEmail, userRole, switchWorkspace } = useWorkspace();
+  const [approvalCount, setApprovalCount] = useState(0);
+
+  useEffect(() => {
+    if (!workspace?.id) { setApprovalCount(0); return; }
+    let cancelled = false;
+    const refresh = () => pendingApprovalCount(workspace.id).then(n => { if (!cancelled) setApprovalCount(n); }).catch(() => {});
+    refresh();
+    const interval = setInterval(refresh, 30_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [workspace?.id]);
 
   const isBd = (workspace as any)?.slug === "cob-hq-bd";
-  const navItems = [
+  const navItems: Array<{ to: string; label: string; icon: any; end?: boolean; badge?: number }> = [
     { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
     ...(isBd ? [
       { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
       { to: "/app/clients", label: "Client Board", icon: Users },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
+      { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
     ] : []),
     { to: "/app/accounts", label: labels.accounts, icon: Building2 },
