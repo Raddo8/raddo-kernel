@@ -26,7 +26,9 @@ import {
   markInvoicePaid, voidInvoice, issueInvoice, sweepOverdue,
   updateInvoiceEditable, buildIssueEmailDraft, mailtoUrl, fmtMoneyPlain,
   parseMonthInputLocal,
+  createInvoicePaymentLink, sendInvoiceEmail, checkPaymentsStatus,
   type Invoice, type InvoiceStatus, type PaidVia, type InvoiceLineItem,
+  type PaymentsStatus,
 } from "@/lib/invoices";
 import InvoiceDocument from "@/components/invoice/InvoiceDocument";
 
@@ -65,6 +67,7 @@ export default function InvoicesList() {
   const [paidVia, setPaidVia] = useState<PaidVia>("bank");
   const [paidNote, setPaidNote] = useState("");
   const [voidReason, setVoidReason] = useState("");
+  const [paymentsStatus, setPaymentsStatus] = useState<PaymentsStatus | null>(null);
 
   const load = useCallback(async () => {
     if (!workspace?.id) return;
@@ -107,10 +110,11 @@ export default function InvoicesList() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Sweep overdue on mount.
+  // Sweep overdue on mount + probe Stripe status.
   useEffect(() => {
     if (!workspace?.id) return;
     sweepOverdue(workspace.id).catch(() => {});
+    checkPaymentsStatus().then(setPaymentsStatus).catch(() => setPaymentsStatus(null));
   }, [workspace?.id]);
 
   const filtered = useMemo(() => rows.filter((r) => {
@@ -311,9 +315,9 @@ export default function InvoicesList() {
                             <Pencil className="w-3 h-3" />
                           </Button>
                         )}
-                        {(inv.status === "draft" || inv.status === "auto_draft") && (
-                          <Button size="sm" variant="outline" onClick={() => setIssueDialog(inv)}>
-                            <Send className="w-3 h-3 mr-1" /> Issue
+                        {inv.status !== "paid" && inv.status !== "void" && (
+                          <Button size="sm" variant="outline" onClick={() => setIssueDialog(inv)} title="Send · payment link">
+                            <Send className="w-3 h-3 mr-1" /> Send
                           </Button>
                         )}
                         {inv.status !== "paid" && inv.status !== "void" && (
@@ -375,15 +379,18 @@ export default function InvoicesList() {
         actorEmail={userEmail ?? null}
       />
 
-      {/* Issue → email draft dialog */}
+      {/* Issue → send hub (branded email + payment link) */}
       <IssueEmailDialog
         invoice={issueDialog}
         account={issueDialog ? accounts[issueDialog.account_id] ?? null : null}
         contact={issueDialog ? contacts[issueDialog.account_id] ?? null : null}
         workspaceName={workspace?.name ?? null}
         remittance={remittance}
+        paymentsStatus={paymentsStatus}
         onCancel={() => setIssueDialog(null)}
         onConfirm={doIssueConfirmed}
+        onSent={async () => { setIssueDialog(null); await load(); }}
+        onLinkCreated={async () => { await load(); }}
       />
 
       {/* Settings dialog */}
@@ -590,22 +597,29 @@ function EditInvoiceDialog({
   );
 }
 
-/* ---------------- Issue → email dialog ---------------- */
+/* ---------------- Issue → send hub (branded email + payment link + mailto fallback) ---------------- */
 
 function IssueEmailDialog({
-  invoice, account, contact, workspaceName, remittance, onCancel, onConfirm,
+  invoice, account, contact, workspaceName, remittance, paymentsStatus,
+  onCancel, onConfirm, onSent, onLinkCreated,
 }: {
   invoice: Invoice | null;
   account: AccountLite | null;
   contact: ContactLite | null;
   workspaceName: string | null;
   remittance: string;
+  paymentsStatus: PaymentsStatus | null;
   onCancel: () => void;
   onConfirm: (inv: Invoice) => Promise<void> | void;
+  onSent: () => Promise<void> | void;
+  onLinkCreated: () => Promise<void> | void;
 }) {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState<null | "link" | "send" | "issue">(null);
+  const [payLink, setPayLink] = useState<string | null>(null);
 
   useEffect(() => {
     if (!invoice) return;
@@ -620,58 +634,159 @@ function IssueEmailDialog({
     setTo(draft.to);
     setSubject(draft.subject);
     setBody(draft.body);
+    setMessage("");
+    setPayLink(invoice.stripe_payment_link || null);
   }, [invoice?.id, account?.id, contact?.email, remittance, workspaceName]);
 
   if (!invoice) return null;
 
+  const stripeReady = paymentsStatus?.stripe_connected === true;
+  const stripeTest = paymentsStatus?.stripe_test_mode === true;
+
   const doCopy = async () => {
     const full = `To: ${to}\nSubject: ${subject}\n\n${body}`;
-    try {
-      await navigator.clipboard.writeText(full);
-      toast.success("Email copied");
-    } catch {
-      toast.error("Copy failed");
-    }
+    try { await navigator.clipboard.writeText(full); toast.success("Email copied"); }
+    catch { toast.error("Copy failed"); }
   };
 
   const doMailto = () => {
     window.location.href = mailtoUrl({ to, subject, body });
   };
 
+  const doCreatePaymentLink = async () => {
+    setBusy("link");
+    const res = await createInvoicePaymentLink(invoice.id);
+    setBusy(null);
+    if ("error" in res) { toast.error(res.error || "Failed to create link"); return; }
+    setPayLink(res.url);
+    toast.success(stripeTest ? "Stripe test payment link created" : "Stripe payment link created");
+    await onLinkCreated();
+  };
+
+  const doSendBranded = async () => {
+    setBusy("send");
+    // Auto-create a payment link first if Stripe is ready and none exists.
+    if (stripeReady && !payLink) {
+      const linkRes = await createInvoicePaymentLink(invoice.id);
+      if ("url" in linkRes) setPayLink(linkRes.url);
+    }
+    const res = await sendInvoiceEmail({
+      invoiceId: invoice.id, to, subject, message: message || undefined,
+    });
+    setBusy(null);
+    if (!res.ok) {
+      if (res.error === "not_configured") {
+        toast.error("Email sending not configured yet · verify the sending domain and set RESEND_API_KEY");
+      } else {
+        toast.error(res.detail || res.error || "Send failed");
+      }
+      return;
+    }
+    toast.success(`Sent · ${res.to}`);
+    await onSent();
+  };
+
+  const doMarkIssuedOnly = async () => {
+    setBusy("issue");
+    await onConfirm(invoice);
+    setBusy(null);
+  };
+
   return (
     <Dialog open={!!invoice} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-4 h-4" /> Issue {invoice.invoice_number} · outbound email
+            <Mail className="w-4 h-4" /> Send {invoice.invoice_number}
           </DialogTitle>
         </DialogHeader>
-        <div className="space-y-3">
-          <div className="grid grid-cols-[70px,1fr] gap-2 items-center text-xs font-mono">
-            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">To</div>
-            <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="billing@client.com" />
-            <div className="text-muted-foreground uppercase tracking-wider text-[10px]">Subject</div>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
-          </div>
-          <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={16} className="font-mono text-xs" />
-          {!remittance && (
-            <div className="text-[11px] font-mono text-status-amber">
-              No remittance instructions set · add them in Billing settings so wire details appear here automatically.
-            </div>
+
+        {/* Status strip */}
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono uppercase tracking-wider">
+          <span className={`px-2 py-0.5 border rounded ${stripeReady ? "border-status-green/50 text-status-green" : "border-status-amber/50 text-status-amber"}`}>
+            stripe · {stripeReady ? (stripeTest ? "test mode" : "live") : "not connected"}
+          </span>
+          {!stripeReady && (
+            <span className="text-muted-foreground normal-case tracking-normal font-sans text-[11px]">
+              Add STRIPE_SECRET_KEY (sk_test_… for test mode) in project secrets to enable payment links.
+            </span>
           )}
-          {!to && (
-            <div className="text-[11px] font-mono text-status-amber">
-              No recipient · add a primary contact email on the account or set metadata.cob_profile.primary_contact.email.
+        </div>
+
+        {/* Payment link */}
+        <div className="border border-border rounded p-3 space-y-2">
+          <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">
+            Stripe payment link
+          </div>
+          {payLink ? (
+            <div className="flex items-center gap-2">
+              <a href={payLink} target="_blank" rel="noopener noreferrer"
+                 className="text-xs text-dossier-brass underline break-all">
+                {payLink}
+              </a>
+              <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(payLink); toast.success("Copied"); }}>
+                <Copy className="w-3 h-3" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">No payment link yet.</span>
+              <Button size="sm" variant="outline" onClick={doCreatePaymentLink} disabled={!stripeReady || busy !== null}>
+                {busy === "link" ? "Creating…" : "Create payment link"}
+              </Button>
             </div>
           )}
         </div>
+
+        {/* Recipient + subject */}
+        <div className="grid grid-cols-[80px,1fr] gap-2 items-center text-xs font-mono">
+          <div className="text-muted-foreground uppercase tracking-wider text-[10px]">To</div>
+          <Input value={to} onChange={(e) => setTo(e.target.value)} placeholder="billing@client.com" />
+          <div className="text-muted-foreground uppercase tracking-wider text-[10px]">Subject</div>
+          <Input value={subject} onChange={(e) => setSubject(e.target.value)} />
+          <div className="text-muted-foreground uppercase tracking-wider text-[10px]">Note</div>
+          <Textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={3}
+                    placeholder="Optional short note that appears above the invoice details in the branded email." />
+        </div>
+
+        {/* Mailto-fallback body (editable) */}
+        <details className="border border-border rounded">
+          <summary className="px-3 py-2 text-[11px] font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
+            Fallback · plain-text body for copy or open-in-email
+          </summary>
+          <div className="p-3 space-y-2">
+            <Textarea value={body} onChange={(e) => setBody(e.target.value)} rows={12} className="font-mono text-xs" />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={doCopy}>
+                <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
+              </Button>
+              <Button variant="outline" size="sm" onClick={doMailto} disabled={!to}>
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open in email
+              </Button>
+            </div>
+          </div>
+        </details>
+
+        {!remittance && (
+          <div className="text-[11px] font-mono text-status-amber">
+            No remittance instructions set · add them in Billing settings.
+          </div>
+        )}
+        {!to && (
+          <div className="text-[11px] font-mono text-status-amber">
+            No recipient · add a primary contact email on the account.
+          </div>
+        )}
+
         <DialogFooter className="flex-wrap gap-2">
           <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-          <Button variant="outline" onClick={doCopy}><Copy className="w-3.5 h-3.5 mr-1.5" /> Copy</Button>
-          <Button variant="outline" onClick={doMailto} disabled={!to}>
-            <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Open in email
+          <Button variant="outline" onClick={doMarkIssuedOnly} disabled={busy !== null}>
+            Mark issued only
           </Button>
-          <Button onClick={() => onConfirm(invoice)}>Mark issued</Button>
+          <Button onClick={doSendBranded} disabled={!to || busy !== null}>
+            <Send className="w-3.5 h-3.5 mr-1.5" />
+            {busy === "send" ? "Sending…" : "Send branded email"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

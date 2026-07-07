@@ -63,3 +63,6 @@ verify_jwt = false
 
 [functions.stripe-payments-admin]
 verify_jwt = true
+
+[functions.send-invoice-email]
+verify_jwt = true
