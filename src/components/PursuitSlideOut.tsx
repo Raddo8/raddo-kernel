@@ -226,7 +226,25 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                 )}
                 {item.metadata?.score != null && <span className="px-1.5 py-0.5 border border-border rounded">score {item.metadata.score}</span>}
                 {item.metadata?.cohort && <span className="px-1.5 py-0.5 border border-border rounded">{item.metadata.cohort}</span>}
+                {workOrders.map(w => (
+                  <span key={w.id} className="px-1.5 py-0.5 rounded border border-dossier-brass/60 text-dossier-brass" title={`${w.status} · ${w.created_by}`}>
+                    COB · {orderTypeLabel(w.order_type)} · {w.status}
+                  </span>
+                ))}
               </div>
+              <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono">
+                <span className="text-muted-foreground uppercase tracking-wider">Autopilot</span>
+                {(["inherit","auto","manual"] as const).map(m => (
+                  <button key={m}
+                    onClick={() => setItemAutopilot(m)}
+                    className={`px-1.5 py-0.5 rounded border ${itemAutopilot === m ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground hover:border-dossier-brass/40"}`}
+                  >{m}</button>
+                ))}
+                <span className="text-muted-foreground">
+                  · effective {autopilotOn ? "ON" : "OFF"}
+                </span>
+              </div>
+
             </SheetHeader>
 
             {/* Contact block */}
