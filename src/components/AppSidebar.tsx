@@ -138,21 +138,29 @@ export default function AppSidebar() {
       )}
 
       <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
-        {navItems.map(({ to, label, icon: Icon, end }) => {
+        {navItems.map(({ to, label, icon: Icon, end, badge }) => {
           const active = end ? location.pathname === to : location.pathname.startsWith(to);
           return (
             <NavLink
               key={to}
               to={to}
               className={cn(
-                "flex items-center gap-3 px-4 py-2 text-sm transition-colors",
+                "flex items-center gap-3 px-4 py-2 text-sm transition-colors relative",
                 active
                   ? "bg-sidebar-accent text-sidebar-accent-foreground border-r-2 border-sidebar-primary"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
             >
               <Icon size={18} />
-              {!collapsed && <span>{label}</span>}
+              {!collapsed && <span className="flex-1">{label}</span>}
+              {badge != null && badge > 0 && (
+                <span className={cn(
+                  "text-[10px] font-mono min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1 bg-dossier-brass text-background",
+                  collapsed && "absolute top-1 right-1"
+                )}>
+                  {badge > 99 ? "99+" : badge}
+                </span>
+              )}
             </NavLink>
           );
         })}
