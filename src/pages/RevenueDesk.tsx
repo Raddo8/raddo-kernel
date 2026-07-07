@@ -423,28 +423,7 @@ export default function RevenueDesk() {
 
           {/* Ledger · sortable + filterable, persisted per surface */}
           <LedgerTable
-            rows={useMemo(() => {
-              if (!segFilter) return rows;
-              return rows.filter(r => {
-                if (r.status === "cancelled") return false;
-                // series match
-                if (segFilter.band === "account" && r.account_id !== segFilter.seriesKey) return false;
-                if (segFilter.band === "stage") {
-                  const p = r.item_id ? pursuits.find(x => x.id === r.item_id) : null;
-                  const stage = p ? (stateNameById[p.state_id] || "unlinked") : "unlinked";
-                  if (stage !== segFilter.seriesKey) return false;
-                }
-                if (segFilter.band === "status") {
-                  const isCommitted = ["active","invoiced","paid"].includes(r.status);
-                  const isExpected = ["expected","agreement_pending"].includes(r.status);
-                  if (segFilter.seriesKey === "committed" && !isCommitted) return false;
-                  if (segFilter.seriesKey === "expected" && !isExpected) return false;
-                  if (segFilter.seriesKey === "forecast" && !isExpected) return false;
-                }
-                // window match
-                return scheduleInstances(r, segFilter.start, segFilter.end).length > 0;
-              });
-            }, [rows, segFilter, pursuits, stateNameById])}
+            rows={ledgerRows}
             onEdit={openEdit}
             onCancel={cancelSchedule}
             stripeConnected={stripeConnected}
