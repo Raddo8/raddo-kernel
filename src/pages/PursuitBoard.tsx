@@ -33,6 +33,7 @@ export default function PursuitBoard() {
   const [primaryContactByAccount, setPrimaryContactByAccount] = useState<Record<string, { name: string; email: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
   const [showRaw,      setShowRaw]      = useViewPref("board.showRaw",      true);
   const [showWeighted, setShowWeighted] = useViewPref("board.showWeighted", false);
   const [showContact,  setShowContact]  = useViewPref("board.showContact",  true);
