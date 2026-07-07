@@ -85,6 +85,18 @@ export default function AccountEditDialog({
             </Select>
           </div>
           <Input placeholder="UTM slug (e.g. pinnacle)" value={utmSlug} onChange={e => setUtmSlug(e.target.value)} />
+          <div>
+            <label className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground block mb-1">
+              Billing mode
+            </label>
+            <Select value={billingMode} onValueChange={(v) => setBillingMode(v as any)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="manual">manual · we issue and chase invoices</SelectItem>
+                <SelectItem value="auto_draft">auto-draft · Stripe subscription collects automatically</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <Button onClick={save} className="w-full" disabled={!name.trim() || saving}>Save</Button>
         </div>
       </DialogContent>
