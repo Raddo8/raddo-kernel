@@ -12,9 +12,12 @@ import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
 import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
 import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
-import { changeItemState } from "@/lib/state-transitions";
+import { changeItemState, maybeQueueAutopilotOrder } from "@/lib/state-transitions";
+import { activeWorkOrdersByItem, orderTypeLabel, type WorkOrder } from "@/lib/work-orders";
 import PursuitSlideOut from "@/components/PursuitSlideOut";
 import DispositionDialog from "@/components/dialogs/DispositionDialog";
+import { Switch } from "@/components/ui/switch";
+
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; category?: string; }
 interface Pursuit {
@@ -27,13 +30,16 @@ const DISPOSITION_NAMES = new Set(["case_open", "case_closed"]);
 
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
-  const { settings } = useWorkspaceSettings(workspace?.id);
+  const { settings, save: saveSettings } = useWorkspaceSettings(workspace?.id);
+  const workspaceAutopilot = (settings as any)?.autopilot === true;
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
   const [schedulesByItem, setSchedulesByItem] = useState<Record<string, Schedule[]>>({});
   const [primaryContactByAccount, setPrimaryContactByAccount] = useState<Record<string, { name: string; email: string | null }>>({});
+  const [workOrdersByItem, setWorkOrdersByItem] = useState<Record<string, WorkOrder[]>>({});
   const [loading, setLoading] = useState(true);
+
   const [dragId, setDragId] = useState<string | null>(null);
   const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
   const [pendingDisposition, setPendingDisposition] = useState<{ pursuitId: string; targetStateId: string; kind: "case_open" | "case_closed" } | null>(null);
@@ -106,8 +112,13 @@ export default function PursuitBoard() {
       setPrimaryContactByAccount({});
     }
 
+    // Active work orders per item · powers the "Queued for COB" chips.
+    const woMap = await activeWorkOrdersByItem(list.map(p => p.id));
+    setWorkOrdersByItem(woMap);
+
     setLoading(false);
   }, [workspace]);
+
 
   useEffect(() => { load(); }, [load]);
 
@@ -153,10 +164,24 @@ export default function PursuitBoard() {
         });
       } catch (err) { console.warn("queue stand_up_revenue task failed", err); }
     }
+
+    // Autopilot: pre-queue the intelligence work order tied to the newly-entered state.
+    if (workspace?.id && res.state?.name) {
+      try {
+        const ap = await maybeQueueAutopilotOrder({
+          item: { id: pursuitId, account_id: pursuit.account_id, workspace_id: workspace.id, metadata: pursuit.metadata },
+          newStateName: res.state.name,
+          workspaceAutopilot,
+        });
+        if (ap.queued && ap.orderType) toast.info(`Autopilot queued · ${orderTypeLabel(ap.orderType)}`);
+      } catch (e) { console.warn("autopilot queue failed", e); }
+    }
+
     toast.success("Moved");
-    // Refresh so client_ops parallel item creation is reflected everywhere.
-    if (target?.name === "client") load();
+    // Refresh so client_ops mirror + WO chips reflect everywhere.
+    load();
   };
+
 
   const onDrop = async (e: React.DragEvent, stateId: string) => {
     e.preventDefault();
@@ -212,13 +237,27 @@ export default function PursuitBoard() {
         title="Pursuit Board"
         subtitle="Drag pursuits between states"
         actions={
-          <ViewMenu toggles={[
-            { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
-            { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
-            { label: "Show primary contact", value: showContact,  onChange: setShowContact },
-          ]} />
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-muted-foreground cursor-pointer">
+              <span>Autopilot</span>
+              <Switch
+                checked={workspaceAutopilot}
+                onCheckedChange={async (v) => {
+                  await saveSettings({ autopilot: v } as any);
+                  toast.success(`Autopilot ${v ? "ON" : "OFF"} · workspace default`);
+                }}
+              />
+              <span className={workspaceAutopilot ? "text-dossier-brass" : ""}>{workspaceAutopilot ? "on" : "off"}</span>
+            </label>
+            <ViewMenu toggles={[
+              { label: "Show raw pipeline",   value: showRaw,      onChange: setShowRaw },
+              { label: "Show weighted",       value: showWeighted, onChange: setShowWeighted },
+              { label: "Show primary contact", value: showContact,  onChange: setShowContact },
+            ]} />
+          </div>
         }
       />
+
       {rollupLines.length > 0 && (showRaw || showWeighted) && (
         <div className="px-6 py-2 border-b border-border text-[11px] font-mono text-muted-foreground bg-muted/10 overflow-x-auto whitespace-nowrap">
           Pipeline · {rollupLines.join(" · ")}
@@ -254,7 +293,9 @@ export default function PursuitBoard() {
                     const followUp = stateName === "case_open" ? md.follow_up_date as string | undefined : undefined;
                     const resurface = followUp ? new Date(followUp) <= new Date() : false;
                     const dnc = p.accounts?.metadata?.do_not_contact === true;
+                    const wos = workOrdersByItem[p.id] || [];
                     return (
+
                       <button
                         key={p.id}
                         type="button"
@@ -284,7 +325,17 @@ export default function PursuitBoard() {
                             </span>
                           )}
                           {dnc && <span className="px-1.5 py-0.5 border border-destructive/60 text-destructive rounded">DNC</span>}
+                          {wos.map(w => (
+                            <span
+                              key={w.id}
+                              className="px-1.5 py-0.5 border border-dossier-brass/60 text-dossier-brass rounded truncate max-w-[22ch]"
+                              title={`COB · ${w.status} · ${w.created_by}`}
+                            >
+                              COB · {orderTypeLabel(w.order_type)} · {w.status}
+                            </span>
+                          ))}
                         </div>
+
                       </button>
                     );
                   })}

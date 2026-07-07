@@ -1,5 +1,8 @@
 # COB Operator API
 
+> **Architectural principle (binding).** The app is the control surface; COB is the engine.
+> The app NEVER performs or simulates intelligence work (research, deep dives, deck / site generation, email drafting, enrichment). For state transitions that require such work, the app creates **work orders** that the external COB engine executes; results return via `record_files` and `approval_requests`. The app must never mark intelligence work "done" on its own — state advances only when the engine completes the order and its approval is granted through the standard approvals queue.
+
 Single edge function: `cob-operator`. All requests are `POST` with JSON body and a required header `X-COB-Operator-Key` whose value is the project secret `COB_OPERATOR_KEY`.
 
 **Scope lock:** every endpoint is hard-scoped to workspace `b0c00b00-0000-4000-8000-000000000001` (COB HQ · BD). Any explicit `workspace_id` in the body that does not match is rejected with `403`.
@@ -7,6 +10,7 @@ Single edge function: `cob-operator`. All requests are `POST` with JSON body and
 **Rate limit:** 60 requests · minute · IP.
 
 Body shape: `{ "action": "<name>", ...args }`
+
 
 ## list_pursuits
 Returns board snapshot with signals heat.
@@ -65,3 +69,40 @@ Queues a pending approval visible on `/app/approvals`.
 
 ## Errors
 `401 unauthorized` · `403 workspace_locked` · `400 unknown_action | invalid_json | *_required | invalid_layer | unknown_state` · `404 not_found` · `429 rate_limited` · `500 internal_error`
+
+## list_work_orders
+```json
+{ "action": "list_work_orders", "status": "queued" }
+```
+`status` is one of `queued · claimed · in_progress · done · failed · cancelled · active · all` (default `queued`; `active` = queued+claimed+in_progress). Response: `{ work_orders: [...] }`.
+
+## claim_work_order
+Atomic claim. Only succeeds if the order is still `queued`.
+```json
+{ "action": "claim_work_order", "work_order_id": "<uuid>", "claimed_by": "cob-engine-worker-1" }
+```
+Response: `{ ok: true, work_order: { id, item_id, order_type, params } }` · `409 not_claimable` if already claimed.
+
+## complete_work_order
+Marks the order `done` (default) / `failed` / `cancelled`. Optionally registers result files (same shape as `upload_file` inputs) and creates an approval request in one call — this is how the engine hands work back to the operator for state advancement.
+```json
+{
+  "action": "complete_work_order",
+  "work_order_id": "<uuid>",
+  "outcome": "done",
+  "result_note": "Deep dive complete · 3 openers, dossier v2.",
+  "files": [{ "storage_path": "…", "file_name": "deepdive.pdf", "kind": "other", "size_bytes": 12345 }],
+  "approval": {
+    "kind": "state_move",
+    "payload": { "from_state": "qualified", "to_state": "deepdive" },
+    "note": "Deep dive ready for principal review."
+  }
+}
+```
+Response: `{ ok: true, work_order_id, registered_files: [...], approval_id }`. Always writes a timeline event.
+
+## Order types
+`qualify_enrichment · deepdive · build_asset · prepare_send · draft_nudge · revisit`
+
+## Autopilot
+Autopilot is a per-workspace setting (`workspaces.settings.autopilot: true|false`) with a per-pursuit override in `items.metadata.autopilot` (`auto | manual | inherit`). When effective autopilot is ON, entering a state whose next intelligence step maps in `AUTOPILOT_ON_ENTER` auto-creates the corresponding work order with `created_by=autopilot`. Autopilot only queues work — it never skips approvals.

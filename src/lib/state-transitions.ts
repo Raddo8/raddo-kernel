@@ -9,6 +9,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
+import { queueWorkOrder, orderTypeLabel, type WorkOrderType } from "@/lib/work-orders";
+
 
 /** State names that require a decision-maker contact with an email. */
 export const GATED_STATES = new Set([
@@ -19,11 +21,26 @@ export const GATED_STATES = new Set([
 /** Disposition state names on the pursuit ladder. */
 export const DISPOSITION_STATES = new Set(["case_open", "case_closed"]);
 
-/** Concrete next-state action per current state (pursuit ladder). */
-export const NEXT_STATE_ACTION: Record<string, { target: string; label: string }> = {
-  signal:      { target: "qualified",   label: "Qualify (requires dossier + decision-maker email)" },
-  qualified:   { target: "deepdive",    label: "Start deep dive" },
-  deepdive:    { target: "asset_built", label: "Mark asset built" },
+/**
+ * Concrete next-state action per current state (pursuit ladder).
+ *
+ * `intelligence: true` means the action requires research / synthesis / draft work
+ * that the app MUST NOT perform. Clicking creates a work_order (see src/lib/work-orders.ts)
+ * and the STATE DOES NOT CHANGE. The engine completes the work and returns via an
+ * approval_request (UX05) to advance the state.
+ *
+ * `intelligence` absent means the action records reality that the operator observed —
+ * state changes directly.
+ */
+export const NEXT_STATE_ACTION: Record<string, {
+  target: string;
+  label: string;
+  intelligence?: true;
+  orderType?: import("./work-orders").WorkOrderType;
+}> = {
+  signal:      { target: "qualified",   label: "Qualify (requires dossier + decision-maker email)", intelligence: true, orderType: "qualify_enrichment" },
+  qualified:   { target: "deepdive",    label: "Start deep dive",                    intelligence: true, orderType: "deepdive" },
+  deepdive:    { target: "asset_built", label: "Build asset",                        intelligence: true, orderType: "build_asset" },
   asset_built: { target: "build_shown", label: "Mark contacted · build sent" },
   build_shown: { target: "meeting_set", label: "Log meeting set" },
   meeting_set: { target: "proposal",    label: "Move to proposal" },
@@ -31,6 +48,17 @@ export const NEXT_STATE_ACTION: Record<string, { target: string; label: string }
   agreement:   { target: "onboarding",  label: "Start onboarding" },
   onboarding:  { target: "client",      label: "Mark client" },
 };
+
+/**
+ * Which work order type autopilot queues when a pursuit ENTERS a given state.
+ * Autopilot never advances state — it only pre-queues intelligence work.
+ */
+export const AUTOPILOT_ON_ENTER: Record<string, import("./work-orders").WorkOrderType> = {
+  qualified:   "deepdive",
+  deepdive:    "build_asset",
+  asset_built: "prepare_send",
+};
+
 
 export interface GateOk { ok: true }
 export interface GateFail { ok: false; reason: string }
@@ -302,4 +330,56 @@ export async function moveClientOpsState(args: {
   }
 
   return { ok: true };
+}
+
+/**
+ * Autopilot preference for a given pursuit.
+ * Item override wins (`auto` / `manual` / `inherit` in item.metadata.autopilot);
+ * else falls back to workspace-level `settings.autopilot === true`.
+ */
+export function resolveAutopilot(args: {
+  itemMetadata?: any;
+  workspaceAutopilot: boolean;
+}): boolean {
+  const override = args.itemMetadata?.autopilot;
+  if (override === "auto") return true;
+  if (override === "manual") return false;
+  return args.workspaceAutopilot;
+}
+
+/**
+ * Called after a successful state change. If autopilot is on AND the newly-entered
+ * state has an intelligence work-order mapping AND no active order of that type
+ * exists, queue one (created_by=autopilot) and write a timeline event.
+ */
+export async function maybeQueueAutopilotOrder(args: {
+  item: { id: string; account_id: string; workspace_id: string; metadata?: any };
+  newStateName: string;
+  workspaceAutopilot: boolean;
+}): Promise<{ queued: boolean; orderType?: WorkOrderType }> {
+  if (!resolveAutopilot({ itemMetadata: args.item.metadata, workspaceAutopilot: args.workspaceAutopilot })) {
+    return { queued: false };
+  }
+  const orderType = AUTOPILOT_ON_ENTER[args.newStateName];
+  if (!orderType) return { queued: false };
+  const res = await queueWorkOrder({
+    workspaceId: args.item.workspace_id,
+    itemId: args.item.id,
+    orderType,
+    createdBy: "autopilot",
+  });
+  if (res.created) {
+    try {
+      await writeTimelineEvent({
+        accountId: args.item.account_id,
+        itemId: args.item.id,
+        direction: "system",
+        channel: "system",
+        summary: `Autopilot queued work order · ${orderTypeLabel(orderType)}`,
+        rawJson: { source: "autopilot", order_type: orderType, work_order_id: res.workOrder?.id },
+      });
+    } catch (e) { console.warn("autopilot timeline write failed", e); }
+    return { queued: true, orderType };
+  }
+  return { queued: false, orderType };
 }

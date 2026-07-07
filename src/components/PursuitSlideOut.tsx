@@ -11,12 +11,17 @@ import {
   GATED_STATES,
   changeItemState,
   accountHasDecisionMakerEmail,
+  maybeQueueAutopilotOrder,
+  resolveAutopilot,
 } from "@/lib/state-transitions";
+import { queueWorkOrder, activeWorkOrdersByItem, orderTypeLabel, type WorkOrder } from "@/lib/work-orders";
 import ContactEditDialog, { type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import DoNotContactBanner from "@/components/DoNotContactBanner";
 import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
 import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 import FilesPanel from "@/components/FilesPanel";
+import { useWorkspaceSettings } from "@/lib/workspace-settings";
+
 
 interface Props {
   pursuitId: string | null;
@@ -43,9 +48,15 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   const [addEmail, setAddEmail] = useState("");
   const [addTitle, setAddTitle] = useState("");
   const [addDm, setAddDm] = useState(false);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [occEdit, setOccEdit] = useState<{
     schedule: Schedule; baseDate: Date; amount: number; date: Date; existing: OccurrenceOverride | null;
   } | null>(null);
+  const { settings, save: saveSettings } = useWorkspaceSettings(item?.workspace_id);
+  const workspaceAutopilot = (settings as any)?.autopilot === true;
+  const itemAutopilot: "auto" | "manual" | "inherit" = item?.metadata?.autopilot || "inherit";
+  const autopilotOn = resolveAutopilot({ itemMetadata: item?.metadata, workspaceAutopilot });
+
 
   const load = async () => {
     if (!pursuitId) return;
@@ -88,7 +99,14 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
     } else {
       setSignals([]);
     }
+
+    const { data: wos } = await (supabase as any).from("work_orders")
+      .select("*").eq("item_id", pursuitId)
+      .in("status", ["queued", "claimed", "in_progress"])
+      .order("created_at", { ascending: false });
+    setWorkOrders((wos || []) as WorkOrder[]);
   };
+
 
   useEffect(() => { if (open && pursuitId) load(); }, [open, pursuitId]);
 
@@ -102,16 +120,66 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
 
   const primaryTitle = primary?.title ?? primary?.role ?? null;
 
+  const activeOrderForNext = nextAction?.orderType
+    ? workOrders.find(w => w.order_type === nextAction.orderType)
+    : null;
+
   const doAdvance = async () => {
-    if (!item || !targetStateRow) return;
+    if (!item || !nextAction) return;
+
+    // Intelligence transition: create a work order for the engine · do NOT change state.
+    if (nextAction.intelligence && nextAction.orderType) {
+      // Enforce the qualified-gate precondition even before queuing intelligence work
+      // for the "signal → qualified" transition (dossier + DM email).
+      if (nextAction.target === "qualified" && !dmWithEmail) {
+        toast.error("Add a decision-maker contact with an email before queuing qualification.");
+        return;
+      }
+      setBusy(true);
+      const res = await queueWorkOrder({
+        workspaceId: item.workspace_id,
+        itemId: item.id,
+        orderType: nextAction.orderType,
+        createdBy: "manual",
+      });
+      setBusy(false);
+      if (res.error) { toast.error(res.error); return; }
+      toast.success(res.created
+        ? `Queued for COB · ${orderTypeLabel(nextAction.orderType)}`
+        : `Already queued · ${orderTypeLabel(nextAction.orderType)}`);
+      await load();
+      onChanged();
+      return;
+    }
+
+    // Factual transition: advance state directly.
+    if (!targetStateRow) return;
     setBusy(true);
     const res = await changeItemState({ item, targetStateId: targetStateRow.id, states });
+    if (res.ok) {
+      // Autopilot: pre-queue the intelligence order for the newly-entered state.
+      await maybeQueueAutopilotOrder({
+        item: { id: item.id, account_id: item.account_id, workspace_id: item.workspace_id, metadata: item.metadata },
+        newStateName: res.state?.name || "",
+        workspaceAutopilot,
+      });
+    }
     setBusy(false);
     if (!res.ok) { toast.error(res.error || "Blocked"); return; }
     toast.success(`Moved to ${res.state?.label}`);
     await load();
     onChanged();
   };
+
+  const setItemAutopilot = async (mode: "auto" | "manual" | "inherit") => {
+    if (!item) return;
+    const meta = { ...(item.metadata || {}), autopilot: mode };
+    const { error } = await supabase.from("items").update({ metadata: meta }).eq("id", item.id);
+    if (error) { toast.error(error.message); return; }
+    setItem({ ...item, metadata: meta });
+    toast.success(`Pursuit autopilot · ${mode}`);
+  };
+
 
   const addContact = async () => {
     if (!item || !addName.trim() || !addEmail.trim()) return;
@@ -158,7 +226,25 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                 )}
                 {item.metadata?.score != null && <span className="px-1.5 py-0.5 border border-border rounded">score {item.metadata.score}</span>}
                 {item.metadata?.cohort && <span className="px-1.5 py-0.5 border border-border rounded">{item.metadata.cohort}</span>}
+                {workOrders.map(w => (
+                  <span key={w.id} className="px-1.5 py-0.5 rounded border border-dossier-brass/60 text-dossier-brass" title={`${w.status} · ${w.created_by}`}>
+                    COB · {orderTypeLabel(w.order_type)} · {w.status}
+                  </span>
+                ))}
               </div>
+              <div className="flex items-center gap-1.5 pt-1 text-[10px] font-mono">
+                <span className="text-muted-foreground uppercase tracking-wider">Autopilot</span>
+                {(["inherit","auto","manual"] as const).map(m => (
+                  <button key={m}
+                    onClick={() => setItemAutopilot(m)}
+                    className={`px-1.5 py-0.5 rounded border ${itemAutopilot === m ? "border-dossier-brass text-dossier-brass" : "border-border text-muted-foreground hover:border-dossier-brass/40"}`}
+                  >{m}</button>
+                ))}
+                <span className="text-muted-foreground">
+                  · effective {autopilotOn ? "ON" : "OFF"}
+                </span>
+              </div>
+
             </SheetHeader>
 
             {/* Contact block */}
@@ -239,17 +325,29 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
             </section>
 
             {/* Next-state action */}
-            {nextAction && targetStateRow && (
+            {nextAction && (targetStateRow || nextAction.intelligence) && (
               <section>
                 <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">Next</h3>
-                <Button className="w-full justify-start" onClick={doAdvance} disabled={busy}>
-                  → {nextAction.label}
+                <Button
+                  className="w-full justify-start"
+                  onClick={doAdvance}
+                  disabled={busy || !!activeOrderForNext}
+                  variant={nextAction.intelligence ? "outline" : "default"}
+                >
+                  {nextAction.intelligence
+                    ? (activeOrderForNext
+                        ? `⧗ Queued for COB · ${orderTypeLabel(nextAction.orderType!)}`
+                        : `⇢ Queue for COB · ${nextAction.label}`)
+                    : `→ ${nextAction.label}`}
                 </Button>
                 <p className="text-[10px] font-mono text-muted-foreground mt-1">
-                  Advances to <strong>{targetStateRow.label}</strong>. Writes a timeline event.
+                  {nextAction.intelligence
+                    ? "Creates a work order. State advances only after COB completes and the approval is granted."
+                    : (targetStateRow && <>Advances to <strong>{targetStateRow.label}</strong>. Writes a timeline event.</>)}
                 </p>
               </section>
             )}
+
 
             {/* Dossier summary */}
             <section>
