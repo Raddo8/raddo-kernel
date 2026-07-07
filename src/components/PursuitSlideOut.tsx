@@ -328,10 +328,13 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                     const to = new Date(); to.setMonth(to.getMonth() + 6);
                     const occs = expandOccurrences(s, from, to, idx[s.id] || []).slice(0, 3);
                     return (
-                      <div key={s.id} className="border border-border rounded p-2 space-y-1">
+                      <div key={s.id} className={`border border-border rounded p-2 space-y-1 ${(s as any).counted === false ? "opacity-50" : ""}`}>
                         <div className="text-[11px] font-mono flex justify-between">
-                          <span className="truncate">{s.description || s.kind}</span>
-                          <span>{fmtUsd(Number(s.amount_usd || 0))}{s.cadence === "monthly" ? "/mo" : ""}</span>
+                          <span className="truncate">
+                            {s.description || s.kind}
+                            {(s as any).counted === false && <span className="ml-1 text-[9px] uppercase tracking-wider text-muted-foreground border border-border rounded px-1">excluded</span>}
+                          </span>
+                          <span className={(s as any).counted === false ? "line-through" : ""}>{fmtUsd(Number(s.amount_usd || 0))}{s.cadence === "monthly" ? "/mo" : ""}</span>
                         </div>
                         {occs.length > 0 && (
                           <div className="space-y-0.5">
