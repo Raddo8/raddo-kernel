@@ -11,12 +11,17 @@ import {
   GATED_STATES,
   changeItemState,
   accountHasDecisionMakerEmail,
+  maybeQueueAutopilotOrder,
+  resolveAutopilot,
 } from "@/lib/state-transitions";
+import { queueWorkOrder, activeWorkOrdersByItem, orderTypeLabel, type WorkOrder } from "@/lib/work-orders";
 import ContactEditDialog, { type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import DoNotContactBanner from "@/components/DoNotContactBanner";
 import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
 import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 import FilesPanel from "@/components/FilesPanel";
+import { useWorkspaceSettings } from "@/lib/workspace-settings";
+
 
 interface Props {
   pursuitId: string | null;
