@@ -71,10 +71,12 @@ export default function AccountDetail() {
     if (!id || !canAddContact) return;
     const { error } = await supabase.from("contacts").insert({
       account_id: id, name: cName.trim(),
-      email: cEmail.trim() || null, phone: cPhone.trim() || null, role: cRole.trim() || null,
-    });
+      email: cEmail.trim() || null, phone: cPhone.trim() || null,
+      role: cTitle.trim() || null, title: cTitle.trim() || null,
+      is_decision_maker: cDm,
+    } as any);
     if (error) { toast.error(error.message); return; }
-    setCName(""); setCEmail(""); setCPhone(""); setCRole(""); setContactOpen(false);
+    setCName(""); setCEmail(""); setCPhone(""); setCTitle(""); setCDm(false); setContactOpen(false);
     refreshContacts();
     toast.success("Contact added");
   };
