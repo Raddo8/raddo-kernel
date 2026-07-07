@@ -5,7 +5,10 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 
 const WORKSPACE_ID = "b0c00b00-0000-4000-8000-000000000001";
-const ALLOWED_ACTIONS = new Set(["list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task"]);
+const ALLOWED_ACTIONS = new Set([
+  "list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task",
+  "upload_file", "create_approval_request", "list_approval_requests",
+]);
 const ALLOWED_LAYERS = new Set(["L1", "L2", "L3", "L4", "L5"]);
 const GATED_STATES = new Set([
   "qualified", "deepdive", "asset_built", "meeting_set",
