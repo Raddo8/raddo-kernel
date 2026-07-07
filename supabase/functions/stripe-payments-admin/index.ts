@@ -133,7 +133,8 @@ Deno.serve(async (req) => {
   }
 
   // ---------- Revenue schedule flows (existing) ----------
-
+  const scheduleId = body.schedule_id;
+  if (!scheduleId) return jsonResponse({ error: "schedule_id required" }, 400);
 
   const { data: schedule, error: sErr } = await supabase
     .from("revenue_schedules")
