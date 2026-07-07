@@ -51,7 +51,7 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
     if (!pursuitId) return;
     const { data: it } = await supabase
       .from("items")
-      .select("id, title, state_id, account_id, metadata, updated_at, accounts(id, name, metadata), item_states(id, name, label, color)")
+      .select("id, title, state_id, account_id, workspace_id, metadata, updated_at, accounts(id, name, metadata), item_states(id, name, label, color)")
       .eq("id", pursuitId).maybeSingle();
     setItem(it);
     if (!it) return;
