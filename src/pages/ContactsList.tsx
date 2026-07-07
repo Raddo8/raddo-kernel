@@ -102,7 +102,15 @@ export default function ContactsList() {
                 <Input placeholder="Name" value={cName} onChange={e => setCName(e.target.value)} />
                 <Input placeholder="Email" value={cEmail} onChange={e => setCEmail(e.target.value)} />
                 <Input placeholder="Phone" value={cPhone} onChange={e => setCPhone(e.target.value)} />
-                <Input placeholder="Role" value={cRole} onChange={e => setCRole(e.target.value)} />
+                <Input placeholder="Title" value={cRole} onChange={e => setCRole(e.target.value)} />
+                <div className="flex gap-4 text-xs font-mono">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={cDm} onChange={e => setCDm(e.target.checked)} /> decision-maker
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={cVerified} onChange={e => setCVerified(e.target.checked)} /> email verified
+                  </label>
+                </div>
                 <p className="text-xs text-muted-foreground">At least email or phone is required.</p>
                 <Button onClick={create} className="w-full" disabled={!canAdd}>Add</Button>
               </div>
