@@ -48,9 +48,15 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   const [addEmail, setAddEmail] = useState("");
   const [addTitle, setAddTitle] = useState("");
   const [addDm, setAddDm] = useState(false);
+  const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [occEdit, setOccEdit] = useState<{
     schedule: Schedule; baseDate: Date; amount: number; date: Date; existing: OccurrenceOverride | null;
   } | null>(null);
+  const { settings, save: saveSettings } = useWorkspaceSettings(item?.workspace_id);
+  const workspaceAutopilot = (settings as any)?.autopilot === true;
+  const itemAutopilot: "auto" | "manual" | "inherit" = item?.metadata?.autopilot || "inherit";
+  const autopilotOn = resolveAutopilot({ itemMetadata: item?.metadata, workspaceAutopilot });
+
 
   const load = async () => {
     if (!pursuitId) return;
