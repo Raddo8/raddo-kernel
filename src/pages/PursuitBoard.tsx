@@ -325,7 +325,17 @@ export default function PursuitBoard() {
                             </span>
                           )}
                           {dnc && <span className="px-1.5 py-0.5 border border-destructive/60 text-destructive rounded">DNC</span>}
+                          {wos.map(w => (
+                            <span
+                              key={w.id}
+                              className="px-1.5 py-0.5 border border-dossier-brass/60 text-dossier-brass rounded truncate max-w-[22ch]"
+                              title={`COB · ${w.status} · ${w.created_by}`}
+                            >
+                              COB · {orderTypeLabel(w.order_type)} · {w.status}
+                            </span>
+                          ))}
                         </div>
+
                       </button>
                     );
                   })}
