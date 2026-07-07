@@ -34,6 +34,8 @@ export interface Schedule {
   end_date: string | null;
   next_due: string | null;
   status: Status;
+  /** When false, the schedule is EXCLUDED from every revenue total everywhere. */
+  counted?: boolean;
   stripe_product_id?: string | null;
   stripe_price_id?: string | null;
   stripe_subscription_id?: string | null;
@@ -181,6 +183,7 @@ export function expandOccurrences(
   overrides: OccurrenceOverride[] = [],
 ): Occurrence[] {
   if (s.status === "cancelled") return [];
+  if (s.counted === false) return [];
   const overrideByMonth = new Map<string, OccurrenceOverride>();
   for (const o of overrides) overrideByMonth.set(o.occurrence_month.slice(0, 10), o);
 
@@ -307,6 +310,7 @@ export function pipelineRollup(params: {
     if (schedules.length > 0) {
       for (const s of schedules) {
         if (s.status === "cancelled") continue;
+        if (s.counted === false) continue;
         const v = amt(s);
         if (s.kind === "one_time") { bucket.oneTime += v; bucket.weightedOneTime += v * prob; }
         else if (s.kind === "subscription") { bucket.monthly += v; bucket.weightedMonthly += v * prob; }

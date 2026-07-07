@@ -23,6 +23,8 @@ import {
 } from "@/lib/revenue-math";
 import { useWorkspaceSettings, DEFAULT_STAGE_PROBABILITIES, stageProbability } from "@/lib/workspace-settings";
 import RibbonChart, { BandBy } from "@/components/revenue/RibbonChart";
+import MonthStrip from "@/components/revenue/MonthStrip";
+import GroupedLedger from "@/components/revenue/GroupedLedger";
 
 function statusTone(status: Status): string {
   switch (status) {
@@ -132,13 +134,19 @@ export default function RevenueDesk() {
   }, [pursuits, stateNameById, settings]);
 
   const mrrActive = useMemo(
-    () => rows.filter(r => r.kind === "subscription" && r.status === "active").reduce((a, r) => a + amt(r), 0),
+    () => rows.filter(r => r.counted !== false && r.kind === "subscription" && r.status === "active").reduce((a, r) => a + amt(r), 0),
     [rows]
   );
   const mrrPending = useMemo(
-    () => rows.filter(r => r.kind === "subscription" && (r.status === "expected" || r.status === "agreement_pending" || r.status === "invoiced")).reduce((a, r) => a + amt(r), 0),
+    () => rows.filter(r => r.counted !== false && r.kind === "subscription" && (r.status === "expected" || r.status === "agreement_pending" || r.status === "invoiced")).reduce((a, r) => a + amt(r), 0),
     [rows]
   );
+
+  // Ledger view mode · grouped-by-account is the new default.
+  const [ledgerMode, setLedgerMode] = useState<"grouped" | "flat">(() => {
+    try { return (localStorage.getItem("revenue.ledgerMode") as any) || "grouped"; } catch { return "grouped"; }
+  });
+  useEffect(() => { try { localStorage.setItem("revenue.ledgerMode", ledgerMode); } catch { /* noop */ } }, [ledgerMode]);
 
   /* ---------- Calendar buckets ---------- */
   const now = new Date();
@@ -363,6 +371,17 @@ export default function RevenueDesk() {
             />
           )}
 
+          {/* Monthly summary strip · shown while a fiscal weekly quarter is active */}
+          {primaryMode !== "ledger" && view === "quarter" && (
+            <MonthStrip
+              quarterStart={activeQStart}
+              schedules={rows}
+              overridesByScheduleId={overridesByScheduleId}
+              stageProbForItem={stageProbForItem}
+            />
+          )}
+
+
           {/* Calendar grid · Cards mode */}
           {primaryMode === "cards" && (
             <div className={view === "custom" ? "" : "overflow-x-auto"}>
@@ -466,16 +485,38 @@ export default function RevenueDesk() {
             </div>
           )}
 
-          {/* Ledger · sortable + filterable, persisted per surface */}
-          <LedgerTable
-            rows={ledgerRows}
-            onEdit={openEdit}
-            onCancel={cancelSchedule}
-            stripeConnected={stripeConnected}
-            stripeAction={stripeAction}
-            busyId={busyId}
-            pursuits={pursuits}
-          />
+          {/* Ledger · grouped-by-account (default) or flat table */}
+          <div className="flex items-center gap-2">
+            <div className="inline-flex border border-border rounded overflow-hidden text-[10px] font-mono">
+              {(["grouped","flat"] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setLedgerMode(m)}
+                  className={`px-2 py-1 ${ledgerMode === m ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
+                >{m}</button>
+              ))}
+            </div>
+          </div>
+          {ledgerMode === "grouped" ? (
+            <GroupedLedger
+              rows={ledgerRows}
+              onEdit={openEdit}
+              onCancel={cancelSchedule}
+              onChanged={load}
+              pursuits={pursuits}
+              actorEmail={userEmail}
+            />
+          ) : (
+            <LedgerTable
+              rows={ledgerRows}
+              onEdit={openEdit}
+              onCancel={cancelSchedule}
+              stripeConnected={stripeConnected}
+              stripeAction={stripeAction}
+              busyId={busyId}
+              pursuits={pursuits}
+            />
+          )}
         </div>
       )}
 
