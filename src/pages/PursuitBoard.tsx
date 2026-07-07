@@ -265,6 +265,13 @@ export default function PursuitBoard() {
           </div>
         </div>
       )}
+      <PursuitSlideOut
+        pursuitId={openPursuitId}
+        open={!!openPursuitId}
+        onOpenChange={(v) => { if (!v) setOpenPursuitId(null); }}
+        states={states}
+        onChanged={load}
+      />
     </div>
   );
 }
