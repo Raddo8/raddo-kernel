@@ -75,10 +75,12 @@ export default function RevenueScheduleDialog({
       setEnd(schedule.end_date ?? "");
       setNext(schedule.next_due ?? "");
       setStatus(schedule.status);
+      setInvoiceSeparately(Boolean((schedule as any).invoice_separately));
     } else {
       setAccountId(""); setItemId(""); setKind("one_time"); setCadence("once");
       setDescription(""); setAmount(""); setStart(""); setEnd(""); setNext("");
       setStatus("expected");
+      setInvoiceSeparately(false);
     }
   }, [schedule?.id, open]);
 
