@@ -414,18 +414,59 @@ Deno.serve(async (req: Request) => {
       }
 
       // Optional approval_request creation (typical for state advancement after work).
+      // Per-state autopilot matrix: if mode = AUTO for this order_type and kind = state_move,
+      // apply the state change directly (respecting the qualified gate) and skip approval.
+      // send_email is ALWAYS gated regardless of mode.
       let approval_id: string | null = null;
+      let auto_applied_state: string | null = null;
       if (body?.approval && typeof body.approval === "object") {
         const kind = String(body.approval.kind || "");
         if (!["state_move","send_email","other"].includes(kind)) return json(400, { error: "invalid_approval_kind" });
         const payload = body.approval.payload && typeof body.approval.payload === "object" ? body.approval.payload : {};
-        const { data: ar } = await supabase.from("approval_requests").insert({
-          workspace_id: WORKSPACE_ID,
-          item_id: (wo as any).item_id,
-          kind, payload,
-          note: typeof body.approval.note === "string" ? body.approval.note.slice(0, 1000) : null,
-        } as any).select("id").single();
-        approval_id = (ar as any)?.id ?? null;
+
+        const { data: ws } = await supabase.from("workspaces").select("settings").eq("id", WORKSPACE_ID).maybeSingle();
+        const { data: itMeta } = await supabase.from("items").select("metadata, account_id, workspace_id").eq("id", (wo as any).item_id).maybeSingle();
+        const wm = ((ws as any)?.settings?.autopilot_matrix || {}) as Record<string, "auto"|"assist"|"manual">;
+        const im = ((itMeta as any)?.metadata?.autopilot_matrix || {}) as Record<string, "auto"|"assist"|"manual">;
+        const ot = (wo as any).order_type as string;
+        const mode = im[ot] ?? wm[ot] ?? DEFAULT_AUTOPILOT_MATRIX[ot] ?? "manual";
+
+        const canAutoApply = kind === "state_move" && mode === "auto" && typeof payload.to_state === "string";
+        let didAutoApply = false;
+        if (canAutoApply) {
+          const targetName = String(payload.to_state);
+          let gateBlocked = false;
+          if (GATED_STATES.has(targetName)) {
+            const { data: dm } = await supabase.from("contacts").select("email, is_decision_maker").eq("account_id", (itMeta as any).account_id);
+            const hasDm = (dm || []).some((c: any) => c.is_decision_maker && (c.email || "").trim());
+            if (!hasDm) gateBlocked = true;
+          }
+          if (!gateBlocked) {
+            const { data: st } = await supabase.from("item_states").select("id, name, label").eq("workspace_id", WORKSPACE_ID).eq("name", targetName).maybeSingle();
+            if (st) {
+              await supabase.from("items").update({ state_id: (st as any).id }).eq("id", (wo as any).item_id);
+              await supabase.from("timeline_events").insert({
+                account_id: (itMeta as any).account_id,
+                item_id: (wo as any).item_id,
+                direction: "system", channel: "system",
+                summary: `State changed to ${(st as any).label} · autopilot AUTO`,
+                raw_json: { source: "cob-operator", state: targetName, mode: "auto", work_order_id: id },
+                occurred_at: new Date().toISOString(),
+              });
+              auto_applied_state = targetName;
+              didAutoApply = true;
+            }
+          }
+        }
+        if (!didAutoApply) {
+          const { data: ar } = await supabase.from("approval_requests").insert({
+            workspace_id: WORKSPACE_ID,
+            item_id: (wo as any).item_id,
+            kind, payload,
+            note: typeof body.approval.note === "string" ? body.approval.note.slice(0, 1000) : null,
+          } as any).select("id").single();
+          approval_id = (ar as any)?.id ?? null;
+        }
       }
 
       // Timeline event · always.
