@@ -17,35 +17,30 @@ interface Props {
   account: { id: string; name: string; billing_mode?: "manual" | "auto_draft" } | null;
   contact?: { name: string | null; email: string | null } | null;
   workspace?: { name?: string | null } | null;
+  /** Free-form remittance / wiring instructions from workspace settings. */
+  remittance?: string | null;
 }
 
 function fmtD(iso: string): string {
   try { return format(parseISO(iso), "MMMM d, yyyy"); } catch { return iso; }
 }
 
-function remitCopy(mode: "manual" | "auto_draft", link: string | null | undefined): { title: string; body: string } {
-  if (mode === "auto_draft") {
-    return {
-      title: "Remittance",
-      body: "This invoice is collected automatically via your subscription on file. No action needed.",
-    };
-  }
-  if (link) {
-    return {
-      title: "Payment",
-      body: `Pay online at ${link}\n\nOr remit by bank transfer to the account on file. Reference the invoice number in the memo line.`,
-    };
-  }
-  return {
-    title: "Payment",
-    body: "Remit by bank transfer to the account on file. Reference the invoice number in the memo line. Contact billing@chiefofbusiness.ai for wire instructions.",
-  };
+function remitTitle(mode: "manual" | "auto_draft"): string {
+  return mode === "auto_draft" ? "Remittance" : "Payment";
 }
 
-export default function InvoiceDocument({ invoice, account, contact }: Props) {
+function remitFallback(mode: "manual" | "auto_draft"): string {
+  if (mode === "auto_draft") {
+    return "This invoice is collected automatically via your subscription on file. No action needed.";
+  }
+  return "Bank remittance details will be provided separately. Reference the invoice number in the memo line.";
+}
+
+export default function InvoiceDocument({ invoice, account, contact, remittance }: Props) {
   const lines = (invoice.line_items || []) as InvoiceLineItem[];
   const total = Number(invoice.total ?? invoice.subtotal ?? 0);
-  const remit = remitCopy(invoice.billing_mode, invoice.stripe_payment_link);
+  const remitBody = (remittance?.trim() || remitFallback(invoice.billing_mode));
+  const payLink = invoice.stripe_payment_link || null;
   const periodLabel = (() => {
     try { return format(parseISO(invoice.billing_period), "MMMM yyyy"); } catch { return invoice.billing_period; }
   })();
