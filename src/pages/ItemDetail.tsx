@@ -328,7 +328,7 @@ export default function ItemDetail() {
               <TimelineStream itemId={id!} />
             </TabsContent>
             <TabsContent value="dossier" className="m-0">
-              <DossierPanel itemId={id!} itemMetadata={item.metadata} />
+              <DossierPanel itemId={id!} itemMetadata={item.metadata} accountId={item.account_id ?? item.accounts?.id ?? null} />
             </TabsContent>
             <TabsContent value="signals" className="m-0">
               <SignalsPanel utmSlug={item.accounts?.metadata?.utm_slug ?? null} />
@@ -342,6 +342,13 @@ export default function ItemDetail() {
         open={editOpen}
         onOpenChange={setEditOpen}
         onSaved={() => id && fetchItem(id)}
+        actorEmail={userEmail}
+      />
+      <ContactEditDialog
+        contact={editContact}
+        open={editContactOpen}
+        onOpenChange={setEditContactOpen}
+        onSaved={() => item?.account_id && fetchContacts(item.account_id)}
         actorEmail={userEmail}
       />
     </div>
