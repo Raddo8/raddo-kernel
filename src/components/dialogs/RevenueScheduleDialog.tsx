@@ -60,6 +60,7 @@ export default function RevenueScheduleDialog({
   const [end, setEnd] = useState("");
   const [next, setNext] = useState("");
   const [status, setStatus] = useState<string>("expected");
+  const [invoiceSeparately, setInvoiceSeparately] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
