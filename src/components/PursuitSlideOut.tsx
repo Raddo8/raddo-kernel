@@ -16,6 +16,7 @@ import ContactEditDialog, { type ContactRow } from "@/components/dialogs/Contact
 import DoNotContactBanner from "@/components/DoNotContactBanner";
 import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
 import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
+import FilesPanel from "@/components/FilesPanel";
 
 interface Props {
   pursuitId: string | null;
@@ -361,6 +362,17 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
                 </div>
               )}
             </section>
+
+            {/* Files */}
+            {item.accounts?.id && (
+              <FilesPanel
+                workspaceId={(item as any).workspace_id}
+                accountId={item.accounts.id}
+                itemId={item.id}
+                actorEmail={actorEmail}
+                compact
+              />
+            )}
 
             <div>
               <Button variant="outline" size="sm" asChild className="w-full">
