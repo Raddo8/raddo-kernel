@@ -20,6 +20,7 @@ export default function AccountEditDialog({
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
   const [utmSlug, setUtmSlug] = useState("");
+  const [billingMode, setBillingMode] = useState<"manual"|"auto_draft">("manual");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -28,6 +29,7 @@ export default function AccountEditDialog({
     setType(account.type ?? "prospect");
     setStatus(account.status ?? "active");
     setUtmSlug(account.metadata?.utm_slug ?? "");
+    setBillingMode((account.billing_mode as any) ?? "manual");
   }, [account?.id, open]);
 
   if (!account) return null;
