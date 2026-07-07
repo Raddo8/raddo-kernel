@@ -485,16 +485,38 @@ export default function RevenueDesk() {
             </div>
           )}
 
-          {/* Ledger · sortable + filterable, persisted per surface */}
-          <LedgerTable
-            rows={ledgerRows}
-            onEdit={openEdit}
-            onCancel={cancelSchedule}
-            stripeConnected={stripeConnected}
-            stripeAction={stripeAction}
-            busyId={busyId}
-            pursuits={pursuits}
-          />
+          {/* Ledger · grouped-by-account (default) or flat table */}
+          <div className="flex items-center gap-2">
+            <div className="inline-flex border border-border rounded overflow-hidden text-[10px] font-mono">
+              {(["grouped","flat"] as const).map(m => (
+                <button
+                  key={m}
+                  onClick={() => setLedgerMode(m)}
+                  className={`px-2 py-1 ${ledgerMode === m ? "bg-muted text-foreground" : "text-muted-foreground hover:bg-muted/50"}`}
+                >{m}</button>
+              ))}
+            </div>
+          </div>
+          {ledgerMode === "grouped" ? (
+            <GroupedLedger
+              rows={ledgerRows}
+              onEdit={openEdit}
+              onCancel={cancelSchedule}
+              onChanged={load}
+              pursuits={pursuits}
+              actorEmail={userEmail}
+            />
+          ) : (
+            <LedgerTable
+              rows={ledgerRows}
+              onEdit={openEdit}
+              onCancel={cancelSchedule}
+              stripeConnected={stripeConnected}
+              stripeAction={stripeAction}
+              busyId={busyId}
+              pursuits={pursuits}
+            />
+          )}
         </div>
       )}
 
