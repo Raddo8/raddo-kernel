@@ -34,7 +34,7 @@ export default function ItemDetail() {
   const fetchItem = async (itemId: string) => {
     const { data, error } = await supabase
       .from("items")
-      .select("*, accounts(id, name), item_states(id, name, label, color), policies(id, name)")
+      .select("*, accounts(id, name, metadata), item_states(id, name, label, color), policies(id, name)")
       .eq("id", itemId)
       .maybeSingle();
     if (error || !data) {
