@@ -30,13 +30,16 @@ const DISPOSITION_NAMES = new Set(["case_open", "case_closed"]);
 
 export default function PursuitBoard() {
   const { workspace } = useWorkspace();
-  const { settings } = useWorkspaceSettings(workspace?.id);
+  const { settings, save: saveSettings } = useWorkspaceSettings(workspace?.id);
+  const workspaceAutopilot = (settings as any)?.autopilot === true;
   const [states, setStates] = useState<State[]>([]);
   const [pursuits, setPursuits] = useState<Pursuit[]>([]);
   const [signalsBySlug, setSignalsBySlug] = useState<Record<string, { ts: string }[]>>({});
   const [schedulesByItem, setSchedulesByItem] = useState<Record<string, Schedule[]>>({});
   const [primaryContactByAccount, setPrimaryContactByAccount] = useState<Record<string, { name: string; email: string | null }>>({});
+  const [workOrdersByItem, setWorkOrdersByItem] = useState<Record<string, WorkOrder[]>>({});
   const [loading, setLoading] = useState(true);
+
   const [dragId, setDragId] = useState<string | null>(null);
   const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
   const [pendingDisposition, setPendingDisposition] = useState<{ pursuitId: string; targetStateId: string; kind: "case_open" | "case_closed" } | null>(null);
