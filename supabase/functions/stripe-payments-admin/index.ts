@@ -28,11 +28,14 @@ Deno.serve(async (req) => {
   const action = body.action;
 
   if (action === "status") {
-    return jsonResponse({ connected: Boolean(stripeKey) });
+    return jsonResponse({
+      connected: Boolean(stripeKey),
+      test_mode: stripeKey ? stripeKey.startsWith("sk_test_") : null,
+    });
   }
 
   if (!stripeKey) {
-    return jsonResponse({ error: "Stripe not connected" }, 400);
+    return jsonResponse({ error: "Stripe not connected — set STRIPE_SECRET_KEY in project secrets (test mode: sk_test_…)" }, 400);
   }
 
   // Auth: verify caller
@@ -47,8 +50,90 @@ Deno.serve(async (req) => {
 
   const stripe = new Stripe(stripeKey, { apiVersion: "2024-06-20" });
 
-  const scheduleId = body.schedule_id;
-  if (!scheduleId) return jsonResponse({ error: "schedule_id required" }, 400);
+  // ---------- Invoice payment link (hybrid rail) ----------
+  if (action === "create_invoice_payment_link") {
+    const invoiceId = body.invoice_id;
+    if (!invoiceId) return jsonResponse({ error: "invoice_id required" }, 400);
+
+    const { data: inv, error: iErr } = await supabase
+      .from("invoices")
+      .select("*, accounts(id, name)")
+      .eq("id", invoiceId)
+      .maybeSingle();
+    if (iErr || !inv) return jsonResponse({ error: "invoice not found" }, 404);
+
+    const { data: isMember } = await supabase.rpc("is_workspace_member", {
+      _user_id: user.id,
+      _workspace_id: inv.workspace_id,
+    });
+    if (!isMember) return jsonResponse({ error: "forbidden" }, 403);
+
+    if (inv.status === "paid" || inv.status === "void") {
+      return jsonResponse({ error: `invoice is ${inv.status}` }, 400);
+    }
+
+    // Reuse existing payment link if already created.
+    if (inv.stripe_payment_link) {
+      return jsonResponse({ ok: true, url: inv.stripe_payment_link, reused: true });
+    }
+
+    try {
+      const totalCents = Math.round(Number(inv.total ?? inv.subtotal ?? 0) * 100);
+      if (totalCents <= 0) return jsonResponse({ error: "invoice total must be > 0" }, 400);
+
+      // One consolidated line per invoice keeps the Stripe receipt tidy and
+      // avoids per-line rounding drift on the customer statement.
+      const product = await stripe.products.create({
+        name: `Invoice ${inv.invoice_number} · ${inv.accounts?.name ?? "Account"}`,
+        metadata: {
+          cob_invoice_id: inv.id,
+          workspace_id: inv.workspace_id,
+          invoice_number: inv.invoice_number,
+        },
+      });
+      const price = await stripe.prices.create({
+        product: product.id,
+        currency: "usd",
+        unit_amount: totalCents,
+      });
+      const link = await stripe.paymentLinks.create({
+        line_items: [{ price: price.id, quantity: 1 }],
+        metadata: {
+          cob_invoice_id: inv.id,
+          workspace_id: inv.workspace_id,
+          invoice_number: inv.invoice_number,
+        },
+        payment_intent_data: {
+          metadata: {
+            cob_invoice_id: inv.id,
+            invoice_number: inv.invoice_number,
+          },
+        },
+      });
+
+      await supabase.from("invoices").update({
+        stripe_payment_link: link.url,
+        stripe_invoice_id: link.id, // payment-link id; webhook also matches via metadata.cob_invoice_id
+      }).eq("id", inv.id);
+
+      await supabase.from("timeline_events").insert({
+        account_id: inv.account_id,
+        direction: "system",
+        channel: "system",
+        summary: `Stripe payment link created for invoice ${inv.invoice_number}`,
+        raw_json: { invoice_id: inv.id, price_id: price.id, product_id: product.id, link: link.url },
+        occurred_at: new Date().toISOString(),
+      });
+
+      return jsonResponse({ ok: true, url: link.url });
+    } catch (e: any) {
+      console.error("create_invoice_payment_link error", e?.message);
+      return jsonResponse({ error: e?.message ?? "stripe error" }, 500);
+    }
+  }
+
+  // ---------- Revenue schedule flows (existing) ----------
+
 
   const { data: schedule, error: sErr } = await supabase
     .from("revenue_schedules")
