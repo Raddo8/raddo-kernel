@@ -1104,6 +1104,7 @@ export type Database = {
           account_id: string
           amount_usd: number
           cadence: string
+          counted: boolean
           created_at: string
           description: string
           end_date: string | null
@@ -1126,6 +1127,7 @@ export type Database = {
           account_id: string
           amount_usd: number
           cadence: string
+          counted?: boolean
           created_at?: string
           description: string
           end_date?: string | null
@@ -1148,6 +1150,7 @@ export type Database = {
           account_id?: string
           amount_usd?: number
           cadence?: string
+          counted?: boolean
           created_at?: string
           description?: string
           end_date?: string | null
