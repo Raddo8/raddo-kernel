@@ -150,6 +150,7 @@ export default function DossierPanel({ itemId, itemMetadata, accountId }: Props)
       {/* Outreach */}
       <section>
         <h4 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">L4 · Outreach Kit</h4>
+        {accountDnc.flag && <div className="mb-2"><DoNotContactBanner reason={accountDnc.reason} /></div>}
         <div className="border border-border rounded p-2 bg-muted/20 mb-3 text-xs font-mono flex items-center gap-2">
           <Mail size={12} className="text-muted-foreground shrink-0" />
           <span className="text-muted-foreground">Recipient:</span>
