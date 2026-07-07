@@ -9,6 +9,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
+import { queueWorkOrder, orderTypeLabel, type WorkOrderType } from "@/lib/work-orders";
+
 
 /** State names that require a decision-maker contact with an email. */
 export const GATED_STATES = new Set([
