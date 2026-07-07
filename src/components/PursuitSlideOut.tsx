@@ -325,17 +325,29 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
             </section>
 
             {/* Next-state action */}
-            {nextAction && targetStateRow && (
+            {nextAction && (targetStateRow || nextAction.intelligence) && (
               <section>
                 <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">Next</h3>
-                <Button className="w-full justify-start" onClick={doAdvance} disabled={busy}>
-                  → {nextAction.label}
+                <Button
+                  className="w-full justify-start"
+                  onClick={doAdvance}
+                  disabled={busy || !!activeOrderForNext}
+                  variant={nextAction.intelligence ? "outline" : "default"}
+                >
+                  {nextAction.intelligence
+                    ? (activeOrderForNext
+                        ? `⧗ Queued for COB · ${orderTypeLabel(nextAction.orderType!)}`
+                        : `⇢ Queue for COB · ${nextAction.label}`)
+                    : `→ ${nextAction.label}`}
                 </Button>
                 <p className="text-[10px] font-mono text-muted-foreground mt-1">
-                  Advances to <strong>{targetStateRow.label}</strong>. Writes a timeline event.
+                  {nextAction.intelligence
+                    ? "Creates a work order. State advances only after COB completes and the approval is granted."
+                    : (targetStateRow && <>Advances to <strong>{targetStateRow.label}</strong>. Writes a timeline event.</>)}
                 </p>
               </section>
             )}
+
 
             {/* Dossier summary */}
             <section>
