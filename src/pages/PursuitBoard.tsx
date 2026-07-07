@@ -137,7 +137,7 @@ export default function PursuitBoard() {
                         draggable
                         onDragStart={() => setDragId(p.id)}
                         onDragEnd={() => setDragId(null)}
-                        className="block bg-background border border-border rounded p-3 hover:border-raddo-brass/50 transition-colors cursor-grab active:cursor-grabbing"
+                        className="block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">{accountName}</div>
                         <div className="text-sm font-medium mt-0.5 line-clamp-2">{p.title}</div>

@@ -15,8 +15,8 @@ export function signalHeat(events: { ts: string }[]): "hot" | "warm" | "cold" {
 
 export function HeatBadge({ heat }: { heat: "hot" | "warm" | "cold" }) {
   const map = {
-    hot: { label: "hot", cls: "bg-raddo-brass/20 text-raddo-brass border-raddo-brass/40" },
-    warm: { label: "warm", cls: "bg-raddo-ink/20 text-raddo-ink-soft border-raddo-ink/40" },
+    hot: { label: "hot", cls: "bg-dossier-brass/20 text-dossier-brass border-dossier-brass/40" },
+    warm: { label: "warm", cls: "bg-dossier-ink/20 text-dossier-ink-soft border-dossier-ink/40" },
     cold: { label: "cold", cls: "bg-muted text-muted-foreground border-border" },
   } as const;
   const m = map[heat];
@@ -79,7 +79,7 @@ export default function SignalsPanel({ utmSlug }: Props) {
         <div className="flex items-end gap-1 h-16 border border-border rounded p-2 bg-muted/20">
           {spark.map((n, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-1">
-              <div className="w-full bg-raddo-brass/70 rounded-sm" style={{ height: `${(n / max) * 100}%`, minHeight: n > 0 ? 2 : 0 }} />
+              <div className="w-full bg-dossier-brass/70 rounded-sm" style={{ height: `${(n / max) * 100}%`, minHeight: n > 0 ? 2 : 0 }} />
               <span className="text-[9px] font-mono text-muted-foreground">{n}</span>
             </div>
           ))}
