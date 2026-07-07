@@ -121,18 +121,21 @@ export default function PursuitBoard() {
     const pursuit = pursuits.find(p => p.id === id);
     if (!pursuit || pursuit.state_id === stateId) return;
     const target = states.find(s => s.id === stateId);
+    const prevStateId = pursuit.state_id;
 
     setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: stateId } : p));
 
-    const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
-    if (error) { toast.error(error.message); load(); return; }
-    await writeTimelineEvent({
-      accountId: pursuit.account_id,
-      itemId: id,
-      direction: "system",
-      channel: "system",
-      summary: `State changed to ${target?.label || "unknown"}`,
+    const res = await changeItemState({
+      item: { id, account_id: pursuit.account_id },
+      targetStateId: stateId,
+      states,
     });
+    if (!res.ok) {
+      // Revert optimistic move + surface reason.
+      setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: prevStateId } : p));
+      toast.error(res.error || "Move blocked");
+      return;
+    }
 
     const targetName = (target?.name || target?.label || "").toLowerCase();
     if (/agreement/.test(targetName)) {
