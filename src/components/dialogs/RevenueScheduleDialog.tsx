@@ -107,6 +107,7 @@ export default function RevenueScheduleDialog({
       end_date: end || null,
       next_due: next || null,
       status,
+      invoice_separately: invoiceSeparately,
     };
     if (editing && schedule) {
       const { error } = await (supabase as any)
