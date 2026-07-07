@@ -60,6 +60,15 @@ export default function RevenueDesk() {
   const [customFrom, setCustomFrom] = useState(format(new Date(), "yyyy-MM-dd"));
   const [customTo, setCustomTo] = useState(format(addMonths(new Date(), 1), "yyyy-MM-dd"));
 
+  // Primary visual switcher · Ribbon is the new default.
+  type Primary = "ribbon" | "cards" | "ledger";
+  const [primary, setPrimary] = useViewPref("revenue.primary.ribbon", true); // true=ribbon default (legacy bool key retained for existing users)
+  const [primaryMode, setPrimaryMode] = useState<Primary>("ribbon");
+  const [band, setBand] = useState<BandBy>("account");
+
+  // Segment click → filter ledger by series + week window.
+  const [segFilter, setSegFilter] = useState<{ seriesKey: string; seriesLabel: string; band: BandBy; start: Date; end: Date } | null>(null);
+
   // View preferences · forecast overlays are OPT-IN.
   const [showCommitted, setShowCommitted] = useViewPref("revenue.showCommitted", true);
   const [showExpected,  setShowExpected]  = useViewPref("revenue.showExpected",  true);
