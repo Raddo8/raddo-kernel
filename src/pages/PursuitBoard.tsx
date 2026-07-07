@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
@@ -7,13 +6,14 @@ import EmptyState from "@/components/EmptyState";
 import { LayoutGrid, User } from "lucide-react";
 import { HeatBadge, signalHeat } from "@/components/SignalsPanel";
 import { toast } from "sonner";
-import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
 import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
 import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
 import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
+import { changeItemState } from "@/lib/state-transitions";
+import PursuitSlideOut from "@/components/PursuitSlideOut";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
 interface Pursuit {
