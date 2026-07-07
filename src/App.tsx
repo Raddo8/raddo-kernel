@@ -127,6 +127,7 @@ const App = () => (
             <Route path="scheduler-health" element={<SchedulerHealth />} />
             <Route path="billing" element={<BillingUsage />} />
             <Route path="revenue" element={<RevenueDesk />} />
+            <Route path="invoices" element={<InvoicesList />} />
             <Route path="clients" element={<ClientBoard />} />
             <Route path="approvals" element={<ApprovalsQueue />} />
             <Route path="onboarding/kernel" element={<KernelBoard />} />
