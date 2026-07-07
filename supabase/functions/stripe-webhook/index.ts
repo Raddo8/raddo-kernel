@@ -64,12 +64,40 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const obj = event.data.object as Stripe.Checkout.Session;
+
+        // Hybrid rail: settle an invoice if the payment link carried cob_invoice_id.
+        const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id
+          ?? (obj.payment_intent && typeof obj.payment_intent === "object"
+              ? (obj.payment_intent as any)?.metadata?.cob_invoice_id : null);
+        if (cobInvoiceId) {
+          const { data: inv } = await supabase.from("invoices")
+            .select("id, account_id, invoice_number, status")
+            .eq("id", cobInvoiceId).maybeSingle();
+          if (inv && inv.status !== "paid" && inv.status !== "void") {
+            await supabase.from("invoices").update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              paid_via: "stripe",
+              stripe_invoice_id: obj.id,
+            }).eq("id", inv.id);
+            await supabase.from("timeline_events").insert({
+              account_id: inv.account_id,
+              direction: "system", channel: "system",
+              summary: `Invoice ${inv.invoice_number} paid via Stripe`,
+              raw_json: { invoice_id: inv.id, session_id: obj.id, amount_total: obj.amount_total },
+              occurred_at: new Date().toISOString(),
+            });
+          }
+        }
+
+        // Legacy revenue-schedule flow.
         const id = findScheduleId(obj);
-        if (!id) break;
-        const patch: any = { status: obj.mode === "subscription" ? "active" : "paid" };
-        if (obj.subscription) patch.stripe_subscription_id = String(obj.subscription);
-        await supabase.from("revenue_schedules").update(patch).eq("id", id);
-        await writeTimeline(id, `Stripe checkout completed (${obj.mode})`, { session_id: obj.id });
+        if (id) {
+          const patch: any = { status: obj.mode === "subscription" ? "active" : "paid" };
+          if (obj.subscription) patch.stripe_subscription_id = String(obj.subscription);
+          await supabase.from("revenue_schedules").update(patch).eq("id", id);
+          await writeTimeline(id, `Stripe checkout completed (${obj.mode})`, { session_id: obj.id });
+        }
         break;
       }
       case "invoice.paid": {
