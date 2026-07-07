@@ -24,6 +24,8 @@ export default function AccountDetail() {
   const [account, setAccount] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [items, setItems] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [overrides, setOverrides] = useState<OccurrenceOverride[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [cName, setCName] = useState("");
