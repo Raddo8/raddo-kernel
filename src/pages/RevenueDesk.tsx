@@ -381,8 +381,6 @@ export default function RevenueDesk() {
             />
           )}
 
-          {/* --- unchanged below --- */}
-          {false && (
 
           {/* Calendar grid · Cards mode */}
           {primaryMode === "cards" && (
