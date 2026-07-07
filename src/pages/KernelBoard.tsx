@@ -138,6 +138,8 @@ export default function KernelBoard() {
                   {colItems.map(i => {
                     const rows = checklist[i.account_id] || [];
                     const p = progress(rows);
+                    const designation = (i.metadata?.designation as string) || null;
+                    const preSig = !!i.metadata?.pre_signature;
                     return (
                       <button
                         key={i.id}
@@ -149,6 +151,20 @@ export default function KernelBoard() {
                         className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="text-sm font-medium truncate">{i.accounts?.name || "—"}</div>
+                        <div className="mt-1 flex flex-wrap gap-1 text-[9px] font-mono uppercase tracking-wider">
+                          {designation === "regulated" && (
+                            <>
+                              <span className="px-1 py-0.5 border border-dossier-brass/60 text-dossier-brass rounded">regulated</span>
+                              <span className="px-1 py-0.5 border border-border rounded text-muted-foreground">no customer-NPI</span>
+                            </>
+                          )}
+                          {designation === "standard" && (
+                            <span className="px-1 py-0.5 border border-border rounded text-muted-foreground">standard</span>
+                          )}
+                          {preSig && (
+                            <span className="px-1 py-0.5 border border-border rounded text-muted-foreground">pre-signature</span>
+                          )}
+                        </div>
                         <div className="mt-2 h-1 bg-muted rounded overflow-hidden">
                           <div className="h-full bg-dossier-brass" style={{ width: `${p.pct}%` }} />
                         </div>
