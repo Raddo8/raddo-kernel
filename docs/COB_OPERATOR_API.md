@@ -33,7 +33,9 @@ State change through the normal path · records a system timeline event.
 ```json
 { "action": "set_state", "pursuit_id": "<uuid>", "state": "meeting_set" }
 ```
-`state` is the item_state `name` (e.g. `signal`, `qualified`, `meeting_set`).
+`state` is the item_state `name` (e.g. `signal`, `qualified`, `asset_built`, `meeting_set`).
+
+Transitioning into any of `qualified · deepdive · asset_built · meeting_set · build_shown · proposal · agreement · onboarding · client` requires the account to have a contact with `is_decision_maker=true` AND a non-empty `email`. Otherwise returns `409 qualified_gate_blocked` with a `reason` string.
 
 ## queue_task
 Creates an `internal_task` action with `status=approved` for the worklist.

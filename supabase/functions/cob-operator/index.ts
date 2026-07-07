@@ -7,6 +7,10 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 const WORKSPACE_ID = "b0c00b00-0000-4000-8000-000000000001";
 const ALLOWED_ACTIONS = new Set(["list_pursuits", "get_pursuit", "add_note", "set_state", "queue_task"]);
 const ALLOWED_LAYERS = new Set(["L1", "L2", "L3", "L4", "L5"]);
+const GATED_STATES = new Set([
+  "qualified", "deepdive", "asset_built", "meeting_set",
+  "build_shown", "proposal", "agreement", "onboarding", "client",
+]);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -176,6 +180,21 @@ Deno.serve(async (req: Request) => {
         .from("item_states").select("id, name, label")
         .eq("workspace_id", WORKSPACE_ID).eq("name", stateName).maybeSingle();
       if (!st) return json(400, { error: "unknown_state" });
+
+      // Qualified gate · must mirror src/lib/state-transitions.ts.
+      if (GATED_STATES.has(stateName)) {
+        const { data: dm } = await supabase
+          .from("contacts")
+          .select("id, email, is_decision_maker")
+          .eq("account_id", (item as any).account_id);
+        const hasDm = (dm || []).some((c: any) => c.is_decision_maker && (c.email || "").trim());
+        if (!hasDm) {
+          return json(409, {
+            error: "qualified_gate_blocked",
+            reason: `Contact incomplete · a decision-maker contact with a non-empty email is required to reach ${stateName} or beyond.`,
+          });
+        }
+      }
 
       const { error: upErr } = await supabase.from("items")
         .update({ state_id: (st as any).id })

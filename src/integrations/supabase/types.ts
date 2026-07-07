@@ -521,31 +521,49 @@ export type Database = {
           account_id: string
           created_at: string
           email: string | null
+          email_verified: boolean
           id: string
+          is_decision_maker: boolean
+          linkedin_url: string | null
           metadata: Json | null
           name: string
+          notes: string | null
           phone: string | null
           role: string | null
+          source: string | null
+          title: string | null
         }
         Insert: {
           account_id: string
           created_at?: string
           email?: string | null
+          email_verified?: boolean
           id?: string
+          is_decision_maker?: boolean
+          linkedin_url?: string | null
           metadata?: Json | null
           name: string
+          notes?: string | null
           phone?: string | null
           role?: string | null
+          source?: string | null
+          title?: string | null
         }
         Update: {
           account_id?: string
           created_at?: string
           email?: string | null
+          email_verified?: boolean
           id?: string
+          is_decision_maker?: boolean
+          linkedin_url?: string | null
           metadata?: Json | null
           name?: string
+          notes?: string | null
           phone?: string | null
           role?: string | null
+          source?: string | null
+          title?: string | null
         }
         Relationships: [
           {

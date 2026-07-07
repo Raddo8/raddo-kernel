@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useWorkspace } from "@/lib/workspace-context";
 import PageHeader from "@/components/PageHeader";
@@ -7,13 +6,14 @@ import EmptyState from "@/components/EmptyState";
 import { LayoutGrid, User } from "lucide-react";
 import { HeatBadge, signalHeat } from "@/components/SignalsPanel";
 import { toast } from "sonner";
-import { writeTimelineEvent } from "@/lib/timeline-events";
 import { queueAction } from "@/lib/queue-actions";
 import { differenceInDays } from "date-fns";
 import { pipelineRollup, fmtUsd, type Schedule } from "@/lib/revenue-math";
 import { useWorkspaceSettings, stageProbability } from "@/lib/workspace-settings";
 import ViewMenu from "@/components/ViewMenu";
 import { useViewPref } from "@/lib/view-prefs";
+import { changeItemState } from "@/lib/state-transitions";
+import PursuitSlideOut from "@/components/PursuitSlideOut";
 
 interface State { id: string; name: string; label: string; color: string; sort_order: number; }
 interface Pursuit {
@@ -33,6 +33,7 @@ export default function PursuitBoard() {
   const [primaryContactByAccount, setPrimaryContactByAccount] = useState<Record<string, { name: string; email: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [dragId, setDragId] = useState<string | null>(null);
+  const [openPursuitId, setOpenPursuitId] = useState<string | null>(null);
   const [showRaw,      setShowRaw]      = useViewPref("board.showRaw",      true);
   const [showWeighted, setShowWeighted] = useViewPref("board.showWeighted", false);
   const [showContact,  setShowContact]  = useViewPref("board.showContact",  true);
@@ -120,18 +121,21 @@ export default function PursuitBoard() {
     const pursuit = pursuits.find(p => p.id === id);
     if (!pursuit || pursuit.state_id === stateId) return;
     const target = states.find(s => s.id === stateId);
+    const prevStateId = pursuit.state_id;
 
     setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: stateId } : p));
 
-    const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
-    if (error) { toast.error(error.message); load(); return; }
-    await writeTimelineEvent({
-      accountId: pursuit.account_id,
-      itemId: id,
-      direction: "system",
-      channel: "system",
-      summary: `State changed to ${target?.label || "unknown"}`,
+    const res = await changeItemState({
+      item: { id, account_id: pursuit.account_id },
+      targetStateId: stateId,
+      states,
     });
+    if (!res.ok) {
+      // Revert optimistic move + surface reason.
+      setPursuits(prev => prev.map(p => p.id === id ? { ...p, state_id: prevStateId } : p));
+      toast.error(res.error || "Move blocked");
+      return;
+    }
 
     const targetName = (target?.name || target?.label || "").toLowerCase();
     if (/agreement/.test(targetName)) {
@@ -227,13 +231,14 @@ export default function PursuitBoard() {
                     const heat = slug ? signalHeat(signalsBySlug[slug] || []) : "cold";
                     const days = differenceInDays(new Date(), new Date(p.updated_at));
                     return (
-                      <Link
+                      <button
                         key={p.id}
-                        to={`/app/items/${p.id}`}
+                        type="button"
                         draggable
                         onDragStart={() => setDragId(p.id)}
                         onDragEnd={() => setDragId(null)}
-                        className="block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
+                        onClick={() => setOpenPursuitId(p.id)}
+                        className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate">{accountName}</div>
                         <div className="text-sm font-medium mt-0.5 line-clamp-2">{p.title}</div>
@@ -250,7 +255,7 @@ export default function PursuitBoard() {
                           <HeatBadge heat={heat} />
                           {md.subdomain_slug && <span className="px-1.5 py-0.5 border border-border rounded text-muted-foreground">/{md.subdomain_slug}</span>}
                         </div>
-                      </Link>
+                      </button>
                     );
                   })}
                   {items.length === 0 && <div className="text-[10px] font-mono text-muted-foreground px-1">empty</div>}
@@ -260,6 +265,13 @@ export default function PursuitBoard() {
           </div>
         </div>
       )}
+      <PursuitSlideOut
+        pursuitId={openPursuitId}
+        open={!!openPursuitId}
+        onOpenChange={(v) => { if (!v) setOpenPursuitId(null); }}
+        states={states}
+        onChanged={load}
+      />
     </div>
   );
 }

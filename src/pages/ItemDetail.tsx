@@ -15,10 +15,11 @@ import { toast } from "sonner";
 import { useWorkspace } from "@/lib/workspace-context";
 import { queueAction } from "@/lib/queue-actions";
 import { evaluatePlaybook } from "@/lib/evaluate-playbook";
-import { writeTimelineEvent } from "@/lib/timeline-events";
+
 import { useLabels } from "@/lib/labels-context";
 import PursuitEditDialog from "@/components/dialogs/PursuitEditDialog";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
+import { changeItemState } from "@/lib/state-transitions";
 
 export default function ItemDetail() {
   const labels = useLabels();
@@ -40,7 +41,7 @@ export default function ItemDetail() {
   const fetchContacts = async (accountId: string) => {
     const { data } = await supabase
       .from("contacts")
-      .select("id, account_id, name, email, phone, role")
+      .select("id, account_id, name, email, phone, role, title, is_decision_maker, email_verified")
       .eq("account_id", accountId)
       .order("created_at", { ascending: true });
     setContacts((data as any) || []);
@@ -110,26 +111,24 @@ export default function ItemDetail() {
 
   const changeState = async (stateId: string) => {
     if (!id || !item || !workspace) return;
+    const prev = selectedState;
     setSelectedState(stateId);
-    const { error } = await supabase.from("items").update({ state_id: stateId }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-
-    const state = states.find(s => s.id === stateId);
-
-    // Centralized timeline write (constraint 2)
-    await writeTimelineEvent({
-      accountId: item.account_id || item.accounts?.id,
-      itemId: id,
-      direction: "system",
-      channel: "system",
-      summary: `State changed to ${state?.label || "unknown"}`,
+    const res = await changeItemState({
+      item: { id, account_id: item.account_id || item.accounts?.id },
+      targetStateId: stateId,
+      states,
     });
+    if (!res.ok) {
+      setSelectedState(prev);
+      toast.error(res.error || "Move blocked");
+      return;
+    }
 
     // Evaluate playbook via extracted module
     await evaluatePlaybook({
       itemId: id,
       stateId,
-      stateName: state?.name || "",
+      stateName: res.state?.name || "",
       itemType: item.type,
       workspaceId: workspace.id,
       actorUserId: userId ?? undefined,
@@ -240,11 +239,13 @@ export default function ItemDetail() {
                   <div key={c.id} className="flex items-start gap-2 text-sm group">
                     <User size={14} className="text-muted-foreground shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-wrap">
                         <span className="truncate">{c.name}</span>
                         {i === 0 && <span className="text-[9px] font-mono text-dossier-brass">· primary</span>}
+                        {c.is_decision_maker && <span className="text-[9px] font-mono px-1 py-0 rounded border border-dossier-brass/60 text-dossier-brass">DM</span>}
+                        {c.email_verified && <span className="text-[9px] font-mono px-1 py-0 rounded border border-status-green/60 text-status-green">✓</span>}
                       </div>
-                      {c.role && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.role}</div>}
+                      {(c.title || c.role) && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.title || c.role}</div>}
                       {c.email && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.email}</div>}
                       {c.phone && <div className="text-[10px] font-mono text-muted-foreground truncate">{c.phone}</div>}
                     </div>
