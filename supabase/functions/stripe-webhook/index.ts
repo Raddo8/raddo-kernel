@@ -95,6 +95,51 @@ Deno.serve(async (req) => {
         }
         break;
       }
+      case "invoice.paid": {
+        const obj = event.data.object as Stripe.Invoice;
+        const subId = obj.subscription ? String(obj.subscription) : null;
+        if (subId) {
+          const { data: row } = await supabase
+            .from("revenue_schedules")
+            .select("id")
+            .eq("stripe_subscription_id", subId)
+            .maybeSingle();
+          if (row) {
+            await supabase.from("revenue_schedules")
+              .update({ status: "active", stripe_invoice_id: obj.id })
+              .eq("id", row.id);
+            await writeTimeline(row.id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
+          }
+        }
+        const id = findScheduleId(obj);
+        if (id) {
+          await supabase.from("revenue_schedules").update({ status: "paid", stripe_invoice_id: obj.id }).eq("id", id);
+          await writeTimeline(id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
+        }
+        // Also settle any COB-side invoice tied to this stripe invoice or containing this schedule.
+        const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id;
+        if (cobInvoiceId) {
+          const { data: inv } = await supabase.from("invoices")
+            .select("id, account_id, invoice_number")
+            .eq("id", cobInvoiceId).maybeSingle();
+          if (inv) {
+            await supabase.from("invoices").update({
+              status: "paid",
+              paid_at: new Date().toISOString(),
+              paid_via: "stripe",
+              stripe_invoice_id: obj.id,
+            }).eq("id", inv.id);
+            await supabase.from("timeline_events").insert({
+              account_id: inv.account_id,
+              direction: "system", channel: "system",
+              summary: `Invoice ${inv.invoice_number} paid via Stripe`,
+              raw_json: { invoice_id: inv.id, stripe_invoice_id: obj.id },
+              occurred_at: new Date().toISOString(),
+            });
+          }
+        }
+        break;
+      }
       case "invoice.payment_failed": {
         const obj = event.data.object as Stripe.Invoice;
         const subId = obj.subscription ? String(obj.subscription) : null;
@@ -104,6 +149,21 @@ Deno.serve(async (req) => {
           if (row) {
             await supabase.from("revenue_schedules").update({ status: "overdue" }).eq("id", row.id);
             await writeTimeline(row.id, `Stripe payment failed`, { invoice_id: obj.id });
+          }
+        }
+        const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id;
+        if (cobInvoiceId) {
+          const { data: inv } = await supabase.from("invoices")
+            .select("id, account_id, invoice_number").eq("id", cobInvoiceId).maybeSingle();
+          if (inv) {
+            await supabase.from("invoices").update({ status: "overdue" }).eq("id", inv.id);
+            await supabase.from("timeline_events").insert({
+              account_id: inv.account_id,
+              direction: "system", channel: "system",
+              summary: `Invoice ${inv.invoice_number} · Stripe payment failed — chase draft needed`,
+              raw_json: { invoice_id: inv.id, stripe_invoice_id: obj.id },
+              occurred_at: new Date().toISOString(),
+            });
           }
         }
         break;
