@@ -12,25 +12,83 @@ export interface KernelPhase {
   defaults: string[];
 }
 
+// Canonical 13-column onboarding framework. Order is authoritative.
 export const KERNEL_PHASES: KernelPhase[] = [
   { key: "agreement_access", label: "Agreement & Access",
-    defaults: ["Countersigned agreement", "Payment terms confirmed", "Access credentials received"] },
+    defaults: [
+      "Standard-vs-Regulated designation set",
+      "Countersigned agreement",
+      "Payment terms confirmed",
+      "Access credentials received",
+    ] },
   { key: "workspace_scaffold", label: "Workspace Scaffold",
-    defaults: ["Workspace created", "Users invited", "Brand tokens applied"] },
-  { key: "connectors", label: "Connectors",
-    defaults: ["Email connected", "Calendar connected", "Notion OFFICE connected", "Business systems connected"] },
+    defaults: [
+      "Full CORE built",
+      "Rules surface (AGENT-HEADER + registry)",
+      "Memory Sync home",
+      "Session Log home",
+      "Permissions Always-Allow",
+    ] },
+  { key: "connect_your_world", label: "Connect Your World",
+    defaults: [
+      "Email",
+      "Calendar (+forwarding for secondary inboxes)",
+      "Files",
+      "Accounting",
+      "CRM",
+      "Comms",
+    ] },
   { key: "storage_files", label: "Storage & Files",
-    defaults: ["Storage bucket ready", "Baseline files uploaded"] },
-  { key: "ingest_history", label: "Ingest & History",
-    defaults: ["Email history ingested", "Meeting history ingested", "Financial history ingested"] },
-  { key: "discovery", label: "Discovery",
-    defaults: ["Discovery interview held", "Doctrine captured"] },
+    defaults: [
+      "Client's own Box kernel folder readable (identity kernel only · no mutable stores)",
+      "Shared Skills-Source folder readable",
+    ] },
+  { key: "install_skills", label: "Install Operating Skills",
+    defaults: [
+      "Skill · begin (read from Skills-Source, rebuilt, client Saved, version cross-checked)",
+      "Skill · save",
+      "Skill · sync",
+      "Skill · end",
+      "Skill · format",
+      "Skill · council",
+    ] },
+  { key: "gather_foundation", label: "Gather & Foundation",
+    defaults: [
+      "Rich world-read into the OFFICE",
+      "Regulated no-store honored",
+    ] },
+  { key: "gather_packet_gate", label: "Gather Packet Gate",
+    defaults: [
+      "Packet produced",
+      "Single-home checkpoint passed (one Notion home per mutable thing)",
+      "No Box mutable seeds lingering (any seed consumed then DELETED)",
+    ] },
+  { key: "deep_ingest_discovery", label: "Deep Ingest & Discovery",
+    defaults: [
+      "Full corpus read",
+      "Vision/values discovery (inferred vs confirmed flagged)",
+    ] },
+  { key: "migrate_memory", label: "Migrate Memory",
+    defaults: [
+      "Migrated into Memory Sync (the one home)",
+      "Seed-delete verified",
+    ] },
   { key: "domain_build", label: "Domain Build",
-    defaults: ["Core objects modeled", "Policies drafted"] },
+    defaults: [
+      "Catered domain DBs from the client's real world",
+    ] },
   { key: "kernel_assembly", label: "Kernel Assembly",
-    defaults: ["Playbooks wired", "Templates loaded", "Rules armed"] },
+    defaults: [
+      "4-doc kernel built verbatim-from-canon",
+      "Identity files to Box under STABLE filenames",
+    ] },
   { key: "go_live_gate", label: "Go-Live Gate",
-    defaults: ["Dry-run brief delivered", "Sign-off received"] },
+    defaults: [
+      "Operator ratifies kernel",
+      "Council connector handoff",
+      "First /begin greets clean",
+      "Client told 'live' only now",
+    ] },
   { key: "live", label: "LIVE",
     defaults: [] },
 ];
