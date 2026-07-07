@@ -379,15 +379,18 @@ export default function InvoicesList() {
         actorEmail={userEmail ?? null}
       />
 
-      {/* Issue → email draft dialog */}
+      {/* Issue → send hub (branded email + payment link) */}
       <IssueEmailDialog
         invoice={issueDialog}
         account={issueDialog ? accounts[issueDialog.account_id] ?? null : null}
         contact={issueDialog ? contacts[issueDialog.account_id] ?? null : null}
         workspaceName={workspace?.name ?? null}
         remittance={remittance}
+        paymentsStatus={paymentsStatus}
         onCancel={() => setIssueDialog(null)}
         onConfirm={doIssueConfirmed}
+        onSent={async () => { setIssueDialog(null); await load(); }}
+        onLinkCreated={async () => { await load(); }}
       />
 
       {/* Settings dialog */}
