@@ -270,6 +270,7 @@ export default function AccountDetail() {
                 <TabsTrigger value="timeline">Timeline</TabsTrigger>
                 <TabsTrigger value="files">Files</TabsTrigger>
                 <TabsTrigger value="signals">Signals</TabsTrigger>
+                <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
               </TabsList>
             </div>
             <TabsContent value="timeline" className="m-0">
@@ -286,6 +287,11 @@ export default function AccountDetail() {
             </TabsContent>
             <TabsContent value="signals" className="m-0">
               <SignalsPanel utmSlug={account?.metadata?.utm_slug ?? null} />
+            </TabsContent>
+            <TabsContent value="onboarding" className="m-0">
+              {account && (
+                <AccountOnboardingTab workspaceId={account.workspace_id} accountId={account.id} />
+              )}
             </TabsContent>
           </Tabs>
         </div>
