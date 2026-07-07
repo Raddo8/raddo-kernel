@@ -310,6 +310,7 @@ export function pipelineRollup(params: {
     if (schedules.length > 0) {
       for (const s of schedules) {
         if (s.status === "cancelled") continue;
+        if (s.counted === false) continue;
         const v = amt(s);
         if (s.kind === "one_time") { bucket.oneTime += v; bucket.weightedOneTime += v * prob; }
         else if (s.kind === "subscription") { bucket.monthly += v; bucket.weightedMonthly += v * prob; }
