@@ -438,3 +438,69 @@ export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return "";
   try { return format(parseISO(iso), "MMM d, yyyy"); } catch { return iso; }
 }
+
+export function fmtMoneyPlain(n: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2,
+  }).format(n);
+}
+
+/**
+ * Build a draft outbound "here is your invoice" email. Nothing is sent — the UI
+ * offers copy + mailto so the operator addresses it themselves.
+ */
+export function buildIssueEmailDraft(params: {
+  invoice: Invoice;
+  accountName: string;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  remittance?: string | null;
+  workspaceName?: string | null;
+}): { to: string; subject: string; body: string } {
+  const inv = params.invoice;
+  const periodLabel = (() => {
+    try { return format(parseISO(inv.billing_period), "MMMM yyyy"); } catch { return inv.billing_period; }
+  })();
+  const dueLabel = fmtDate(inv.due_date);
+  const total = Number(inv.total ?? inv.subtotal ?? 0);
+  const greetName = params.contactName?.trim() || "there";
+  const lines: string[] = [];
+  lines.push(`Hi ${greetName},`);
+  lines.push("");
+  lines.push(`Please find invoice ${inv.invoice_number} for ${params.accountName} attached below.`);
+  lines.push("");
+  lines.push(`Invoice number: ${inv.invoice_number}`);
+  lines.push(`Billing period: ${periodLabel}`);
+  lines.push(`Amount due:     ${fmtMoneyPlain(total)}`);
+  lines.push(`Due date:       ${dueLabel}`);
+  lines.push("");
+  if (inv.stripe_payment_link) {
+    lines.push(`Pay online: ${inv.stripe_payment_link}`);
+    lines.push("");
+  }
+  const remit = (params.remittance || "").trim();
+  if (remit) {
+    lines.push("Remittance instructions:");
+    lines.push(remit);
+    lines.push("");
+  }
+  if (inv.notes) {
+    lines.push(`Notes: ${inv.notes}`);
+    lines.push("");
+  }
+  lines.push("Any questions, just reply to this email.");
+  lines.push("");
+  lines.push("Thank you,");
+  lines.push(params.workspaceName?.trim() || "COB · Chief of Business");
+
+  return {
+    to: params.contactEmail?.trim() || "",
+    subject: `Invoice ${inv.invoice_number} · ${params.accountName} · ${periodLabel}`,
+    body: lines.join("\n"),
+  };
+}
+
+export function mailtoUrl(draft: { to: string; subject: string; body: string }): string {
+  const q = new URLSearchParams({ subject: draft.subject, body: draft.body });
+  return `mailto:${encodeURIComponent(draft.to)}?${q.toString()}`;
+}
