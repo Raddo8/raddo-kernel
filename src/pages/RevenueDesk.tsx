@@ -197,6 +197,27 @@ export default function RevenueDesk() {
 
   const shiftQ = (delta: number) => setQOffset(qOffset + delta);
 
+  const ledgerRows = useMemo(() => {
+    if (!segFilter) return rows;
+    return rows.filter(r => {
+      if (r.status === "cancelled") return false;
+      if (segFilter.band === "account" && r.account_id !== segFilter.seriesKey) return false;
+      if (segFilter.band === "stage") {
+        const p = r.item_id ? pursuits.find(x => x.id === r.item_id) : null;
+        const stage = p ? (stateNameById[p.state_id] || "unlinked") : "unlinked";
+        if (stage !== segFilter.seriesKey) return false;
+      }
+      if (segFilter.band === "status") {
+        const isCommitted = ["active","invoiced","paid"].includes(r.status);
+        const isExpected = ["expected","agreement_pending"].includes(r.status);
+        if (segFilter.seriesKey === "committed" && !isCommitted) return false;
+        if ((segFilter.seriesKey === "expected" || segFilter.seriesKey === "forecast") && !isExpected) return false;
+      }
+      return scheduleInstances(r, segFilter.start, segFilter.end).length > 0;
+    });
+  }, [rows, segFilter, pursuits, stateNameById]);
+
+
   return (
     <div>
       <PageHeader
