@@ -124,7 +124,10 @@ export default function AccountDetail() {
                     <Input placeholder="Name" value={cName} onChange={e => setCName(e.target.value)} />
                     <Input placeholder="Email" value={cEmail} onChange={e => setCEmail(e.target.value)} />
                     <Input placeholder="Phone" value={cPhone} onChange={e => setCPhone(e.target.value)} />
-                    <Input placeholder="Role" value={cRole} onChange={e => setCRole(e.target.value)} />
+                    <Input placeholder="Title" value={cTitle} onChange={e => setCTitle(e.target.value)} />
+                    <label className="flex items-center gap-2 text-xs font-mono cursor-pointer">
+                      <input type="checkbox" checked={cDm} onChange={e => setCDm(e.target.checked)} /> decision-maker
+                    </label>
                     <p className="text-xs text-muted-foreground">At least email or phone is required.</p>
                     <Button onClick={addContact} className="w-full" disabled={!canAddContact}>Add</Button>
                   </div>
