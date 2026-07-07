@@ -196,6 +196,46 @@ export default function AccountDetail() {
           </div>
 
           <div className="p-4">
+            <h3 className="text-sm font-semibold font-mono mb-3 flex items-center gap-1">
+              <DollarSign size={14} /> REVENUE
+            </h3>
+            {schedules.length === 0 ? (
+              <p className="text-xs text-muted-foreground">No revenue schedules yet.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  {schedules.map(s => (
+                    <div key={s.id} className="text-[11px] font-mono flex justify-between border border-border rounded px-2 py-1">
+                      <span className="truncate">
+                        <Link to="/app/revenue" className="hover:text-dossier-brass">{s.description || s.kind}</Link>
+                        <span className="text-muted-foreground"> · {s.status}</span>
+                      </span>
+                      <span>{fmtUsd(Number(s.amount_usd) || 0)}{s.cadence === "monthly" ? "/mo" : ""}</span>
+                    </div>
+                  ))}
+                </div>
+                {next3.length > 0 && (
+                  <div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground mb-1">Next occurrences</div>
+                    <div className="space-y-0.5">
+                      {next3.map((o, i) => (
+                        <div key={i} className="text-[11px] font-mono text-muted-foreground flex justify-between">
+                          <span>{format(o.date, "MMM d yyyy")} · {o.s.description}</span>
+                          <span>
+                            {fmtUsd(o.amount)}
+                            {o.override && <span className="text-dossier-brass"> ·</span>}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+
+          <div className="p-4">
             <h3 className="text-sm font-semibold font-mono mb-3">{labels.itemsUpper}</h3>
             {items.length === 0 ? (
               <p className="text-xs text-muted-foreground">No {labels.itemsLower} yet</p>
