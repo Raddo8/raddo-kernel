@@ -362,7 +362,7 @@ Deno.serve(async (req: Request) => {
         subject,
         html,
         text,
-        reply_to: "billing@chiefofbusiness.ai",
+        reply_to: "cob@chiefofbusiness.ai",
         tags: [
           { name: "kind", value: "invoice" },
           { name: "invoice_number", value: String(inv.invoice_number).replace(/[^A-Za-z0-9_-]/g, "_") },
