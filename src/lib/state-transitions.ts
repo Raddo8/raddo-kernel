@@ -331,3 +331,55 @@ export async function moveClientOpsState(args: {
 
   return { ok: true };
 }
+
+/**
+ * Autopilot preference for a given pursuit.
+ * Item override wins (`auto` / `manual` / `inherit` in item.metadata.autopilot);
+ * else falls back to workspace-level `settings.autopilot === true`.
+ */
+export function resolveAutopilot(args: {
+  itemMetadata?: any;
+  workspaceAutopilot: boolean;
+}): boolean {
+  const override = args.itemMetadata?.autopilot;
+  if (override === "auto") return true;
+  if (override === "manual") return false;
+  return args.workspaceAutopilot;
+}
+
+/**
+ * Called after a successful state change. If autopilot is on AND the newly-entered
+ * state has an intelligence work-order mapping AND no active order of that type
+ * exists, queue one (created_by=autopilot) and write a timeline event.
+ */
+export async function maybeQueueAutopilotOrder(args: {
+  item: { id: string; account_id: string; workspace_id: string; metadata?: any };
+  newStateName: string;
+  workspaceAutopilot: boolean;
+}): Promise<{ queued: boolean; orderType?: WorkOrderType }> {
+  if (!resolveAutopilot({ itemMetadata: args.item.metadata, workspaceAutopilot: args.workspaceAutopilot })) {
+    return { queued: false };
+  }
+  const orderType = AUTOPILOT_ON_ENTER[args.newStateName];
+  if (!orderType) return { queued: false };
+  const res = await queueWorkOrder({
+    workspaceId: args.item.workspace_id,
+    itemId: args.item.id,
+    orderType,
+    createdBy: "autopilot",
+  });
+  if (res.created) {
+    try {
+      await writeTimelineEvent({
+        accountId: args.item.account_id,
+        itemId: args.item.id,
+        direction: "system",
+        channel: "system",
+        summary: `Autopilot queued work order · ${orderTypeLabel(orderType)}`,
+        rawJson: { source: "autopilot", order_type: orderType, work_order_id: res.workOrder?.id },
+      });
+    } catch (e) { console.warn("autopilot timeline write failed", e); }
+    return { queued: true, orderType };
+  }
+  return { queued: false, orderType };
+}
