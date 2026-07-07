@@ -93,29 +93,6 @@ Deno.serve(async (req) => {
           await supabase.from("revenue_schedules").update({ status: "paid", stripe_invoice_id: obj.id }).eq("id", id);
           await writeTimeline(id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
         }
-        break;
-      }
-      case "invoice.paid": {
-        const obj = event.data.object as Stripe.Invoice;
-        const subId = obj.subscription ? String(obj.subscription) : null;
-        if (subId) {
-          const { data: row } = await supabase
-            .from("revenue_schedules")
-            .select("id")
-            .eq("stripe_subscription_id", subId)
-            .maybeSingle();
-          if (row) {
-            await supabase.from("revenue_schedules")
-              .update({ status: "active", stripe_invoice_id: obj.id })
-              .eq("id", row.id);
-            await writeTimeline(row.id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
-          }
-        }
-        const id = findScheduleId(obj);
-        if (id) {
-          await supabase.from("revenue_schedules").update({ status: "paid", stripe_invoice_id: obj.id }).eq("id", id);
-          await writeTimeline(id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
-        }
         // Also settle any COB-side invoice tied to this stripe invoice or containing this schedule.
         const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id;
         if (cobInvoiceId) {
