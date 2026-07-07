@@ -62,8 +62,10 @@ export default function RevenueDesk() {
 
   // Primary visual switcher · Ribbon is the new default.
   type Primary = "ribbon" | "cards" | "ledger";
-  const [primary, setPrimary] = useViewPref("revenue.primary.ribbon", true); // true=ribbon default (legacy bool key retained for existing users)
-  const [primaryMode, setPrimaryMode] = useState<Primary>("ribbon");
+  const [primaryMode, setPrimaryMode] = useState<Primary>(() => {
+    try { return (localStorage.getItem("revenue.primaryMode") as Primary) || "ribbon"; } catch { return "ribbon"; }
+  });
+  useEffect(() => { try { localStorage.setItem("revenue.primaryMode", primaryMode); } catch { /* noop */ } }, [primaryMode]);
   const [band, setBand] = useState<BandBy>("account");
 
   // Segment click → filter ledger by series + week window.
