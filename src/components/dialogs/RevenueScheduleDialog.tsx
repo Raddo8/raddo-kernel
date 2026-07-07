@@ -127,6 +127,10 @@ export default function RevenueScheduleDialog({
           { field: "status", before: schedule.status, after: payload.status },
         ],
       });
+      await reflectClientOpsFromStatus({
+        workspaceId, accountId: schedule.account_id,
+        prevStatus: schedule.status, nextStatus: status,
+      });
     } else {
       const { data, error } = await (supabase as any)
         .from("revenue_schedules")
@@ -145,6 +149,10 @@ export default function RevenueScheduleDialog({
           { field: "amount_usd", before: null, after: payload.amount_usd },
           { field: "kind", before: null, after: payload.kind },
         ],
+      });
+      await reflectClientOpsFromStatus({
+        workspaceId, accountId,
+        prevStatus: null, nextStatus: status,
       });
     }
     setSaving(false);
