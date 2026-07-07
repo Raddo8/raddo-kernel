@@ -21,6 +21,8 @@ import { fmtUsd, expandOccurrences, indexOverrides, type Schedule, type Occurren
 import OccurrenceEditorDialog from "@/components/dialogs/OccurrenceEditorDialog";
 import FilesPanel from "@/components/FilesPanel";
 import { useWorkspaceSettings } from "@/lib/workspace-settings";
+import AutopilotMatrixPopover from "@/components/AutopilotMatrixPopover";
+import { type AutopilotMatrix } from "@/lib/autopilot-matrix";
 
 
 interface Props {
@@ -54,7 +56,9 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
   } | null>(null);
   const { settings, save: saveSettings } = useWorkspaceSettings(item?.workspace_id);
   const workspaceAutopilot = (settings as any)?.autopilot === true;
+  const workspaceMatrix: AutopilotMatrix = ((settings as any)?.autopilot_matrix || {}) as AutopilotMatrix;
   const itemAutopilot: "auto" | "manual" | "inherit" = item?.metadata?.autopilot || "inherit";
+  const itemMatrix: AutopilotMatrix = ((item?.metadata?.autopilot_matrix || {}) as AutopilotMatrix);
   const autopilotOn = resolveAutopilot({ itemMetadata: item?.metadata, workspaceAutopilot });
 
 
@@ -161,6 +165,7 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
       await maybeQueueAutopilotOrder({
         item: { id: item.id, account_id: item.account_id, workspace_id: item.workspace_id, metadata: item.metadata },
         newStateName: res.state?.name || "",
+        workspaceMatrix,
         workspaceAutopilot,
       });
     }
