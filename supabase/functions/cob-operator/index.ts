@@ -181,6 +181,21 @@ Deno.serve(async (req: Request) => {
         .eq("workspace_id", WORKSPACE_ID).eq("name", stateName).maybeSingle();
       if (!st) return json(400, { error: "unknown_state" });
 
+      // Qualified gate · must mirror src/lib/state-transitions.ts.
+      if (GATED_STATES.has(stateName)) {
+        const { data: dm } = await supabase
+          .from("contacts")
+          .select("id, email, is_decision_maker")
+          .eq("account_id", (item as any).account_id);
+        const hasDm = (dm || []).some((c: any) => c.is_decision_maker && (c.email || "").trim());
+        if (!hasDm) {
+          return json(409, {
+            error: "qualified_gate_blocked",
+            reason: `Contact incomplete · a decision-maker contact with a non-empty email is required to reach ${stateName} or beyond.`,
+          });
+        }
+      }
+
       const { error: upErr } = await supabase.from("items")
         .update({ state_id: (st as any).id })
         .eq("id", id).eq("workspace_id", WORKSPACE_ID);
