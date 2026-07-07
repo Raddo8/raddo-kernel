@@ -34,6 +34,8 @@ export interface Schedule {
   end_date: string | null;
   next_due: string | null;
   status: Status;
+  /** When false, the schedule is EXCLUDED from every revenue total everywhere. */
+  counted?: boolean;
   stripe_product_id?: string | null;
   stripe_price_id?: string | null;
   stripe_subscription_id?: string | null;
