@@ -67,6 +67,7 @@ export default function InvoicesList() {
   const [paidVia, setPaidVia] = useState<PaidVia>("bank");
   const [paidNote, setPaidNote] = useState("");
   const [voidReason, setVoidReason] = useState("");
+  const [paymentsStatus, setPaymentsStatus] = useState<PaymentsStatus | null>(null);
 
   const load = useCallback(async () => {
     if (!workspace?.id) return;
