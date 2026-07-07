@@ -23,6 +23,7 @@ import FilesPanel from "@/components/FilesPanel";
 import { useWorkspaceSettings } from "@/lib/workspace-settings";
 import AutopilotMatrixPopover from "@/components/AutopilotMatrixPopover";
 import { type AutopilotMatrix } from "@/lib/autopilot-matrix";
+import CompanyProfilePanel from "@/components/CompanyProfilePanel";
 
 
 interface Props {
