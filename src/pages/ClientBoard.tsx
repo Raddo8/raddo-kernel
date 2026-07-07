@@ -168,6 +168,8 @@ export default function ClientBoard() {
                     const days = differenceInDays(new Date(), new Date(p.updated_at));
                     const dnc = md.do_not_contact === true;
                     const fleet = md.fleet_status as string | undefined;
+                    const onboardingPct = (p.item_states as any)?.name === "client_onboarding"
+                      ? onboardingPctByAccount[p.account_id] : undefined;
                     return (
                       <div
                         key={p.id}
@@ -177,6 +179,14 @@ export default function ClientBoard() {
                         className="w-full text-left block bg-background border border-border rounded p-3 hover:border-dossier-brass/50 transition-colors cursor-grab active:cursor-grabbing"
                       >
                         <div className="text-sm font-medium truncate">{p.accounts?.name || "—"}</div>
+                        {onboardingPct != null && (
+                          <div className="mt-1.5">
+                            <div className="h-1 bg-muted rounded overflow-hidden">
+                              <div className="h-full bg-dossier-brass" style={{ width: `${onboardingPct}%` }} />
+                            </div>
+                            <div className="text-[10px] font-mono text-muted-foreground mt-0.5">onboarding · {onboardingPct}%</div>
+                          </div>
+                        )}
                         <div className="mt-1 flex items-center gap-1.5 flex-wrap text-[10px] font-mono">
                           {mrr > 0 && <span className="px-1.5 py-0.5 border border-dossier-brass/40 text-dossier-brass rounded">{fmtUsd(mrr)}/mo</span>}
                           {signalCt > 0 && <span className="px-1.5 py-0.5 border border-border rounded">{signalCt} signals · 7d</span>}
