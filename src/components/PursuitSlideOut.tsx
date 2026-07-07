@@ -264,6 +264,12 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
 
             </SheetHeader>
 
+            {item.accounts?.metadata?.cob_profile && (
+              <CompanyProfilePanel profile={item.accounts.metadata.cob_profile} compact />
+            )}
+
+
+
             {/* Contact block */}
             <section>
               <div className="flex items-center justify-between mb-2">
