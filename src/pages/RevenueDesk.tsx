@@ -23,6 +23,8 @@ import {
 } from "@/lib/revenue-math";
 import { useWorkspaceSettings, DEFAULT_STAGE_PROBABILITIES, stageProbability } from "@/lib/workspace-settings";
 import RibbonChart, { BandBy } from "@/components/revenue/RibbonChart";
+import MonthStrip from "@/components/revenue/MonthStrip";
+import GroupedLedger from "@/components/revenue/GroupedLedger";
 
 function statusTone(status: Status): string {
   switch (status) {
