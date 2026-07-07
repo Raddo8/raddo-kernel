@@ -134,13 +134,19 @@ export default function RevenueDesk() {
   }, [pursuits, stateNameById, settings]);
 
   const mrrActive = useMemo(
-    () => rows.filter(r => r.kind === "subscription" && r.status === "active").reduce((a, r) => a + amt(r), 0),
+    () => rows.filter(r => r.counted !== false && r.kind === "subscription" && r.status === "active").reduce((a, r) => a + amt(r), 0),
     [rows]
   );
   const mrrPending = useMemo(
-    () => rows.filter(r => r.kind === "subscription" && (r.status === "expected" || r.status === "agreement_pending" || r.status === "invoiced")).reduce((a, r) => a + amt(r), 0),
+    () => rows.filter(r => r.counted !== false && r.kind === "subscription" && (r.status === "expected" || r.status === "agreement_pending" || r.status === "invoiced")).reduce((a, r) => a + amt(r), 0),
     [rows]
   );
+
+  // Ledger view mode · grouped-by-account is the new default.
+  const [ledgerMode, setLedgerMode] = useState<"grouped" | "flat">(() => {
+    try { return (localStorage.getItem("revenue.ledgerMode") as any) || "grouped"; } catch { return "grouped"; }
+  });
+  useEffect(() => { try { localStorage.setItem("revenue.ledgerMode", ledgerMode); } catch { /* noop */ } }, [ledgerMode]);
 
   /* ---------- Calendar buckets ---------- */
   const now = new Date();
