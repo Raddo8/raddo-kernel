@@ -26,6 +26,7 @@ import SuppressionList from "@/pages/SuppressionList";
 import SchedulerHealth from "@/pages/SchedulerHealth";
 import BillingUsage from "@/pages/BillingUsage";
 import RevenueDesk from "@/pages/RevenueDesk";
+import InvoicesList from "@/pages/InvoicesList";
 import ClientBoard from "@/pages/ClientBoard";
 import KernelBoard from "@/pages/KernelBoard";
 import ProjectBuildsBoard from "@/pages/ProjectBuildsBoard";
