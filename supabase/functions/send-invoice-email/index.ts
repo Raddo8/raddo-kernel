@@ -15,8 +15,8 @@ const BRASS = "#EF9F27";
 const ASH = "#5F5E5A";
 const CHARCOAL = "#2C2C2A";
 
-const FROM_ADDRESS = "billing@chiefofbusiness.ai";
-const FROM_DISPLAY = "COB Billing";
+const FROM_ADDRESS = "cob@chiefofbusiness.ai";
+const FROM_DISPLAY = "COB · Chief of Business";
 
 const BodySchema = z.object({
   invoice_id: z.string().uuid(),
@@ -362,7 +362,7 @@ Deno.serve(async (req: Request) => {
         subject,
         html,
         text,
-        reply_to: "billing@chiefofbusiness.ai",
+        reply_to: "cob@chiefofbusiness.ai",
         tags: [
           { name: "kind", value: "invoice" },
           { name: "invoice_number", value: String(inv.invoice_number).replace(/[^A-Za-z0-9_-]/g, "_") },
