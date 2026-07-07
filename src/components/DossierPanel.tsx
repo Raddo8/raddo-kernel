@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FileText } from "lucide-react";
+import { FileText, Mail } from "lucide-react";
 
-interface Props { itemId: string; itemMetadata?: any; }
+interface Props { itemId: string; itemMetadata?: any; accountId?: string | null; }
 
 // Only accept valid CSS hex; reject anything else per ui security hardening.
 function safeHex(v: unknown): string | null {
@@ -10,9 +10,10 @@ function safeHex(v: unknown): string | null {
   return /^#[0-9a-fA-F]{3,8}$/.test(v) ? v : null;
 }
 
-export default function DossierPanel({ itemId, itemMetadata }: Props) {
+export default function DossierPanel({ itemId, itemMetadata, accountId }: Props) {
   const [notes, setNotes] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
+  const [primaryContact, setPrimaryContact] = useState<{ name: string; email: string | null; phone: string | null; role: string | null } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -35,6 +36,22 @@ export default function DossierPanel({ itemId, itemMetadata }: Props) {
       });
     return () => { active = false; };
   }, [itemId]);
+
+  // Live-read the primary contact so the Outreach Kit recipient reflects any
+  // edit made elsewhere (contacts table is the single source of truth).
+  useEffect(() => {
+    if (!accountId) { setPrimaryContact(null); return; }
+    let active = true;
+    supabase
+      .from("contacts")
+      .select("name, email, phone, role")
+      .eq("account_id", accountId)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => { if (active) setPrimaryContact(data as any); });
+    return () => { active = false; };
+  }, [accountId]);
 
   const md = itemMetadata || {};
   const brand = md.brand || {};
@@ -121,6 +138,19 @@ export default function DossierPanel({ itemId, itemMetadata }: Props) {
       {/* Outreach */}
       <section>
         <h4 className="text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">L4 · Outreach Kit</h4>
+        <div className="border border-border rounded p-2 bg-muted/20 mb-3 text-xs font-mono flex items-center gap-2">
+          <Mail size={12} className="text-muted-foreground shrink-0" />
+          <span className="text-muted-foreground">Recipient:</span>
+          {primaryContact ? (
+            <span className="truncate">
+              {primaryContact.name}
+              {primaryContact.role && <span className="text-muted-foreground"> · {primaryContact.role}</span>}
+              {primaryContact.email && <span className="text-muted-foreground"> · {primaryContact.email}</span>}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">no primary contact on file</span>
+          )}
+        </div>
         {notes.L4 ? (
           <div className="text-sm whitespace-pre-wrap">{notes.L4.body || notes.L4.summary}</div>
         ) : <p className="text-xs text-muted-foreground">No L4 note</p>}

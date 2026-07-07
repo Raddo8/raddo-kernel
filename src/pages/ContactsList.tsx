@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
+import { useTableSort, sortIndicator } from "@/lib/table-sort";
 
 export default function ContactsList() {
   const { workspace, userEmail } = useWorkspace();
@@ -109,30 +110,11 @@ export default function ContactsList() {
       ) : contacts.length === 0 ? (
         <EmptyState icon={Users} title="No contacts" description="Add contacts to your accounts." />
       ) : (
-        <div className="divide-y divide-border">
-          {contacts.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group"
-            >
-              <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
-                <span className="font-medium text-sm">{c.name}</span>
-                {c.role && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.role})</span>}
-                {c.email && <span className="text-xs text-muted-foreground ml-2">· {c.email}</span>}
-                {c.phone && <span className="text-xs text-muted-foreground ml-2">· {c.phone}</span>}
-              </Link>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground font-mono">{(c as any).accounts?.name}</span>
-                <Button variant="ghost" size="sm" onClick={() => { setEditContact(c); setEditOpen(true); }}>
-                  <Pencil size={12} />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => handleDelete(c)}>
-                  <Trash2 size={12} />
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ContactsTable
+          contacts={contacts}
+          onEdit={(c) => { setEditContact(c); setEditOpen(true); }}
+          onDelete={handleDelete}
+        />
       )}
       <ContactEditDialog
         contact={editContact}
@@ -141,6 +123,68 @@ export default function ContactsList() {
         onSaved={fetchContacts}
         actorEmail={userEmail}
       />
+    </div>
+  );
+}
+
+function ContactsTable({
+  contacts, onEdit, onDelete,
+}: {
+  contacts: any[];
+  onEdit: (c: ContactRow) => void;
+  onDelete: (c: ContactRow) => void;
+}) {
+  const { sort, toggle, filter, setFilter, sorted } = useTableSort(contacts, {
+    storageKey: "contacts.list",
+    defaultSort: { key: "name", dir: "asc" },
+    getters: {
+      name:    (c) => c.name ?? "",
+      email:   (c) => c.email ?? "",
+      role:    (c) => c.role ?? "",
+      account: (c) => c.accounts?.name ?? "",
+    },
+    filterFn: (c, needle) =>
+      (c.name ?? "").toLowerCase().includes(needle) ||
+      (c.email ?? "").toLowerCase().includes(needle) ||
+      (c.accounts?.name ?? "").toLowerCase().includes(needle),
+  });
+  const H = ({ k, label }: { k: string; label: string }) => (
+    <button className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground" onClick={() => toggle(k)}>
+      {label} <span className="text-muted-foreground/60">{sortIndicator(sort.key === k, sort.dir)}</span>
+    </button>
+  );
+  return (
+    <div>
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-border">
+        <Input placeholder="Filter name, email, account…" value={filter} onChange={(e) => setFilter(e.target.value)} className="h-7 w-72 text-xs font-mono" />
+        <div className="ml-auto flex items-center gap-4">
+          <H k="name" label="Name" />
+          <H k="role" label="Role" />
+          <H k="email" label="Email" />
+          <H k="account" label="Account" />
+        </div>
+      </div>
+      <div className="divide-y divide-border">
+        {sorted.map((c) => (
+          <div key={c.id} className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group">
+            <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
+              <span className="font-medium text-sm">{c.name}</span>
+              {c.role && <span className="text-xs text-muted-foreground ml-2 font-mono">({c.role})</span>}
+              {c.email && <span className="text-xs text-muted-foreground ml-2">· {c.email}</span>}
+              {c.phone && <span className="text-xs text-muted-foreground ml-2">· {c.phone}</span>}
+            </Link>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground font-mono">{c.accounts?.name}</span>
+              <Button variant="ghost" size="sm" onClick={() => onEdit(c)}>
+                <Pencil size={12} />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => onDelete(c)}>
+                <Trash2 size={12} />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
