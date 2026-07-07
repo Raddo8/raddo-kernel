@@ -23,6 +23,7 @@ import FilesPanel from "@/components/FilesPanel";
 import { useWorkspaceSettings } from "@/lib/workspace-settings";
 import AutopilotMatrixPopover from "@/components/AutopilotMatrixPopover";
 import { type AutopilotMatrix } from "@/lib/autopilot-matrix";
+import CompanyProfilePanel from "@/components/CompanyProfilePanel";
 
 
 interface Props {
@@ -262,6 +263,12 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
               </div>
 
             </SheetHeader>
+
+            {item.accounts?.metadata?.cob_profile && (
+              <CompanyProfilePanel profile={item.accounts.metadata.cob_profile} compact />
+            )}
+
+
 
             {/* Contact block */}
             <section>

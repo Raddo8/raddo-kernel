@@ -16,6 +16,7 @@ import { useWorkspace } from "@/lib/workspace-context";
 import ContactEditDialog, { deleteContactWithAudit, type ContactRow } from "@/components/dialogs/ContactEditDialog";
 import AccountEditDialog from "@/components/dialogs/AccountEditDialog";
 import AccountOnboardingTab from "@/components/AccountOnboardingTab";
+import CompanyProfilePanel from "@/components/CompanyProfilePanel";
 import { expandOccurrences, fmtUsd, indexOverrides, type Schedule, type OccurrenceOverride } from "@/lib/revenue-math";
 import { format, addMonths } from "date-fns";
 
@@ -143,6 +144,11 @@ export default function AccountDetail() {
           </Button>
         }
       />
+      {account.metadata?.cob_profile && (
+        <div className="border-b border-border">
+          <CompanyProfilePanel profile={account.metadata.cob_profile} />
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-border">
         <div className="lg:col-span-1 divide-y divide-border">
           <div className="p-4">
