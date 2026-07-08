@@ -100,7 +100,8 @@ Deno.serve(async (req) => {
         }
         break;
       }
-      case "invoice.paid": {
+      case "invoice.paid":
+      case "invoice.payment_succeeded": {
         const obj = event.data.object as Stripe.Invoice;
         const subId = obj.subscription ? String(obj.subscription) : null;
         if (subId) {
@@ -121,27 +122,35 @@ Deno.serve(async (req) => {
           await supabase.from("revenue_schedules").update({ status: "paid", stripe_invoice_id: obj.id }).eq("id", id);
           await writeTimeline(id, `Stripe invoice paid`, { invoice_id: obj.id, amount: obj.amount_paid });
         }
-        // Also settle any COB-side invoice tied to this stripe invoice or containing this schedule.
-        const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id;
+        // Settle COB-side invoice: match by metadata OR by stored stripe_invoice_id.
+        const cobInvoiceId = (obj.metadata as any)?.cob_invoice_id ?? null;
+        let cobInv: any = null;
         if (cobInvoiceId) {
-          const { data: inv } = await supabase.from("invoices")
-            .select("id, account_id, invoice_number")
+          const { data } = await supabase.from("invoices")
+            .select("id, account_id, invoice_number, status")
             .eq("id", cobInvoiceId).maybeSingle();
-          if (inv) {
-            await supabase.from("invoices").update({
-              status: "paid",
-              paid_at: new Date().toISOString(),
-              paid_via: "stripe",
-              stripe_invoice_id: obj.id,
-            }).eq("id", inv.id);
-            await supabase.from("timeline_events").insert({
-              account_id: inv.account_id,
-              direction: "system", channel: "system",
-              summary: `Invoice ${inv.invoice_number} paid via Stripe`,
-              raw_json: { invoice_id: inv.id, stripe_invoice_id: obj.id },
-              occurred_at: new Date().toISOString(),
-            });
-          }
+          cobInv = data;
+        }
+        if (!cobInv && obj.id) {
+          const { data } = await supabase.from("invoices")
+            .select("id, account_id, invoice_number, status")
+            .eq("stripe_invoice_id", obj.id).maybeSingle();
+          cobInv = data;
+        }
+        if (cobInv && cobInv.status !== "paid" && cobInv.status !== "void") {
+          await supabase.from("invoices").update({
+            status: "paid",
+            paid_at: new Date().toISOString(),
+            paid_via: "stripe",
+            stripe_invoice_id: obj.id,
+          }).eq("id", cobInv.id);
+          await supabase.from("timeline_events").insert({
+            account_id: cobInv.account_id,
+            direction: "system", channel: "system",
+            summary: `Invoice ${cobInv.invoice_number} paid via Stripe`,
+            raw_json: { invoice_id: cobInv.id, stripe_invoice_id: obj.id, amount_paid: obj.amount_paid },
+            occurred_at: new Date().toISOString(),
+          });
         }
         break;
       }

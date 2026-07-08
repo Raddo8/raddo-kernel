@@ -60,6 +60,7 @@ export interface Invoice {
   void_reason: string | null;
   stripe_invoice_id: string | null;
   stripe_payment_link: string | null;
+  stripe_invoice_pdf?: string | null;
   notes: string | null;
   created_by: string | null;
   created_at?: string;

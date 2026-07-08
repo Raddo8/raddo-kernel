@@ -23,6 +23,7 @@ export type Database = {
           name: string
           primary_contact_id: string | null
           status: string | null
+          stripe_customer_id: string | null
           type: string | null
           updated_at: string
           workspace_id: string
@@ -35,6 +36,7 @@ export type Database = {
           name: string
           primary_contact_id?: string | null
           status?: string | null
+          stripe_customer_id?: string | null
           type?: string | null
           updated_at?: string
           workspace_id: string
@@ -47,6 +49,7 @@ export type Database = {
           name?: string
           primary_contact_id?: string | null
           status?: string | null
+          stripe_customer_id?: string | null
           type?: string | null
           updated_at?: string
           workspace_id?: string
@@ -700,6 +703,7 @@ export type Database = {
           paid_via: string | null
           status: string
           stripe_invoice_id: string | null
+          stripe_invoice_pdf: string | null
           stripe_payment_link: string | null
           subtotal: number
           total: number
@@ -724,6 +728,7 @@ export type Database = {
           paid_via?: string | null
           status?: string
           stripe_invoice_id?: string | null
+          stripe_invoice_pdf?: string | null
           stripe_payment_link?: string | null
           subtotal?: number
           total?: number
@@ -748,6 +753,7 @@ export type Database = {
           paid_via?: string | null
           status?: string
           stripe_invoice_id?: string | null
+          stripe_invoice_pdf?: string | null
           stripe_payment_link?: string | null
           subtotal?: number
           total?: number
