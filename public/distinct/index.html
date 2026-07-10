@@ -1,0 +1,1429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script>window.COB_DEEPDIVE_ENDPOINT = "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/deepdive-cob";</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Distinct . AI Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#090B23; --panel:#0E1030; --panel2:#151838; --panel3:#1B1E42;
+    --gold:#BF9B30; --gold2:#DCB94A; --lgold:#CDBE96; --txt:#EAE8E0; --soft:#C4C6DC; --mut:#8B8EAC;
+    --line:rgba(205,190,150,.14); --line2:rgba(205,190,150,.26); --glow:rgba(191,155,48,.35);
+    --ok:#84C56A; --warn:#E0B24A; --bad:#E27C6B;
+    --disp:'Archivo',Arial,sans-serif; --sans:'Inter',-apple-system,Segoe UI,Roboto,sans-serif;
+    --sb:256px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:var(--sans);background:var(--navy);color:var(--txt);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  h1,h2,h3,h4{font-family:var(--disp);font-weight:800;letter-spacing:-.01em;line-height:1.08;color:#fff}
+  ::selection{background:var(--gold);color:#0a0a0a}
+  .gold{color:var(--gold2)}
+  .mono{font-variant-numeric:tabular-nums}
+  input,select,textarea,button{font-family:var(--sans)}
+
+  /* layout */
+  .app{display:flex;min-height:100vh}
+  .sb{width:var(--sb);flex:0 0 var(--sb);background:linear-gradient(180deg,#0B0D28,#080A1E);border-right:1px solid var(--line);position:fixed;top:0;bottom:0;left:0;display:flex;flex-direction:column;z-index:40}
+  .main{margin-left:var(--sb);flex:1;min-width:0}
+  @media(max-width:900px){
+    .sb{transform:translateX(-100%);transition:transform .25s;width:270px}
+    .sb.open{transform:none;box-shadow:0 0 40px rgba(0,0,0,.6)}
+    .main{margin-left:0}
+    .burger{display:inline-flex!important}
+  }
+
+  /* sidebar */
+  .sb-logo{padding:22px 22px 16px;border-bottom:1px solid var(--line)}
+  .sb-logo .wm{font-family:var(--disp);font-weight:900;font-size:22px;letter-spacing:.14em;color:#fff}
+  .sb-logo .wm b{color:var(--gold2)}
+  .sb-logo .sub{font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--mut);margin-top:5px}
+  .sb-nav{flex:1;overflow-y:auto;padding:14px 12px}
+  .sb-group{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut);padding:14px 12px 7px;font-weight:600}
+  .nav-i{display:flex;align-items:center;gap:12px;padding:10px 12px;font-size:13.5px;color:var(--soft);cursor:pointer;border-left:2px solid transparent;transition:.14s;font-weight:500}
+  .nav-i i{font-size:17px;width:20px;text-align:center;color:var(--mut);transition:.14s}
+  .nav-i:hover{background:rgba(255,255,255,.03);color:#fff}
+  .nav-i:hover i{color:var(--gold2)}
+  .nav-i.on{background:linear-gradient(90deg,rgba(191,155,48,.14),transparent);border-left-color:var(--gold);color:#fff}
+  .nav-i.on i{color:var(--gold2)}
+  .sb-foot{padding:14px 16px;border-top:1px solid var(--line)}
+  .sb-cta{display:block;text-align:center;background:var(--gold);color:#141200;font-weight:700;font-size:13px;padding:11px;letter-spacing:.02em;cursor:pointer;transition:.15s}
+  .sb-cta:hover{background:var(--gold2)}
+  .sb-built{font-size:10.5px;color:var(--mut);text-align:left;margin-top:12px;line-height:1.5}
+  .sb-brand{display:flex;align-items:center;gap:9px;margin-top:8px}
+  .sb-brand-mk{width:22px;height:22px;object-fit:contain;opacity:.95;flex:0 0 auto}
+  .sb-brand span{font-family:var(--disp);font-size:11px;letter-spacing:.05em;color:var(--soft);font-weight:700}
+  .sb-brand .dot{color:var(--gold2)}
+
+  /* topbar */
+  .top{position:sticky;top:0;z-index:30;background:rgba(9,11,35,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 26px;height:60px}
+  .burger{display:none;background:none;border:1px solid var(--line2);color:var(--txt);width:38px;height:38px;align-items:center;justify-content:center;cursor:pointer}
+  .top .ttl{font-family:var(--disp);font-weight:700;font-size:16px;color:#fff}
+  .ticker{margin-left:auto;overflow:hidden;max-width:46%;white-space:nowrap;position:relative;mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+  .ticker .track{display:inline-block;padding-left:100%;animation:tick 34s linear infinite}
+  .ticker span{font-size:12px;color:var(--mut);margin-right:34px}
+  .ticker span b{color:var(--lgold);font-weight:600}
+  .ticker .dot{color:var(--gold2)}
+  @keyframes tick{to{transform:translateX(-100%)}}
+  @keyframes ddsp{to{transform:rotate(360deg)}}
+  @keyframes ddbar{0%{transform:translateX(-130%)}100%{transform:translateX(360%)}}
+  /* premium: expandable stack rows */
+  .stk-row{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:#0c0f2b;transition:border-color .18s}
+  .stk-row.open{border-color:var(--gold)}
+  .stk-head{display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer}
+  .stk-cat{font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold2);min-width:92px}
+  .stk-main{flex:1;min-width:0}
+  .stk-main .sv{color:#fff;font-weight:600;font-size:14px}
+  .stk-main .sr{color:var(--mut);font-size:12.5px;margin-top:2px}
+  .stk-cost{font-family:var(--disp);font-weight:700;color:var(--gold2);font-size:13px;flex:none}
+  .stk-chev{color:var(--mut);transition:transform .2s;flex:none}
+  .stk-row.open .stk-chev{transform:rotate(180deg);color:var(--gold2)}
+  .stk-det{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .stk-row.open .stk-det{max-height:320px}
+  .stk-det-in{padding:0 16px 16px 122px}
+  .stk-det-in>div{font-size:13px;color:var(--soft);line-height:1.55;margin-top:6px}
+  .stk-det-in b{color:var(--gold2)}
+  /* premium: AI tools catalog posture */
+  .pdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle;flex:none}
+  .pgood{background:#84C56A}.pwarn{background:#E27C6B}.pmix{background:#DCB94A}
+  .cat-legend{display:flex;gap:20px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);margin:2px 0 14px}
+  .cat-legend span{display:inline-flex;align-items:center}
+  /* premium: what-COB-builds tiles */
+  .wmodal{position:fixed;inset:0;background:rgba(4,6,18,.82);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+  .wmodal.on{display:flex}
+  .wmodal-box{background:var(--panel2);border:1px solid var(--line);border-radius:16px;max-width:920px;width:100%;max-height:92vh;overflow:auto;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+  .wmodal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:22px 24px 0}
+  .wmodal-x{background:none;border:1px solid var(--line2);color:var(--mut);border-radius:8px;min-width:34px;height:34px;cursor:pointer;flex:none;font-size:16px}
+  .wmodal-x:hover{color:#fff;border-color:var(--gold)}
+  .wmodal-img{padding:16px 24px 0}
+  .wmodal-img svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px}
+  .wmodal-cap{font-size:11px;color:var(--mut);text-align:center;margin-top:8px}
+  .wmodal-body{padding:14px 24px 26px}
+  /* premium: tasteful press feedback everywhere */
+  .btn,.chip,.flat,.nav-i,.pp-item,.vend-item,.sc-dl,button{transition:transform .09s ease,border-color .18s,background .18s,color .18s}
+  .btn:active,.chip:active,.flat:active,button:active,.pp-item:active{transform:scale(.975)}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+  @media(max-width:900px){.ticker{display:none}}
+
+  /* view */
+  .view{display:none;padding:34px 40px 90px;max-width:1080px;animation:vin .4s ease}
+  .view.on{display:block}
+  @keyframes vin{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @media(max-width:640px){.view{padding:24px 20px 70px}}
+  .eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold2);font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .eyebrow::before{content:'';width:22px;height:1px;background:var(--gold)}
+  .h-lead{color:var(--soft);font-size:16.5px;max-width:680px;line-height:1.7;margin-top:14px}
+  .vh{font-size:clamp(26px,3.6vw,40px);max-width:20ch}
+
+  /* panels + cards */
+  .panel{background:linear-gradient(180deg,var(--panel),#0C0E28);border:1px solid var(--line);margin-top:26px}
+  .p-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .p-top .t{font-family:var(--disp);font-weight:700;font-size:16px;color:#fff}
+  .p-top .tag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold2);font-weight:600;border:1px solid var(--line2);padding:4px 9px}
+  .p-body{padding:24px 22px}
+  .flat{background:var(--panel2);border:1px solid var(--line)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+  @media(max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+
+  /* KPI */
+  .kpi{background:var(--panel2);border:1px solid var(--line);padding:20px;position:relative;overflow:hidden}
+  .kpi .n{font-family:var(--disp);font-weight:800;font-size:34px;color:var(--gold2)}
+  .kpi .l{font-size:12.5px;color:var(--soft);margin-top:4px}
+  .kpi .s{font-size:11px;color:var(--mut);margin-top:8px}
+  .kpi::after{content:'';position:absolute;right:-30px;top:-30px;width:110px;height:110px;background:radial-gradient(circle,var(--glow),transparent 70%);opacity:.5}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:9px;padding:12px 22px;font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid var(--gold);background:var(--gold);color:#141200;transition:.15s}
+  .btn:hover{background:var(--gold2);border-color:var(--gold2)}
+  .btn-o{background:transparent;color:var(--txt);border-color:var(--line2)}
+  .btn-o:hover{border-color:var(--gold);color:var(--gold2);background:transparent}
+  .btn-sm{padding:8px 14px;font-size:12.5px}
+
+  /* form controls */
+  label.fl{display:block;font-size:12.5px;color:var(--soft);margin:0 0 7px;font-weight:500}
+  .inp,select.inp,textarea.inp{width:100%;background:#0A0C24;border:1px solid var(--line2);color:var(--txt);padding:11px 13px;font-size:14px}
+  .inp:focus{outline:none;border-color:var(--gold)}
+  textarea.inp{min-height:70px;resize:vertical}
+  input[type=range]{width:100%;accent-color:var(--gold);height:3px}
+  .chips{display:flex;flex-wrap:wrap;gap:9px}
+  .chip{border:1px solid var(--line2);background:#0A0C24;padding:8px 13px;font-size:12.5px;font-weight:500;cursor:pointer;color:var(--soft);transition:.13s;user-select:none}
+  .chip:hover{border-color:var(--gold)}
+  .chip.on{background:var(--gold);color:#141200;border-color:var(--gold)}
+
+  /* paste checker */
+  .verdict{border:1px solid var(--line2);padding:16px 18px;font-size:14px;min-height:62px;background:#0A0C24}
+  .v-tag{font-family:var(--disp);font-weight:700;font-size:13px;display:inline-block;padding:3px 11px;margin-bottom:8px;color:#0a0a0a}
+  .v-never{background:var(--bad)} .v-redact{background:var(--warn)} .v-ok{background:var(--ok)}
+
+  /* scorecard gauge */
+  .gauge-wrap{display:flex;gap:26px;align-items:center;flex-wrap:wrap}
+  .gnum{font-family:var(--disp);font-weight:900;font-size:52px;color:#fff;line-height:1}
+  .q-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+  .q-row:first-child{border-top:0}
+  .q-row .q{font-size:14px;color:var(--soft);max-width:600px}
+  .yn{display:flex;gap:7px;flex:0 0 auto}
+  .yn b{border:1px solid var(--line2);background:#0A0C24;padding:6px 15px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--soft)}
+  .yn b.yes.on{background:var(--ok);color:#0a0a0a;border-color:var(--ok)}
+  .yn b.no.on{background:var(--bad);color:#0a0a0a;border-color:var(--bad)}
+  .roadmap{display:none;margin-top:22px;border-top:1px solid var(--line2);padding-top:22px}
+  .road-i{display:flex;gap:14px;padding:12px 0;border-top:1px solid var(--line)}
+  .road-i:first-child{border-top:0}
+  .road-i .rk{font-family:var(--disp);font-weight:800;color:var(--gold2);font-size:13px;flex:0 0 66px}
+  .road-i .rt{font-size:14px;color:var(--soft)}
+
+  /* forecaster */
+  .fc{display:grid;grid-template-columns:290px 1fr;gap:24px}
+  @media(max-width:820px){.fc{grid-template-columns:1fr}}
+  .fld{margin-bottom:15px}
+  .fld .fl{display:flex;justify-content:space-between}
+  .fld .fl b{color:var(--gold2)}
+  .stat3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+  .stat{border:1px solid var(--line);padding:13px;background:#0A0C24}
+  .stat .l{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+  .stat .v{font-family:var(--disp);font-weight:800;font-size:22px;margin-top:5px;color:#fff}
+
+  /* generated output block */
+  .gen{display:none;margin-top:20px;border:1px solid var(--line2);background:#0A0C24}
+  .gen .gh{padding:13px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px}
+  .gen .gh .gt{font-family:var(--disp);font-weight:700;font-size:14px;color:var(--gold2)}
+  .gen .gb{padding:20px 22px;font-size:13.5px;color:var(--soft);line-height:1.7}
+  .gen .gb h4{font-family:var(--disp);color:#fff;font-size:14px;margin:16px 0 6px;letter-spacing:.02em}
+  .gen .gb h4:first-child{margin-top:0}
+  .gen .gb ul{margin:6px 0 6px 18px}.gen .gb li{margin:4px 0}
+  .gen .gb .mut{color:var(--mut)}
+
+  /* stack result */
+  .stack-row{display:flex;justify-content:space-between;gap:14px;padding:13px 0;border-top:1px solid var(--line)}
+  .stack-row:first-child{border-top:0}
+  .stack-row .sl{font-size:12px;color:var(--mut);flex:0 0 130px}
+  .stack-row .sv{font-size:14px;color:#fff;font-weight:600}
+  .stack-row .sr{font-size:12.5px;color:var(--soft);margin-top:3px}
+
+  /* accordions (vault + learn) */
+  .acc .row{border:1px solid var(--line);background:var(--panel2);margin-bottom:12px}
+  .acc .q{padding:18px 20px;display:flex;justify-content:space-between;gap:14px;cursor:pointer;align-items:center}
+  .acc .q:hover{background:rgba(255,255,255,.02)}
+  .acc .q .qt{font-family:var(--disp);font-weight:700;font-size:15.5px;color:#fff}
+  .acc .q .qs{font-size:12px;color:var(--mut);margin-top:3px}
+  .acc .q .pl{color:var(--gold2);font-size:22px;transition:.2s;flex:0 0 auto}
+  .acc .row.open .pl{transform:rotate(45deg)}
+  .acc .a{max-height:0;overflow:hidden;transition:max-height .32s ease}
+  .acc .a .inner{padding:2px 20px 20px;font-size:13.8px;color:var(--soft);line-height:1.7}
+  .acc .a .inner ul,.acc .a .inner ol{margin:8px 0 8px 18px}.acc .a .inner li{margin:5px 0}
+  .acc .a .inner b{color:#fff}
+  .mini-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold2);font-weight:600;margin-top:14px;display:block}
+
+  /* demo wall */
+  .wall{display:grid;grid-template-columns:repeat(auto-fill,minmax(208px,1fr));gap:12px}
+  @media(max-width:820px){.wall{grid-template-columns:1fr}}
+  .wcard{border:1px solid var(--line);background:var(--panel2);padding:15px;position:relative;overflow:hidden;transition:.18s;cursor:pointer}
+  .wcard:hover{border-color:var(--line2)}
+  .wcard .wi{font-size:19px;color:var(--gold2);margin-bottom:9px}
+  .wcard h4{font-size:14.5px;margin-bottom:5px}
+  .wcard p{font-size:12.5px;color:var(--mut)}
+
+  /* about + audit */
+  .audit{border:1px solid var(--line2);background:var(--panel2);padding:26px;margin-top:22px}
+  .audit .frow{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .audit .inp{flex:1;min-width:200px}
+
+  /* hero glow bg on overview */
+  .glowbg{position:relative}
+  .glowbg::before{content:'';position:absolute;left:-10%;top:-40px;width:520px;height:320px;background:radial-gradient(circle,var(--glow),transparent 65%);filter:blur(20px);opacity:.55;pointer-events:none;animation:drift 9s ease-in-out infinite alternate}
+  @keyframes drift{from{transform:translate(0,0)}to{transform:translate(60px,20px)}}
+
+  .reveal{opacity:0;transform:translateY(14px);transition:.6s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+  .disc{font-size:11.5px;color:var(--mut);margin-top:14px}
+  .verse{font-family:var(--disp);font-style:italic;color:var(--lgold);font-weight:600;font-size:14px}
+  /* decision flow */
+  .flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .flow-opt{border:1px solid var(--line2);background:#0A0C24;padding:14px 16px;cursor:pointer;transition:.14s}
+  .flow-opt:hover{border-color:var(--gold)}
+  .flow-opt.on{border-color:var(--gold);background:rgba(191,155,48,.08)}
+  .flow-opt .fo-t{font-family:var(--disp);font-weight:700;font-size:14px;color:#fff}
+  .flow-opt .fo-s{font-size:11.5px;color:var(--mut);margin-top:4px}
+  .flow-res{display:none;margin-top:20px;border:1px solid var(--line2);background:#0A0C24;padding:22px}
+  .flow-res .fr-tag{font-family:var(--disp);font-weight:800;font-size:15px;padding:4px 12px;display:inline-block;margin-bottom:12px}
+  .fr-go{background:var(--ok);color:#0a0a0a}.fr-cond{background:var(--warn);color:#0a0a0a}.fr-stop{background:var(--bad);color:#0a0a0a}
+  .flow-res .fr-row{display:flex;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+  .flow-res .fr-row:first-of-type{border-top:0}
+  .flow-res .fr-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold2);font-weight:600;flex:0 0 150px}
+  .flow-res .fr-v{font-size:13.5px;color:var(--soft)}
+  /* vendor checklist */
+  .vend-item{display:flex;align-items:flex-start;gap:12px;padding:13px 0;border-top:1px solid var(--line);cursor:pointer}
+  .vend-item:first-child{border-top:0}
+  .vend-box{flex:0 0 auto;width:22px;height:22px;border:1px solid var(--line2);display:flex;align-items:center;justify-content:center;font-size:14px;color:transparent;margin-top:1px}
+  .vend-item.on .vend-box{background:var(--ok);border-color:var(--ok);color:#0a0a0a}
+  .vend-item .vt{font-size:14px;color:var(--soft)}
+  .vend-item .vt b{color:#fff}
+  .vend-out{display:none;margin-top:18px;border-top:1px solid var(--line2);padding-top:18px}
+  /* skills */
+  .skill-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+  @media(max-width:760px){.skill-grid{grid-template-columns:1fr}}
+  .skill-card{border:1px solid var(--line);background:var(--panel2);padding:20px;display:flex;flex-direction:column}
+  .skill-card .sc-i{font-size:20px;color:var(--gold2);margin-bottom:10px}
+  .skill-card h4{font-size:16px;margin-bottom:6px}
+  .skill-card p{font-size:12.8px;color:var(--soft);flex:1;line-height:1.6}
+  .skill-card .sc-row{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+  .skill-card .sc-row .btn{margin:0}
+  /* prompt filter */
+  .pfilter{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .pp-item{border:1px solid var(--line);background:var(--panel2);padding:12px 14px;margin-bottom:10px;cursor:pointer;font-size:13.5px;color:#fff;transition:.13s;line-height:1.5}
+  .pp-item:hover{border-color:var(--gold)}
+  .pp-item .pp-cat{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold2);font-weight:600;display:block;margin-bottom:5px}
+  .pp-item .pp-safe{display:block;font-size:11.5px;color:var(--mut);margin-top:7px;font-style:italic}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sb" id="sb">
+    <div class="sb-logo">
+      <img src="https://images.squarespace-cdn.com/content/v1/670fa8f11cf7492809bb495a/6c7f9098-af44-4aa6-8f1b-c235dffce1f4/whitewordmark.png?format=1500w" alt="Distinct" style="max-width:158px;width:100%;height:auto;display:block;margin-bottom:9px" onerror="this.style.display='none';var f=document.getElementById('wmFallback');if(f)f.style.display='block'">
+      <div class="wm" id="wmFallback" style="display:none">DISTINCT<b>.</b></div>
+      <div class="sub">AI Command Center</div>
+    </div>
+    <nav class="sb-nav" id="nav">
+      <div class="sb-group">Start here</div>
+      <div class="nav-i on" data-v="overview"><i class="ti ti-layout-dashboard"></i>Overview</div>
+      <div class="sb-group">Build with AI</div>
+      <div class="nav-i" data-v="policy"><i class="ti ti-file-shield"></i>AI use policy</div>
+      <div class="nav-i" data-v="stack"><i class="ti ti-stack-2"></i>Pick your AI stack</div>
+      <div class="nav-i" data-v="prompts"><i class="ti ti-message-2-cog"></i>Prompt library</div>
+      <div class="nav-i" data-v="skills"><i class="ti ti-download"></i>Skills to download</div>
+      <div class="sb-group">Protect</div>
+      <div class="nav-i" data-v="security"><i class="ti ti-shield-lock"></i>Security tools</div>
+      <div class="nav-i" data-v="scorecard"><i class="ti ti-gauge"></i>Security scorecard</div>
+      <div class="nav-i" data-v="flow"><i class="ti ti-route"></i>Can this data touch AI?</div>
+      <div class="nav-i" data-v="vendor"><i class="ti ti-clipboard-check"></i>Vendor diligence</div>
+      <div class="sb-group">Keep</div>
+      <div class="nav-i" data-v="vault"><i class="ti ti-folder"></i>Take-home vault</div>
+      <div class="nav-i" data-v="learn"><i class="ti ti-bulb"></i>Tricks of the trade</div>
+      <div class="sb-group">More</div>
+      <div class="nav-i" data-v="work"><i class="ti ti-layout-grid"></i>What COB builds</div>
+      <div class="nav-i" data-v="about"><i class="ti ti-info-circle"></i>About COB</div>
+    </nav>
+    <div class="sb-foot">
+      <div class="sb-cta" data-v="about">Request a free audit</div>
+      <div class="sb-built">Workshop command center</div>
+      <div class="sb-brand"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEgAAABICAYAAABV7bNHAAANGUlEQVR42t2ce5AcxX3HP7+e2b2HbrmHAElGki0QWIUMJeOSVUDixEEKqWBXWQ5xeBSJwXEMSkokdsohUI5dSSDlYBfGdsp/JHYSOyF2YQyJY8JDMQZjEhQMQYWIlJIA8RASh0669z6m+5c/pmdv9m5vdTu7t4fTVVu3dTc30/3t7+/7e3RPC7OaqgYiYv3384FfBy4BzgYGgYC2NwWEyZcfBQlYtubnqr9bhBYBw8D/AA8Ad4vIS7PHXr+bqoH/uUFV/1FVp3Sxm7Oqqlo6/oIe+MZmPfjNi7U8ftj/zWkH2jFV/ZKqnp7GIGlmNnNU9WPAU8BVQA9gAeendNGaLY6gzqJRCTf9ZopZi9LUj8kCQ8CNwE9VdavHIKwBSFVD/4ebgb8Blnkq4k3KLBbfExDs9AjgUHW4yjSL3MSPKfAdiIDVwAOqermIRAmTjGdOpKrXAbf6ix0Q0sGm0XTcV2ex5fHFZtBssELPJgPcpaoXecIEBnCquh74qr8oSJveogOTmFhpHFQBxZVGWYIWeGLkgH9Q1T5AjYgo8Odeb3TxTGn+6QNwxZHkG64y0Tn+zAUpAtYBO0XEGVXdCGz3/QlYoqa2XAXLVsFakmY8FjeoasF4b5X39JKl6pWLip4xgiuO1rBriQBaDVwaAltnsb25gTnFaUZjUCUwgghEk0cQCUAtrjIV31vBWQuSDSojgjGZ/lf9Z1sIrM8CkHMxKMYIph1z7SoxEGJwlXF/7wDTortwTuPbNgey+M/GEBhoFiDntDoze/e9wrP7XmN0rIhIbKUnU3pVxQQBthTxy7+0kfXvWElUGveDMLjyJADP7XuFx36yj6C7C2cjf1OpGYWqemAFVBEUJaC/r4sLzns7G9avmtPnJnzHqWGzLj150MFDw3zqT77FA4/uoTRWgigCMVXTmYO5pH8PBAGMTfC9+/+U9e84ncrUMf//lqgcB4pPPvsSv/vbX4GBXrA2vkmCvvjv1AKEanyfnKGnv5df/YV3ccetv8WaVYM4VUxzTArCLODsP3iE9//abbz+0lEwQtDfTaFvCOecn0WpiXKqjFKNfyPxrNjlPbxtxSBQQVRRBCTAlScAy8rTh+hbO0iu0IOzir8CxYCZi7kAKoKoZaIYMT06yT33Pskze1/mh/fcwtozljfLJER14QrrnKKqvP+Kz/PjXc+SG+jlxo9dyjUfvpDlgwVUXbWr4qFpdHN1jhUrhpDiEV697yrQCqjF5E9hzYfvpswyhodPYIypex9pECsdOz7BX3/7Mb72zR/hxqbY+iubeOiuT6PKQgBK5vTAghlknSMwhkee2M+PH38ecoZbdn6Qz/7B9pb1uTQ2jtoSYoLYPLSCqxTp7htgzerTMt1z9duW89U/u4Z8Ps8dX/5ndj3yLE88dYCLN59dHctCff5CPTIAP3xiHzJZZmhlP7/30a1Y64isRTV29019nPV5WAnUf0dwlSKuPBaz1tqm76uqRJHFOeUPP76NwvICMmV5fPd+z9yFhyVNJ6THRyfRyLLytEH6C70EgaHqSLKWOkonUFdBgq5Ya20FV5mshhFZ4qAgMIgIfX099A8UGH95mJETE00HNE1HGUGijFW9aUcmPzWjXwqqDrXltiXD6j1bZLXpkK9pgFRdretoxyCcTamtoM5iqxl9a88yiHcZLkVEXTyAQNqWJFVLHdMjoK4a36MOV60JtelJ2nQ0nRUgWknd5tGgUWZHG0k+1h6uztYxWWSA2mRh1XAyKlUHIAiqYIvHlzKjbweD2gWRYqeGETHeEmJBjU1M22TGmlk3TbZHanto5PMOFxV9kquJaqNRuc38kUwmsIQmpmAMrjJJNHkEgnzMIjFIkKc8+iJqSyBBSw+UmaSqgxok7SG+LY5w+N+up3z8AILipkew08cwJqQ0/ByHH9zhE9dWZyUu72Spu5msD2sNnzgXHP7JX1A8+t+IGPKnrGXogt9haNPHyRVWI5Kj9Ppu3nzy877MoS1PCLOqDIuSasTPaQEkdSCG4ht7mDz0IzB5ule+h5WXfAGT7wNg4PyP8vpDN1Iafo6Jgw/S/65r6Bo8p/q/2WHSDjCoTeZVPPpMXN4Qw+AFN2Dyfagto7ZM0D3A0AXX+6i6TPHI05kHmH5ulq6bzGxttQQdFXG2Qq73VPL9a0EdYnKICUEt+cF1hD2n4KIydvpEe/xYxyJpzU6lREpM0I2RAFsaoTTyvyAGVRvnehJQenMftjSGmBxB72mZyatJDJRxYrN7MWltFntXX4TJF1BrObb7DioThxETIiakfOJFjj31ZZxTgnyB3lWbM9u3tKgJYata0nyPDagjP3Q2y9ZtZXTvd4jGXuW1719L94pNiAmYem03uGk0mqJw7hXkvAlmEWitOpW4xNtBgKQVMQB1nHrhp3GlMSZeeAhKE0xM/AB1ignzqK3Q/84Psfy9Oz04krGXM2mGJLVo7QRA2mLgJmByy1i59YuMPv8dJg89QjRxBARyhTPoO/NSCud8KMUDaX0im6+XZQWoHa7Mr0mIoX/jlfRvvDJOUEUwub5Zz2pFRzQ1p9oJBml1H0/bEki1IAaTL6Se4Xwe1saENYOZLtouMm3KBM3MKmnN77SJsctJTUzoiInJSVONDEu8rQeeJ31mtjg8bNU66vJBhOlSGRe5VKVwRnYyaOW8fVBVgjCgO587uWllcCzZAJrnOcmK5d/e/Ti33n4PdOex1nlw6i0US61rSe91SNbxZ1+TbFZI7VkwxQqf/eOPcPX2Cxusmmabjhbc/Pye/98ff56D/7UfCssgso1DhbS5ppdltB44dQqDoYHxMR7bvZ+rt1/YgCTZwv+wnfYV+EDs9ps/wkWb1lGxFnXqHbXUuO2Y9TrDHI1ZJjJX4MVfUMMonbmupyvH5R/cUtOHdgUnbY2DEk+yasUAO67dxlK0+b2ZdtjEGnkUp1QqUUeByeXCk25rEbSTAM3/MGOErq4cb4WmS2Ni9XUo0dzR8WkefnQPTiEI4rVxTVX01OtHTfIoc7MK8fo08yfxGxG85BqDc0ouMGx733l0d+dmdD8d/2h2P9ZWE7POEQaG3//cXfzdnd+HwV6wrk6Cq1VRrglv53NBUi/p9EgEBkbG+dTnruQLn7mq2odZRp+5ohi2VyDjnxvOWsHA2iHo7camajAzewqrfAATu1/VdM1Ya118Ne7x1+K39iIYUaS/i/XrVjZIt2QpTKyem49n7o92fIDfvPxiosjV0tqTRGqqHpJaHo5BmB0Y1JSRUuaXhAS5fMhpQ6fU9IGa6ySzCIXZ5UcbJqqrTh/srBirnjRh1c55scZRqSrYFl4hyFK8M8Y0eNzsmpIsMkAnSfqMEYxZsheH5ve4GWrabdWgZJP2Y0/u50tfu5+KkVQJojaNkLTTqtEInfmjSI3ZJEKevHuRmFUO+OQNl7Hl3WfOv1FcJJMIZV96rsNnp4pBuPPrD3Hv3/8rdPfXJquqs5XWi3OjbX3zbFtJ1D4MoThKvifPlnd/otqHemYmHRPpeVxCwpabdlxGf1cAYYB1ziescQfVxyOSfr9iAbKQDg/SDFFVuoKAnZ+4rGredfuq2fKyMKs5z6c9AJs3ncnmr+xYErWpW1WsgtsJE9N6MzJXi1Q7+8apNHp5LntBcfGS1aXffpkKRiV7HGSqiUqzwMhbBICFzqNkSletAU40o1xJxvQzAk+KNUIQmGZhfdMAB5oBqNDXjYQBxydKlEoVrHUd15uFph7WOirlCpNTU4iBvt78QkeaKPpeA+xaCEAJY9676Sy0t4vDh45y74NPV9+qcVleh2rHx9X5+AAyCAx33/9TRo6cQHu6eM956xZa9khE9GFUdaOqllTV+U/9U2ycU+dUxyemdd1Fn1ROvVqHNl6vd933H1oslvWt1oqlsv7Tff+p/efuUJZfqedecpMWS5XqOBo063F4RVUL/lVS/TbwG8THMoSNCmKBMTzwyB4uu+p2nFXIB7xz/SrOWLUcIw4kjC3fudQqBDV1jiRNmFMD0WTFI1ntkFnRt/qvMhNsJnUk8YUTAeuEV147yv4Db0CxTK4nz67v3sz7tpyDddpw5SOFwS0icpuoqgBnAXuIT2BoeBSOcw5jDP/y8DPsvOkbHHrhKJQtlCt+c9Qc18Gc7bfpZdYaAH3aUeujqd0wIbUeSWdtpkiuz4XQFXL2hjX81V9ex7af37iQF3qTw11eBM4HpiR1sNJ1wNc9goYG2/MSJo2OT/K9HzzF03sPEdmIGGvnA7Jk7UtqEk1Osn4u6RVWbcZLa+pVYsgFAZvPezvbP7CFvt7uhYJj/Ph/UUSeUNUgMbHQnyF0M/EZQizU3H4WWsL6Bh7LMnOG0BUi8t2EOJJyi+kjuu4kPoUqQVbqVclUFev0LQ1OfDaIzOfG0yfevApcKyK7EsJQZ8AJSBuAzxAfm9PD/+82AnwLuE1E3ph9Ep7UCbAaHRM4xJK/Y9Zya+qYwP8D1+KAinuNAE0AAAAASUVORK5CYII=" alt="COB" class="sb-brand-mk"><span>COB <span class="dot">.</span> chiefofbusiness.ai</span></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="top">
+      <button class="burger" id="burger" aria-label="menu"><i class="ti ti-menu-2"></i></button>
+      <div class="ttl" id="topTitle">Overview</div>
+      <div class="ticker"><div class="track" id="tick"></div></div>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="view on glowbg" data-view="overview">
+      <div class="eyebrow">Distinct AI Workshop . your home base</div>
+      <h1 class="vh">Grow with AI. Guard what you've built. Stay distinct.</h1>
+      <p class="h-lead">This is your command center. The presentation is right here, and everything we cover lives in the menu on the left for good: working tools, deliverables built for your business, and the tricks of the trade a pro would charge for.</p>
+
+      <div class="panel" style="margin-top:26px">
+        <div class="p-top"><span class="t">The presentation</span><span class="tag">13 slides . the overview</span></div>
+        <div class="p-body">
+          <img id="slideImg" src="slides/slide-01.jpg" alt="Presentation slide" style="width:100%;display:block;border:1px solid var(--line)">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;gap:12px;flex-wrap:wrap">
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn btn-o btn-sm" id="slPrev" aria-label="previous slide"><i class="ti ti-chevron-left"></i></button>
+              <span id="slNum" style="font-family:var(--disp);font-weight:700;color:var(--gold2);font-size:14px">1 / 13</span>
+              <button class="btn btn-o btn-sm" id="slNext" aria-label="next slide"><i class="ti ti-chevron-right"></i></button>
+            </div>
+            <a class="btn btn-sm" href="Distinct_AI_Workshop_Overview.pptx" download><i class="ti ti-download"></i> Download the deck</a>
+          </div>
+          <div id="slDots" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- Meet COB . deepdive, below the presentation -->
+      <div class="panel reveal" id="ddPanel" style="margin-top:26px;border-color:var(--gold);box-shadow:0 0 0 1px rgba(191,155,48,.25),0 20px 60px rgba(0,0,0,.45)">
+        <div class="p-top"><span class="t"><i class="ti ti-sparkles" style="color:var(--gold2)"></i> Meet COB: your live deepdive</span><span class="tag">personalized in seconds</span></div>
+        <div class="p-body">
+          <p style="color:var(--mut);font-size:13.5px;margin:0 0 16px;max-width:70ch">Tell COB who you are. It will read your world and hand you a straight read: where AI pays off fastest for a business like yours, and where you are quietly exposed. This is the same intelligence that runs a real business behind the scenes.</p>
+          <div id="ddForm" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <input id="ddFirst" placeholder="First name" autocomplete="given-name" style="padding:12px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px">
+            <input id="ddLast" placeholder="Last name" autocomplete="family-name" style="padding:12px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px">
+            <input id="ddBiz" placeholder="Your business" style="padding:12px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px">
+            <input id="ddCity" placeholder="City" autocomplete="address-level2" style="padding:12px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px">
+            <input id="ddInd" placeholder="Industry (e.g. roofing, law, retail, healthcare)" list="ddIndList" style="grid-column:1 / -1;padding:12px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px">
+            <datalist id="ddIndList">
+              <option value="Construction / Trades"><option value="Roofing"><option value="Real Estate"><option value="Law / Legal"><option value="Financial Services / Wealth"><option value="Healthcare / Medical"><option value="Retail / E-commerce"><option value="Restaurant / Hospitality"><option value="Professional Services"><option value="Nonprofit / Ministry"><option value="Manufacturing"><option value="Home Services"><option value="Insurance"><option value="Auto / Dealership"><option value="Marketing / Agency">
+            </datalist>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+            <button class="btn" id="ddRun"><i class="ti ti-player-play"></i> Run my deepdive</button>
+          </div>
+          <div id="ddOut" style="display:none;margin-top:20px"></div>
+        </div>
+      </div>
+
+      <div class="grid3" style="margin-top:26px">
+        <div class="kpi reveal"><div class="n mono" data-count="67" data-suf="%">0</div><div class="l">of employees already use AI at work</div><div class="s">only 18% of companies have any rule for it</div></div>
+        <div class="kpi reveal"><div class="n mono" data-count="20" data-suf="%">0</div><div class="l">of data breaches now involve unapproved "shadow" AI</div><div class="s">IBM 2025 . and it mostly exposes customer data</div></div>
+        <div class="kpi reveal"><div class="n mono" data-count="97" data-suf="%">0</div><div class="l">of AI-related breaches had no real AI access controls</div><div class="s">IBM 2025 . a door problem, not a model one</div></div>
+      </div>
+      <div class="panel reveal">
+        <div class="p-top"><span class="t">Jump in</span><span class="tag">7 tools . 8 guides</span></div>
+        <div class="p-body">
+          <div class="grid3">
+            <div class="flat" style="padding:18px;cursor:pointer" data-v="scorecard"><div style="color:var(--gold2);font-size:20px;margin-bottom:8px"><i class="ti ti-gauge"></i></div><b style="color:#fff;font-family:var(--disp)">Score your exposure</b><p style="font-size:12.5px;color:var(--mut);margin-top:6px">A 2-minute read on where you stand and what to fix first.</p></div>
+            <div class="flat" style="padding:18px;cursor:pointer" data-v="policy"><div style="color:var(--gold2);font-size:20px;margin-bottom:8px"><i class="ti ti-file-shield"></i></div><b style="color:#fff;font-family:var(--disp)">Generate an AI policy</b><p style="font-size:12.5px;color:var(--mut);margin-top:6px">A real one-page policy for your business, in 60 seconds.</p></div>
+            <div class="flat" style="padding:18px;cursor:pointer" data-v="flow"><div style="color:var(--gold2);font-size:20px;margin-bottom:8px"><i class="ti ti-route"></i></div><b style="color:#fff;font-family:var(--disp)">Can this data touch AI?</b><p style="font-size:12.5px;color:var(--mut);margin-top:6px">The five-second ruling your team can make at the moment of risk.</p></div>
+          </div>
+        </div>
+      </div>
+      <div class="verse reveal" style="margin-top:30px">"...so that we are distinct, I and your people, from every other people on the face of the earth." Exodus 33:16</div>
+    </section>
+
+    <!-- SECURITY -->
+    <section class="view" data-view="security">
+      <div class="eyebrow">Protect . security first</div>
+      <h2 class="vh">AI is not Google. What you put in can come back on you.</h2>
+      <p class="h-lead">Search takes information out. AI puts your information in. On a free tool, what you paste can be retained, used to train the model, and, the part no one says out loud, it becomes a discoverable record. In a dispute it can be subpoenaed like email. Treat every prompt like something a lawyer could read aloud.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">Can I paste this into AI?</span><span class="tag">Live tool . built by COB</span></div>
+        <div class="p-body">
+          <p style="font-size:13.5px;color:var(--soft);margin-bottom:12px">Tap what you're about to paste. Get the honest ruling and the safe way to do it.</p>
+          <div class="chips" id="chips" style="margin-bottom:18px">
+            <div class="chip" data-k="ssn">SSN or tax ID</div>
+            <div class="chip" data-k="bank">Bank or card numbers</div>
+            <div class="chip" data-k="client">Client list / records</div>
+            <div class="chip" data-k="pw">Passwords or logins</div>
+            <div class="chip" data-k="contract">Contract / NDA material</div>
+            <div class="chip" data-k="health">Health or employee records</div>
+            <div class="chip" data-k="fin">Full financials</div>
+            <div class="chip" data-k="draft">Marketing draft</div>
+            <div class="chip" data-k="public">Public / general question</div>
+            <div class="chip" data-k="redact">Redacted, no names or numbers</div>
+          </div>
+          <div class="verdict" id="pv"><span style="color:var(--mut)">Pick something above.</span></div>
+        </div>
+      </div>
+      <div class="grid3" style="margin-top:22px">
+        <div class="flat" style="padding:20px"><div style="color:var(--gold2);font-size:20px;margin-bottom:10px"><i class="ti ti-database-off"></i></div><b style="color:#fff;font-family:var(--disp)">It's retained</b><p style="font-size:13px;color:var(--soft);margin-top:6px">Free tiers keep prompts and, by default, train on them. Your words leave the building.</p></div>
+        <div class="flat" style="padding:20px"><div style="color:var(--gold2);font-size:20px;margin-bottom:10px"><i class="ti ti-scale"></i></div><b style="color:#fff;font-family:var(--disp)">It's discoverable</b><p style="font-size:13px;color:var(--soft);margin-top:6px">Chat history is a business record. It can be subpoenaed and read by people you never intended.</p></div>
+        <div class="flat" style="padding:20px"><div style="color:var(--gold2);font-size:20px;margin-bottom:10px"><i class="ti ti-alert-triangle"></i></div><b style="color:#fff;font-family:var(--disp)">It's exposed</b><p style="font-size:13px;color:var(--soft);margin-top:6px">If the tool is breached, whatever you pasted is in that breach with everything else.</p></div>
+      </div>
+    </section>
+
+    <!-- SCORECARD -->
+    <section class="view" data-view="scorecard">
+      <div class="eyebrow">Protect . flagship</div>
+      <h2 class="vh">Your AI and security scorecard.</h2>
+      <p class="h-lead">Answer honestly. You get a weighted score, where you stand, and a prioritized roadmap of the moves that close the most risk for the least effort. Runs in your browser, nothing is sent anywhere.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">Business AI and Security Scorecard</span><span class="tag">12 checks . built by COB</span></div>
+        <div class="p-body">
+          <div id="qs"></div>
+          <div style="margin-top:18px"><button class="btn" id="scoreBtn">Reveal my score</button></div>
+          <div class="roadmap" id="roadmap">
+            <div class="gauge-wrap">
+              <svg width="132" height="132" viewBox="0 0 132 132"><circle cx="66" cy="66" r="56" fill="none" stroke="rgba(205,190,150,.14)" stroke-width="10"/><circle id="arc" cx="66" cy="66" r="56" fill="none" stroke="var(--gold)" stroke-width="10" stroke-linecap="round" stroke-dasharray="352" stroke-dashoffset="352" transform="rotate(-90 66 66)"/><text id="arcNum" x="66" y="74" text-anchor="middle" font-family="Archivo" font-weight="900" font-size="34" fill="#fff">0</text></svg>
+              <div><div class="score-tier" id="sTier" style="font-family:var(--disp);font-weight:800;font-size:22px"></div><div style="font-size:12.5px;color:var(--mut);margin-top:4px">out of 100 . weighted by real-world risk</div></div>
+            </div>
+            <div id="scSum" style="font-size:13.5px;color:var(--soft);margin:16px 0 6px"></div>
+            <div class="mini-label">Your roadmap, hardest-hitting first . tap any step for why it matters</div>
+            <div id="roadItems"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn btn-o btn-sm" id="scCopy"><i class="ti ti-copy"></i> Copy my roadmap</button><button class="btn btn-o btn-sm" data-v="about">Want the full audit? It's free.</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINANCE -->
+    <section class="view" data-view="finance">
+      <div class="eyebrow">Grow . finance</div>
+      <h2 class="vh">See the cash coming, and turn hours into dollars.</h2>
+      <p class="h-lead">The number-one reason good businesses fail is cash flow, not profit. Two tools: forecast your runway 13 weeks out, and put a real number on what AI would give back.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">13-week cash-flow forecaster</span><span class="tag">Live tool . built by COB</span></div>
+        <div class="p-body">
+          <div class="fc">
+            <div>
+              <div class="fld"><label class="fl">Cash in the bank <b id="v-cash">$40,000</b></label><input id="cash" type="range" min="5000" max="150000" step="1000" value="40000"></div>
+              <div class="fld"><label class="fl">Avg weekly revenue <b id="v-rev">$18,000</b></label><input id="rev" type="range" min="3000" max="60000" step="500" value="18000"></div>
+              <div class="fld"><label class="fl">Weekly fixed costs <b id="v-cost">$15,500</b></label><input id="cost" type="range" min="2000" max="55000" step="500" value="15500"></div>
+              <div class="fld"><label class="fl">Unpaid invoices owed <b id="v-ar">$18,000</b></label><input id="ar" type="range" min="0" max="120000" step="1000" value="18000"></div>
+              <div class="fld" style="padding-top:12px;border-top:1px solid var(--line)"><label class="fl"><span>Chase invoices with AI</span> <b id="ai-lab">off</b></label><input id="ai" type="range" min="0" max="1" step="1" value="0"></div>
+            </div>
+            <div>
+              <div class="stat3">
+                <div class="stat"><div class="l">Lowest week</div><div class="v mono" id="s-low">--</div></div>
+                <div class="stat"><div class="l">Week 13</div><div class="v mono" id="s-end">--</div></div>
+                <div class="stat"><div class="l">Runway wks</div><div class="v mono" id="s-run">--</div></div>
+              </div>
+              <svg id="chart" viewBox="0 0 640 230" width="100%" preserveAspectRatio="xMidYMid meet" style="border:1px solid var(--line);background:#0A0C24"></svg>
+              <div class="verdict" id="fcv" style="margin-top:12px">Adjust the sliders to model your business.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="p-top"><span class="t">What would AI give you back?</span><span class="tag">ROI calculator . built by COB</span></div>
+        <div class="p-body">
+          <p style="font-size:13.5px;color:var(--soft);margin-bottom:14px">Pick the tasks AI could take off your plate, set hours saved a week, and what your time is worth. See the year.</p>
+          <div id="roiRows"></div>
+          <div style="margin-top:8px"><button class="btn-o btn btn-sm" id="roiAdd"><i class="ti ti-plus"></i> Add a task</button></div>
+          <div class="grid3" style="margin-top:20px">
+            <div class="kpi" style="background:#0A0C24"><div class="n mono" id="roiHrs">0</div><div class="l">hours back a year</div></div>
+            <div class="kpi" style="background:#0A0C24"><div class="n mono" id="roiDol">$0</div><div class="l">that time is worth</div></div>
+            <div class="kpi" style="background:#0A0C24"><div class="n mono" id="roiWk">0</div><div class="l">full work-weeks reclaimed</div></div>
+          </div>
+          <div class="disc">A conservative frame. Real gains depend on the task and the tool. The point is to make "AI is useful" a number you can act on.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- POLICY GENERATOR -->
+    <section class="view" data-view="policy">
+      <div class="eyebrow">Build with AI . deliverable</div>
+      <h2 class="vh">Generate your board-ready AI use policy.</h2>
+      <p class="h-lead">Almost no small business has one, and a generic template will not survive a regulator. Pick your industry and this writes a real, adopt-ready policy with the clauses that actually govern your data: Gramm-Leach-Bliley Act for financial, HIPAA and the Business Associate Agreement for healthcare, privilege for law, PCI for payments, state privacy for consumer. A $5,000 to $15,000 deliverable, generated in a minute.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">AI Use Policy generator</span><span class="tag">Built by COB</span></div>
+        <div class="p-body">
+          <div class="grid2">
+            <div>
+              <label class="fl">Business name</label>
+              <input class="inp" id="pol-name" placeholder="e.g. Cornerstone Landscape" style="margin-bottom:16px">
+              <label class="fl">Your industry (sets the regulatory clauses)</label>
+              <select class="inp" id="pol-vert" style="margin-bottom:16px">
+                <option value="general">General small business</option>
+                <option value="financial">Financial services / lending</option>
+                <option value="health">Healthcare / clinic</option>
+                <option value="law">Law firm / legal</option>
+                <option value="realestate">Real estate / title</option>
+                <option value="retail">Retail / consumer goods</option>
+                <option value="construction">Construction / trades / home services</option>
+                <option value="professional">Professional services / agency</option>
+                <option value="nonprofit">Nonprofit / ministry</option>
+                <option value="insurance">Insurance agency</option>
+                <option value="restaurant">Restaurant / hospitality</option>
+                <option value="auto">Auto dealer / repair</option>
+              </select>
+              <label class="fl">Your ecosystem</label>
+              <select class="inp" id="pol-eco" style="margin-bottom:16px">
+                <option value="Microsoft">Microsoft (Outlook, Teams, 365)</option>
+                <option value="Google Workspace">Google Workspace (Gmail, Drive)</option>
+                <option value="both Microsoft and Google">Both Microsoft and Google</option>
+                <option value="Apple and standalone apps">Apple / Mac and standalone apps</option>
+                <option value="a mix of standalone cloud tools">Mostly separate cloud tools</option>
+                <option value="a stack we are still standardizing">Still standardizing our tools</option>
+              </select>
+              <label class="fl">Team size</label>
+              <select class="inp" id="pol-size">
+                <option>Just me</option><option selected>2 to 10</option><option>11 to 50</option><option>50+</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl">Approved AI tools (pick what you'll allow)</label>
+              <div class="chips" id="pol-tools" style="margin-bottom:16px">
+                <div class="chip on" data-v="ChatGPT Team">ChatGPT Team</div>
+                <div class="chip" data-v="ChatGPT Enterprise">ChatGPT Enterprise</div>
+                <div class="chip on" data-v="Microsoft 365 Copilot">Microsoft Copilot</div>
+                <div class="chip" data-v="Google Workspace with Gemini">Google Gemini</div>
+                <div class="chip" data-v="Claude for Work (Team)">Claude for Work</div>
+                <div class="chip" data-v="Claude Enterprise">Claude Enterprise</div>
+                <div class="chip" data-v="Perplexity Enterprise">Perplexity Enterprise</div>
+                <div class="chip" data-v="Notion AI on a business plan">Notion AI</div>
+                <div class="chip" data-v="GitHub Copilot Business">GitHub Copilot Business</div>
+              </div>
+              <div style="display:flex;gap:8px;margin-bottom:16px">
+                <input id="pol-tool-add" class="inp" placeholder="Add another tool you use (e.g. Grammarly, Jasper, your CRM's AI)" style="flex:1;margin:0">
+                <button class="btn btn-o" id="pol-tool-addbtn" type="button" style="white-space:nowrap"><i class="ti ti-plus"></i> Add</button>
+              </div>
+              <label class="fl">Sensitive data you handle</label>
+              <div class="chips" id="pol-data">
+                <div class="chip on" data-v="customer">Customer personal information</div>
+                <div class="chip on" data-v="financial">Financials</div>
+                <div class="chip" data-v="health">Health data</div>
+                <div class="chip" data-v="payment">Card / payment data</div>
+                <div class="chip" data-v="legal">Contracts / legal</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:20px"><button class="btn" id="polGen">Generate my policy</button></div>
+          <div class="gen" id="polOut">
+            <div class="gh"><span class="gt" id="polTitle">Your AI Use Policy</span><button class="btn-o btn btn-sm" id="polCopy"><i class="ti ti-copy"></i> Copy</button></div>
+            <div class="gb" id="polBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STACK BUILDER -->
+    <section class="view" data-view="stack">
+      <div class="eyebrow">Build with AI . deliverable</div>
+      <h2 class="vh">Every AI tool that matters, and which are safe with your data.</h2>
+      <p class="h-lead">The real map of what is on the market, with current pricing and the one thing owners never check: whether the tool trains on what you feed it. Browse the full catalog, or let COB pick the stack for a business like yours.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">The AI tools map</span><span class="tag" id="catCount">the real catalog . built by COB</span></div>
+        <div class="p-body">
+          <input id="catSearch" placeholder="Search a tool (Claude, Copilot, Perplexity, Cursor, Codex...)" style="width:100%;padding:11px 14px;background:#0c0f2b;border:1px solid var(--line2);border-radius:10px;color:#fff;font-size:14px;margin-bottom:12px">
+          <div class="pfilter" id="catFilter"></div>
+          <div class="cat-legend"><span><span class="pdot pgood"></span> Safe on a business tier</span><span><span class="pdot pwarn"></span> Looser on your data, be careful</span><span><span class="pdot pmix"></span> Depends on the plan or setting</span></div>
+          <div id="catBody"></div>
+          <div class="disc">Prices are per user per month on business tiers, current as of July 2026. Always confirm on the vendor's own page, they change often. The posture dot is the fast read; tap any tool for the security detail.</div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="p-top"><span class="t">Not sure? Answer four questions</span><span class="tag">Decision engine . built by COB</span></div>
+        <div class="p-body">
+          <div class="grid2">
+            <div>
+              <label class="fl">Which do you already live in?</label>
+              <div class="chips" id="st-eco" style="margin-bottom:16px"><div class="chip on" data-v="ms">Microsoft</div><div class="chip" data-v="goog">Google</div><div class="chip" data-v="both">Both</div><div class="chip" data-v="none">Neither / not sure</div></div>
+              <label class="fl">Team size</label>
+              <div class="chips" id="st-size" style="margin-bottom:16px"><div class="chip on" data-v="solo">Just me</div><div class="chip" data-v="small">2 to 10</div><div class="chip" data-v="mid">11 to 24</div><div class="chip" data-v="large">25+</div></div>
+            </div>
+            <div>
+              <label class="fl">Biggest use</label>
+              <div class="chips" id="st-use" style="margin-bottom:16px"><div class="chip on" data-v="write">Writing / email</div><div class="chip" data-v="numbers">Numbers / finance</div><div class="chip" data-v="docs">Docs / research</div><div class="chip" data-v="service">Customer service</div><div class="chip" data-v="content">Marketing / content</div></div>
+              <label class="fl">Handle regulated data (health, legal, card)?</label>
+              <div class="chips" id="st-reg"><div class="chip" data-v="yes">Yes</div><div class="chip on" data-v="no">No</div></div>
+            </div>
+          </div>
+          <div style="margin-top:20px"><button class="btn" id="stGen">Build my stack</button></div>
+          <div class="gen" id="stOut">
+            <div class="gh"><span class="gt" id="stTitle">Your stack</span><span style="display:flex;align-items:center;gap:12px"><span id="stCost" style="font-family:var(--disp);font-weight:800;color:var(--gold2)"></span><button class="btn-o btn btn-sm" id="stCopy"><i class="ti ti-copy"></i> Copy plan</button></span></div>
+            <div class="gb"><div id="stRows"></div><div id="stWhy" style="margin-top:14px;color:var(--soft)"></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROMPT LIBRARY -->
+    <section class="view" data-view="prompts">
+      <div class="eyebrow">Build with AI . deliverable</div>
+      <h2 class="vh">The Essential Library. Gated, curated, safe to actually use.</h2>
+      <p class="h-lead">A working library organized by the job to be done, every prompt with a safe-use note so you never leak what you shouldn't. Filter by category, tap any prompt to copy it, swap the [brackets] with your details, and paste it straight into ChatGPT or Claude. Save the ones you love as a Custom GPT or a Claude Project so they are one tap away. Use your business AI account for anything with real data.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t" id="ppCount">The Essential Library</span><span class="tag">tap a prompt to copy . built by COB</span></div>
+        <div class="p-body">
+          <div class="pfilter" id="ppFilter"></div>
+          <div id="ppBody"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CAN THIS DATA TOUCH AI (decision flow) -->
+    <section class="view" data-view="flow">
+      <div class="eyebrow">Protect . the decision your team makes daily</div>
+      <h2 class="vh">Can this data touch AI? Get the ruling in two taps.</h2>
+      <p class="h-lead">The single highest-leverage tool here. Pick the kind of data, then the tool you'd use, and it tells you the verdict, the contract you need, and the protection technique. This is the decision an employee should be able to make correctly in five seconds, at the moment of risk.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">Data-to-AI decision engine</span><span class="tag">built by COB</span></div>
+        <div class="p-body">
+          <label class="fl">1. What kind of data is it?</label>
+          <div class="flow-grid" id="flowData" style="margin-bottom:20px"></div>
+          <label class="fl">2. Where would it go?</label>
+          <div class="flow-grid" id="flowTool"></div>
+          <div class="flow-res" id="flowRes"></div>
+          <div class="disc">Educational, not legal advice. For regulated data, confirm with counsel and your compliance team.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VENDOR DILIGENCE -->
+    <section class="view" data-view="vendor">
+      <div class="eyebrow">Protect . before you sign anything</div>
+      <h2 class="vh">Vendor AI due diligence, in twelve questions.</h2>
+      <p class="h-lead">Any AI vendor that will touch your data has to clear this bar before you sign. Check what they actually give you in writing, and get an honest pass or fail. "We take security seriously" is not an answer. A signed term is.</p>
+      <div class="panel">
+        <div class="p-top"><span class="t">The 12-point vendor gate</span><span class="tag">check what they provide . built by COB</span></div>
+        <div class="p-body">
+          <div id="vendList"></div>
+          <div class="vend-out" id="vendOut"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="view" data-view="skills">
+      <div class="eyebrow">Build with AI . yours to keep</div>
+      <h2 class="vh">Skills you can download and run yourself.</h2>
+      <p class="h-lead">Each of these is a ready-made instruction set for an AI assistant. Download it, paste it into your business AI account or Cowork, and it runs the job for you. Built from the same systems COB runs, sized down for an owner.</p>
+      <div class="skill-grid" id="skillGrid" style="margin-top:24px"></div>
+      <div class="disc">Each downloads as a plain-text skill file. In ChatGPT, create a Custom GPT and paste it into Instructions, or paste it at the top of a new chat. In Claude, paste it into a Project's custom instructions, or as your first message. It then runs that job for you every time.</div>
+    </section>
+
+    <!-- VAULT -->
+    <section class="view" data-view="vault">
+      <div class="eyebrow">Keep . take-home vault</div>
+      <h2 class="vh">The guides, here whenever you need them.</h2>
+      <p class="h-lead">No login, no email wall. Tap any card to open it. Print them for the break room, hand the checklists to your team.</p>
+      <div class="acc" id="vault" style="margin-top:24px"></div>
+    </section>
+
+    <!-- LEARN -->
+    <section class="view" data-view="learn">
+      <div class="eyebrow">Keep . tricks of the trade</div>
+      <h2 class="vh">What a pro knows that a checklist won't tell you.</h2>
+      <p class="h-lead">Short, plain, and worth real money. Tap to open.</p>
+      <div class="acc" id="learn" style="margin-top:24px"></div>
+    </section>
+
+    <!-- WORK -->
+    <section class="view" data-view="work">
+      <div class="eyebrow">More . what COB builds</div>
+      <h2 class="vh">What COB builds when it runs your whole business.</h2>
+      <p class="h-lead">The tools on this page are a taste. Plugged into the systems you already run, COB builds and operates the kinds of systems below.</p>
+      <div class="wall" id="workWall" style="margin-top:24px"></div>
+      <div class="disc">A sampling of what COB stands up when it is connected to a whole business.</div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="view" data-view="about">
+      <div class="eyebrow">More . the quiet part</div>
+      <h2 class="vh">This whole command center was built by COB.</h2>
+      <p class="h-lead">Not a chatbot bolted on the side. COB plugs into the systems you already run, learns your business, watches what matters, and does the real work: the forecast you tried, the invoice chasing, the reporting, the quiet security checks. It keeps a memory of your world, so you're never starting over.</p>
+      <div class="grid2" style="margin-top:24px">
+        <div class="flat" style="padding:24px"><h4 style="color:var(--lgold);font-size:18px;margin-bottom:10px">What it does</h4><p style="font-size:14px;color:var(--soft)">Reads your books and flags the cash dip before it lands. Chases the late invoices. Turns a week of numbers into a plain brief. Watches the doors so nothing slips through.</p></div>
+        <div class="flat" style="padding:24px"><h4 style="color:var(--lgold);font-size:18px;margin-bottom:10px">What it means for you</h4><p style="font-size:14px;color:var(--soft)">You stop doing the work a system should do, and you see around corners you used to hit head-on. Built for an owner, not a finance department. Presence-driven, not busywork-driven.</p></div>
+      </div>
+      <div class="audit">
+        <h4 style="font-size:19px;margin-bottom:6px">Request a free look at your business</h4>
+        <p style="font-size:13.5px;color:var(--soft)">No deck, no pitch. The audit tells you where you're exposed and where AI would pay off fastest. Leave your name and email, or just grab Jake after the session.</p>
+        <div class="frow">
+          <input class="inp" id="au-name" placeholder="Your name">
+          <input class="inp" id="au-email" type="email" placeholder="Email">
+          <button class="btn" id="auBtn">Request my audit</button>
+        </div>
+        <div id="au-msg" style="font-size:13px;color:var(--lgold);margin-top:12px;display:none"><i class="ti ti-check"></i> Ready to send. You can also reach Jake at jake@chiefofbusiness.ai.</div>
+      </div>
+      <div class="verse" style="margin-top:26px">"Transforming <s style="text-decoration-thickness:2px;opacity:.85">Driven</s> Business Leaders into Presence-Driven Business Leaders."</div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(s,r){return (r||document).querySelector(s)};
+  var $$=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s))};
+  var esc=function(s){return (s==null?'':String(s)).replace(/[&<>"']/g,function(m){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])})};
+  var fmt=function(n){return '$'+Math.round(n).toLocaleString('en-US')};
+
+  // ---- nav / views ----
+  var views={}; $$('.view').forEach(function(v){views[v.getAttribute('data-view')]=v});
+  var titleMap={overview:'Overview',security:'Security tools',scorecard:'Security scorecard',flow:'Can this data touch AI?',vendor:'Vendor diligence',finance:'Finance tools',policy:'AI use policy',stack:'Pick your AI stack',prompts:'Prompt library',skills:'Skills to download',vault:'Take-home vault',learn:'Tricks of the trade',work:'What COB builds',about:'About COB'};
+  function go(v){
+    if(!views[v])return;
+    $$('.view').forEach(function(x){x.classList.remove('on')});
+    views[v].classList.add('on');
+    $$('.nav-i').forEach(function(n){n.classList.toggle('on',n.getAttribute('data-v')===v)});
+    $('#topTitle').textContent=titleMap[v]||'';
+    $('#sb').classList.remove('open');
+    window.scrollTo({top:0,behavior:'instant'in window?'instant':'auto'});
+    revealScan();
+  }
+  document.addEventListener('click',function(e){
+    var t=e.target.closest('[data-v]'); if(t){go(t.getAttribute('data-v'));}
+  });
+  $('#burger').addEventListener('click',function(){$('#sb').classList.toggle('open')});
+
+  // ---- counters ----
+  function counters(scope){
+    $$('[data-count]',scope).forEach(function(el){
+      if(el._done)return; el._done=true;
+      var to=+el.getAttribute('data-count'),suf=el.getAttribute('data-suf')||'',dec=to>=1000,st=null;
+      function step(ts){ if(!st)st=ts; var p=Math.min((ts-st)/1100,1); var val=to*(1-Math.pow(1-p,3));
+        el.textContent=(dec?Math.round(val).toLocaleString():Math.round(val))+suf; if(p<1)requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    });
+  }
+  // ---- reveal ----
+  var io=new IntersectionObserver(function(es){es.forEach(function(en){if(en.isIntersecting){en.target.classList.add('in');if(en.target.querySelector&&en.target.matches('.kpi'))counters(en.target);}})},{threshold:.15});
+  function revealScan(){ $$('.view.on .reveal').forEach(function(el){io.observe(el)}); counters($('.view.on')); }
+  revealScan();
+
+  // ---- ticker ----
+  var tk=['<b>MFA</b> blocks 99%+ of account break-ins','<b>$2.77B</b> lost to email fraud in 2024','<b>67%</b> of teams already use AI, 18% have a rule','<b>3 seconds</b> of audio clones a voice','<b>82%</b> of failures trace to cash flow, not profit','<b>$17,500</b> the average unpaid invoices a business is owed','AI chats are <b>discoverable</b> in a lawsuit','<b>13 weeks</b> is the runway most owners never see coming'];
+  $('#tick').innerHTML=tk.map(function(t){return '<span><span class="dot">&#9670;</span> '+t+'</span>'}).join('');
+
+  // ---- slide viewer (the presentation, in the Overview) ----
+  (function(){var N=13,i=1,img=$('#slideImg'),num=$('#slNum'),dots=$('#slDots');if(!img)return;
+    function pad(n){return n<10?'0'+n:''+n}
+    for(var k=1;k<=N;k++){var d=document.createElement('span');d.setAttribute('data-i',k);d.style.cssText='width:9px;height:9px;border:1px solid var(--line2);cursor:pointer;background:transparent;transition:.15s';dots.appendChild(d);}
+    function show(){img.src='slides/slide-'+pad(i)+'.jpg';num.textContent=i+' / '+N;$$('#slDots span').forEach(function(s,idx){var on=(idx+1===i);s.style.background=on?'var(--gold)':'transparent';s.style.borderColor=on?'var(--gold)':'var(--line2)';});}
+    $('#slPrev').addEventListener('click',function(){i=i>1?i-1:N;show();});
+    $('#slNext').addEventListener('click',function(){i=i<N?i+1:1;show();});
+    dots.addEventListener('click',function(e){var s=e.target.closest('span');if(!s)return;i=+s.getAttribute('data-i');show();});
+    document.addEventListener('keydown',function(e){if(!views.overview.classList.contains('on'))return;if(e.key==='ArrowLeft'){i=i>1?i-1:N;show();}if(e.key==='ArrowRight'){i=i<N?i+1:1;show();}});
+    show();
+  })();
+
+  // ---- /deepdive . COB personalizes the room ----
+  (function(){
+    // Set this to the deployed Supabase edge function URL after Lovable push.
+    // e.g. https://YOURPROJECT.supabase.co/functions/v1/deepdive-cob
+    var COB_ENDPOINT = window.COB_DEEPDIVE_ENDPOINT || '';
+    // AFTER THE WORKSHOP: set window.COB_DEEPDIVE_OPEN = false (one line) to close the live /deepdive
+    // so nobody abuses it. The deck, tools, and deliverables all stay. Also undeploy the function
+    // or unset the Anthropic key to fully stop any API cost. Default open.
+    var DEEPDIVE_OPEN = (window.COB_DEEPDIVE_OPEN !== false);
+
+    // Baked demo. Renders instantly, no network. Jake walks the room through the problem live.
+    var DEMO = {
+      for:{first:'John',business:'Sons of Thunder Roofing LLC',city:'Fort Worth',industry:'Roofing'},
+      brief:{
+        welcome:"John, good to meet you. A Fort Worth roofer living through hail season is a fast business with a lot of sensitive paper moving through it, and that mix is exactly where AI helps most and hurts worst.",
+        read:"Roofing runs on speed and on trust: estimates out before the homeowner cools off, supplements that actually get approved, crews and adjusters kept in the loop. AI can take the slow, repeatable parts off your plate and hand you back hours every week. The catch is that most of that work touches a homeowner's insurance and identity, so how you use it matters as much as whether you use it.",
+        wins:[
+          "Photo to proposal in minutes: turn roof photos and a few notes into a written estimate. Keep the address and policy number out of it and you lose nothing.",
+          "Supplements that stick: draft the insurance supplement and the adjuster follow-up from your scope, using a job number instead of the homeowner's name, and stop losing weeks to stalled claims.",
+          "Never miss a storm lead: an assistant answers and qualifies the 9pm hail call, books the inspection, and hands you a clean summary, with no customer data left sitting in a chat."
+        ],
+        exposures:[
+          "The trap is the shortcut. Paste a homeowner's adjuster report into a free AI tool and their name, address, and policy number now live in a system built to keep what you feed it.",
+          "The quieter leak is worse. That file gets dropped into a shared Slack or Google Doc nobody locked down, where a crew member who left months ago still has the keys. Privileged data ends up everywhere, reachable by people who no longer work for you."
+        ],
+        line:"Sons of Thunder can run AI hard and win with it. The win is never the tool, it is the framework you put underneath it. Tell me what software you run and I will show you exactly how."
+      }
+    };
+
+    var out=$('#ddOut');
+    function esc(s){return String(s||'').replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c]})}
+    function li(arr,icon,col){return '<ul style="list-style:none;margin:8px 0 0;padding:0;display:grid;gap:8px">'+arr.map(function(t){return '<li style="display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--txt)"><i class="ti '+icon+'" style="color:'+col+';margin-top:2px;flex:none"></i><span>'+esc(t)+'</span></li>'}).join('')+'</ul>'}
+
+    function render(r){
+      var b=r.brief||{}, f=r.for||{};
+      out.innerHTML=''
+        +'<div class="reveal on" style="border-top:1px solid var(--line);padding-top:18px">'
+        +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="width:26px;height:26px;border-radius:6px;background:var(--gold);color:#0a0c22;display:grid;place-items:center;font-family:var(--disp);font-weight:800;font-size:13px">C</span><span style="font-family:var(--disp);font-weight:700;color:var(--gold2);font-size:12px;letter-spacing:.06em;text-transform:uppercase">COB . a read for '+esc(f.business||'your business')+'</span></div>'
+        +'<p style="font-size:16px;color:#fff;font-family:var(--disp);line-height:1.5;margin:0 0 10px">'+esc(b.welcome)+'</p>'
+        +'<p style="font-size:14px;color:var(--txt);line-height:1.65;margin:0 0 18px">'+esc(b.read)+'</p>'
+        +'<div class="grid2" style="display:grid;grid-template-columns:1fr 1fr;gap:18px">'
+        +'<div class="flat" style="padding:16px"><b style="color:#fff;font-family:var(--disp);font-size:13px"><i class="ti ti-trending-up" style="color:#5fd08a"></i> Where AI pays off</b>'+li(b.wins||[],'ti-check','#5fd08a')+'</div>'
+        +'<div class="flat" style="padding:16px;border-color:rgba(191,155,48,.35)"><b style="color:#fff;font-family:var(--disp);font-size:13px"><i class="ti ti-shield-half" style="color:var(--gold2)"></i> Where you are exposed</b>'+li(b.exposures||[],'ti-alert-triangle','var(--gold2)')+'</div>'
+        +'</div>'
+        +'<p style="font-size:14.5px;color:var(--gold2);font-family:var(--disp);font-style:italic;line-height:1.55;margin:18px 0 0;border-left:2px solid var(--gold);padding-left:14px">'+esc(b.line)+'</p>'
+        +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:18px">'
+        +'<button class="btn btn-sm" id="ddSave"><i class="ti ti-download"></i> Save my brief</button>'
+        +'<button class="btn btn-o btn-sm" id="ddMail"><i class="ti ti-mail"></i> Email it to me</button>'
+        +'<a class="btn btn-o btn-sm" href="#" data-v="about"><i class="ti ti-messages"></i> See what COB is</a>'
+        +'</div>'
+        +'<p style="font-size:11.5px;color:var(--mut);margin:12px 0 0">This read was built live by COB. It kept your data for exactly this answer and nothing more.</p>'
+        +'</div>';
+      out.style.display='block';
+      out.querySelectorAll('.reveal').forEach(function(el){el.classList.add('on')});
+      out.scrollIntoView({behavior:'smooth',block:'nearest'});
+      // rewire the "See what COB is" jump to the About view
+      var jump=out.querySelector('[data-v="about"]');
+      if(jump)jump.addEventListener('click',function(e){e.preventDefault();var n=document.querySelector('.nav-i[data-v="about"]');if(n)n.click();});
+      // save + email the personalized brief (client-side, no server, works after the event too)
+      var sv=out.querySelector('#ddSave'); if(sv)sv.addEventListener('click',function(){saveBrief(r)});
+      var ml=out.querySelector('#ddMail'); if(ml)ml.addEventListener('click',function(){mailBrief(r)});
+    }
+
+    function briefText(r){
+      var b=r.brief||{}, f=r.for||{};
+      return 'A read from COB for '+(f.business||'your business')+(f.city?' . '+f.city:'')+'\n\n'
+        +(b.welcome||'')+'\n\n'
+        +(b.read||'')+'\n\n'
+        +'WHERE AI PAYS OFF\n'+(b.wins||[]).map(function(t){return '. '+t}).join('\n')+'\n\n'
+        +'WHERE YOU ARE EXPOSED\n'+(b.exposures||[]).map(function(t){return '. '+t}).join('\n')+'\n\n'
+        +(b.line||'')+'\n\n— COB . chiefofbusiness.ai';
+    }
+    function saveBrief(r){
+      var b=r.brief||{}, f=r.for||{};
+      var html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Your read from COB</title>'
+        +'<style>body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#090B23;color:#e8e9f2;margin:0;padding:40px 22px;line-height:1.6}'
+        +'.w{max-width:640px;margin:0 auto}h1{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:#CDBE96;margin:0 0 18px}'
+        +'h2{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:#BF9B30;margin:26px 0 8px}'
+        +'.lead{font-size:20px;color:#fff;margin:0 0 14px}p{margin:0 0 12px}ul{margin:6px 0 0;padding-left:18px}li{margin:6px 0}'
+        +'.line{border-left:2px solid #BF9B30;padding-left:14px;color:#CDBE96;font-style:italic;font-size:17px;margin-top:24px}'
+        +'.f{margin-top:34px;padding-top:14px;border-top:1px solid #2a2d4a;color:#8a8ca6;font-size:12px}@media print{body{background:#fff;color:#111}.lead,h1{color:#111}}</style></head><body><div class="w">'
+        +'<h1>A read from COB . '+esc(f.business||'your business')+(f.city?' . '+esc(f.city):'')+'</h1>'
+        +'<p class="lead">'+esc(b.welcome||'')+'</p><p>'+esc(b.read||'')+'</p>'
+        +'<h2>Where AI pays off</h2><ul>'+(b.wins||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ul>'
+        +'<h2>Where you are exposed</h2><ul>'+(b.exposures||[]).map(function(t){return '<li>'+esc(t)+'</li>'}).join('')+'</ul>'
+        +'<p class="line">'+esc(b.line||'')+'</p>'
+        +'<div class="f">Built live by COB at the Distinct AI Workshop. chiefofbusiness.ai . Open this file and print to PDF to keep it.</div>'
+        +'</div></body></html>';
+      var blob=new Blob([html],{type:'text/html'});
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='COB-brief-'+String(f.business||'business').replace(/[^a-z0-9]+/gi,'-').toLowerCase().slice(0,40)+'.html';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+    }
+    function mailBrief(r){
+      var f=r.for||{};
+      var subj='Your read from COB . '+(f.business||'your business');
+      window.location.href='mailto:?subject='+encodeURIComponent(subj)+'&body='+encodeURIComponent(briefText(r));
+    }
+
+    var ddTimer=null;
+    function stopLoad(){ if(ddTimer){clearInterval(ddTimer);ddTimer=null;} }
+    function loading(){
+      out.style.display='block';
+      var msgs=['COB is reading your world','Scanning your industry','Checking public signals','Writing your brief','Almost there'];
+      out.innerHTML='<div style="border-top:1px solid var(--line);padding-top:18px">'
+        +'<div style="display:flex;align-items:center;gap:12px;color:var(--gold2);font-size:14px;font-family:var(--disp);font-weight:700">'
+        +'<span class="ddspin" style="width:18px;height:18px;border:2px solid var(--line2);border-top-color:var(--gold);border-radius:50%;display:inline-block;animation:ddsp .7s linear infinite;flex:none"></span>'
+        +'<span id="ddMsgT">'+msgs[0]+'</span></div>'
+        +'<div style="height:3px;background:var(--line2);border-radius:3px;margin-top:14px;overflow:hidden"><div style="height:100%;width:38%;border-radius:3px;background:linear-gradient(90deg,transparent,var(--gold),transparent);animation:ddbar 1.25s ease-in-out infinite"></div></div>'
+        +'<div style="font-size:11.5px;color:var(--mut);margin-top:9px">This takes a few seconds. COB is looking at your actual business, not a template.</div>'
+        +'</div>';
+      stopLoad(); var k=0;
+      ddTimer=setInterval(function(){k=(k+1)%msgs.length;var m=document.getElementById('ddMsgT');if(m){m.textContent=msgs[k];}else{stopLoad();}},1900);
+    }
+    function err(m){stopLoad();out.style.display='block';out.innerHTML='<div style="border-top:1px solid var(--line);padding-top:16px;color:var(--gold2);font-size:13.5px"><i class="ti ti-alert-circle"></i> '+esc(m)+'</div>';}
+
+    $('#ddRun').addEventListener('click',function(){
+      var first=$('#ddFirst').value.trim(),biz=$('#ddBiz').value.trim(),ind=$('#ddInd').value.trim();
+      if(!first||!biz||!ind){err('COB needs at least your first name, your business, and your industry.');return;}
+      if(!COB_ENDPOINT){ // not wired yet: fall back to the demo so nothing dead-ends in the room
+        loading();setTimeout(function(){stopLoad();render({for:{first:first,business:biz,city:$('#ddCity').value,industry:ind},brief:DEMO.brief});},650);return;
+      }
+      loading();
+      fetch(COB_ENDPOINT,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({
+        first:first,last:$('#ddLast').value.trim(),business:biz,city:$('#ddCity').value.trim(),industry:ind
+      })}).then(function(r){return r.json()}).then(function(d){
+        stopLoad(); if(d&&d.ok&&d.brief)render(d);else err((d&&d.error)||'COB could not compose a read. Try again.');
+      }).catch(function(){err('COB is catching its breath. Try again in a moment.');});
+    });
+
+    // After the workshop: window.COB_DEEPDIVE_OPEN = false closes the live run cleanly.
+    if(!DEEPDIVE_OPEN){
+      var _f=$('#ddForm'); if(_f)_f.style.display='none';
+      var _r=$('#ddRun'); if(_r)_r.style.display='none';
+      var _d=$('#ddDemo'); if(_d)_d.style.display='none';
+      out.style.display='block';
+      out.innerHTML='<div style="border-top:1px solid var(--line);padding-top:16px;color:var(--mut);font-size:13.5px">The live deepdive was open during the workshop. It is closed now, but everything else stays yours: download the deck below, keep the tools and deliverables in the menu, and if you want COB to look at your business for real, use <b style="color:var(--gold2)">See what COB is</b> to request a free audit.</div>';
+    }
+  })();
+
+  // ---- paste checker ----
+  var rules={
+    ssn:['never','Never','A Social Security or tax ID is the crown jewel for identity theft, and pasting it creates a permanent, discoverable record.','If the AI needs the context, use a placeholder like XXX-XX-1234. It never needs the real number.'],
+    bank:['never','Never','Full bank or card numbers never belong in a prompt, on any tier, and card numbers carry PCI obligations.','Give it the last four at most, or describe the account without the number.'],
+    client:['never','Never on a free tool','Client records are personal information you are trusted to protect, and a free tool can retain and train on them.','Use a business-tier account that does not train on you, and replace names with "Client A" or an ID first.'],
+    pw:['never','Never','A password or login in a chat is a breach waiting to happen and a lasting record of your credentials.','Store and share logins in a password manager, never in a chat.'],
+    contract:['never','Never on a free tool','Contracts can be privileged and are highly discoverable, so a free tool is a real exposure.','Business tier only, and redact party names and dollar figures the task does not need.'],
+    health:['never','Never on a free tool','Health and employee records are regulated, and a free tool has no agreement covering them.','Business tier under a signed Business Associate Agreement only, de-identified, and only if you truly must.'],
+    fin:['redact','Redact first','Full financials are sensitive and discoverable, so the raw ledger should never go into a general tool.','On a business tier, strip account numbers first and describe the numbers rather than pasting the raw file. Never on a free account.'],
+    draft:['ok','Go ahead','Marketing and blog drafts are exactly what AI is great at, and there is nothing sensitive to protect.','You are clear. Just keep client names and unpublished numbers out of it.'],
+    public:['ok','Go ahead','Public information and general questions are the safe everyday use, and this is most of what AI is for.','Go for it. This is the use AI is built for.'],
+    redact:['ok','The pro move','Redacted data, with names and numbers replaced by placeholders, gets you the full AI benefit with the risk stripped out.','Keep doing this. It is the single best habit on this page.']
+  };
+  $$('#chips .chip').forEach(function(c){c.addEventListener('click',function(){
+    $$('#chips .chip').forEach(function(x){x.classList.remove('on')}); c.classList.add('on');
+    var r=rules[c.getAttribute('data-k')],cls=r[0]==='never'?'v-never':r[0]==='redact'?'v-redact':'v-ok';
+    $('#pv').innerHTML='<span class="v-tag '+cls+'">'+esc(r[1])+'</span><div style="margin-top:10px">'+esc(r[2])+'</div><div style="margin-top:10px;font-size:13px;color:var(--soft)"><b style="color:var(--gold2)">The safe way:</b> '+esc(r[3])+'</div>';
+  })});
+
+  // ---- scorecard ----
+  var Q=[
+    ['Two-step login (MFA) on your email and bank?',14],
+    ['Unique passwords, ideally a password manager?',9],
+    ['Verify payment or bank-detail changes by calling a known number?',15],
+    ['Team uses a business AI account, not personal free ones?',11],
+    ['A short "never paste into AI" rule your team knows?',9],
+    ['Backups you have actually tested restoring?',11],
+    ['Know where your customer personal information lives and who can reach it?',9],
+    ['Could you cut a departed employee\'s access same-day?',7],
+    ['A written note of what to do first if breached or scammed?',6],
+    ['A money code word for urgent financial requests?',5],
+    ['Cyber insurance, or know what it would require?',2],
+    ['Someone owns security, even part-time?',2]
+  ];
+  var ans={}, qw=$('#qs');
+  Q.forEach(function(q,i){var r=document.createElement('div');r.className='q-row';r.innerHTML='<div class="q">'+esc(q[0])+'</div><div class="yn"><b class="yes" data-i="'+i+'" data-v="1">Yes</b><b class="no" data-i="'+i+'" data-v="0">No</b></div>';qw.appendChild(r)});
+  qw.addEventListener('click',function(e){var b=e.target.closest('b');if(!b)return;var i=b.getAttribute('data-i');var row=b.closest('.q-row');$$('b',row).forEach(function(x){x.classList.remove('on')});b.classList.add('on');ans[i]=+b.getAttribute('data-v')});
+  var actMap={
+    'Two-step login (MFA) on your email and bank?':'Turn on two-step login (MFA) on email and bank tonight. Blocks 99%+ of break-ins, free.',
+    'Verify payment or bank-detail changes by calling a known number?':'Set one money rule: no payment or bank-detail change without a callback to a number you already have. Stops the #1 loss.',
+    'Unique passwords, ideally a password manager?':'Roll out a password manager and kill reused passwords.',
+    'Backups you have actually tested restoring?':'Set up an off-site backup and test one restore.',
+    'Team uses a business AI account, not personal free ones?':'Give the team one business AI account that does not train on your data.',
+    'A short "never paste into AI" rule your team knows?':'Post a one-line never-paste list: no client data, financials, passwords, contracts into a free tool.',
+    'Know where your customer personal information lives and who can reach it?':'Map where customer personal information lives and trim who can reach it.',
+    'Could you cut a departed employee\'s access same-day?':'Write a same-day offboarding checklist.',
+    'A written note of what to do first if breached or scammed?':'Keep a one-page incident plan by the desk: bank, ic3.gov, who to notify, in order.',
+    'A money code word for urgent financial requests?':'Agree on a family and finance code word. A cloned voice cannot know it.',
+    'Cyber insurance, or know what it would require?':'Get a cyber-insurance quote. The questionnaire doubles as a free gap check.',
+    'Someone owns security, even part-time?':'Name an owner for security, even a few hours a month.'
+  };
+  var whyMap={
+    'Two-step login (MFA) on your email and bank?':'A stolen password is worthless if a second step is required. This one setting blocks the large majority of account break-ins, and it is free.',
+    'Unique passwords, ideally a password manager?':'One reused password leaked anywhere becomes the key to everything. A manager makes unique passwords effortless and lets you cut access instantly.',
+    'Verify payment or bank-detail changes by calling a known number?':'The most common six-figure loss for a small business is a fake "our bank details changed" email. A callback to a number you already have stops it cold.',
+    'Team uses a business AI account, not personal free ones?':'Free and personal accounts can keep and train on what your team types. A business account contractually does not, and keeps your data out of a stranger\'s model.',
+    'A short "never paste into AI" rule your team knows?':'Most AI leaks are one well-meaning person pasting something they should not. A one-line rule everyone knows prevents most of them.',
+    'Backups you have actually tested restoring?':'Ransomware hunts your backups. One you have never restored is a hope, not a plan. A tested one is the difference between a bad day and a closed business.',
+    'Know where your customer personal information lives and who can reach it?':'You cannot protect what you cannot see. Knowing where personal data sits, and trimming who can reach it, shrinks the damage of any mistake.',
+    'Could you cut a departed employee\'s access same-day?':'An account that outlives the person is a live key. Same-day offboarding closes the door before a disgruntled ex-employee, or their old tools, walk back in.',
+    'A written note of what to do first if breached or scammed?':'In a real incident, minutes matter and panic sets in. A one-page plan by the desk means the right calls happen in the right order.',
+    'A money code word for urgent financial requests?':'A cloned voice can sound exactly like you. A private code word is something the clone cannot know, and it defuses the urgent-wire-transfer scam.',
+    'Cyber insurance, or know what it would require?':'Even if you never buy it, the application is a free checklist of the controls insurers expect, and a real policy caps the damage.',
+    'Someone owns security, even part-time?':'Everyone\'s job is no one\'s job. Naming an owner, even a few hours a month, turns good intentions into things that actually get done.'
+  };
+  $('#scoreBtn').addEventListener('click',function(){
+    var tot=0,max=0,gaps=[],met=0; Q.forEach(function(q,i){max+=q[1];if(ans[i]===1){tot+=q[1];met++;}else gaps.push([q[0],q[1]])});
+    var pct=Math.round(tot/max*100); gaps.sort(function(a,b){return b[1]-a[1]});
+    var tier=pct>=85?['Well protected','var(--ok)']:pct>=60?['Some real gaps','var(--warn)']:pct>=35?['Exposed','var(--warn)']:['Wide open','var(--bad)'];
+    $('#roadmap').style.display='block';
+    var arc=$('#arc'),len=352; arc.style.strokeDashoffset=len; arc.style.stroke=tier[1];
+    var st=null; function anim(ts){if(!st)st=ts;var p=Math.min((ts-st)/1000,1);var e=1-Math.pow(1-p,3);arc.style.strokeDashoffset=len-len*(pct/100)*e;$('#arcNum').textContent=Math.round(pct*e);if(p<1)requestAnimationFrame(anim)} requestAnimationFrame(anim);
+    $('#sTier').textContent=tier[0]; $('#sTier').style.color=tier[1];
+    $('#scSum').innerHTML= met+' of '+Q.length+' basics in place. '+(gaps.length? '<b style="color:#fff">'+gaps.length+' gap'+(gaps.length>1?'s':'')+' to close</b>, ordered by how much risk each one carries.' : 'Nothing left on this checklist. You are ahead of almost every business in the room.');
+    window.__scGaps=gaps;
+    var items=gaps.map(function(g,idx){var imp=g[1]>=11?'High impact':g[1]>=7?'Medium':'Nice to have';
+      return '<div class="stk-row"><div class="stk-head"><div class="stk-cat" style="min-width:62px">STEP '+(idx+1)+'</div><div class="stk-main"><div class="sv">'+esc(actMap[g[0]]||g[0])+'</div><div class="sr">'+esc(g[0])+'</div></div><span class="stk-cost">'+imp+'</span><i class="ti ti-chevron-down stk-chev"></i></div><div class="stk-det"><div style="padding:0 16px 16px 78px"><div style="font-size:13px;color:var(--soft);line-height:1.55;margin-top:6px"><b style="color:var(--gold2)">Why it matters:</b> '+esc(whyMap[g[0]]||'Closes a real gap that attackers and honest mistakes both exploit.')+'</div></div></div></div>';
+    });
+    if(!items.length)items=['<div class="stk-row"><div class="stk-head"><div class="stk-main"><div class="sv">You are ahead of almost every business in the room.</div><div class="sr">Keep testing backups and your verification habits, and revisit this every quarter.</div></div></div></div>'];
+    $('#roadItems').innerHTML=items.join('');
+    $$('#roadItems .stk-row').forEach(function(el){var h=el.querySelector('.stk-head');if(h)h.addEventListener('click',function(){el.classList.toggle('open')})});
+    $('#roadmap').scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  $('#scCopy').addEventListener('click',function(){
+    var gaps=window.__scGaps||[];
+    var txt='MY AI AND SECURITY ROADMAP\n\n'+(gaps.length?gaps.map(function(g,i){return (i+1)+'. '+(actMap[g[0]]||g[0])+'\n   Why: '+(whyMap[g[0]]||'Closes a real gap.')}).join('\n\n'):'All 12 basics in place. Keep testing and revisit quarterly.')+'\n\n— From the Distinct AI Workshop scorecard . chiefofbusiness.ai';
+    try{navigator.clipboard.writeText(txt)}catch(e){}
+    this.innerHTML='<i class="ti ti-check"></i> Copied';var b=this;setTimeout(function(){b.innerHTML='<i class="ti ti-copy"></i> Copy my roadmap'},1600);
+  });
+
+  // ---- forecaster ----
+  var fi={cash:$('#cash'),rev:$('#rev'),cost:$('#cost'),ar:$('#ar'),ai:$('#ai')};
+  function proj(){var cash=+fi.cash.value,rev=+fi.rev.value,cost=+fi.cost.value,ar=+fi.ar.value,ai=+fi.ai.value;var col=ai?4:8,leak=ai?.985:1,arw=ar>0?ar/col:0,s=[],b=cash,low=cash,lw=0;for(var w=1;w<=13;w++){b+=rev+(w<=col?arw:0)-cost*leak;s.push(b);if(b<low){low=b;lw=w}}var burn=cost*leak-rev,run=burn>0?cash/burn:99;return{s:s,low:low,lw:lw,end:s[12],run:run,ai:ai}}
+  function draw(r){var w=640,h=230,pl=56,pr=14,pt=16,pb=24,mn=Math.min(0,r.low),mx=Math.max.apply(null,r.s);if(mx===mn)mx=mn+1;var x=function(i){return pl+i/12*(w-pl-pr)},y=function(v){return pt+(1-(v-mn)/(mx-mn))*(h-pt-pb)},g='';for(var k=0;k<=4;k++){var yy=pt+k/4*(h-pt-pb);g+='<line x1="'+pl+'" y1="'+yy+'" x2="'+(w-pr)+'" y2="'+yy+'" stroke="rgba(205,190,150,.10)"/>'}if(0>=mn&&0<=mx){var z=y(0);g+='<line x1="'+pl+'" y1="'+z+'" x2="'+(w-pr)+'" y2="'+z+'" stroke="#E27C6B" stroke-dasharray="4 4"/>'}var d='',a='';for(var i=0;i<r.s.length;i++){var px=x(i),py=y(r.s[i]);d+=(i?'L':'M')+px+' '+py+' ';a+=(i?'L':'M')+px+' '+py+' '}a+='L'+x(12)+' '+y(mn)+' L'+x(0)+' '+y(mn)+' Z';var col=r.ai?'#DCB94A':'#7f83a6';g+='<path d="'+a+'" fill="'+(r.ai?'rgba(191,155,48,.14)':'rgba(127,131,166,.10)')+'"/>';g+='<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.5"/>';for(var j=0;j<r.s.length;j++)g+='<circle cx="'+x(j)+'" cy="'+y(r.s[j])+'" r="2.4" fill="'+col+'"/>';g+='<text x="'+pl+'" y="'+(h-7)+'" fill="#8B8EAC" font-size="11" font-family="Inter">Wk 1</text><text x="'+(w-pr-30)+'" y="'+(h-7)+'" fill="#8B8EAC" font-size="11" font-family="Inter">Wk 13</text><text x="6" y="'+y(mx)+'" fill="#8B8EAC" font-size="11" font-family="Inter">'+fmt(mx)+'</text>';$('#chart').innerHTML=g}
+  function fcR(){['cash','rev','cost','ar'].forEach(function(k){$('#v-'+k).textContent=fmt(+fi[k].value)});$('#ai-lab').textContent=(+fi.ai.value?'on':'off');var r=proj();$('#s-low').textContent=fmt(r.low);$('#s-low').style.color=r.low<0?'#E27C6B':'#fff';$('#s-end').textContent=fmt(r.end);$('#s-run').textContent=(r.run>=99?'52+':Math.round(r.run));draw(r);var v=$('#fcv');if(r.low<0){v.style.borderColor='#5c2c26';v.innerHTML='<b style="color:#E27C6B">Cash crunch in week '+r.lw+'.</b> The account goes negative before revenue catches up. '+(r.ai?'Even with faster collections the gap is real, but you saw it 12 weeks early.':'Flip on AI collections to lift the floor, and know you would have seen it coming.')}else if(r.run<6){v.style.borderColor='#5c4a26';v.innerHTML='<b style="color:#E0B24A">Thin runway.</b> If revenue stalled you have about '+Math.round(r.run)+' weeks of cushion.'}else{v.style.borderColor='var(--line2)';v.innerHTML='<b style="color:#84C56A">Healthy.</b> Cash holds all 13 weeks'+(r.ai?', and AI collections are lifting the floor.':'. Turn on AI collections to see the floor rise.')}}
+  Object.keys(fi).forEach(function(k){fi[k].addEventListener('input',fcR)}); fcR();
+
+  // ---- ROI ----
+  var roiTasks=[['Bookkeeping and categorizing',3],['Chasing invoices',2],['Writing emails and replies',4],['Reports and admin',3]];
+  var roiWrap=$('#roiRows');
+  function roiRow(name,hrs){var d=document.createElement('div');d.className='grid3';d.style.cssText='gap:12px;margin-bottom:10px;align-items:end';d.innerHTML='<div><label class="fl">Task</label><input class="inp roi-name" value="'+esc(name)+'"></div><div><label class="fl">Hours saved / week</label><input class="inp roi-hrs" type="number" min="0" max="40" value="'+hrs+'"></div><div><label class="fl">Your time is worth /hr</label><input class="inp roi-rate" type="number" min="0" value="50"></div>';roiWrap.appendChild(d);$$('.inp',d).forEach(function(x){x.addEventListener('input',roiCalc)})}
+  roiTasks.forEach(function(t){roiRow(t[0],t[1])});
+  $('#roiAdd').addEventListener('click',function(){roiRow('New task',2);roiCalc()});
+  function tween(el,to,pre){var from=parseFloat((el.textContent||'0').replace(/[^0-9.]/g,''))||0,st=null;function s(ts){if(!st)st=ts;var p=Math.min((ts-st)/500,1),val=from+(to-from)*(1-Math.pow(1-p,3));el.textContent=(pre||'')+Math.round(val).toLocaleString();if(p<1)requestAnimationFrame(s)}requestAnimationFrame(s)}
+  function roiCalc(){var hrs=0,dol=0;$$('#roiRows .grid3').forEach(function(r){var h=+$('.roi-hrs',r).value||0,rate=+$('.roi-rate',r).value||0;hrs+=h*52;dol+=h*52*rate});tween($('#roiHrs'),hrs,'');tween($('#roiDol'),dol,'$');$('#roiWk').textContent=Math.round(hrs/40)}
+  roiCalc();
+
+  // ---- generic chip toggles (multi) ----
+  function multiToggle(sel){$$(sel+' .chip').forEach(function(c){c.addEventListener('click',function(){c.classList.toggle('on')})})}
+  function singleToggle(sel){$$(sel+' .chip').forEach(function(c){c.addEventListener('click',function(){$$(sel+' .chip').forEach(function(x){x.classList.remove('on')});c.classList.add('on')})})}
+  multiToggle('#pol-tools'); multiToggle('#pol-data');
+  (function(){
+    var inp=$('#pol-tool-add'), btn=$('#pol-tool-addbtn'), wrap=$('#pol-tools');
+    if(!wrap)return;
+    function add(){
+      var v=(inp.value||'').trim(); if(!v)return;
+      var exists=$$('#pol-tools .chip').some(function(c){return c.getAttribute('data-v').toLowerCase()===v.toLowerCase()});
+      if(exists){inp.value='';return;}
+      var c=document.createElement('div'); c.className='chip on'; c.setAttribute('data-v',v); c.textContent=v;
+      c.addEventListener('click',function(){c.classList.toggle('on')});
+      wrap.appendChild(c); inp.value=''; inp.focus();
+    }
+    if(btn)btn.addEventListener('click',add);
+    if(inp)inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();add();}});
+  })();
+  singleToggle('#st-eco'); singleToggle('#st-size'); singleToggle('#st-use'); singleToggle('#st-reg');
+  function picked(sel){return $$(sel+' .chip.on').map(function(c){return c.getAttribute('data-v')})}
+  function pickedOne(sel){var c=$(sel+' .chip.on');return c?c.getAttribute('data-v'):''}
+
+  // ---- policy generator (deep, vertical + regulatory) ----
+  var VERT={
+    general:{label:'general small business',regime:'',clause:''},
+    financial:{label:'financial services business',regime:'Gramm-Leach-Bliley Act Safeguards Rule',clause:'<h4>R. Financial data (Gramm-Leach-Bliley Act)</h4>We handle nonpublic personal financial information under the Gramm-Leach-Bliley Act Safeguards Rule. Account numbers, routing numbers, SSNs, and balances are NEVER entered into a general AI tool. Any AI vendor that touches this data is a service provider: vetted, contracted, and covered by our written information security program and our breach-notification plan. Financial identifiers are tokenized before any AI query.'},
+    health:{label:'healthcare business',regime:'HIPAA',clause:'<h4>R. Protected health information (HIPAA)</h4>Protected Health Information is NEVER entered into any AI tool we have not covered with a signed Business Associate Agreement. No Business Associate Agreement means no patient health information, and the absence of the Business Associate Agreement is itself the violation. Where the task allows, patient health information is de-identified (Safe Harbor) before analysis. All AI access to patient health information is logged so it survives an audit.'},
+    law:{label:'law firm',regime:'privilege and confidentiality',clause:'<h4>R. Client confidences and privilege</h4>Client confidential and privileged material is NEVER entered into a consumer AI tool: one paste can waive privilege. We use only enterprise tools under contract, reference clients by identifier rather than name, and obtain client consent where our duties require it. AI never produces a client-facing or filed document without attorney review.'},
+    realestate:{label:'real estate or title business',regime:'Gramm-Leach-Bliley Act, fair housing, and state privacy',clause:'<h4>R. Buyer, borrower, and applicant data</h4>Buyer, borrower, and applicant financial and identity data is nonpublic personal information: never entered into an ungoverned AI tool. AI is never used for tenant or applicant screening, pricing, or steering without a documented bias review, to avoid fair-housing disparate-impact exposure. State privacy access and deletion rights are honored.'},
+    retail:{label:'retail or consumer-goods business',regime:'state privacy law and PCI-DSS',clause:'<h4>R. Customer and payment data</h4>Full card numbers NEVER enter any AI tool: they are tokenized first. Our customer database is personal information under state privacy law, carrying deletion and opt-out obligations, so it is never dumped into a tool that retains or trains on it, because we cannot honor a deletion request for data we no longer control.'},
+    construction:{label:'construction or trades business',regime:'customer-data and financing obligations',clause:'<h4>R. Homeowner and jobsite data</h4>Homeowner names, addresses, and their insurance or financing details are personal information: never pasted into a general AI tool. We reference jobs by number, not by homeowner name, and strip claim, policy, and account numbers before any AI task. Any tool that touches customer or payment data is contracted before it is used.'},
+    professional:{label:'professional services firm',regime:'client confidentiality and any NDA obligations',clause:'<h4>R. Client confidential material</h4>Client confidential and NDA-covered material is never entered into a consumer AI tool. We use only contracted business-tier tools, reference clients by identifier rather than name, and keep client-identifying detail out of any prompt that does not require it. AI never produces client-facing work without a person reviewing it.'},
+    nonprofit:{label:'nonprofit or ministry',regime:'donor privacy and duty of care',clause:'<h4>R. Donor, member, and congregant data</h4>Donor giving records, member and congregant details, and any pastoral or counseling information are treated as confidential and never pasted into a general AI tool. We honor the trust behind that data, reference people by first name or ID, and use only accounts that do not train on what we submit.'},
+    insurance:{label:'insurance agency',regime:'Gramm-Leach-Bliley Act and state insurance privacy rules',clause:'<h4>R. Policyholder nonpublic information</h4>Policyholder SSNs, financial details, and any health information are nonpublic personal information under the Gramm-Leach-Bliley Act and state insurance privacy rules: never entered into a general AI tool. Identifiers are tokenized before any AI query, and any AI vendor that touches this data is vetted, contracted, and covered by our information security program.'},
+    restaurant:{label:'restaurant or hospitality business',regime:'PCI-DSS and employee-data obligations',clause:'<h4>R. Payment and employee data</h4>Full card numbers NEVER enter any AI tool: they are tokenized first, and PCI-DSS governs how card data is handled. Employee records, tips, and personal details are personal information kept out of general AI tools, and guest reservation and contact data is never dumped into a tool that retains or trains on it.'},
+    auto:{label:'auto dealer or repair business',regime:'Gramm-Leach-Bliley Act and state privacy law',clause:'<h4>R. Buyer credit and identity data</h4>Buyer credit applications, SSNs, driver-license numbers, and financing details are nonpublic personal information under the Gramm-Leach-Bliley Act: never pasted into a general AI tool. We tokenize identifiers before any AI task, and any tool that touches customer or financing data is contracted first, with a written no-training term.'}
+  };
+  $('#polGen').addEventListener('click',function(){
+    var name=$('#pol-name').value.trim()||'Your Business',eco=$('#pol-eco').value,size=$('#pol-size').value,vert=$('#pol-vert').value;
+    var V=VERT[vert]||VERT.general;
+    var tools=picked('#pol-tools'); if(!tools.length)tools=['a single approved business AI account'];
+    var toolLine=tools.join(', ');
+    var data=picked('#pol-data');
+    var dataLine=data.length?'We handle '+data.map(function(d){return({customer:'customer personal information',financial:'financial records',health:'health data',payment:'payment and card data',legal:'contracts and legal material'}[d])}).join(', ')+', so the rules below are not optional.':'';
+    var regLine=V.regime?' Our primary regulatory obligation is the '+V.regime+'.':'';
+    $('#polTitle').textContent=name+' . AI Use Policy';
+    var mgr = size==='Just me'?'the owner':'a manager';
+    var todayStr = new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+    $('#polBody').innerHTML=
+      '<p class="mut">'+esc(name)+' . Artificial Intelligence Acceptable Use Policy . Version 1.0, adopted '+todayStr+' . next review within 6 months . owner: '+mgr+'</p>'+
+      '<h4>Purpose and scope</h4>AI is one of the most valuable tools available to '+esc(name)+', and one of the fastest ways to cause real harm when used carelessly. '+dataLine+regLine+' This policy exists so our team can use AI boldly to do better work, inside rules that protect our customers, our finances, and our obligations. It applies to everyone who works for '+esc(name)+', including employees, owners, contractors, and temporary staff, and to every AI tool used for any company purpose on any device.'+
+      '<h4>Approved tools only</h4>Company information may be used only in our approved, paid business accounts: <b>'+esc(toolLine)+'</b>. These are business-tier accounts that contractually do not train on our data and keep it under our control. Personal, free, or unmanaged AI accounts are never used for anything related to '+esc(name)+'. ('+esc(eco)+' is our primary ecosystem, and approved tools should sit inside it where possible.) To use a tool not on this list, get approval from '+mgr+' before any company data goes near it.'+
+      '<h4>Classify before you connect</h4>Before putting anything into AI, decide which tier it is, and use the higher tier when unsure:<ul><li><b>Public</b> (marketing copy, public info, general questions): any approved tool is fine.</li><li><b>Internal</b> (drafts, notes, non-sensitive work): approved business tool only.</li><li><b>Confidential</b> (financials, contracts, strategy, staff records): approved tool, minimized and redacted first.</li><li><b>Privileged or regulated</b> (customer personal information, health records, privileged files, card data): never pasted, only handled through a contracted, governed setup, and de-identified where possible.</li></ul>'+
+      '<h4>Never put these into any AI tool</h4><ul><li>Customer or client names, records, or confidences</li><li>Full financial statements, bank, routing, or card numbers</li><li>Social Security numbers, driver-license numbers, or dates of birth</li><li>Passwords, keys, or logins</li><li>Employee or health records</li><li>Contracts or anything under a non-disclosure agreement or privilege</li></ul>The safest field is the one you never send. When in doubt, replace names and numbers with a placeholder (for example, "Customer 4471") first.'+
+      V.clause+
+      '<h4>No personal or hidden AI on company data</h4>Using your own personal AI account, browser extension, or plugin on company or customer information is prohibited. It moves our data somewhere we do not control and cannot audit. If a personal tool would help you work better, ask '+mgr+' to add an approved version. We would rather buy you the right tool than discover the wrong one after a leak.'+
+      '<h4>Access follows the person</h4>AI tools and the systems they connect to are granted by role and removed the day someone leaves or changes jobs. Shared logins are not used. '+mgr+' reviews who can reach which tools and data at least quarterly, and offboarding removes every account, tool, and shared credential the same day.'+
+      '<h4>A human approves anything irreversible</h4>AI drafts; a person decides. Nothing AI produced reaches a customer, a regulator, a bank, our books, or a filing without a person reviewing it first. Reading and drafting can be delegated to AI. Sending, paying, filing, and deleting cannot.'+
+      '<h4>Every prompt is a business record</h4>What goes into an AI tool can be retained and, in a dispute, requested and read like email. Treat every prompt as something that could be read aloud in a deposition. We prefer tools with short or zero retention, and any legal hold we are placed under includes our AI tools.'+
+      '<h4>What a tool must give us before it touches our data</h4>In writing, every time: no training on our data; a stated retention window (short or zero); a defined data-residency boundary; proof of SOC 2 (Type II is the gold standard); and the right agreement for our data ('+(V.regime?'the '+V.regime+' terms, plus ':'')+'a Business Associate Agreement or a data-processing agreement as applicable). "We take security seriously" is not an answer. A signed term is.'+
+      '<h4>What AI is for here (use it)</h4>You are encouraged to use our approved tools to draft, summarize, research, brainstorm, plan, and take repetitive work off your plate, so your time goes to customers and judgment. Bringing a better, faster way to do your job is exactly what we want, done inside this policy.'+
+      '<h4>What AI is never used for</h4><ul><li>A final decision affecting a person\'s money, job, health, or legal standing without human review</li><li>Screening, pricing, or ranking people in a way that could discriminate</li><li>Presenting AI output as human where a customer would reasonably expect a person</li><li>Anything illegal, deceptive, or against our values</li></ul>'+
+      '<h4>If something goes wrong</h4>If sensitive data may have been exposed, or an AI output caused a problem: stop and do not delete anything; tell '+mgr+' the same day; write down what happened and what data was involved; then we contain it, log it, and notify anyone we are obligated to. Fast and honest always beats quiet.'+
+      '<h4>Training and acknowledgment</h4>Everyone who uses AI for '+esc(name)+' reads this policy, and new team members read it before they receive any AI access. We refresh it as tools and rules change, at least every six months.'+
+      '<div style="margin-top:20px;padding-top:14px;border-top:1px solid var(--line)"><b style="color:#fff">Acknowledged by</b><p class="mut" style="margin-top:8px">Name: ______________________   Role: ______________________   Date: ____________</p></div>'+
+      '<p class="mut" style="margin-top:14px">Drafted for '+esc(name)+' as a starting point, aware of your regulated data. Have counsel review it before you rely on it for regulated data. Educational, not legal advice.</p>';
+    $('#polOut').style.display='block'; $('#polOut').scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  $('#polCopy').addEventListener('click',function(){var t=$('#polBody').innerText;try{navigator.clipboard.writeText($('#polTitle').textContent+'\n\n'+t)}catch(e){}this.innerHTML='<i class="ti ti-check"></i> Copied';var b=this;setTimeout(function(){b.innerHTML='<i class="ti ti-copy"></i> Copy'},1600)});
+
+  // ---- stack builder (premium: itemized, drill-down, verdict + copy) ----
+  var stItems=[];
+  $('#stGen').addEventListener('click',function(){
+    var eco=pickedOne('#st-eco'),size=pickedOne('#st-size'),use=pickedOne('#st-use'),reg=pickedOne('#st-reg');
+    var ecoName=({ms:'Microsoft',goog:'Google',both:'Microsoft and Google',none:'no single ecosystem yet'})[eco]||'your tools';
+    var sizeName=({solo:'a solo owner',small:'a small team',mid:'a growing team',large:'a larger team'})[size]||'your team';
+    var useName=({write:'writing and email',numbers:'numbers and finance',docs:'docs and research',service:'customer service',content:'marketing and content'})[use]||'daily work';
+    var users=size==='solo'?1:size==='small'?6:size==='large'?25:14;
+    var perUser=eco==='ms'?21:eco==='goog'?14:eco==='both'?33:25;
+    var ai = eco==='ms'?['Microsoft 365 Copilot','Lives in the Outlook and Office you already use, and keeps data in your tenant.','It is already wired into your email and files, so your team adopts it without switching tools, and Microsoft does not train on your business data.','Turn it on for a small pilot group in the Microsoft 365 admin center and confirm Enterprise Data Protection is on.']
+      : eco==='goog'?['Gemini in Google Workspace','Sits inside Gmail and Drive, and is not trained on your Workspace data.','It reads your Docs and Gmail in place under the permissions you already set, so nobody has to paste anything out to use it.','Enable Gemini for your Workspace in the admin console, and keep it to a pilot group first.']
+      : eco==='both'?['Microsoft 365 Copilot, plus ChatGPT Team','Copilot for your Office work, a business-tier ChatGPT account for everything else.','You live in both worlds, so anchor on Copilot where your documents are and add a business-tier general account for flexible work, both no-training.','Start Copilot in the Microsoft admin center and buy ChatGPT Team seats for your power users.']
+      : ['ChatGPT Team','The most flexible starting point, business-tier so your data is not used for training.','You do not have one ecosystem yet, so start with the most capable general tool on a business plan that contractually does not train on your inputs.','Buy ChatGPT Team seats, not free accounts, and set the workspace to exclude member chats from training.'];
+    var pm=['1Password','Unique passwords for everyone, central control, instant offboarding.','Most break-ins start with a reused or stolen password. A shared vault is one place to grant access and, the day someone leaves, cut every login at once.','Roll it to the whole team, require the built-in 2-step, and make same-day offboarding a habit.'];
+    var email = eco==='goog'?['Google Workspace advanced protection','Enhanced phishing and malware protection, likely already in your plan.','The fake-vendor and fake-boss emails that trick someone into moving money get caught here before they land.','Turn on advanced phishing and malware protection in the Google admin console.']
+      : ['Microsoft Defender for Office 365','Catches the fake-vendor and fake-boss emails a normal filter misses, likely in your plan already.','Business email fraud is the most expensive attack on small firms, and this is the control that blunts it.','Enable Defender for Office 365 in the Microsoft security center, or turn on your provider equivalent.'];
+    var backup=['Immutable cloud backup','Copies ransomware cannot alter, tested with a real restore.','A backup you have never restored is a hope, not a plan, and ransomware specifically hunts the backups it can reach.','Set up Backblaze or your provider immutable backup, then actually run a test restore this month.'];
+    var extra = reg==='yes'?['A written data map, plus data-loss protection','Know where regulated data lives, and turn on the protection already in your license.','You handle regulated data, so the gap between a scare and a violation is knowing where it sits and having a control that stops it leaving.','List where sensitive data lives, then switch on the data-loss protection in your Microsoft or Google plan.']:null;
+    stItems=[['AI',ai,users*perUser],['Passwords',pm,users*8],['Email security',email,eco==='none'?users*3:0],['Backup',backup,30]];
+    if(extra)stItems.push(['Compliance',extra,users*3]);
+    var total=stItems.reduce(function(a,r){return a+r[2]},0);
+    $('#stTitle').textContent='Your starting stack';
+    $('#stCost').textContent='~'+fmt(total)+' / mo';
+    $('#stRows').innerHTML=stItems.map(function(r,i){var it=r[1];var c=r[2]?'~'+fmt(r[2])+'/mo':'in your plan';
+      return '<div class="stk-row" data-i="'+i+'"><div class="stk-head"><div class="stk-cat">'+esc(r[0])+'</div><div class="stk-main"><div class="sv">'+esc(it[0])+'</div><div class="sr">'+esc(it[1])+'</div></div><span class="stk-cost">'+c+'</span><i class="ti ti-chevron-down stk-chev"></i></div><div class="stk-det"><div class="stk-det-in"><div><b>Why this:</b> '+esc(it[2])+'</div><div><b>Set it up:</b> '+esc(it[3])+'</div></div></div></div>';
+    }).join('');
+    $$('#stRows .stk-row').forEach(function(el){el.querySelector('.stk-head').addEventListener('click',function(){el.classList.toggle('open')})});
+    $('#stWhy').innerHTML='<b style="color:#fff">Why this stack, for you:</b> sized for '+sizeName+', anchored on '+ecoName+', and built around '+useName+'. Tap any layer for the reason and the one step to set it up. Pay for what you will actually run, not a suite that sits unused.';
+    $('#stOut').style.display='block'; $('#stOut').scrollIntoView({behavior:'smooth',block:'nearest'});
+  });
+  $('#stCopy').addEventListener('click',function(){
+    if(!stItems.length)return;
+    var total=stItems.reduce(function(a,r){return a+r[2]},0);
+    var txt='YOUR STARTING AI AND SECURITY STACK  (~'+fmt(total)+'/mo)\n\n'+stItems.map(function(r){var it=r[1];return r[0].toUpperCase()+': '+it[0]+(r[2]?'  (~'+fmt(r[2])+'/mo)':'  (in your plan)')+'\n  '+it[1]+'\n  Why: '+it[2]+'\n  Set it up: '+it[3]}).join('\n\n')+'\n\n— Built by COB . chiefofbusiness.ai';
+    try{navigator.clipboard.writeText(txt)}catch(e){}
+    this.innerHTML='<i class="ti ti-check"></i> Copied';var b=this;setTimeout(function(){b.innerHTML='<i class="ti ti-copy"></i> Copy plan'},1600);
+  });
+
+  // ---- AI tools catalog (extensive, current pricing + security posture) ----
+  var CATALOG=[
+    ['ChatGPT','Assistants','Plus $20 · Business $25 · Enterprise ~$60','mix','The versatile default for writing, analysis, and everyday work.','Free and Plus can use your chats to improve the model unless you switch it off. Business, Team, and Enterprise do not train on your data by default. For anything with company or client info, use a Business seat, never a personal account.'],
+    ['Claude','Assistants','Pro $20 · Team $25/seat · Enterprise custom','good','Careful reasoning, long documents, and writing that sounds human. This is the engine behind COB.','Team and Enterprise (Claude for Work) do not train on your data by default and keep short retention. Cowork, below, is its desktop side.'],
+    ['Claude Cowork','Assistants','Part of your Claude plan','good','Letting AI work with the real files and tasks on your computer.','It is Claude on your desktop, so your Claude plan data terms carry over. This is the surface COB itself runs in.'],
+    ['ChatGPT Agent','Assistants','In ChatGPT Plus / Business / Pro','mix','Letting ChatGPT take multi-step actions for you.','Powerful and higher risk. Give it the narrowest access, and keep a human on anything that sends, pays, or deletes.'],
+    ['Grok (xAI)','Assistants','Subscription varies, confirm current','warn','Real-time, edgy answers tied to X.','Consumer terms are looser on training. Treat it as a personal tool, not a home for company or client data.'],
+    ['Microsoft 365 Copilot','Office-embedded','$21/user add-on (promo $18)','good','Microsoft and Office shops that want AI inside Outlook, Word, and Excel.','Enterprise Data Protection means no training, your data stays in your tenant, and it honors the file permissions you already set. It is an add-on to a Microsoft 365 plan.'],
+    ['Google Gemini','Office-embedded','In Workspace Standard $14 · Plus $22','good','Teams already living in Gmail, Docs, and Drive.','Gemini is now bundled into Google Workspace business plans, and Google does not train on or human-review your Workspace content.'],
+    ['Notion AI','Office-embedded','Included in Notion business plans','mix','Notes, docs, and wikis with AI built in.','Notion says it does not train its models on your content. Still keep truly regulated data out and confirm your plan terms.'],
+    ['Perplexity','Research','Pro $20 · Enterprise $40 · Enterprise Max $325','mix','Fast, sourced answers when you need citations, not just prose.','Consumer plans may use your data; Enterprise does not train on it and adds audit logs and retention controls. Great for research, not for pasting client files.'],
+    ['Claude Code','Builders & coders','In Claude Pro $20 / Max $100-200','good','Building real tools and automations from your terminal. This is how COB builds.','Runs on your Claude plan, so the Team and Enterprise no-train terms apply.'],
+    ['Cursor','Builders & coders','Pro $20 · Pro+ $60 · Ultra $200','mix','Writing and editing code in a real editor with AI.','It has a privacy mode that stops your code from being retained. Turn it on for anything proprietary.'],
+    ['GitHub Copilot','Builders & coders','Pro $10 · Pro+ $39 · Business usage-based','good','In-editor code completion for developers.','Business and Enterprise exclude your code from training and add policy controls.'],
+    ['OpenAI Codex','Builders & coders','In ChatGPT Plus $20 / Team $25 / Pro $200','mix','Agentic coding tasks, in ChatGPT or the free command-line tool.','Follows your ChatGPT plan terms, so use a Business or Team seat for company work. The command-line tool bills model use through the API.'],
+    ['Lovable / v0 / Bolt','Builders & coders','Subscription plus usage, varies','mix','Building web apps and sites from a prompt (this dashboard was built this way).','Great for shipping fast. Keep real customer data out of the build environment and wire it in through a governed connection later.'],
+    ['Otter / Fireflies / Fathom','Meetings & notes','~$10 to $30/user, varies','warn','Recording and transcribing your meetings automatically.','These sit in your calls and keep the transcript. Check retention, whether they train on your audio, and which meetings they auto-join. A recorded client call is sensitive data.'],
+    ['Granola','Meetings & notes','Subscription varies','mix','Private meeting notes that stay closer to your device than most.','Better default privacy than most notetakers. Still confirm what leaves your machine before using it on sensitive calls.'],
+    ['Gamma','Creative','Free · paid subscription','mix','Turning a prompt into a slide deck or one-pager fast.','Fine for public-facing decks. Do not paste unreleased financials or client detail into a consumer creative tool.'],
+    ['Canva AI','Creative','In Canva Pro / Teams','mix','Design, images, and brand content with AI built in.','Business tiers give more control. Keep customer photos and personal information out of shared design projects.'],
+    ['ElevenLabs','Creative','Subscription by usage','warn','Realistic AI voice and audio.','Voice is powerful and abusable, the same tech behind the deepfake-CFO scam. Use it for your own content, and always verify a voice request another way.'],
+    ['Grammarly','Creative','Free · Pro · Business ~$15/user','mix','Writing help across everything you type.','It reads what you write nearly everywhere. The Business tier adds no-training and admin controls; be deliberate about where it is installed.']
+  ];
+  var catCats=[]; CATALOG.forEach(function(r){if(catCats.indexOf(r[1])<0)catCats.push(r[1])});
+  var catFilter='All', catQ='';
+  var cfb=$('#catFilter');
+  ['All'].concat(catCats).forEach(function(c){var b=document.createElement('div');b.className='chip'+(c==='All'?' on':'');b.textContent=c;b.setAttribute('data-c',c);cfb.appendChild(b)});
+  function renderCat(){
+    $$('#catFilter .chip').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-c')===catFilter)});
+    var rows=CATALOG.filter(function(r){return (catFilter==='All'||r[1]===catFilter)&&(!catQ||(r[0]+' '+r[4]).toLowerCase().indexOf(catQ)>=0)});
+    $('#catCount').textContent=rows.length+' of '+CATALOG.length+' tools';
+    if(!rows.length){$('#catBody').innerHTML='<div style="color:var(--mut);font-size:13.5px;padding:14px 2px">No tool matches that. Try another name or category.</div>';return;}
+    $('#catBody').innerHTML=rows.map(function(r){var pl={good:'Safe on a business tier',warn:'Looser on your data',mix:'Depends on the plan'}[r[3]];
+      return '<div class="stk-row"><div class="stk-head"><div class="stk-main"><div class="sv"><span class="pdot p'+r[3]+'"></span>'+esc(r[0])+' <span style="color:var(--mut);font-weight:400;font-size:11.5px">. '+esc(r[1])+'</span></div><div class="sr">'+esc(r[4])+'</div></div><span class="stk-cost">'+esc(r[2])+'</span><i class="ti ti-chevron-down stk-chev"></i></div><div class="stk-det"><div style="padding:0 16px 16px"><div style="font-size:13px;color:var(--soft);line-height:1.55;margin-top:6px"><b style="color:var(--gold2)">'+pl+'.</b> '+esc(r[5])+'</div></div></div></div>';
+    }).join('');
+    $$('#catBody .stk-row').forEach(function(el){el.querySelector('.stk-head').addEventListener('click',function(){el.classList.toggle('open')})});
+  }
+  cfb.addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;catFilter=b.getAttribute('data-c');renderCat()});
+  $('#catSearch').addEventListener('input',function(){catQ=this.value.trim().toLowerCase();renderCat()});
+  renderCat();
+
+  // ---- prompt library (gated) ----
+  var LIB=[
+    ['Cash & forecasting','Build me a simple 13-week cash-flow forecast from these weekly figures: starting cash [X], expected revenue [X], fixed costs [X], and these known one-off payments [list]. Show the ending balance each week and flag the first week it goes below [X].'],
+    ['Cash & forecasting','Explain my profit-and-loss like my accountant would, in plain English: what is healthy, what is creeping, and the two line items I should watch. [paste a summarized P&L, no account numbers]','Summarize your numbers, do not paste account or card numbers.'],
+    ['Cash & forecasting','I am considering a [X] price increase. At [current price] with roughly [cost] to deliver, show my margin now and after, and a plain-English take on the risk.'],
+    ['Cash & forecasting','Turn this month of expenses into categories with a one-line reason each, and flag anything that looks like a duplicate or a subscription I forgot. [paste redacted bank lines]','Redact merchant account numbers first.'],
+    ['Cash & forecasting','Give me three questions to ask my accountant before year-end that could save me money, based on a [type] business with about [revenue] in revenue.'],
+    ['Getting paid','Write a warm but firm reminder for a [X]-day overdue invoice of [amount] to a long-time customer named [first name]. Gracious tone, no guilt-trip, include a one-line pay-link placeholder.'],
+    ['Getting paid','Draft a friendly second notice for an unpaid invoice, one notch firmer than the first, that keeps the relationship intact.'],
+    ['Getting paid','Turn this list of overdue invoices into a prioritized call list with a one-line talking point for each. [paste a redacted list, first names only]','Use first names or IDs only, never full client records.'],
+    ['Getting paid','Write three ways to say "our terms are payment within 15 days" that stay warm but clear, for a new-customer welcome email.'],
+    ['Getting paid','Draft a short, kind message to a customer whose card was declined on an auto-payment, asking them to update it, with a link placeholder.'],
+    ['Bookkeeping & taxes','Give me a plain-English monthly bookkeeping checklist for a [type] business, in the order I should actually do it.'],
+    ['Bookkeeping & taxes','Explain the difference between an expense and a capital purchase for my taxes, with three examples from a [type] business.'],
+    ['Bookkeeping & taxes','I got this notice from a vendor or agency. Summarize what it actually says, what it wants, and by when. [paste the notice, remove account numbers]','Strip account and case numbers before pasting.'],
+    ['Bookkeeping & taxes','Draft a clear email to my accountant handing off my year-end, listing what I am attaching and my three open questions.'],
+    ['Security & policy','Draft a one-page AI use policy for my [type] business that allows [tools], names what my team must never paste, and covers the [regulation] rules for my industry.'],
+    ['Security & policy','Write a short "never paste into AI" card for my team, six bullets, plain language, that I can print and tape by every monitor.'],
+    ['Security & policy','I am evaluating an AI vendor. Give me the exact questions to ask about training on my data, retention, data location, SOC 2, and whether they will sign a Business Associate Agreement or DPA.'],
+    ['Security & policy','Write a two-line "verify before you pay" rule and a script my bookkeeper can say when a vendor emails that their bank details changed.'],
+    ['Security & policy','Draft a simple same-day offboarding checklist for when someone leaves: every account, tool, and shared password to cut.'],
+    ['Client & customer','Draft a warm, professional reply to this customer email, under 120 words. [paste the email, remove last names and any account detail]','Remove last names and account details.'],
+    ['Client & customer','Turn these rough notes into a clear, friendly update to a client, with a short next-steps list at the end. [notes, first names only]'],
+    ['Client & customer','Write a gracious message declining a request I cannot meet, that keeps the door open.'],
+    ['Client & customer','Draft a short survey (five questions) to ask recent customers how we did, in a warm voice, no jargon.'],
+    ['Client & customer','Write a kind apology and recovery message for a customer whose order was late, with a small goodwill gesture placeholder.'],
+    ['Marketing & content','Write five short social captions for [what you do], in a warm, faith-friendly voice, no hype.'],
+    ['Marketing & content','Draft a simple monthly email to past customers: one genuinely helpful tip and one soft call to action.'],
+    ['Marketing & content','Give me ten blog or video titles a [type] customer would actually click, no clickbait.'],
+    ['Marketing & content','Rewrite this so a busy owner gets it in ten seconds. [paste text]'],
+    ['Marketing & content','Turn this one testimonial into three formats: a social post, a website line, and an email quote. [paste testimonial, get permission first]'],
+    ['Marketing & content','Draft a one-page description of my [service] that leads with the outcome, not the features.'],
+    ['Hiring & team','Write a plain, appealing job post for a [role] at a small [type] business, values-forward, no corporate filler.'],
+    ['Hiring & team','Draft five interview questions that reveal character and reliability, not just skills.'],
+    ['Hiring & team','Turn these interview notes into a fair summary of strengths and concerns. [notes, no full names]','Use initials or a code, not full names.'],
+    ['Hiring & team','Write a warm, clear rejection email that still feels personal.'],
+    ['Hiring & team','Draft a simple 30-60-90 day plan for a new [role], with what "good" looks like at each mark.'],
+    ['Hiring & team','Write a short, encouraging message to my team celebrating a win this week, that names the behavior I want more of.'],
+    ['Operations & SOPs','Turn how I do [task] into a clear step-by-step SOP someone new could follow, with the common mistakes called out.'],
+    ['Operations & SOPs','Give me a simple weekly operating rhythm for a [type] business: what to check Monday, mid-week, and Friday.'],
+    ['Operations & SOPs','Draft a checklist for [recurring event] so nothing gets missed, ordered the way it actually happens.'],
+    ['Operations & SOPs','I keep hitting [bottleneck]. Ask me five sharp questions to find the real cause, then suggest the first fix.'],
+    ['Operations & SOPs','Summarize this long meeting transcript into decisions made, who owns what, and by when. [paste transcript, remove sensitive names]','Scrub sensitive names before pasting a transcript.'],
+    ['Strategy & decisions','I am deciding between [option A] and [option B]. Lay out the case for each, the risk I am underweighting, and what I would need to believe to pick each one.'],
+    ['Strategy & decisions','Play the skeptic on this plan. What are the three ways it fails, and what is the cheapest test to find out before I commit? [paste the plan]'],
+    ['Strategy & decisions','Help me think through whether to hire, outsource, or automate [task]. Ask what you need, then give a plain recommendation.'],
+    ['Strategy & decisions','If I want to reach [goal] in 12 months, work backward and give me the three or four moves that actually matter, and what to ignore.'],
+    ['Strategy & decisions','Pressure-test my pricing. Given [details], where am I likely leaving money on the table and where might I be too high?'],
+    ['Contracts & vendors','Explain this contract in plain English: what am I agreeing to, what are the risky clauses, and what would I ask to change? [paste the contract, redact parties and dollar figures]','Redact party names and figures; this is not legal advice.'],
+    ['Contracts & vendors','Draft a simple statement of work for [project] with scope, timeline, price, and what is not included.'],
+    ['Contracts & vendors','Compare these two vendor quotes on more than price: terms, what is included, and the hidden costs. [paste redacted quotes]'],
+    ['Contracts & vendors','Write a polite email asking a vendor to clarify three specific terms before I sign.'],
+    ['Values & ministry','Help me write a short, sincere note of encouragement to [person] going through [situation], in my own plain voice.'],
+    ['Values & ministry','Draft a warm invitation to our [event] that reflects a presence-driven, welcoming tone, not a sales pitch.'],
+    ['Values & ministry','Turn these ministry meeting notes into a clear recap with prayer points and next steps. [notes]'],
+    ['Values & ministry','Help me think through a decision where doing the right thing and the profitable thing seem to pull apart. Ask good questions first.'],
+    ['AI, used safely','Look at how I want to use AI for [task]. Tell me exactly what data would be exposed, whether it is safe on a business-tier account, and the one change that makes it safe.'],
+    ['AI, used safely','Rewrite this prompt so it does the same job with no names, account numbers, or client details, using placeholders instead. [paste your prompt]','Great habit before pasting anything sensitive.'],
+    ['AI, used safely','I want to let my team use AI for [tasks]. Give me the three simple rules they must follow and the one thing they must never do.'],
+    ['AI, used safely','Explain in plain English the real difference between a free AI account and a business one for a [type] business, and exactly what changes for my data.'],
+    ['AI, used safely','My team wants to use this tool: [tool]. Give me the five questions to ask before I let any company data near it.'],
+    ['AI, used safely','Turn this document into a version safe to analyze with AI by replacing every identifier with a placeholder, then list what you changed. [paste]','For regulated data, use a contracted business tier even after redacting.'],
+    ['AI, used safely','What are the three most common ways a business like mine accidentally leaks data into AI, and the simple habit that prevents each?'],
+    ['AI, used safely','Draft a friendly two-minute explainer for my team on why using their personal ChatGPT on company data is a problem, and what to use instead.'],
+    ['Security & policy','Draft a quarterly AI access review: who can reach which tools and data, and how we cut access the same day someone leaves.'],
+    ['Security & policy','Write a short incident script for "someone may have pasted sensitive data into a free AI tool": the first five steps, in order.'],
+    ['Security & policy','Give me a one-paragraph contract clause requiring no training on our data, a retention limit, and breach notice, in plain terms I can send a vendor.'],
+    ['Security & policy','Draft a simple approved-tools list for my [type] business: what we use, what we ban, and the one-line reason for each.'],
+    ['Operations & SOPs','Design an onboarding checklist for granting a new hire the right tool and data access, plus the matching offboarding checklist to revoke every bit of it.'],
+    ['Strategy & decisions','I want to add AI to [process]. Map the steps, mark which are safe to automate now and which need a human, and show me where the data risk sits.'],
+    ['Client & customer','Draft a reassuring note to a client explaining how we protect their information when we use AI internally, in warm, non-technical language.'],
+    ['Bookkeeping & taxes','Build me a simple recordkeeping habit so my AI-assisted work stays audit-ready: what to log, where, and for how long.']
+  ];
+  var cats=[]; LIB.forEach(function(r){if(cats.indexOf(r[0])<0)cats.push(r[0])});
+  $('#ppCount').textContent='The Essential Library . '+LIB.length+' prompts';
+  var curFilter='All';
+  var fbar=$('#ppFilter');
+  ['All'].concat(cats).forEach(function(c){var b=document.createElement('div');b.className='chip'+(c==='All'?' on':'');b.textContent=c;b.setAttribute('data-c',c);fbar.appendChild(b)});
+  function renderPrompts(){
+    $$('#ppFilter .chip').forEach(function(x){x.classList.toggle('on',x.getAttribute('data-c')===curFilter)});
+    var rows=LIB.filter(function(r){return curFilter==='All'||r[0]===curFilter});
+    $('#ppBody').innerHTML=rows.map(function(r){return '<div class="pp-item" data-t="'+esc(r[1])+'"><span class="pp-cat">'+esc(r[0])+'</span>'+esc(r[1])+(r[2]?'<span class="pp-safe"><i class="ti ti-shield-lock" style="font-size:12px"></i> '+esc(r[2])+'</span>':'')+'</div>'}).join('');
+    $$('#ppBody .pp-item').forEach(function(el){el.addEventListener('click',function(){try{navigator.clipboard.writeText(el.getAttribute('data-t'))}catch(e){}el.style.borderColor='var(--gold)';var sv=el.innerHTML;setTimeout(function(){el.style.borderColor=''},700)})});
+  }
+  fbar.addEventListener('click',function(e){var b=e.target.closest('.chip');if(!b)return;curFilter=b.getAttribute('data-c');renderPrompts()});
+  renderPrompts();
+
+  // ---- decision flow: can this data touch AI ----
+  var DATA=[
+    ['public','Public / general','no sensitive data'],
+    ['internal','Internal, non-sensitive','ops notes, drafts'],
+    ['pii','Customer / client info','names, contacts, records'],
+    ['fin','Financial data','accounts, balances, SSNs'],
+    ['card','Card / payment (PCI)','full card numbers'],
+    ['phi','Health data','patient or medical data'],
+    ['legal','Legal / privileged','client confidences, contracts']
+  ];
+  var TOOLS=[
+    ['free','Free consumer AI','personal ChatGPT, free Gemini'],
+    ['biz','Business tier','Team, Copilot, Gemini Workspace, Claude for Work'],
+    ['gov','Governed / connected','AI reading your data in your own tenant']
+  ];
+  var flowD=null,flowT=null;
+  function chipRow(el,arr,which){arr.forEach(function(a){var d=document.createElement('div');d.className='flow-opt';d.setAttribute('data-k',a[0]);d.innerHTML='<div class="fo-t">'+esc(a[1])+'</div><div class="fo-s">'+esc(a[2])+'</div>';el.appendChild(d)});el.addEventListener('click',function(e){var o=e.target.closest('.flow-opt');if(!o)return;$$('.flow-opt',el).forEach(function(x){x.classList.remove('on')});o.classList.add('on');if(which==='d')flowD=o.getAttribute('data-k');else flowT=o.getAttribute('data-k');flowEval()})}
+  chipRow($('#flowData'),DATA,'d'); chipRow($('#flowTool'),TOOLS,'t');
+  function flowEval(){
+    if(!flowD||!flowT)return;
+    var sensitive={pii:1,fin:1,card:1,phi:1,legal:1}[flowD];
+    var contract={pii:'DPA (and state-privacy terms)',fin:'Gramm-Leach-Bliley Act service-provider terms',card:'PCI scope, or keep it out entirely',phi:'a signed Business Associate Agreement',legal:'enterprise terms + client consent'}[flowD]||'none required';
+    var tech={pii:'minimize and redact identifiers first',fin:'tokenize account numbers first',card:'tokenize; the full number never goes in',phi:'de-identify (Safe Harbor) where possible',legal:'reference by identifier, not by name'}[flowD]||'standard care';
+    var tag,verdict;
+    if(!sensitive){ tag=['fr-go','Go']; verdict='Everyday safe use. Public and internal non-sensitive work is exactly what AI is for.'; }
+    else if(flowT==='free'){ tag=['fr-stop','Stop']; verdict='Do not. This is regulated or personal data going into a tool that can retain and train on it, and create a discoverable record. This is the classic breach.'; }
+    else if(flowT==='biz'){ tag=(flowD==='card'||flowD==='phi')?['fr-cond','Only with the paper']:['fr-cond','Yes, with guardrails']; verdict=(flowD==='card')?'Only if the full card number is tokenized out first; a business tier does not make raw card number safe.':(flowD==='phi')?'Only after a signed Business Associate Agreement and de-identification; without the Business Associate Agreement the tier does not matter.':'Yes on a contracted business tier that does not train on your data, once you '+tech+'.'; }
+    else { tag=['fr-go','Best path']; verdict='This is the right architecture: the AI reads your data under your own permissions, in your own environment, and nothing is copied out. Still apply '+tech+' and keep the human gate on anything irreversible.'; }
+    var dataLabel=(DATA.filter(function(x){return x[0]===flowD})[0]||[])[1]||'';
+    var toolLabel=(TOOLS.filter(function(x){return x[0]===flowT})[0]||[])[1]||'';
+    $('#flowRes').style.display='block';
+    $('#flowRes').innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span class="fr-tag '+tag[0]+'">'+tag[1]+'</span><button class="btn btn-o btn-sm" id="flowCopy"><i class="ti ti-copy"></i> Copy this ruling</button></div>'+
+      '<div class="fr-row"><div class="fr-k">Verdict</div><div class="fr-v">'+esc(verdict)+'</div></div>'+
+      (sensitive?'<div class="fr-row"><div class="fr-k">Contract you need</div><div class="fr-v">'+esc(contract)+'</div></div><div class="fr-row"><div class="fr-k">Protect it by</div><div class="fr-v">'+esc(tech)+'</div></div>':'');
+    var fc=$('#flowCopy'); if(fc)fc.addEventListener('click',function(){
+      var txt='CAN THIS DATA TOUCH AI?\n\nData: '+dataLabel+'\nTool: '+toolLabel+'\nRuling: '+tag[1]+'\nVerdict: '+verdict+(sensitive?'\nContract you need: '+contract+'\nProtect it by: '+tech:'')+'\n\n— Distinct AI Workshop . chiefofbusiness.ai';
+      try{navigator.clipboard.writeText(txt)}catch(x){}
+      this.innerHTML='<i class="ti ti-check"></i> Copied';var b=this;setTimeout(function(){b.innerHTML='<i class="ti ti-copy"></i> Copy this ruling'},1600);
+    });
+  }
+
+  // ---- vendor diligence ----
+  var VEND=[
+    ['They will state, in writing, that they do NOT train on your data',1,'This is the whole ballgame. If your inputs can train their model, your data can surface in someone else\'s answer. Get the prohibition in writing, or walk.'],
+    ['A stated retention window (short or zero), not "indefinite"',1,'Data they keep is data that can leak or be subpoenaed later. Short or zero retention shrinks the window of risk.'],
+    ['A defined data-residency boundary (where your data physically lives)',1,'Where your data physically lives decides which laws apply and who can compel access. You want a defined boundary, not "somewhere in the cloud."'],
+    ['Proof of SOC 2, with Type II the gold standard (not just the badge)',1,'An independent audit that they actually do what they claim. Type II tests it over months; the badge alone proves nothing.'],
+    ['Will sign a Business Associate Agreement if you handle health data',0,'If you touch health data, this contract is required before any of it moves. No agreement is itself the violation.'],
+    ['Will sign a data-processing agreement for personal data',0,'The contract that governs personal data and cross-border transfers. Without it, you cannot promise customers what the law requires.'],
+    ['A published subprocessor list (who else touches your data)',0,'Your data is only as safe as the least careful company they quietly hand it to. You deserve to see that list.'],
+    ['A breach-notification commitment with a time limit',1,'When they get breached, your clock starts. A time limit is the difference between acting in days and finding out from the news.'],
+    ['Permission-aware access (AI cannot see what a user cannot)',0,'The AI must never become a way around your own controls. It should see only what the person using it is already allowed to see.'],
+    ['Audit logging you can actually export',0,'You cannot prove what you cannot see. Exportable logs are how you show a regulator, or yourself, exactly what happened.'],
+    ['A named security contact, not a support queue',0,'In an incident you need a person, not a ticket. A named security contact is a sign they take this seriously.'],
+    ['Encryption in transit and at rest, stated explicitly',1,'The floor. Data scrambled in transit and at rest is useless to anyone who intercepts or steals it. If they will not state it plainly, keep looking.']
+  ];
+  var vchecked={};
+  var vl=$('#vendList');
+  VEND.forEach(function(v,i){var d=document.createElement('div');d.className='vend-item';d.setAttribute('data-i',i);d.innerHTML='<div class="vend-box"><i class="ti ti-check"></i></div><div class="vt"><div class="vtt">'+esc(v[0])+(v[1]?' <span style="color:var(--gold2);font-weight:700">. critical</span>':'')+' <span class="vwhy-t" data-i="'+i+'" style="color:var(--mut);font-size:11.5px;cursor:pointer;text-decoration:underline;white-space:nowrap">why it matters</span></div><div class="vwhy" id="vwhy'+i+'" style="display:none;font-size:12.5px;color:var(--soft);margin-top:6px;line-height:1.5">'+esc(v[2])+'</div></div>';vl.appendChild(d)});
+  vl.addEventListener('click',function(e){
+    var w=e.target.closest('.vwhy-t');
+    if(w){e.stopPropagation();var wd=$('#vwhy'+w.getAttribute('data-i'));if(wd)wd.style.display=wd.style.display==='none'?'block':'none';return;}
+    var it=e.target.closest('.vend-item');if(!it)return;var i=it.getAttribute('data-i');it.classList.toggle('on');vchecked[i]=it.classList.contains('on');vendEval();
+  });
+  function vendEval(){
+    var got=0,crit=0,critMet=0,miss=[]; VEND.forEach(function(v,i){if(v[1])crit++; if(vchecked[i]){got++;if(v[1])critMet++;}else if(v[1])miss.push(v[0])});
+    var pass=critMet===crit && got>=8;
+    $('#vendOut').style.display='block';
+    $('#vendOut').innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap"><span class="fr-tag '+(pass?'fr-go':'fr-stop')+'" style="font-family:var(--disp);font-weight:800;font-size:15px;padding:4px 12px;display:inline-block">'+(pass?'Clears the bar':'Not yet')+'</span><button class="btn btn-o btn-sm" id="vendCopy"><i class="ti ti-copy"></i> Copy result</button></div>'+
+      '<div style="font-size:14px;color:var(--soft);margin-top:12px">'+got+' of 12 met, '+critMet+' of '+crit+' critical.'+(pass?' This vendor is worth a real conversation.':' Get the missing critical items in writing before you sign.')+'</div>'+
+      (miss.length?'<div class="mini-label">Missing critical</div><ul style="margin:6px 0 0 18px;color:var(--soft);font-size:13px">'+miss.map(function(m){return '<li style="margin:4px 0">'+esc(m)+'</li>'}).join('')+'</ul>':'');
+    var cb=$('#vendCopy'); if(cb)cb.addEventListener('click',function(){
+      var txt='VENDOR AI DUE-DILIGENCE RESULT\n\n'+got+' of 12 met, '+critMet+' of '+crit+' critical.\n\n'+VEND.map(function(v,i){return (vchecked[i]?'[x] ':'[ ] ')+v[0]}).join('\n')+(miss.length?'\n\nMISSING CRITICAL:\n'+miss.map(function(m){return '- '+m}).join('\n'):'')+'\n\n— Distinct AI Workshop vendor gate . chiefofbusiness.ai';
+      try{navigator.clipboard.writeText(txt)}catch(x){}
+      this.innerHTML='<i class="ti ti-check"></i> Copied';var b=this;setTimeout(function(){b.innerHTML='<i class="ti ti-copy"></i> Copy result'},1600);
+    });
+  }
+
+  // ---- What COB builds (representative capabilities) ----
+  var WORK=[
+    ['ti-dashboard','Intelligence command centers','Live dashboards that read a whole business at a glance, like this one.','The macro view a founder actually wants: revenue, cash, risk, and the one signal that matters, pulled from your real systems, with a recommended action on every tile.'],
+    ['ti-coin','Cash-flow systems','Forecasting and invoice chasing wired straight into the books.','A rolling runway that flags the low week before it lands, and an assistant that chases late invoices in your voice, matched to how overdue each one is.'],
+    ['ti-shield-check','Security build-outs','The locks, policies, and monitoring that close the doors an owner cannot see.','Access reviews, offboarding automation, an AI use policy your team actually follows, and a quiet watch for the account that should not exist anymore.'],
+    ['ti-robot','AI agents at work','Assistants that do real jobs: drafting, chasing, reporting, watching.','Purpose-built agents scoped to a single job, with the narrow access and the human gate that make them safe to trust.'],
+    ['ti-building-store','Branded client hubs','Workshop and member sites like this, in the client\'s own brand.','A permanent home for a client\'s tools, deliverables, and audience, in their look and voice, that keeps working long after the event.'],
+    ['ti-report-analytics','Owner briefings','A week of numbers turned into one plain-language read, every Monday.','COB reads the week across your systems and hands you the one thing that matters, the decisions you owe, and what to watch, in five minutes.'],
+    ['ti-home-cog','Insurance-claim automation','Turns a photo and a scope into a written supplement, safely.','For roofers and contractors: draft the supplement and the adjuster follow-up from your files, referencing a job number instead of the homeowner, so claims stop stalling.'],
+    ['ti-file-certificate','Contract and renewal monitors','Never miss a renewal or a buried clause again.','Every agreement watched for cancel-by dates and off-market terms, with a 30-day heads-up before a window closes and a plain-English read of the risky clauses.'],
+    ['ti-target-arrow','Lead-to-close pipelines','Score, route, and follow up on every lead automatically.','Inbound leads scored by fit and urgency, the top few surfaced with talking points, and the follow-ups drafted so nothing warm goes cold.'],
+    ['ti-checklist','Meeting-to-action pipelines','Every call becomes decisions, owners, and dates.','Transcripts turned into accountable action the same day, with sensitive names handled correctly and nothing lost between the meeting and the work.'],
+    ['ti-presentation','Board and investor reporting','The quarterly pack, built from your numbers, on time.','A repeatable board and investor report assembled from your systems, at the right altitude, with the narrative written and the figures reconciled.'],
+    ['ti-clipboard-check','Compliance evidence rooms','Audit-ready proof, organized before the auditor asks.','A living record of your controls, policies, and logs, mapped to the framework you answer to, so an audit is a morning, not a month.'],
+    ['ti-file-scan','Document intake and extraction','Paperwork read, sorted, and filed for you.','Invoices, applications, and forms parsed into clean structured data and routed where they belong, with the sensitive fields handled under policy.'],
+    ['ti-headset','Customer-support copilots','Faster, on-brand answers with your knowledge behind them.','A support assistant grounded in your own documentation that drafts accurate replies and flags anything that needs a human.'],
+    ['ti-packages','Inventory and reorder alerts','Know what is running low before you sell out.','Stock watched against sales velocity, with reorder alerts timed to your lead times and a plain read on what is moving and what is dead.'],
+    ['ti-chart-arcs','Pricing and margin analyzers','See where you are leaving money on the table.','Margins by product and job, with pricing scenarios modeled on your real numbers, so a price change is a decision, not a guess.'],
+    ['ti-user-plus','Hiring and onboarding systems','From job post to a productive first week.','Structured job posts, a scoring rubric, and a 30-60-90 plan, plus the onboarding and offboarding checklists that keep access clean.'],
+    ['ti-calendar-cog','Field-service scheduling','The right crew, the right job, the fewest miles.','Jobs, crews, and drive time optimized, with the schedule and the customer updates handled so the phone stops running the day.'],
+    ['ti-star','Review and reputation monitors','Catch the unhappy customer before the public does.','New reviews and mentions watched across sites, sorted by sentiment, with drafted responses and a weekly read on what customers keep saying.'],
+    ['ti-cash','Tax-credit and grant finders','Money you may be leaving on the table, surfaced.','A client-specific look at the R&D and other credits your AI and software work may qualify for, framed as inputs for your advisor, not tax advice.'],
+    ['ti-radar','Market and competitor intel','Nothing about your market is off the radar.','Competitor moves, category shifts, and regulatory signals compiled and ranked by what they mean for you, with the strategic so-what on each.'],
+    ['ti-alert-hexagon','Fraud and anomaly watchers','The odd transaction, flagged before it clears.','Payments, logins, and vendor changes watched for the pattern that does not fit, with a callback rule that stops the fake-invoice scam cold.'],
+    ['ti-book','Knowledge bases and SOP libraries','The business out of one person\'s head and into a system.','Your processes captured as searchable step-by-step guides an AI can follow, so a new hire, or an assistant, does the job right the first time.'],
+    ['ti-map-2','Multi-location rollups','Every location in one view, comparably.','Performance rolled up across sites with the outliers surfaced, so you manage by exception instead of drowning in reports.'],
+    ['ti-heart-handshake','Donor and member systems','For ministries and nonprofits, relationships kept warm.','Donor and member records kept current, giving and engagement surfaced, and outreach drafted in a warm, values-first voice.'],
+    ['ti-file-text','Estimate and proposal builders','A polished, accurate quote in minutes, not hours.','Estimates and proposals generated from your pricing and templates, consistent every time, with the numbers checked before they go out.'],
+    ['ti-users-group','Payroll and labor dashboards','Labor cost and coverage, always in view.','Hours, overtime, and coverage tracked against revenue, with the alerts that keep labor from quietly eating the month.'],
+    ['ti-folders','Data-room and due-diligence builds','Deal-ready document rooms, scoped and safe.','A structured, permission-scoped data room for a sale, raise, or audit, with access validated before anything is shared.'],
+    ['ti-refresh','Subscription and renewal trackers','Every recurring cost and contract, on one clock.','Subscriptions and renewals tracked with cancel-by alerts, so you stop paying for what you dropped and never miss a notice window.'],
+    ['ti-brain','Executive decision agents','A deployable analyst built for one leader\'s job.','A hand-built agent scoped to a specific role, a competitive analyst for a strategist, a numbers checker for a CFO, that runs in your own Claude Project or a GPT.']
+  ];
+  var ww=$('#workWall');
+  if(ww){ ww.innerHTML=WORK.map(function(w){return '<div class="wcard"><div class="wi"><i class="ti '+w[0]+'"></i></div><h4>'+esc(w[1])+'</h4><p>'+esc(w[2])+'</p></div>'}).join(''); }
+
+  // ---- downloadable skills ----
+  var SKILLS=[
+    ['ti-cash','13-Week Cash Flow','Turns a handful of numbers into a rolling 13-week runway with a danger-week flag. Paste your figures, it does the rest.',
+     'SKILL: 13-Week Cash Flow Forecaster\n\nROLE: You are a careful finance assistant for a small business owner.\n\nWHEN THE USER GIVES YOU: starting cash, average weekly revenue, weekly fixed costs, outstanding invoices (with rough collection timing), and any known one-off payments.\n\nDO:\n1. Build a 13-week projection of the ending cash balance for each week.\n2. Identify the lowest week and whether cash goes negative.\n3. State the weeks of runway if revenue paused.\n4. Give three plain-language actions if a shortfall appears.\n\nRULES: Ask for any missing input. Never invent numbers. Do not request account or card numbers. Round to whole dollars. End with one sentence an owner can act on.'],
+    ['ti-shield-lock','AI-Safe Redactor','Before you paste anything sensitive into another tool, this strips names, numbers, and identifiers and hands back a safe version.',
+     'SKILL: AI-Safe Redactor\n\nROLE: You protect the user from leaking sensitive data into AI tools.\n\nWHEN THE USER PASTES TEXT: Return a redacted version safe to use in a general AI tool.\n\nDO:\n1. Replace full names with [First], last names removed.\n2. Replace account, card, routing, and SSNs with [REDACTED-#].\n3. Replace addresses, emails, and phone numbers with [CONTACT].\n4. Keep the meaning and structure intact so the text is still usable.\n5. List what you redacted, by type and count.\n\nRULES: When unsure, redact. Never echo the raw sensitive value back. Remind the user that redacted data is safest, and that regulated data still needs a contracted business tier.'],
+    ['ti-mail-forward','Invoice Chaser','Writes the reminder you hate to send, warm but firm, matched to how overdue the invoice is.',
+     'SKILL: Invoice Chaser\n\nROLE: You write gracious, effective payment reminders in the owner\'s voice.\n\nWHEN THE USER GIVES: customer first name, amount, days overdue, and relationship (new / long-time).\n\nDO:\n1. Choose the tone by age: friendly nudge under 15 days, clear at 15-30, firm-but-kind at 30+.\n2. Keep it under 120 words.\n3. Include a one-line pay-link placeholder.\n4. Offer a short and a slightly firmer version.\n\nRULES: Never guilt-trip. Never threaten. Keep the relationship intact. Use first names or IDs only, never full records.'],
+    ['ti-clipboard-check','Vendor AI Vetter','Paste an AI vendor\'s security page or answers, and it scores them against the twelve questions that matter.',
+     'SKILL: Vendor AI Due-Diligence Vetter\n\nROLE: You assess whether an AI vendor is safe to trust with business data.\n\nWHEN THE USER PASTES: a vendor\'s security/privacy claims or answers.\n\nCHECK for explicit commitments on: no training on customer data, retention window, data residency, SOC 2 Type II, Business Associate Agreement availability, DPA/SCCs, subprocessor list, breach-notification SLA, permission-aware access, audit logging, named security contact, encryption in transit and at rest.\n\nDO:\n1. Mark each as Met, Missing, or Vague.\n2. Flag any "we may use your inputs to improve our models" as a hard fail.\n3. Give a pass / not-yet verdict and the exact follow-up questions to send.\n\nRULES: "We take security seriously" counts as Vague, not Met. Require written terms. This is guidance, not legal advice.'],
+    ['ti-report','Monday Owner Brief','Turns a pile of updates into a tight Monday brief: what changed, what needs you, what to watch.',
+     'SKILL: Monday Owner Brief\n\nROLE: You are the owner\'s chief of staff. You produce a short Monday brief.\n\nWHEN THE USER PASTES: notes, numbers, emails, or updates from the past week (redacted).\n\nPRODUCE, in this order:\n1. The one thing that matters most this week.\n2. Decisions the owner owes (3 max), each a one-line ask.\n3. What changed since last week.\n4. What to watch (early signals).\nKeep the whole brief under one screen. Lead with consequence, not chronology.\n\nRULES: Do not pad. If something needs the owner, say so plainly. Never include full client records; work from summaries.'],
+    ['ti-checklist','Meeting-to-Action','Drop in a meeting transcript, get back decisions, owners, and deadlines, nothing lost.',
+     'SKILL: Meeting-to-Action\n\nROLE: You convert meetings into accountable action.\n\nWHEN THE USER PASTES: a meeting transcript or notes (with sensitive names scrubbed).\n\nPRODUCE:\n1. Decisions made (only real decisions, not discussion).\n2. Action items, each as: owner leads, then the task, then the due date.\n3. Open questions that still need an answer.\n4. A one-line summary a busy person could read in five seconds.\n\nRULES: Do not attribute a quote you are unsure of. Flag anything ambiguous rather than guessing. Remind the user to scrub sensitive names before pasting transcripts.'],
+    ['ti-eye-check','Verify This Output','Before you act on an AI answer, this turns a second AI into your skeptic, checking the logic and the math.',
+     'SKILL: Verify This Output\n\nROLE: You are a rigorous devil\'s advocate. Your job is to find what is wrong or unsupported in an AI-generated output before the user relies on it.\n\nWHEN THE USER PASTES: an AI output (a summary, a plan, a calculation, an email, a memo).\n\nDO:\n1. Check every factual claim and number. Recompute any math and show your work.\n2. Flag anything stated as fact that is actually an assumption or is unverifiable.\n3. Name the strongest objection a smart critic would raise.\n4. List what to confirm before acting, in priority order.\n5. Give a one-line verdict: safe to use, use with fixes, or do not use yet.\n\nRULES: Be specific, not vague. If something is fine, say so. Never invent a flaw to seem thorough. This is a check, not a rewrite.'],
+    ['ti-help-hexagon','Can This Touch AI?','Describe what you are about to do, and this rules on whether it is safe and how to do it right.',
+     'SKILL: Can This Touch AI?\n\nROLE: You are a careful data-safety advisor for a small business.\n\nWHEN THE USER DESCRIBES: a task and the data involved (for example, "summarize this client\'s insurance claim").\n\nDO:\n1. Name the data tier: public, internal, confidential, or privileged/regulated.\n2. Give a clear verdict: go ahead, go ahead after redacting, business-tier only, or do not.\n3. If it can be done safely, give the exact steps (what to remove, which account to use).\n4. Name the specific risk if they skip those steps.\n\nRULES: When unsure, choose the safer answer. Regulated data (health, financial, card, legal) always needs a contracted business tool. Guidance, not legal advice.'],
+    ['ti-wand','Prompt Sharpener','Turns a rushed, leaky prompt into a precise one that gets a better answer and exposes nothing.',
+     'SKILL: Prompt Sharpener\n\nROLE: You improve prompts for quality and safety.\n\nWHEN THE USER PASTES: a draft prompt.\n\nDO:\n1. Rewrite it to be specific: role, task, context, format, and constraints.\n2. Strip or replace any names, account numbers, or client details with placeholders.\n3. List what you removed and why.\n4. Offer one follow-up prompt that would improve the result.\n\nRULES: Keep the user intent. Never leave sensitive data in the rewritten prompt. Prefer placeholders over real values.'],
+    ['ti-file-search','Vendor Terms Checker','Paste an AI vendor\'s terms and get a straight read against the questions that matter.',
+     'SKILL: Vendor Terms Checker\n\nROLE: You assess an AI vendor\'s written terms for a small business.\n\nWHEN THE USER PASTES: a vendor privacy, security, or terms page.\n\nCHECK for explicit commitments on: no training on customer data, retention window, data residency, SOC 2 (Type II preferred), Business Associate Agreement availability, data-processing agreement, subprocessor list, breach-notification time limit, permission-aware access, and audit logging.\n\nDO:\n1. Mark each as Met, Missing, or Vague, quoting the line where you can.\n2. Treat "we may use your inputs to improve our models" as a hard fail.\n3. Give a pass or not-yet verdict and the exact questions to send them.\n\nRULES: "We take security seriously" is Vague, not Met. Require written terms. Guidance, not legal advice.'],
+    ['ti-user-off','Offboarding Access Sweep','Someone is leaving. This builds the same-day list of every account and tool to cut.',
+     'SKILL: Offboarding Access Sweep\n\nROLE: You produce a complete, same-day offboarding checklist so no access is left open when someone leaves.\n\nWHEN THE USER GIVES: the person role and the tools your business uses, or asks you to assume a typical small-business stack.\n\nPRODUCE, grouped and in order:\n1. Identity and email (disable login, reset recovery, forward mail).\n2. AI tools and any connected data.\n3. Shared passwords and password-manager access.\n4. Files, drives, and admin roles.\n5. Customer-facing accounts and any third-party app tokens they granted.\nEnd with the thing most often forgotten: revoking app connections and personal-AI integrations that outlive the login.\n\nRULES: Assume nothing is optional. Flag anything that needs an admin. This is a checklist, not a legal document.'],
+    ['ti-trophy','Weekly AI Wins','A five-minute Friday habit that turns "AI helped" into a number your team can see.',
+     'SKILL: Weekly AI Wins\n\nROLE: You help an owner track the real return from AI, honestly.\n\nWHEN THE USER LISTS: the tasks AI helped with this week and a rough time saved on each.\n\nDO:\n1. Total the hours saved and translate to dollars at the rate they give (ask if missing).\n2. Note the single highest-value use, and one task they could add next week.\n3. Flag any use that touched sensitive data, and whether it was handled safely.\n4. Keep it a short, encouraging recap.\n\nRULES: Stay conservative on estimates. Never inflate. The point is a number they trust, with a safety check baked in.']
+  ];
+  var sg=$('#skillGrid');
+  SKILLS.forEach(function(sk,i){var d=document.createElement('div');d.className='skill-card';d.innerHTML='<div class="sc-i"><i class="ti '+sk[0]+'"></i></div><h4>'+esc(sk[1])+'</h4><p>'+esc(sk[2])+'</p><div class="sc-row"><button class="btn btn-o btn-sm sc-dl" data-i="'+i+'"><i class="ti ti-download"></i> Download</button><button class="btn btn-o btn-sm sc-cp" data-i="'+i+'"><i class="ti ti-copy"></i> Copy</button></div>';sg.appendChild(d)});
+  sg.addEventListener('click',function(e){
+    var cp=e.target.closest('.sc-cp');
+    if(cp){var skc=SKILLS[+cp.getAttribute('data-i')];try{navigator.clipboard.writeText(skc[3])}catch(x){}cp.innerHTML='<i class="ti ti-check"></i> Copied';var cc=cp;setTimeout(function(){cc.innerHTML='<i class="ti ti-copy"></i> Copy'},1600);return;}
+    var b=e.target.closest('.sc-dl');if(!b)return;var i=+b.getAttribute('data-i');var sk=SKILLS[i];var blob=new Blob([sk[3]+'\n\n---\nA COB skill, shared at the Distinct AI Workshop. chiefofbusiness.ai'],{type:'text/plain'});var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=sk[1].replace(/[^a-z0-9]+/gi,'_')+'_skill.txt';document.body.appendChild(a);a.click();document.body.removeChild(a);setTimeout(function(){URL.revokeObjectURL(url)},1500);b.innerHTML='<i class="ti ti-check"></i> Downloaded';var bb=b;setTimeout(function(){bb.innerHTML='<i class="ti ti-download"></i> Download'},1800)});
+
+  // ---- vault ----
+  var vault=[
+    ['Never paste into AI','The card for your whole team','<span class="mini-label">Never into any AI tool</span><ul><li>SSNs or tax IDs</li><li>Full bank or card numbers</li><li>Passwords and logins</li><li>Client names, records, or personal information</li><li>Contracts or anything under NDA</li><li>Health or employee records</li></ul><span class="mini-label">Why</span>On a free tool this can be retained, train the model, and be discovered in a lawsuit. Redact first, or use a business account that does not train on your data.'],
+    ['Verify before you pay','Tape this by the checkbook','<span class="mini-label">The rule</span>Money never moves on a message alone.<ul><li>Any payment or bank-detail change gets a callback to a number you already have, never the one in the email.</li><li>Treat a vendor changing bank details as fraud until verified by voice.</li><li>Set a family and finance code word. A cloned voice cannot know it.</li><li>Require a second approver over a dollar amount you set.</li></ul><span class="mini-label">If a bad wire went out</span>Call your bank and file at ic3.gov the same day. Recovery is possible only within hours.'],
+    ['Lock your front door','20 minutes, tonight, free','<ul><li>Two-step login (MFA) on email, bank, payroll, accounting. Blocks 99%+ of break-ins.</li><li>Stop reusing one password. A manager (1Password, Bitwarden) handles it.</li><li>Use passkeys where offered, they cannot be phished.</li></ul>Your whole business often runs through one email. That is the door most owners leave open.'],
+    ['Your personal information exposure map','Know what you hold, and where','<span class="mini-label">Where personal information hides</span><ul><li>Customer records in your CRM, email, and spreadsheets</li><li>Card data in your processor and old invoices</li><li>Employee data in payroll, hiring files, texts</li><li>IDs and forms in your phone and cloud drive</li></ul><span class="mini-label">The pro habit</span>Collect less, keep it in fewer places, delete what you no longer need. You cannot lose what you do not hold.'],
+    ['SOC 2 in plain English','What it is, and whether you need it','SOC 2 is an independent report that says you handle data securely. A larger customer may require it before they trust you with theirs.<span class="mini-label">Do you need it</span>Selling to bigger companies or handling their data, likely yes eventually. A local shop, usually not yet. Either way the controls behind it (MFA, access reviews, backups, a written policy) are worth doing now, and make getting SOC 2 later far easier.'],
+    ['If it goes wrong','The first hour, in order','<ol><li>Call your bank and freeze what you can. For a wire, ask for a recall.</li><li>File at ic3.gov the same day with every detail.</li><li>Change passwords from a clean device, turn on MFA.</li><li>Tell the people whose data may be affected, honestly.</li><li>Call your insurer and, if needed, a lawyer.</li></ol>Speed beats embarrassment. The ones who recover money call in the first hours.'],
+    ['13-week cash-flow, simple','The workshop template','Type in a handful of numbers and see your bank balance 13 weeks out. No formulas, nothing to connect. The near-term window is short enough to trust, long enough to see a shortfall coming.<span class="mini-label">Note</span>The downloadable spreadsheet drops here soon. The live forecaster in Finance tools does the same math now.'],
+    ['13-week cash-flow, guided','For a first-timer','The same forecast with prompts and examples filled in, so someone who has never built one can follow it start to finish. Answers the one question that keeps owners up: will I make it through the slow stretch.']
+  ];
+  buildAcc('#vault',vault,true);
+  // ---- learn ----
+  var learn=[
+    ['Treat every AI prompt like a deposition','If you would not want a sentence read aloud in court, it does not go in a chatbot. AI chat history is a business record: retained by the vendor and discoverable in a dispute the same way email is. The fix is not fear, it is a business account that does not train on your data, retention turned down, and redacting names and numbers you do not need.'],
+    ['The consumer tier trains on you by default','On most free tools your chats train the next model unless you turn it off. The business tiers (ChatGPT Team or Enterprise, Microsoft 365 Copilot, Google Workspace Gemini, Claude for Work) contractually do not. Match the one to where your work already lives and you get protection for free.'],
+    ['Collect less, and you have less to lose','Every extra piece of customer data is a liability unless you use it. The pros minimize: ask for less, store it in fewer places, delete what is past use. A breach can only expose what you kept.'],
+    ['The scam that empties accounts is boring','Forget the movie hacker. The money leaves through a plain email: a vendor you know says their bank details changed. It looks right. One rule defeats it: verify any payment change by calling a number you already have, never the one in the message.'],
+    ['Your voice is no longer proof it is you','Three seconds of audio from a voicemail or video can clone your voice well enough to fool your bookkeeper. A family and finance code word beats it instantly, because a clone cannot know a word you never posted.'],
+    ['Offboarding is a security control','The quiet risk is the person who left six months ago and still has a login. A same-day offboarding checklist (email, tools, shared passwords, building access) is one of the highest-value five-minute habits an owner can build.'],
+    ['Turn AI on your own money to catch fraud','The same anomaly detection that helps your books, flagging a duplicate charge or an out-of-pattern payment, is what catches vendor fraud and internal theft. Ask your bank and accounting tool what anomaly detection they already offer. You may be paying for it and not using it.']
+  ];
+  buildAcc('#learn',learn,false);
+  function buildAcc(sel,data,sub){var w=$(sel);data.forEach(function(d){var el=document.createElement('div');el.className='row';var q='<div class="q"><div><div class="qt">'+esc(d[0])+'</div>'+(sub?'<div class="qs">'+esc(d[1])+'</div>':'')+'</div><div class="pl">+</div></div>';var body='<div class="a"><div class="inner">'+(sub?d[2]:esc(d[1]))+'</div></div>';el.innerHTML=q+body;var head=$('.q',el),a=$('.a',el);head.addEventListener('click',function(){var open=el.classList.contains('open');$$(sel+' .row').forEach(function(r){r.classList.remove('open');$('.a',r).style.maxHeight='0'});if(!open){el.classList.add('open');a.style.maxHeight=a.scrollHeight+20+'px'}});w.appendChild(el)})}
+
+  // ---- audit ----
+  $('#auBtn').addEventListener('click',function(){var n=$('#au-name').value.trim(),e=$('#au-email').value.trim();$('#au-msg').style.display='block';try{window.location.href='mailto:jake@chiefofbusiness.ai?subject='+encodeURIComponent('Free audit request from the Distinct workshop')+'&body='+encodeURIComponent('Name: '+n+'\nEmail: '+e+'\n\nI would like the free audit.')}catch(err){}});
+})();
+</script>
+</body>
+</html>
