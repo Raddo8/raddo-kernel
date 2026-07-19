@@ -182,7 +182,10 @@ function FlowShell({ userId, email }: { userId: string; email: string }) {
     for (const [k, v] of Object.entries(extra)) p.set(k, v);
     if (nextStep !== "intake") { p.delete("c"); p.delete("q"); }
     setParams(p);
-    const dbStep = nextStep === "intake" ? "chapter" : nextStep;
+    const stepMap: Record<string, string> = {
+      intake: "chapter", review: "chapter", claude: "claude_gate", done: "complete",
+    };
+    const dbStep = stepMap[nextStep] || nextStep;
     try { await updateTenant(tenant.id, { current_step: dbStep as any }); } catch {}
   };
 
