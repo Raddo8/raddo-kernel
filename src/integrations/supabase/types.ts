@@ -641,6 +641,82 @@ export type Database = {
           },
         ]
       }
+      intake_files: {
+        Row: {
+          file_name: string
+          id: string
+          kind: string
+          size_bytes: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_name: string
+          id?: string
+          kind: string
+          size_bytes?: number | null
+          storage_path: string
+          tenant_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_name?: string
+          id?: string
+          kind?: string
+          size_bytes?: number | null
+          storage_path?: string
+          tenant_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_files_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_state: {
+        Row: {
+          answer: string | null
+          chapter: number
+          created_at: string
+          id: string
+          question_key: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: string | null
+          chapter: number
+          created_at?: string
+          id?: string
+          question_key: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string | null
+          chapter?: number
+          created_at?: string
+          id?: string
+          question_key?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_state_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       internal_keys: {
         Row: {
           created_at: string
@@ -1024,6 +1100,77 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      onboarding_escalations: {
+        Row: {
+          created_at: string
+          id: string
+          reason: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reason: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reason?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_escalations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      onboarding_tenants: {
+        Row: {
+          consent_signed_at: string | null
+          consent_signed_name: string | null
+          created_at: string
+          current_step: string
+          id: string
+          status: string
+          step0_flags: Json
+          tenant_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          consent_signed_at?: string | null
+          consent_signed_name?: string | null
+          created_at?: string
+          current_step?: string
+          id?: string
+          status?: string
+          step0_flags?: Json
+          tenant_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          consent_signed_at?: string | null
+          consent_signed_name?: string | null
+          created_at?: string
+          current_step?: string
+          id?: string
+          status?: string
+          step0_flags?: Json
+          tenant_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       playbook_steps: {
         Row: {
@@ -2055,6 +2202,7 @@ export type Database = {
       get_cron_headers: { Args: never; Returns: Json }
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
+      is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
