@@ -143,7 +143,51 @@ export const CHAPTERS: Chapter[] = [
 
 export const TOTAL_QUESTIONS = CHAPTERS.reduce((s, c) => s + c.questions.length, 0);
 
-export const HARVEST_PROMPT_PLACEHOLDER = "HARVEST PROMPT INSERTED BY OPERATOR";
+export const HARVEST_PROMPT_PLACEHOLDER = `You are about to perform a COMPLETE KNOWLEDGE HARVEST of everything you know about me from our entire history together: your saved memories, our past conversations, my custom instructions, and every preference or fact you have absorbed. The output will be used to build my permanent AI executive system, so completeness and accuracy matter more than polish.
+
+OPERATING RULES (binding for this whole exercise):
+1. Truth labels. Tag every load-bearing claim as one of: [DOCUMENTED] (I said it or you have it in memory), [INFERRED] (your read from patterns; say what it is based on), or [UNKNOWN] (you do not know; never guess). Fabricating anything is the one unforgivable failure.
+2. No sensitive identifiers. Never output Social Security numbers, full account numbers, card numbers, passwords, or exact balances. Refer to accounts by nickname only (for example "the Chase operating account").
+3. Completeness over brevity. If you know 40 facts, give 40 facts. Do not summarize away detail.
+4. Where you are thin, say so. End every deliverable with a "GAPS" list: what a chief of staff would want to know here that you cannot supply.
+5. Format. Every deliverable is a standalone markdown file: a # title, a one-line purpose, YAML front matter (deliverable name, date, confidence high/medium/low), then the content in clear ## sections with bullet points. Sentence-level facts, one per bullet.
+6. Pacing. Deliver ONE deliverable per message, in order. After each, stop and wait for me to say "next". If a deliverable is too long for one message, split it and say "continued".
+
+Before Deliverable 1, first output a MEMORY INVENTORY: a numbered list of every saved memory you hold about me, verbatim or near-verbatim, so nothing silently drops out. Then wait for "next".
+
+THE TEN DELIVERABLES:
+
+1. IDENTITY_PROFILE.md
+Who I am: name, location, family facts you know, roles and titles, entities I own or lead, professional history, public footprint, how I describe myself, what I care about most. Include a "how I make decisions" section based on everything you have seen.
+
+2. VENTURES_AND_ENTITIES.md
+Every business, entity, deal, investment, and project you know of: legal structure, ownership stakes, status, key numbers mentioned, stage, what is in flight, what is stalled. One ## section per entity. Include deals or ideas I mentioned once and dropped, flagged as such.
+
+3. PEOPLE_MAP.md
+Every person you know in my world: name, relationship to me, role, organization, context of how they come up, current state of the relationship, and any open items between us. Group by category (family, partners, investors, advisors, counterparties, team, friends).
+
+4. WORKFLOWS_AND_PROCESSES.md
+How I actually work: recurring processes you have watched me run, how I handle email, meetings, follow-ups, content, sales, finance, and admin. What I do repeatedly, in what order, with what tools. Include the processes I have complained about or asked you to help with more than once, and where the friction is.
+
+5. GOALS_VISION_VALUES.md
+My stated goals (short and long horizon), the vision behind them, my priorities as I have ranked or implied them, values I have expressed, lines I will not cross, and what winning looks like in my own words. Quote me where you can.
+
+6. DECISIONS_LOG.md
+Significant decisions I have made or worked through with you: the decision, when, the options weighed, what I chose, the reasoning, and anything left conditional. Include decisions I keep revisiting without closing, flagged as open decision debt.
+
+7. OPEN_LOOPS.md
+Every commitment, pending item, deadline, follow-up, or "I need to..." you have record of that was never confirmed closed. For each: what it is, who is waiting on it, any date attached, and last known status.
+
+8. PREFERENCES_AND_STYLE.md
+How I like to work with an AI and with people: communication style, formats I prefer, length and tone, things that irritate me, standing instructions I have given you, how I want pushback delivered, and every correction I have made to your behavior.
+
+9. TOOLS_AND_SYSTEMS.md
+My stack: every tool, platform, app, and system I have mentioned using (email, calendar, accounting, CRM, banking, project tools, AI tools, industry-specific software), how each is used, what is connected to what, and pain points with any of them.
+
+10. HANDOFF_BRIEF.md
+The synthesis: if you were briefing my new chief of staff on day one, the twenty things they must know, the three biggest risks on my plate, the three biggest opportunities, what to never do, and the first five actions you would tell them to take. Close with a master GAPS list across all deliverables and a completeness self-score (0 to 100) with one line of justification.
+
+Begin now with the MEMORY INVENTORY.`;
 
 // Ordered flow steps for the progress bar
 export const FLOW_ORDER: OnboardingStep[] = [
