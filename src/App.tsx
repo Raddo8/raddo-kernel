@@ -48,8 +48,7 @@ import OAuthLogin from "@/pages/OAuthLogin";
 import ResetPassword from "@/pages/ResetPassword";
 import BuildView from "@/pages/BuildView";
 import BuildsAdmin from "@/pages/BuildsAdmin";
-import OnboardingApp from "@/pages/onboarding/OnboardingApp";
-import OnboardingDashboard from "@/pages/onboarding/OnboardingDashboard";
+import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
 import OnboardingAdmin from "@/pages/onboarding/OnboardingAdmin";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
@@ -102,8 +101,8 @@ const App = () => (
             <Route path="/login" element={<OAuthLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/builds/:token" element={<BuildView />} />
-            <Route path="/onboarding" element={<OnboardingApp />} />
-            <Route path="/onboarding/dashboard" element={<OnboardingDashboard />} />
+            <Route path="/onboarding" element={<OnboardingIframe />} />
+            <Route path="/onboarding/dashboard" element={<OnboardingIframe initialHash="dashboard" />} />
             <Route path="/onboarding/admin" element={<OnboardingAdmin />} />
           <Route path="/app" element={
             <AuthGate>
