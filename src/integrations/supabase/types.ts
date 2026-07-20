@@ -1831,6 +1831,41 @@ export type Database = {
         }
         Relationships: []
       }
+      taylor_questions: {
+        Row: {
+          context: string
+          created_at: string
+          id: string
+          question: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          context?: string
+          created_at?: string
+          id?: string
+          question: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          context?: string
+          created_at?: string
+          id?: string
+          question?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taylor_questions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       templates: {
         Row: {
           body: string
