@@ -101,8 +101,8 @@ const App = () => (
             <Route path="/login" element={<OAuthLogin />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/builds/:token" element={<BuildView />} />
-            <Route path="/onboarding" element={<OnboardingApp />} />
-            <Route path="/onboarding/dashboard" element={<OnboardingDashboard />} />
+            <Route path="/onboarding" element={<OnboardingIframe />} />
+            <Route path="/onboarding/dashboard" element={<OnboardingIframe initialHash="dashboard" />} />
             <Route path="/onboarding/admin" element={<OnboardingAdmin />} />
           <Route path="/app" element={
             <AuthGate>
