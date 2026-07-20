@@ -1178,5 +1178,263 @@ window.addEventListener('keydown',e=>{if(e.key==="Escape")COB.closeDrawer();});
 document.getElementById('saveTxt').textContent="autosave on";
 COB.render();
 </script>
+
+<!-- LOVABLE WIRING v2 · connector-first · injected, does not alter UI/copy -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+(function(){
+  var SUPABASE_URL="https://vacpgxxgdfhgvkduljgs.supabase.co";
+  var SUPABASE_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhY3BneHhnZGZoZ3ZrZHVsamdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjYyNzQsImV4cCI6MjA4NjI0MjI3NH0.3PnFR5kDasS_FHg57CRwD-kSnJFt4baNO2lcbIopi5g";
+  if(!window.supabase||!window.supabase.createClient){console.warn("[wiring] supabase-js not loaded"); return;}
+  var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON,{auth:{persistSession:true,autoRefreshToken:true,storageKey:"cob-onboarding-auth"}});
+  window.__sb=sb;
+  var tenantId=null, factsChan=null, statusPoll=null, saveTimer=null;
+
+  function toast(m){try{COB.toast(m)}catch(_){console.log(m)}}
+  function tenantKey(u){return "t_"+u.id;}
+
+  async function ensureTenant(u){
+    if(!u) return null;
+    var name=(COB.state.user&&COB.state.user.name)||u.user_metadata&&u.user_metadata.full_name||u.email;
+    var payload={user_id:u.id, tenant_key:tenantKey(u)};
+    var {data,error}=await sb.from("onboarding_tenants").select("id,status,current_step,connectors").eq("user_id",u.id).maybeSingle();
+    if(!data){
+      var ins=await sb.from("onboarding_tenants").insert(payload).select("id,status,current_step,connectors").maybeSingle();
+      data=ins.data; error=ins.error;
+    }
+    if(error){console.warn("[wiring] tenant",error.message); return null;}
+    tenantId=data.id;
+    COB.state.tenantId=data.id;
+    if(data.connectors && data.connectors.cob==="done"){
+      COB.state.connectors=COB.state.connectors||{}; COB.state.connectors.cob="done";
+    }
+    subscribeFacts();
+    return data;
+  }
+
+  function subscribeFacts(){
+    if(!tenantId||factsChan) return;
+    factsChan=sb.channel("facts-"+tenantId)
+      .on("postgres_changes",{event:"INSERT",schema:"public",table:"intake_facts",filter:"tenant_id=eq."+tenantId},function(payload){
+        appendFact(payload.new);
+      }).subscribe();
+    // initial load
+    sb.from("intake_facts").select("*").eq("tenant_id",tenantId).order("created_at",{ascending:true}).then(function(r){
+      (r.data||[]).forEach(appendFact);
+      if(r.data&&r.data.length) try{COB.render()}catch(_){}
+    });
+  }
+
+  function appendFact(f){
+    COB.state.briefcase=COB.state.briefcase||[];
+    var bc=COB.state.briefcase.find(function(d){return d.title==="FIRST_CONVERSATION"});
+    if(!bc){bc={title:"FIRST_CONVERSATION",conf:"medium",facts:0,sections:[{h:"live",items:[]}],raw:""};COB.state.briefcase.push(bc);}
+    var sec=bc.sections[0];
+    sec.items.push(f.fact);
+    bc.facts=(bc.facts||0)+1;
+    try{COB.save.__orig?COB.save.__orig.call(COB):localStorage.setItem(COB.KEY,JSON.stringify(COB.state))}catch(_){}
+    try{COB.render()}catch(_){}
+  }
+
+  // ---- persistence: debounced mirror of answers -> intake_state, connectors -> onboarding_tenants
+  function debouncedSync(){
+    if(!tenantId) return;
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(function(){
+      var ans=COB.state.answers||{};
+      var rows=Object.keys(ans).map(function(k){return {tenant_id:tenantId, chapter:0, question_key:k, answer:String(ans[k]==null?"":ans[k])};});
+      if(rows.length){sb.from("intake_state").upsert(rows,{onConflict:"tenant_id,question_key"}).then(function(r){if(r.error)console.warn("[wiring] intake_state",r.error.message)});}
+      sb.from("onboarding_tenants").update({connectors:COB.state.connectors||{}, current_step:(location.hash||"#/welcome").slice(2), status:COB.state.stage||"intake"}).eq("id",tenantId);
+    },800);
+  }
+
+  // ---- wrap COB methods after load
+  function wrap(){
+    if(!window.COB) return setTimeout(wrap,50);
+
+    var origSave=COB.save.bind(COB); COB.save.__orig=origSave;
+    COB.save=function(){origSave(); debouncedSync();};
+
+    var origSignup=COB.signup.bind(COB);
+    COB.signup=async function(){
+      var f=(document.getElementById('f-first')||{}).value||"",
+          l=(document.getElementById('f-last')||{}).value||"",
+          p=(document.getElementById('f-pass')||{}).value||"",
+          e=COB._authEmail||"";
+      if(!f.trim()||!l.trim()){toast("First and last name aim your study. Both, please.");return;}
+      if(p.length<10){toast("Give the password at least 10 characters.");return;}
+      var {data,error}=await sb.auth.signUp({email:e,password:p,options:{data:{full_name:f+" "+l,first_name:f,last_name:l}}});
+      if(error){toast(error.message);return;}
+      COB.state.user={first:f,last:l,name:f+" "+l,email:e};
+      COB.save();
+      if(data.user){await ensureTenant(data.user);}
+      // CRM signal: chat_leads (best-effort, ignore errors)
+      sb.from("chat_leads").insert({email:e, name:f+" "+l, source:"onboarding_signup"}).then(function(){},function(){});
+      COB.go("#/consent");
+    };
+
+    var origSignin=COB.signin.bind(COB);
+    COB.signin=async function(){
+      var p=(document.getElementById('f-pass')||{}).value||"",
+          e=COB._authEmail||"";
+      if(p.length<10){toast("That password looks short.");return;}
+      var {data,error}=await sb.auth.signInWithPassword({email:e,password:p});
+      if(error){toast(error.message);return;}
+      if(data.user){
+        COB.state.user=COB.state.user||{email:e,name:(data.user.user_metadata&&data.user.user_metadata.full_name)||e};
+        COB.save();
+        await ensureTenant(data.user);
+      }
+      toast("Welcome back.");
+      COB.resume();
+    };
+
+    COB.provider=function(id){
+      var map={google:"google",apple:"apple",microsoft:"azure"};
+      if(map[id]){
+        sb.auth.signInWithOAuth({provider:map[id], options:{redirectTo:location.origin+"/onboarding"}}).then(function(r){
+          if(r.error) toast(r.error.message);
+        });
+        return;
+      }
+      toast((id==="passkey"?"Passkey":"Single sign-on")+" sign-in goes live at integration. Use email in this preview.");
+    };
+
+    var origConsent=COB.consent.bind(COB);
+    COB.consent=function(){
+      origConsent();
+      if(tenantId && COB.state.consentName){
+        sb.from("onboarding_tenants").update({consent_signed_name:COB.state.consentName, consent_signed_at:COB.state.consentAt}).eq("id",tenantId);
+      }
+    };
+
+    var origEsc=COB.escalate.bind(COB);
+    COB.escalate=function(reason){
+      origEsc(reason);
+      if(tenantId) sb.from("onboarding_escalations").insert({tenant_id:tenantId, reason:String(reason||"unspecified")});
+    };
+
+    function askInsert(ctx,q){
+      if(!tenantId||!q) return;
+      sb.from("taylor_questions").insert({tenant_id:tenantId, context:String(ctx||"page:"+(location.hash||"")), question:q});
+    }
+    var origAsk=COB.askTaylor.bind(COB);
+    COB.askTaylor=function(ctx,id){
+      var el=document.getElementById(id); var v=(el&&el.value||"").trim();
+      origAsk(ctx,id);
+      askInsert(ctx,v);
+    };
+    var origDock=COB.dockSend.bind(COB);
+    COB.dockSend=function(){
+      var el=document.getElementById('tdock-in'); var v=(el&&el.value||"").trim();
+      origDock();
+      askInsert("page:"+(location.hash||""),v);
+    };
+    var origSide=COB.sideSend.bind(COB);
+    COB.sideSend=function(){
+      var el=document.getElementById('tside-in'); var v=(el&&el.value||"").trim();
+      origSide();
+      askInsert("page:"+(location.hash||"")+":side",v);
+    };
+
+    // ---- files: intercept onDrop to upload the actual file
+    var origDrop=COB.onDrop.bind(COB);
+    COB.onDrop=function(file){
+      origDrop(file);
+      uploadFile(file, /\.zip$/i.test(file.name)?"harvest_zip":"doc");
+    };
+    var origSel=COB.onFileSelected.bind(COB);
+    COB.onFileSelected=function(kind,name){ origSel(kind,name); };
+
+    // briefcase paste -> capture raw before origBriefAdd clears the textarea
+    var origBrief=COB.briefAdd.bind(COB);
+    COB.briefAdd=function(){
+      var el=document.getElementById('bfpaste'); var raw=el?el.value:"";
+      origBrief();
+      if(raw && tenantId){
+        var name="harvest_paste_"+Date.now()+".md";
+        var path=tenantId+"/"+name;
+        sb.storage.from("onboarding-files").upload(path,new Blob([raw],{type:"text/markdown"}),{upsert:false}).then(function(r){
+          if(!r.error) sb.from("intake_files").insert({tenant_id:tenantId, kind:"harvest_paste", file_name:name, storage_path:path, size_bytes:raw.length});
+        });
+      }
+    };
+
+    function uploadFile(file,kind){
+      if(!tenantId||!file) return;
+      var path=tenantId+"/"+Date.now()+"_"+file.name.replace(/[^\w.\-]/g,"_");
+      sb.storage.from("onboarding-files").upload(path,file,{upsert:false}).then(function(r){
+        if(r.error){console.warn("[wiring] upload",r.error.message);return;}
+        sb.from("intake_files").insert({tenant_id:tenantId, kind:kind, file_name:file.name, storage_path:path, size_bytes:file.size||null});
+      });
+    }
+
+    // ---- clear-my-data
+    var origClear=COB.clearConfirm.bind(COB);
+    COB.clearConfirm=async function(){
+      var v=(document.getElementById('clr-in').value||"").trim();
+      if(v!=="CLEAR"){origClear();return;}
+      if(tenantId){
+        var u=(await sb.auth.getUser()).data.user;
+        sb.from("deletion_requests").insert({tenant_id:tenantId, requested_by:u&&u.id});
+        var f=await sb.from("intake_files").select("storage_path").eq("tenant_id",tenantId);
+        var paths=(f.data||[]).map(function(x){return x.storage_path});
+        if(paths.length) await sb.storage.from("onboarding-files").remove(paths);
+        await sb.from("intake_state").delete().eq("tenant_id",tenantId);
+        await sb.from("intake_files").delete().eq("tenant_id",tenantId);
+        await sb.from("intake_facts").delete().eq("tenant_id",tenantId);
+      }
+      origClear();
+    };
+
+    // ---- first-connection tenant-status handshake
+    var origFirst=COB.firstConnected.bind(COB);
+    COB.firstConnected=function(){
+      origFirst(); // optimistic
+      pollStatus();
+    };
+
+    function pollStatus(){
+      if(statusPoll) return;
+      var tries=0;
+      statusPoll=setInterval(async function(){
+        tries++;
+        if(!tenantId || !location.hash.startsWith("#/connect")){clearInterval(statusPoll);statusPoll=null;return;}
+        try{
+          var s=(await sb.auth.getSession()).data.session;
+          var r=await fetch(SUPABASE_URL+"/functions/v1/tenant-status",{headers:{Authorization:"Bearer "+(s&&s.access_token||SUPABASE_ANON), apikey:SUPABASE_ANON}});
+          var j=await r.json();
+          var done=j&&j.cob==="done";
+          COB.state.connectors=COB.state.connectors||{};
+          if(done && COB.state.connectors.cob!=="done"){COB.state.connectors.cob="done";COB.save();COB.render();}
+          if(!done && COB.state.connectors.cob==="done" && tries>2){
+            // client clicked optimistic but server hasn't seen it; keep polling but do not silently downgrade after user confirmed
+          }
+        }catch(_){}
+        if(tries>=60){clearInterval(statusPoll);statusPoll=null;}
+      },5000);
+    }
+    // begin polling whenever /connect route is entered
+    window.addEventListener("hashchange",function(){if(location.hash.startsWith("#/connect")) pollStatus();});
+
+    // ---- initial session restoration
+    sb.auth.getSession().then(function(r){
+      var u=r.data.session&&r.data.session.user;
+      if(u){
+        var meta=u.user_metadata||{};
+        var name=meta.full_name || ((meta.first_name||"")+" "+(meta.last_name||"")).trim() || u.email;
+        COB.state.user=COB.state.user||{email:u.email,name:name,first:meta.first_name||"",last:meta.last_name||""};
+        try{origSave()}catch(_){}
+        ensureTenant(u).then(function(){try{COB.render()}catch(_){}});
+      }
+    });
+    sb.auth.onAuthStateChange(function(_e,session){
+      if(session&&session.user) ensureTenant(session.user);
+    });
+  }
+  wrap();
+})();
+</script>
+
 </body>
 </html>
