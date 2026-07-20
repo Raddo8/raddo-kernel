@@ -828,5 +828,212 @@ window.addEventListener('keydown',e=>{if(e.key==="Escape")COB.closeDrawer();});
 document.getElementById('saveTxt').textContent="autosave on";
 COB.render();
 </script>
+<!-- ================================================================
+LOVABLE WIRING · appended · everything above is verbatim v1
+Implements the 7 integration contract points using Supabase JS (UMD).
+================================================================ -->
+<script>
+(function(){
+  const SB_URL="https://vacpgxxgdfhgvkduljgs.supabase.co";
+  const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhY3BneHhnZGZoZ3ZrZHVsamdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2NjYyNzQsImV4cCI6MjA4NjI0MjI3NH0.3PnFR5kDasS_FHg57CRwD-kSnJFt4baNO2lcbIopi5g";
+  if(!window.supabase||!window.supabase.createClient){console.warn("[cob] supabase UMD not loaded");return;}
+  const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{storage:localStorage,storageKey:"cob-onboarding-auth",persistSession:true,autoRefreshToken:true}});
+  window.__sb=sb;
+
+  let TENANT=null;
+  let ANSWER_DEBOUNCE=null;
+  const pendingAnswers={};
+
+  function slug(email){const b=(email||"").split("@")[0].toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");return (b||"client")+"-"+Math.random().toString(36).slice(2,8);}
+
+  async function ensureTenant(user){
+    if(TENANT)return TENANT;
+    if(!user)return null;
+    const {data:existing}=await sb.from("onboarding_tenants").select("*").eq("user_id",user.id).maybeSingle();
+    if(existing){TENANT=existing;return TENANT;}
+    const {data,error}=await sb.from("onboarding_tenants").insert({user_id:user.id,tenant_key:slug(user.email||""),status:"intake",current_step:"welcome"}).select("*").single();
+    if(!error)TENANT=data;
+    return TENANT;
+  }
+
+  // Question-key -> chapter number (best-effort, defaults to 1)
+  function chapterFor(k){
+    try{
+      const chs=window.CHAPTERS||[];
+      for(let i=0;i<chs.length;i++){for(const q of (chs[i].qs||[])){if(q.k===k)return chs[i].n||(i+1);}}
+    }catch(e){}
+    return 1;
+  }
+
+  async function flushAnswers(){
+    if(!TENANT)return;
+    const keys=Object.keys(pendingAnswers);if(!keys.length)return;
+    const rows=keys.map(k=>({tenant_id:TENANT.id,chapter:chapterFor(k),question_key:k,answer:String(pendingAnswers[k]??"")}));
+    keys.forEach(k=>delete pendingAnswers[k]);
+    try{await sb.from("intake_state").upsert(rows,{onConflict:"tenant_id,question_key"});}catch(e){console.warn("[cob] intake_state upsert failed",e);}
+  }
+  function scheduleFlush(){clearTimeout(ANSWER_DEBOUNCE);ANSWER_DEBOUNCE=setTimeout(flushAnswers,600);}
+
+  async function syncTenantStatus(){
+    if(!TENANT||!window.COB)return;
+    const patch={};
+    if(COB.state.stage&&COB.state.stage!==TENANT.status)patch.status=COB.state.stage;
+    if(COB.state.consentName&&!TENANT.consent_signed_name){patch.consent_signed_name=COB.state.consentName;patch.consent_signed_at=COB.state.consentAt||new Date().toISOString();}
+    if(!Object.keys(patch).length)return;
+    try{const {data}=await sb.from("onboarding_tenants").update(patch).eq("id",TENANT.id).select("*").single();if(data)TENANT=data;}catch(e){}
+  }
+
+  async function loadAnswersFromDb(){
+    if(!TENANT)return;
+    try{
+      const {data}=await sb.from("intake_state").select("question_key,answer").eq("tenant_id",TENANT.id);
+      if(data&&data.length){
+        for(const r of data){if(r.answer!=null&&!(r.question_key in COB.state.answers))COB.state.answers[r.question_key]=r.answer;}
+        try{localStorage.setItem(COB.KEY,JSON.stringify(COB.state));}catch(e){}
+        if(document.getElementById('app'))COB.render();
+      }
+      // pull server stage
+      if(TENANT.status&&TENANT.status!==COB.state.stage){COB.state.stage=TENANT.status;}
+    }catch(e){console.warn("[cob] loadAnswersFromDb failed",e);}
+  }
+
+  async function uploadFileRow(kind,file,rawText){
+    if(!TENANT)return;
+    try{
+      const {data:{user}}=await sb.auth.getUser();
+      if(!user)return;
+      const name=(file&&file.name)||(kind+"-"+Date.now()+".txt");
+      const path=user.id+"/"+TENANT.id+"/"+Date.now()+"-"+name.replace(/[^A-Za-z0-9._-]/g,"_");
+      const body=file||new Blob([rawText||""],{type:"text/plain"});
+      const size=(file&&file.size)||(rawText?rawText.length:0);
+      const up=await sb.storage.from("onboarding-files").upload(path,body,{upsert:false,contentType:(file&&file.type)||"text/plain"});
+      if(up.error){console.warn("[cob] storage upload failed",up.error);return;}
+      await sb.from("intake_files").insert({tenant_id:TENANT.id,kind:kind||"doc",file_name:name,storage_path:path,size_bytes:size});
+    }catch(e){console.warn("[cob] uploadFileRow failed",e);}
+  }
+
+  // ---- wire COB methods ----
+  function wire(){
+    if(!window.COB){setTimeout(wire,50);return;}
+
+    // 2. PERSISTENCE: mirror save() -> intake_state + tenant status
+    const _save=COB.save.bind(COB);
+    COB.save=function(){_save();scheduleFlush();syncTenantStatus();};
+    // Capture per-answer edits with keys
+    const _type=COB.type.bind(COB);
+    COB.type=function(k,v){pendingAnswers[k]=v;_type(k,v);};
+    const _pick=COB.pick.bind(COB);
+    COB.pick=function(k,v,ci,qi){pendingAnswers[k]=v;_pick(k,v,ci,qi);};
+
+    // 3. FILES: dropzone + onFileSelected
+    const _ofs=COB.onFileSelected.bind(COB);
+    COB.onFileSelected=function(kind,fileOrName){
+      const f=(typeof fileOrName==="object"&&fileOrName&&fileOrName.name)?fileOrName:null;
+      _ofs(kind,f?f.name:fileOrName);
+      if(f)uploadFileRow(kind,f,null);
+    };
+    const _onDrop=COB.onDrop.bind(COB);
+    COB.onDrop=function(file){_onDrop(file);if(file&&/\.zip$/i.test(file.name))uploadFileRow("harvest_zip",file,null);};
+    // 3b. briefAdd: also persist raw paste
+    const _briefAdd=COB.briefAdd.bind(COB);
+    COB.briefAdd=function(){
+      const el=document.getElementById('bfpaste');const raw=el?el.value:"";
+      _briefAdd();
+      if(raw&&raw.trim().length>40)uploadFileRow("harvest_paste",null,raw);
+    };
+
+    // 4. ESCALATIONS + TAYLOR
+    const _esc=COB.escalate.bind(COB);
+    COB.escalate=async function(reason){_esc(reason);if(TENANT){try{await sb.from("onboarding_escalations").insert({tenant_id:TENANT.id,reason:String(reason||"unspecified")});}catch(e){}}};
+    const _ask=COB.askTaylor.bind(COB);
+    COB.askTaylor=async function(ctx,id){
+      const el=document.getElementById(id);const q=(el&&el.value||"").trim();
+      _ask(ctx,id);
+      if(q&&TENANT){try{await sb.from("taylor_questions").insert({tenant_id:TENANT.id,context:String(ctx||""),question:q.slice(0,2000)});}catch(e){}}
+    };
+
+    // 1. AUTH — email + password + providers
+    const _emailContinue=COB.emailContinue.bind(COB);
+    COB.emailContinue=async function(){
+      const el=document.getElementById('f-email');const e=(el?el.value:"").trim();
+      if(!e.includes("@")||e.length<5){COB.toast("Enter a real email address to continue.");return;}
+      COB._authEmail=e;
+      // Ask supabase whether this email exists by attempting a signInWithOtp probe? Simpler: keep original UX (defaults to signup unless local state matches)
+      _emailContinue();
+    };
+    COB.signup=async function(){
+      const n=document.getElementById('f-name').value.trim();
+      const p=document.getElementById('f-pass').value;
+      const e=COB._authEmail||"";
+      if(!n){COB.toast("Your name gets you in.");return;}
+      if(p.length<10){COB.toast("Give the password at least 10 characters.");return;}
+      try{
+        const {data,error}=await sb.auth.signUp({email:e,password:p,options:{data:{full_name:n},emailRedirectTo:window.location.origin+"/onboarding"}});
+        if(error){COB.toast(error.message||"Sign-up failed.");return;}
+        COB.state.user={name:n,email:e,id:(data&&data.user&&data.user.id)||null};
+        COB.save();
+        // 6. CRM signal
+        try{await sb.from("chat_leads").insert({session_id:"onboarding-"+Date.now(),name:n,email:e,company:(e.split("@")[1]||"").split(".")[0]||"unknown",title:"onboarding signup",challenge:"Started COB onboarding at /onboarding",referer:location.href.slice(0,500),user_agent:(navigator.userAgent||"").slice(0,500)});}catch(_){}
+        if(data&&data.user)await ensureTenant(data.user);
+        COB.go("#/consent");
+      }catch(err){COB.toast(err.message||"Sign-up failed.");}
+    };
+    COB.signin=async function(){
+      const p=document.getElementById('f-pass').value;
+      const e=COB._authEmail||"";
+      if(!e){COB.toast("Enter your email first.");return;}
+      try{
+        const {data,error}=await sb.auth.signInWithPassword({email:e,password:p});
+        if(error){COB.toast(error.message||"Sign-in failed.");return;}
+        const fullName=(data&&data.user&&(data.user.user_metadata||{}).full_name)||(COB.state.user&&COB.state.user.name)||e.split("@")[0];
+        COB.state.user={name:fullName,email:e,id:data.user.id};
+        COB.save();
+        if(data&&data.user){await ensureTenant(data.user);await loadAnswersFromDb();}
+        COB.toast("Welcome back, "+COB.esc(String(fullName).split(" ")[0])+".");
+        COB.resume();
+      }catch(err){COB.toast(err.message||"Sign-in failed.");}
+    };
+    COB.provider=async function(id){
+      const oauthMap={google:"google",apple:"apple",microsoft:"azure"};
+      const label={google:"Google",apple:"Apple",microsoft:"Microsoft",passkey:"Passkey",sso:"Single sign-on"}[id]||id;
+      if(oauthMap[id]){
+        try{
+          const {error}=await sb.auth.signInWithOAuth({provider:oauthMap[id],options:{redirectTo:window.location.origin+"/onboarding"}});
+          if(error)COB.toast(label+" sign-in: "+(error.message||"unavailable"));
+        }catch(e){COB.toast(label+" sign-in: "+(e.message||"unavailable"));}
+        return;
+      }
+      // passkey + sso: preview toast
+      COB.toast(label+" sign-in goes live at integration. Use email in this preview.");
+    };
+
+    // ---- session bootstrap ----
+    sb.auth.getSession().then(async ({data})=>{
+      const u=data&&data.session&&data.session.user;
+      if(u){
+        const meta=u.user_metadata||{};
+        const name=meta.full_name||(COB.state.user&&COB.state.user.name)||(u.email||"").split("@")[0];
+        COB.state.user={name:name,email:u.email,id:u.id};
+        try{localStorage.setItem(COB.KEY,JSON.stringify(COB.state));}catch(e){}
+        await ensureTenant(u);
+        await loadAnswersFromDb();
+        COB.render();
+      }
+    });
+    sb.auth.onAuthStateChange(async (_evt,session)=>{
+      const u=session&&session.user;
+      if(u&&(!COB.state.user||COB.state.user.email!==u.email)){
+        const meta=u.user_metadata||{};
+        COB.state.user={name:meta.full_name||(u.email||"").split("@")[0],email:u.email,id:u.id};
+        COB.save();
+        await ensureTenant(u);
+        await loadAnswersFromDb();
+        COB.render();
+      }
+    });
+  }
+  wire();
+})();
+</script>
 </body>
 </html>
