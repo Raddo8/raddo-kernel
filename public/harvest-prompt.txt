@@ -1,0 +1,51 @@
+You are about to perform a COMPLETE KNOWLEDGE HARVEST of everything you know about me from our entire history together: your saved memories, our past conversations, my custom instructions, and every preference or fact you have absorbed. The output will be used to build my permanent AI executive system, so completeness and accuracy matter more than polish.
+
+OPERATING RULES (binding):
+1. Truth labels. Tag every load-bearing claim as one of: [DOCUMENTED-MEM] (in your saved memory), [DOCUMENTED-CHAT] (found by searching our past conversations, if you can), [INFERRED] (your read from patterns; say what it is based on), or [UNKNOWN] (you do not know; never guess). Fabricating anything is the one unforgivable failure.
+2. If you can search past conversations or chat history, do so. It is a richer source than saved memory alone.
+3. No sensitive identifiers. Never output Social Security numbers, full account numbers, card numbers, passwords, or exact balances. Refer to accounts by nickname only.
+4. Completeness over brevity. If you know 40 facts, give 40 facts. Do not summarize away detail.
+5. Where you are thin, say so. End every deliverable with a "GAPS" list: what a chief of staff would want that you cannot supply.
+6. Format. Every deliverable is a standalone markdown document: a # title, a one-line purpose, YAML front matter (deliverable name, date, confidence high/medium/low), then clear ## sections with bullet points. Sentence-level facts, one per bullet.
+
+DELIVERY (do it all in ONE pass, no waiting for me):
+- First produce MEMORY_INVENTORY.md: a numbered, near-verbatim enumeration of every saved memory you hold about me.
+- Then produce all ten deliverables below, in order.
+- PREFERRED: if you can create files for download (for example with your code, analysis, or file tools), write each deliverable as its own .md file and bundle everything into ONE zip archive named COB_BRIEFCASE.zip, then give me the download link.
+- INSIDE THAT ZIP, also include COB_BRIEFCASE.html: a single self-contained page that presents every deliverable beautifully, branded EXACTLY as follows. Background #FAF8F4 (warm paper, never pure white). Deep navy #042C53 for headlines and a top banner. Brass #EF9F27 as the ONLY accent color. Body text #2C2C2A. Headlines in the serif font Fraunces, body in Inter, small uppercase labels in JetBrains Mono with wide letter spacing (load all three from Google Fonts). Layout: a navy header band reading CHIEF OF BUSINESS · THE BRIEFCASE with today's date in mono; a summary strip with deliverable and fact counts; then one card per deliverable (white background, 1px #E5E3DE border, square corners) showing the title, a small confidence badge, collapsible sections for its contents, and any GAPS section highlighted with a brass left border. No em dashes anywhere in it. No external scripts; all content embedded inline so the page opens offline with a double click.
+- FALLBACK: if you cannot create files, deliver everything in continuous messages, and begin each deliverable with a marker line exactly like this: === FILE: IDENTITY_PROFILE.md ===
+- If length forces you to split across messages, continue automatically; do not stop to ask.
+
+THE TEN DELIVERABLES:
+
+1. IDENTITY_PROFILE.md
+Who I am: name, location, family facts you know, roles and titles, entities I own or lead, professional history, public footprint, how I describe myself, what I care about most. Include a "how I make decisions" section based on everything you have seen.
+
+2. VENTURES_AND_ENTITIES.md
+Every business, entity, deal, investment, and project you know of: legal structure, ownership stakes, status, key numbers mentioned, stage, what is in flight, what is stalled. One ## section per entity. Include deals or ideas I mentioned once and dropped, flagged as such.
+
+3. PEOPLE_MAP.md
+Every person you know in my world: name, relationship to me, role, organization, context of how they come up, current state of the relationship, and any open items between us. Group by category (family, partners, investors, advisors, counterparties, team, friends).
+
+4. WORKFLOWS_AND_PROCESSES.md
+How I actually work: recurring processes you have watched me run, how I handle email, meetings, follow-ups, content, sales, finance, and admin. What I do repeatedly, in what order, with what tools. Include the processes I have complained about or asked for help with more than once, and where the friction is.
+
+5. GOALS_VISION_VALUES.md
+My stated goals (short and long horizon), the vision behind them, my priorities as I have ranked or implied them, values I have expressed, lines I will not cross, and what winning looks like in my own words. Quote me where you can.
+
+6. DECISIONS_LOG.md
+Significant decisions I have made or worked through with you: the decision, when, the options weighed, what I chose, the reasoning, and anything left conditional. Include decisions I keep revisiting without closing, flagged as open decision debt.
+
+7. OPEN_LOOPS.md
+Every commitment, pending item, deadline, follow-up, or "I need to..." you have record of that was never confirmed closed. For each: what it is, who is waiting on it, any date attached, and last known status.
+
+8. PREFERENCES_AND_STYLE.md
+How I like to work with an AI and with people: communication style, formats I prefer, length and tone, things that irritate me, standing instructions I have given you, how I want pushback delivered, and every correction I have made to your behavior.
+
+9. TOOLS_AND_SYSTEMS.md
+My stack: every tool, platform, app, and system I have mentioned using (email, calendar, accounting, CRM, banking, project tools, AI tools, industry-specific software), how each is used, what is connected to what, and pain points with any of them.
+
+10. HANDOFF_BRIEF.md
+The synthesis: if you were briefing my new chief of staff on day one, the twenty things they must know, the three biggest risks on my plate, the three biggest opportunities, what to never do, and the first five actions you would tell them to take. Close with a master GAPS list across all deliverables and a completeness self-score (0 to 100) with one line of justification.
+
+Begin now.
