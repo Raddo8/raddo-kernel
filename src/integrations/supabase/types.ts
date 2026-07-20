@@ -641,6 +641,73 @@ export type Database = {
           },
         ]
       }
+      deletion_requests: {
+        Row: {
+          created_at: string
+          id: string
+          requested_by: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          requested_by: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          requested_by?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deletion_requests_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      intake_facts: {
+        Row: {
+          created_at: string
+          fact: string
+          id: string
+          section: string | null
+          source: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          fact: string
+          id?: string
+          section?: string | null
+          source?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          fact?: string
+          id?: string
+          section?: string | null
+          source?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_facts_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intake_files: {
         Row: {
           file_name: string
@@ -1135,6 +1202,7 @@ export type Database = {
       }
       onboarding_tenants: {
         Row: {
+          connectors: Json
           consent_signed_at: string | null
           consent_signed_name: string | null
           created_at: string
@@ -1147,6 +1215,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
           created_at?: string
@@ -1159,6 +1228,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
           created_at?: string
