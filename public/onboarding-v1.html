@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meet your COB of Business · onboarding</title>
+<!--
+================================================================================
+COB ONBOARDING EXPERIENCE v1 · single-file · dossier brand (chiefofbusiness.ai/login twin)
+Built HERE, perfected here, then uploaded to Lovable and served verbatim.
+
+LOVABLE INTEGRATION CONTRACT (wire these, change nothing else):
+  1. AUTH: email-first + providers. Wire emailContinue/signup/signin to Supabase Auth (signUp, signInWithPassword); provider buttons to signInWithOAuth (google, apple, azure), WebAuthn passkeys, and SAML SSO. Session -> COB.state.user. Terms/Privacy links point to chiefofbusiness.ai/terms and /privacy (pages owed, KNOX-drafted).
+  2. PERSISTENCE: COB.save() currently writes localStorage key "cob_onboarding_v1".
+     Mirror the same JSON to intake_state/onboarding_tenants (schema already live in the project).
+     Every answer change calls COB.save() -> also debounce-post to Supabase.
+  3. FILES: the harvest upload dropzones fire COB.onFileSelected(kind, file) -> wire to storage bucket + intake_files.
+  4. ESCALATIONS: COB.escalate(reason) -> insert into onboarding_escalations, then show the built-in confirmation.
+  5. STATUS: dashboard build-stage reads COB.state.stage ("intake"|"files"|"build"|"review"|"live") -> read from onboarding_tenants.status.
+  6. CONNECTOR URL: replace {{COB_CONNECTOR_URL}} in the connect act when the OAuth endpoint ships.
+  Fonts load from fonts.googleapis.com. No other external dependencies. No frameworks.
+================================================================================
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --paper:#FAF8F4; --edge:#E5E3DE; --ink:#042C53; --ink-soft:#2A4E78; --charcoal:#2C2C2A; --ash:#5F5E5A;
+  --brass:#EF9F27; --brass-deep:#854F0B; --white:#FFFFFF;
+  --navy:var(--ink); --marble:var(--paper); --marble-2:#F3F0EA; --marble-3:#ECE8DF; --line:var(--edge); --brass-brown:var(--brass-deep);
+  --ok:#2E6B4F; --warn:#8A5A00; --err:#8C2F2F;
+  --serif:'Fraunces',Georgia,serif; --sans:'Inter',system-ui,sans-serif; --mono:'JetBrains Mono',monospace;
+  --s1:4px; --s2:8px; --s3:16px; --s4:24px; --s5:32px; --s6:48px; --s7:64px;
+  --t-xs:12px; --t-sm:14px; --t-md:16px; --t-lg:20px; --t-xl:28px; --t-2xl:clamp(30px,4.5vw,44px); --t-hero:clamp(38px,5.5vw,60px);
+  --ease:cubic-bezier(0.22,1,0.36,1);
+}
+*{box-sizing:border-box;min-width:0}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--charcoal);font-family:var(--sans);font-size:var(--t-md);line-height:1.65;-webkit-font-smoothing:antialiased;overflow-wrap:break-word}
+img,svg,video,table{max-width:100%}
+h1,h2,h3{font-family:var(--serif);color:var(--ink);font-weight:700;line-height:1.12;margin:0 0 var(--s3);letter-spacing:-0.01em}
+h1{font-size:var(--t-2xl)} h2{font-size:var(--t-xl)} h3{font-size:var(--t-lg)}
+p{margin:0 0 var(--s3)}
+a{color:var(--brass-deep);text-underline-offset:3px}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--brass-deep);margin-bottom:var(--s3)}
+.kicker b{color:var(--brass);font-weight:500}
+.hairline{display:flex;align-items:center;gap:8px;margin:var(--s5) 0}
+.hairline::before,.hairline::after{content:"";height:1px;flex:1;background:rgba(239,159,39,.4)}
+.hairline i{width:6px;height:6px;border-radius:50%;background:var(--brass);flex:none}
+button{font-family:var(--sans);cursor:pointer;font-size:var(--t-sm)}
+.btn{background:var(--brass);color:var(--ink);border:none;border-radius:3px;padding:14px 30px;font-weight:600;font-size:15px;letter-spacing:.01em;transition:background .22s var(--ease),color .22s var(--ease),transform .12s var(--ease)}
+.btn:hover{background:var(--brass-deep);color:var(--paper)} .btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.btn2{background:transparent;color:var(--ink);border:1px solid var(--ink);border-radius:0;padding:12px 24px;font-weight:500;transition:background .22s var(--ease),transform .12s var(--ease)}
+.btn2:hover{background:var(--marble-2)} .btn2:active{transform:scale(.98)}
+.btn-ghost{background:none;border:none;color:var(--brass-deep);padding:10px 8px;font-weight:500}
+.btn-ghost:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+input[type=text],input[type=email],input[type=password],textarea,select{
+  width:100%;background:var(--white);border:1px solid var(--edge);border-radius:0;padding:14px 16px;font-family:var(--sans);font-size:var(--t-md);color:var(--charcoal);transition:border-color .22s var(--ease)}
+input:focus,textarea:focus,select:focus{border-color:var(--ink);outline:none}
+textarea{min-height:130px;resize:vertical;line-height:1.6}
+::placeholder{color:#A8A499;font-style:normal}
+.app{display:grid;grid-template-columns:1fr;min-height:100vh}
+/* chrome header: paper, per dossier header doctrine */
+.top{position:sticky;top:0;z-index:40;background:rgba(250,248,244,.92);backdrop-filter:blur(8px);color:var(--ink);display:flex;align-items:center;gap:var(--s3);padding:12px var(--s4);border-bottom:1px solid var(--edge)}
+.top .mark{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink);white-space:nowrap}
+.top .mark b{color:var(--brass);font-weight:500}
+.top .crumb{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top .save{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);display:flex;align-items:center;gap:7px;white-space:nowrap}
+.top .save .dot{width:6px;height:6px;border-radius:50%;background:var(--edge);transition:background .3s}
+.top .save.ok .dot{background:var(--brass)}
+.progress{position:sticky;top:49px;z-index:39;height:2px;background:var(--marble-3)}
+.progress i{display:block;height:100%;background:var(--brass);width:0%;transition:width .4s var(--ease)}
+/* layout */
+.stage{display:grid;grid-template-columns:250px minmax(0,1fr) 290px;gap:0;max-width:1280px;margin:0 auto;width:100%}
+.rail{padding:var(--s5) var(--s3) var(--s5) var(--s4);border-right:1px solid var(--edge);position:sticky;top:72px;align-self:start;max-height:calc(100vh - 72px);overflow-y:auto}
+.rail .r-item{display:flex;gap:10px;align-items:baseline;padding:9px 10px;border:none;background:none;width:100%;text-align:left;font-size:var(--t-sm);color:var(--ash);border-left:2px solid transparent;transition:color .18s}
+.rail .r-item:hover{color:var(--ink);background:var(--marble-2)}
+.rail .r-item.on{border-left-color:var(--brass);color:var(--ink);font-weight:600}
+.rail .r-item.done{color:var(--charcoal)}
+.rail .r-item.done .r-n{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.rail .r-n{font-family:var(--mono);font-size:10px;border:1px solid var(--edge);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.main{padding:var(--s6) clamp(16px,4vw,56px);min-height:calc(100vh - 72px)}
+.world{padding:var(--s5) var(--s4);border-left:1px solid var(--edge);position:sticky;top:72px;align-self:start;max-height:calc(100vh - 72px);overflow-y:auto}
+.world h4{font-family:var(--mono);font-size:10px;color:var(--brass-deep);text-transform:uppercase;letter-spacing:.22em;margin:0 0 var(--s3);font-weight:500}
+.w-group{margin-bottom:var(--s4)}
+.w-label{font-size:10px;color:var(--ash);margin-bottom:6px;font-family:var(--mono);letter-spacing:.18em;text-transform:uppercase}
+.chip{display:inline-block;background:var(--white);border:1px solid var(--edge);padding:5px 10px;font-size:var(--t-xs);margin:0 6px 6px 0;animation:rise .3s var(--ease);color:var(--charcoal)}
+.chip.navy{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.w-empty{font-size:var(--t-xs);color:#A8A499;font-style:italic}
+/* question screens */
+.q-wrap{max-width:640px}
+.q-count{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--ash);margin-bottom:var(--s3)}
+.q-text{font-family:var(--serif);font-size:var(--t-xl);font-weight:700;color:var(--ink);line-height:1.25;margin-bottom:var(--s2)}
+.q-why{font-size:var(--t-sm);color:var(--ash);margin-bottom:var(--s4)}
+.q-input{position:relative;margin-bottom:var(--s3)}
+.mic{position:absolute;right:8px;top:8px;background:var(--white);border:1px solid var(--edge);width:38px;height:38px;display:flex;align-items:center;justify-content:center;color:var(--brass-deep);transition:border-color .18s}
+.mic:hover{border-color:var(--ink)}
+.mic.rec{background:var(--brass);color:var(--ink);border-color:var(--brass);animation:pulse 1.2s infinite}
+.mic svg{width:16px;height:16px}
+.q-actions{display:flex;gap:var(--s3);align-items:center;flex-wrap:wrap;margin-top:var(--s4)}
+.hintline{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#A8A499;margin-top:var(--s2)}
+.choices{display:flex;flex-wrap:wrap;gap:10px;margin:var(--s3) 0}
+.choice{border:1px solid var(--edge);background:var(--white);padding:12px 18px;font-size:var(--t-sm);border-radius:0;color:var(--charcoal);transition:border-color .18s,background .18s}
+.choice:hover{border-color:var(--ink)} .choice.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+/* cards */
+.card{background:var(--white);border:1px solid var(--edge);padding:var(--s4)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100vh}
+/* THE NAVY PANE (dossier brand bible §17, verbatim recipe) */
+.pane-navy{position:relative;overflow:hidden;color:var(--paper);padding:clamp(32px,6vw,80px);display:flex;flex-direction:column;justify-content:center;
+  background-color:var(--ink);
+  background-image:
+    radial-gradient(ellipse 60% 55% at 82% 12%, rgba(239,159,39,.18), transparent 60%),
+    radial-gradient(ellipse 55% 55% at 12% 92%, rgba(42,78,120,.28), transparent 65%),
+    linear-gradient(160deg, hsl(211 93% 8%) 0%, #042C53 55%, hsl(210 82% 22%) 100%);}
+.pane-navy::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);
+  mask-image:radial-gradient(ellipse 75% 70% at 50% 45%, black 40%, transparent 85%);}
+.pane-navy>*{position:relative;z-index:1}
+.pane-navy h1{color:var(--paper);font-size:var(--t-hero);line-height:1.05}
+.pane-navy p{color:rgba(250,248,244,.78)}
+.chip-eyebrow{display:inline-block;background:var(--brass);color:var(--ink);font:700 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;padding:6px 10px;border-radius:3px;margin-bottom:var(--s4);width:max-content}
+.brass-u{color:var(--brass);border-bottom:2px solid var(--brass);padding-bottom:2px}
+.mono-footer{display:flex;justify-content:space-between;align-items:center;gap:12px;font:400 10px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:rgba(255,255,255,.55);margin-top:auto;padding-top:var(--s5);flex-wrap:wrap}
+.pane-form{padding:clamp(32px,6vw,80px);display:flex;flex-direction:column;justify-content:center;max-width:560px;width:100%;margin:0 auto}
+.field{margin-bottom:var(--s3)}
+.field label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep);margin-bottom:7px}
+.rule{height:1px;background:var(--edge);margin:var(--s4) 0}
+.notice{border:1px solid var(--edge);border-left:2px solid var(--brass);background:var(--white);padding:var(--s3);font-size:var(--t-sm);margin:var(--s3) 0;color:var(--charcoal)}
+.review-q{border-bottom:1px solid var(--edge);padding:var(--s3) 0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--s3);align-items:start}
+.review-q:last-child{border-bottom:none}
+.review-q .rq-t{font-size:var(--t-xs);color:var(--ash)}
+.review-q .rq-a{font-size:var(--t-md);color:var(--charcoal);white-space:pre-wrap}
+.review-q .rq-a.skip{color:#A8A499;font-style:italic}
+.tl{list-style:none;padding:0;margin:0}
+.tl li{display:grid;grid-template-columns:26px minmax(0,1fr);gap:var(--s3);padding:var(--s3) 0;border-bottom:1px solid var(--edge)}
+.tl .t-dot{width:13px;height:13px;border-radius:50%;border:2px solid var(--edge);margin-top:4px;background:var(--white)}
+.tl li.done .t-dot{background:var(--ink);border-color:var(--ink)}
+.tl li.now .t-dot{background:var(--brass);border-color:var(--brass);animation:pulse 2s infinite}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3);margin:var(--s4) 0}
+.kpi{background:var(--white);border:1px solid var(--edge);padding:var(--s3);text-align:left;border-radius:0;transition:border-color .18s}
+.kpi:hover{border-color:var(--ink)}
+.kpi .k-v{font-family:var(--serif);font-weight:700;font-size:30px;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi .k-l{font-size:10px;color:var(--ash);font-family:var(--mono);letter-spacing:.18em;text-transform:uppercase;margin-top:4px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:var(--s3)}
+.wcard{background:var(--white);border:1px solid var(--edge);padding:var(--s3);text-align:left;width:100%;transition:border-color .18s}
+.wcard:hover{border-color:var(--brass)}
+.wcard .wc-k{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep);margin-bottom:6px}
+.wcard .wc-t{font-family:var(--serif);font-weight:700;color:var(--ink);font-size:var(--t-lg)}
+.wcard .wc-s{font-size:var(--t-sm);color:var(--ash);margin-top:4px}
+/* drawer */
+.drawer-bg{position:fixed;inset:0;background:rgba(4,44,83,.45);z-index:60;opacity:0;pointer-events:none;transition:opacity .22s var(--ease)}
+.drawer-bg.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);background:var(--paper);z-index:61;transform:translateX(102%);transition:transform .26s var(--ease);padding:var(--s5);overflow-y:auto;border-left:2px solid var(--brass)}
+.drawer.open{transform:none}
+/* connect */
+.conn{border:1px solid var(--edge);background:var(--white);margin-bottom:var(--s3)}
+.conn .c-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);width:100%;background:none;border:none;text-align:left}
+.conn .c-ic{width:40px;height:40px;background:var(--marble-2);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;color:var(--ink);font-size:18px;flex:none}
+.conn .c-t{font-weight:600;color:var(--ink)} .conn .c-s{font-size:var(--t-xs);color:var(--ash)}
+.conn .c-state{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash);white-space:nowrap}
+.conn.done .c-state{color:var(--ok)} .conn .c-body{display:none;padding:0 var(--s3) var(--s3);border-top:1px solid var(--edge)}
+.conn.open .c-body{display:block}
+.steps{counter-reset:s;list-style:none;padding:0;margin:var(--s3) 0}
+.steps li{counter-increment:s;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;padding:8px 0;font-size:var(--t-sm)}
+.steps li::before{content:counter(s);font-family:var(--mono);font-size:10px;border:1px solid var(--edge);width:24px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--brass-deep)}
+.copybox{position:relative;background:var(--ink);color:#DCE6F2;font-family:var(--mono);font-size:12.5px;padding:var(--s3);white-space:pre-wrap;max-height:300px;overflow:auto;line-height:1.55}
+.copybtn{position:sticky;top:0;float:right;background:var(--brass);color:var(--ink);border:none;padding:7px 14px;font-weight:600;font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-family:var(--mono)}
+.drop{border:1px dashed #C9C2B4;padding:var(--s4);text-align:center;color:var(--ash);font-size:var(--t-sm);background:var(--white);display:block;cursor:pointer}
+.drop.over{border-color:var(--brass);background:var(--marble-2)}
+.filelist{list-style:none;padding:0;margin:var(--s2) 0 0}
+.filelist li{font-family:var(--mono);font-size:var(--t-xs);padding:6px 0;border-bottom:1px solid var(--edge);display:flex;justify-content:space-between;gap:var(--s3)}
+/* misc */
+.backbar{display:flex;align-items:center;gap:var(--s2);margin-bottom:var(--s4);flex-wrap:wrap}
+.backbar .bb-note{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A8A499}
+.toast{pointer-events:none;position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(8px);background:var(--ink);color:var(--paper);padding:12px 22px;font-size:var(--t-sm);z-index:70;opacity:0;transition:all .25s var(--ease);border-left:3px solid var(--brass);max-width:92vw}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.milestone{border:1px solid var(--edge);border-top:2px solid var(--brass);background:var(--white);padding:var(--s4);margin:var(--s4) 0;animation:rise .35s var(--ease)}
+.offline{display:none;background:var(--warn);color:#fff;text-align:center;font-size:var(--t-xs);padding:6px}
+body.offline .offline{display:block}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,159,39,.5)}50%{box-shadow:0 0 0 7px rgba(239,159,39,0)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+.mob-nav{display:none}
+.mob-nav.off{display:none!important}
+@media (max-width:1080px){.stage{grid-template-columns:220px minmax(0,1fr)}.world{display:none}}
+@media (max-width:820px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .rail{display:none}
+  .split{grid-template-columns:minmax(0,1fr)}
+  .pane-navy{min-height:38vh;justify-content:flex-end;padding-bottom:var(--s4)}
+  .mob-nav{display:flex;position:sticky;top:51px;z-index:38;background:var(--paper);border-bottom:1px solid var(--edge);padding:8px 16px;gap:12px;align-items:center;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash);width:100%}
+  .main{padding:var(--s4) 16px}
+}
+@media (max-width:640px){
+  .top{gap:10px;padding:11px 14px}
+  .top .crumb{display:none}
+  .top .save #saveTxt{display:none}
+  .top .mark{font-size:10px;letter-spacing:.16em}
+  .mob-nav select{max-width:56vw;overflow:hidden;text-overflow:ellipsis}
+}
+@media (max-width:520px){.conn .c-state{display:none}}
+.prov-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.prov{display:flex;align-items:center;justify-content:center;gap:9px;background:var(--white);border:1px solid var(--edge);padding:12px 10px;font-size:13px;font-weight:500;color:var(--charcoal);border-radius:0;transition:border-color .18s}
+.prov:hover{border-color:var(--ink)}
+.divider{display:flex;align-items:center;gap:12px;margin:var(--s4) 0;color:var(--ash);font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;white-space:nowrap}
+.divider::before,.divider::after{content:"";height:1px;flex:1;background:var(--edge)}
+.legal{font-size:12px;color:var(--ash);margin-top:var(--s4);line-height:1.65}
+.legal a{color:var(--brass-deep)}
+.idchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--edge);background:var(--white);padding:6px 6px 6px 12px;font-size:var(--t-sm);color:var(--charcoal);margin-bottom:var(--s3)}
+.navbtn{display:none;background:none;border:1px solid var(--edge);width:34px;height:34px;align-items:center;justify-content:center;color:var(--ink);flex:none}
+@media (max-width:820px){.navbtn{display:flex}}
+.snav-bg{position:fixed;inset:0;background:rgba(4,44,83,.45);z-index:64;opacity:0;pointer-events:none;transition:opacity .22s var(--ease)}
+.snav-bg.open{opacity:1;pointer-events:auto}
+.snav{position:fixed;top:0;left:0;bottom:0;width:min(320px,86vw);background:var(--paper);z-index:65;transform:translateX(-103%);transition:transform .26s var(--ease);padding:20px 16px;overflow-y:auto;border-right:2px solid var(--brass)}
+.snav.open{transform:none}
+.snav .r-item{display:flex;gap:10px;align-items:baseline;padding:11px 10px;border:none;background:none;width:100%;text-align:left;font-size:15px;color:var(--ash);border-left:2px solid transparent}
+.snav .r-item.on{border-left-color:var(--brass);color:var(--ink);font-weight:600}
+.snav .r-item.done{color:var(--charcoal)}
+.snav .r-item.done .r-n,.rail .r-item.done .r-n{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.snav .r-n{font-family:var(--mono);font-size:10px;border:1px solid var(--edge);min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.tay{border:1px solid var(--edge);background:var(--white);padding:12px;margin-top:14px}
+.tay .t-l{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep);margin-bottom:8px}
+.tay input,.tay textarea{font-size:13px;padding:10px 12px}
+.tay .t-row{display:flex;gap:8px;margin-top:8px}
+.tay .t-hint{font-size:11px;color:#A8A499;margin-top:8px;font-family:var(--mono)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="offline">You're offline. Your answers are saved on this device and will sync when you're back.</div>
+<header class="top">
+  <button class="navbtn" aria-label="Open navigation" onclick="COB.navOpen()"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <span class="mark">chief of business <b>·</b> onboarding</span>
+  <span class="crumb" id="crumb">welcome</span>
+  <span class="save" id="saveState"><span class="dot"></span><span id="saveTxt">ready</span></span>
+</header>
+<div class="progress" aria-hidden="true"><i id="progBar"></i></div>
+<div class="mob-nav" id="mobNav"></div>
+<div id="app" class="app" aria-live="polite"></div>
+<div class="snav-bg" id="snavBg" onclick="COB.navClose()"></div>
+<nav class="snav" id="snav" aria-label="Journey navigation"></nav>
+<div class="drawer-bg" id="drawerBg" onclick="COB.closeDrawer()"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true"></aside>
+<div class="toast" id="toast" role="status"></div>
+<script>
+/* ============ DATA ============ */
+const CHAPTERS=[
+{id:"onlyyou",n:1,title:"Only you can tell us this",kicker:"onboarding 02 · only you",mins:0,
+ why:"The record can show what your business is. Only you can say what it's for, and how you want to be served.",
+ qs:[
+  {k:"hq1",t:"One year from now, what does winning look like, in your words?",long:1,ph:"Crews running without me on every job. A real weekend."},
+  {k:"hq2",t:"Rank what matters most right now. Your top five, your order.",long:1,ph:"1. Cash flow 2. Getting off the roof 3. ...",world:"priorities"},
+  {k:"hq3",t:"What will you NOT sacrifice to get there?",ph:"Coaching my son's team on Tuesdays"},
+  {k:"hq4",t:"Values and lines: things you won't do, ways you won't operate.",ph:"We don't play games with customers. We don't stiff subs."},
+  {k:"hq5",t:"What breaks every single week?",long:1,ph:"Scheduling. Every week, something double-books."},
+  {k:"hq6",t:"If you could hand one whole category of work to your COB tomorrow, what goes first?",ph:"Follow-ups. Estimates that never got answered."},
+  {k:"hq7",t:"What decision have you been circling without closing?",long:1,ph:"Hiring a second office person. Raising prices. The truck."},
+  {k:"hq8",t:"Short and blunt, or full context?",choices:["Short and blunt","Full context","Depends on the stakes"]},
+  {k:"hq9",t:"When you're wrong, how do you want to be told?",ph:"Straight, in private, with the fix attached"},
+  {k:"hq10",t:"Morning brief or end of day? How often is too often?",choices:["Morning brief","End of day","Both","Only when it matters"]},
+  {k:"hq11",t:"Anything your COB should never say, assume, or joke about?",ph:"..."},
+  {k:"hq12",t:"What's your biggest skepticism about this working?",ph:"That it's a toy. That I'll stop using it in a month."}]}
+];
+/* COVERAGE MODEL (not rendered): everything onboarding used to ASK, the engine now FILLS autonomously.
+   src legend: deepdive = public-record study at signup · email/files/accounting/crm = granted connections · harvest = AI memory pull.
+   Unfilled slots after build -> TAYLOR asks the gap conversationally in Claude, never a form. */
+const COVERAGE=[
+ {t:"What the business does, who buys, why they win",src:"deepdive+harvest"},
+ {t:"Stage, geography, origin story",src:"deepdive+harvest"},
+ {t:"Entities, ownership, structure relations",src:"deepdive+files+harvest"},
+ {t:"Team, outside bench, key relationships",src:"email+harvest+deepdive"},
+ {t:"Operating rhythm, recurring processes, meeting load",src:"email+calendar+harvest"},
+ {t:"How commitments are tracked, where admin piles up",src:"email+files+harvest"},
+ {t:"Money rhythm: how cash arrives and leaves, reporting cadence",src:"accounting+harvest"},
+ {t:"Cash tightness patterns, open money decisions",src:"accounting+harvest"},
+ {t:"Systems inventory: email, calendar, files, books, CRM, industry software",src:"connections+harvest"},
+ {t:"Where deals and follow-ups slip",src:"email+crm+harvest"}
+];
+const UNDERSTANDING={
+ biz:"Sample: a storm-restoration roofing company serving DFW homeowners, roughly 200 roofs a year, insurance-led revenue with growing retail work. At integration this paragraph is drafted live from your web presence, your connections, and your memory pull.",
+ entities:[{n:"Reeves Roofing LLC",d:"Texas operating company (sample)"},{n:"MR Holdings LLC",d:"real estate holdco, owns the shop (sample)"}],
+ people:[{n:"Dana",d:"office manager, keeps the wheels on (sample)"},{n:"Luis",d:"crew lead (sample)"},{n:"Bill, CPA",d:"outside books, quarterly (sample)"}],
+ money:"Sample: insurance draws plus homeowner deductibles; crews paid Friday; cash tightens each winter.",
+ systems:["Gmail","Google Calendar","QuickBooks Online","JobNimbus","Xactimate"]};
+window.UNDERSTANDING=UNDERSTANDING;
+const GATE=[
+ {k:"g1",t:"Does your business hold customers' financial account data, health information, or legally privileged material?"},
+ {k:"g2",t:"Are you in a regulated industry (financial advisory, healthcare, legal, insurance)?"},
+ {k:"g3",t:"Would you like a private vault: a space sealed off where even your COB cannot reach?",sub:"If yes, we build you a Confidential Vault you own outright. The block is technically enforced, and we prove it to you before go-live."}];
+const HARVEST_PROMPT=`You are about to perform a COMPLETE KNOWLEDGE HARVEST of everything you know about me from our entire history together: your saved memories, our past conversations, my custom instructions, and every preference or fact you have absorbed. The output will be used to build my permanent AI executive system, so completeness and accuracy matter more than polish.
+
+OPERATING RULES (binding):
+1. Truth labels. Tag every load-bearing claim as one of: [DOCUMENTED-MEM] (in your saved memory), [DOCUMENTED-CHAT] (found by searching our past conversations, if you can), [INFERRED] (your read from patterns; say what it is based on), or [UNKNOWN] (you do not know; never guess). Fabricating anything is the one unforgivable failure.
+2. If you can search past conversations or chat history, do so. It is a richer source than saved memory alone.
+3. No sensitive identifiers. Never output Social Security numbers, full account numbers, card numbers, passwords, or exact balances. Refer to accounts by nickname only.
+4. Completeness over brevity. If you know 40 facts, give 40 facts. Do not summarize away detail.
+5. Where you are thin, say so. End every deliverable with a "GAPS" list: what a chief of staff would want that you cannot supply.
+6. Format. Every deliverable is a standalone markdown document: a # title, a one-line purpose, YAML front matter (deliverable name, date, confidence high/medium/low), then clear ## sections with bullet points. Sentence-level facts, one per bullet.
+
+DELIVERY (do it all in ONE pass, no waiting for me):
+- First produce MEMORY_INVENTORY.md: a numbered, near-verbatim enumeration of every saved memory you hold about me.
+- Then produce all ten deliverables below, in order.
+- PREFERRED: if you can create files for download (for example with your code, analysis, or file tools), write each deliverable as its own .md file and bundle everything into ONE zip archive named COB_BRIEFCASE.zip, then give me the download link.
+- INSIDE THAT ZIP, also include COB_BRIEFCASE.html: a single self-contained page that presents every deliverable beautifully, branded EXACTLY as follows. Background #FAF8F4 (warm paper, never pure white). Deep navy #042C53 for headlines and a top banner. Brass #EF9F27 as the ONLY accent color. Body text #2C2C2A. Headlines in the serif font Fraunces, body in Inter, small uppercase labels in JetBrains Mono with wide letter spacing (load all three from Google Fonts). Layout: a navy header band reading CHIEF OF BUSINESS · THE BRIEFCASE with today's date in mono; a summary strip with deliverable and fact counts; then one card per deliverable (white background, 1px #E5E3DE border, square corners) showing the title, a small confidence badge, collapsible sections for its contents, and any GAPS section highlighted with a brass left border. No em dashes anywhere in it. No external scripts; all content embedded inline so the page opens offline with a double click.
+- FALLBACK: if you cannot create files, deliver everything in continuous messages, and begin each deliverable with a marker line exactly like this: === FILE: IDENTITY_PROFILE.md ===
+- If length forces you to split across messages, continue automatically; do not stop to ask.
+
+THE TEN DELIVERABLES:
+
+1. IDENTITY_PROFILE.md
+Who I am: name, location, family facts you know, roles and titles, entities I own or lead, professional history, public footprint, how I describe myself, what I care about most. Include a "how I make decisions" section based on everything you have seen.
+
+2. VENTURES_AND_ENTITIES.md
+Every business, entity, deal, investment, and project you know of: legal structure, ownership stakes, status, key numbers mentioned, stage, what is in flight, what is stalled. One ## section per entity. Include deals or ideas I mentioned once and dropped, flagged as such.
+
+3. PEOPLE_MAP.md
+Every person you know in my world: name, relationship to me, role, organization, context of how they come up, current state of the relationship, and any open items between us. Group by category (family, partners, investors, advisors, counterparties, team, friends).
+
+4. WORKFLOWS_AND_PROCESSES.md
+How I actually work: recurring processes you have watched me run, how I handle email, meetings, follow-ups, content, sales, finance, and admin. What I do repeatedly, in what order, with what tools. Include the processes I have complained about or asked for help with more than once, and where the friction is.
+
+5. GOALS_VISION_VALUES.md
+My stated goals (short and long horizon), the vision behind them, my priorities as I have ranked or implied them, values I have expressed, lines I will not cross, and what winning looks like in my own words. Quote me where you can.
+
+6. DECISIONS_LOG.md
+Significant decisions I have made or worked through with you: the decision, when, the options weighed, what I chose, the reasoning, and anything left conditional. Include decisions I keep revisiting without closing, flagged as open decision debt.
+
+7. OPEN_LOOPS.md
+Every commitment, pending item, deadline, follow-up, or "I need to..." you have record of that was never confirmed closed. For each: what it is, who is waiting on it, any date attached, and last known status.
+
+8. PREFERENCES_AND_STYLE.md
+How I like to work with an AI and with people: communication style, formats I prefer, length and tone, things that irritate me, standing instructions I have given you, how I want pushback delivered, and every correction I have made to your behavior.
+
+9. TOOLS_AND_SYSTEMS.md
+My stack: every tool, platform, app, and system I have mentioned using (email, calendar, accounting, CRM, banking, project tools, AI tools, industry-specific software), how each is used, what is connected to what, and pain points with any of them.
+
+10. HANDOFF_BRIEF.md
+The synthesis: if you were briefing my new chief of staff on day one, the twenty things they must know, the three biggest risks on my plate, the three biggest opportunities, what to never do, and the first five actions you would tell them to take. Close with a master GAPS list across all deliverables and a completeness self-score (0 to 100) with one line of justification.
+
+Begin now.`;
+window.HARVEST_PROMPT=HARVEST_PROMPT;
+const HARVEST_PROMPT_URL=null; /* LOVABLE: serve the prompt verbatim as text at https://chiefofbusiness.ai/harvest-prompt.txt and set this const to that URL. When set, the provider buttons switch to click-and-send: they open the AI with a one-line pointer that fetches and executes the hosted instructions. */
+const CONNECTORS=[
+ {id:"cob",t:"Chief of Business",s:"Your COB's brain. This one comes first.",required:1,steps:[
+   "Open Claude and sign in (claude.ai or the desktop app).",
+   "Go to Settings, then Connectors.",
+   "Choose Add custom connector.",
+   "Paste this address: {{COB_CONNECTOR_URL}}",
+   "When the sign-in screen appears, use the email and password you created here today.",
+   "Approve the connection. You'll see Chief of Business appear in your connector list."]},
+ {id:"gmail",t:"Email",s:"So your COB can watch the inbox rhythm.",steps:["In Claude, open Settings, then Connectors.","Find Gmail (or your provider) in the directory and choose Connect.","Sign in with the email account you named in chapter 10 and approve."]},
+ {id:"gcal",t:"Calendar",s:"Your real schedule, protected.",steps:["Settings, then Connectors.","Find Google Calendar (or your provider) and choose Connect.","Approve access for the calendar your real schedule lives on."]},
+ {id:"drive",t:"Files (Drive, Box, or Dropbox)",s:"Where your documents actually live.",steps:["Settings, then Connectors.","Connect the file system you named in chapter 10.","Approve read access. Your COB references files, it never moves them without you."]},
+ {id:"books",t:"Accounting",s:"QuickBooks or your bookkeeping system.",steps:["Settings, then Connectors.","Find QuickBooks (or your system) and choose Connect.","Sign in and approve. Your COB reads the rhythm, never touches the money."]}];
+/* ============ ENGINE ============ */
+const COB={
+ state:{user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false},
+ KEY:"cob_onboarding_v1",
+ totalQ:CHAPTERS.reduce((a,c)=>a+c.qs.length,0),
+ RES:["#/consent","#/gate","#/reveal","#/plugin","#/harvest","#/world","#/ch/0/0","#/review","#/claude","#/connect","#/dashboard"],
+ J:[["The study","#/reveal"],["Connections","#/plugin"],["Memory pull","#/harvest"],["Your world, drafted","#/world"],["Only you","#/ch/0/0"],["Review","#/review"],["Claude","#/claude"],["Wire together","#/connect"],["Your build","#/dashboard"]],
+ stepDone(hash){const idx=this.RES.indexOf(hash==="#/ch/0/0"?"#/ch/0/0":hash);return idx>-1&&(this.state.reached||0)>idx;},
+ navItems(){const cur=location.hash||"#/welcome";
+  return this.J.map((s,i)=>{const on=cur.split("/")[1]===s[1].split("/")[1];
+   return `<button class="r-item ${on?"on":""} ${this.stepDone(s[1])?"done":""}" onclick="COB.navClose();COB.go('${s[1]}')"><span class="r-n">${this.stepDone(s[1])?"✓":i+1}</span><span>${s[0]}</span></button>`;}).join("");},
+ taylorBox(ctx,big){const id="tq-"+ctx.replace(/[^a-z0-9]/gi,"");
+  return `<div class="tay"><div class="t-l">ask taylor · your guide</div>
+   ${big?`<textarea id="${id}" placeholder="Ask anything about this step. TAYLOR answers on your dashboard."></textarea>`:`<input type="text" id="${id}" placeholder="Stuck? Ask TAYLOR anything..." onkeydown="if(event.key==='Enter')COB.askTaylor('${ctx}','${id}')">`}
+   <div class="t-row"><button class="btn2" style="padding:9px 16px;font-size:13px" onclick="COB.askTaylor('${ctx}','${id}')">Send to TAYLOR</button></div>
+   ${(this.state.taylor_qs||[]).filter(q=>q.ctx===ctx).map(q=>`<p class="t-hint">"${this.esc(q.q.slice(0,70))}" · with TAYLOR</p>`).join("")}</div>`;},
+ askTaylor(ctx,id){const el=document.getElementById(id);const v=(el&&el.value||"").trim();
+  if(!v){this.toast("Type the question first; TAYLOR reads every word.");return;}
+  this.state.taylor_qs=this.state.taylor_qs||[];this.state.taylor_qs.push({ctx,q:v.slice(0,500),at:new Date().toISOString()});
+  if(el)el.value="";this.save();this.render();/* LOVABLE: insert taylor_questions row; TAYLOR (connector agent) answers to dashboard */
+  this.toast("TAYLOR has it. The answer meets you on your dashboard.");},
+ navOpen(){document.getElementById('snav').innerHTML=`<p class="kicker" style="margin:8px 0 14px">your journey</p>${this.navItems()}${this.taylorBox("sidenav")}<p style="margin-top:16px;text-align:center"><button class="btn-ghost" style="color:var(--ash);font-size:11px" onclick="COB.clearFlow()">Clear my data</button></p>`;
+  document.getElementById('snav').classList.add('open');document.getElementById('snavBg').classList.add('open');},
+ navClose(){document.getElementById('snav').classList.remove('open');document.getElementById('snavBg').classList.remove('open');},
+ clearFlow(){this.navClose();this.openDrawer(`<p class="kicker">clear my data</p>
+  <h3 style="margin-bottom:8px">You are about to erase everything.</h3>
+  <p style="font-size:14px">This permanently removes from this device: every answer you've given, your briefcase and its deliverables, your uploaded file record, your progress, and your session. You would start again from the very beginning.</p>
+  <p style="font-size:14px">At integration this also files a deletion request against your account record, executed completely and confirmed when done. Erasure is your right; we just want you certain.</p>
+  <div class="notice"><b>This cannot be undone.</b> If you only want a break, just close the tab: everything saves itself and waits for you.</div>
+  <div class="field" style="margin-top:14px"><label for="clr-in">Type ERASE to confirm</label><input type="text" id="clr-in" placeholder="ERASE" autocomplete="off"></div>
+  <div class="q-actions"><button class="btn2" style="border-color:var(--err);color:var(--err)" onclick="COB.clearConfirm()">Erase everything</button>
+  <button class="btn-ghost" onclick="COB.closeDrawer()">Keep my work</button></div>`);},
+ clearConfirm(){const v=(document.getElementById('clr-in').value||"").trim();
+  if(v!=="ERASE"){this.toast("Type ERASE exactly to confirm. Anything else keeps your work safe.");return;}
+  try{localStorage.removeItem(this.KEY);}catch(e){}
+  this.state={user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false};
+  this.closeDrawer();this.go("#/welcome");this.render();/* LOVABLE: also insert deletion_request + purge tenant rows/bucket on confirm */
+  this.toast("Erased. This device holds nothing of yours.");},
+ resume(){if(!this.state.user){this.go("#/account");return;}
+  if(!this.state.consentAt){this.go("#/consent");return;}
+  const i=Math.max(this.state.reached||0,2);this.go(this.RES[Math.min(i,this.RES.length-1)]);},
+ save(){try{localStorage.setItem(this.KEY,JSON.stringify(this.state));}catch(e){}
+   const s=document.getElementById('saveState');document.getElementById('saveTxt').textContent="saved";s.classList.add('ok');
+   clearTimeout(this._st);this._st=setTimeout(()=>{s.classList.remove('ok');document.getElementById('saveTxt').textContent="autosave on";},1600);},
+ load(){try{const r=localStorage.getItem(this.KEY);if(r)Object.assign(this.state,JSON.parse(r));}catch(e){}},
+ answered(){return Object.keys(this.state.answers).filter(k=>!k.startsWith("fix_")&&String(this.state.answers[k]||"").trim()).length;},
+ pct(){return Math.round(100*this.answered()/this.totalQ);},
+ toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(this._tt);this._tt=setTimeout(()=>t.classList.remove('show'),2600);},
+ escalate(reason){this.state.escalated=true;this.save();/* LOVABLE: insert onboarding_escalations */
+   this.toast("Flagged to the build team. TAYLOR will track it for you.");},
+ esc(s){return String(s==null?"":s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));},
+ go(h){location.hash=h;},
+ /* ---- world extraction ---- */
+ lines(v){return String(v||"").split(/\n|;/).map(x=>x.trim()).filter(x=>x.length>1).slice(0,10);},
+ world(){const a=this.state.answers;const U=window.UNDERSTANDING||{};const w={entities:[],people:[],systems:[],priorities:[]};
+  w.entities=(U.entities||[]).map(e=>e.n);w.people=(U.people||[]).map(e=>e.n);w.systems=(U.systems||[]).slice(0,9);
+  this.lines(a.hq2).forEach(x=>w.priorities.push(x.replace(/^\d+[\.\)]\s*/,"").slice(0,34)));
+  w.priorities=w.priorities.slice(0,5);return w;},
+ chapterDone(c){return c.qs.every(q=>String(this.state.answers[q.k]||"").trim()||this.state.skipped[q.k]);},
+ /* ---- drawer ---- */
+ openDrawer(html){document.getElementById('drawer').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('drawerBg').classList.add('open');},
+ closeDrawer(){document.getElementById('drawer').classList.remove('open');document.getElementById('drawerBg').classList.remove('open');},
+ /* ---- speech ---- */
+ mic(btn,key){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){this.toast("Voice input isn't supported in this browser. Typing works.");return;}
+  if(this._rec){this._rec.stop();return;}
+  const r=new SR();this._rec=r;r.continuous=true;r.interimResults=false;btn.classList.add('rec');
+  const el=document.getElementById('inp-'+key);
+  r.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
+    el.value=(el.value?el.value+" ":"")+t.trim();this.state.answers[key]=el.value;this.save();};
+  r.onend=()=>{btn.classList.remove('rec');this._rec=null;};r.onerror=()=>{btn.classList.remove('rec');this._rec=null;};r.start();},
+ onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
+ copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
+ /* ---- router ---- */
+ route(){const h=(location.hash||"#/welcome").slice(2).split("/");return{p:h[0]||"welcome",a:h[1],b:h[2]};},
+ render(){const r=this.route();const app=document.getElementById('app');window.scrollTo(0,0);
+  document.getElementById('progBar').style.width=this.pct()+"%";
+  const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world, drafted",ch:"",review:"review everything",harvest:"the memory pull",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
+  let crumb=crumbs[r.p]??r.p;
+  if(r.p==="ch"){const c=CHAPTERS[+r.a];crumb=c?c.kicker:"";}
+  document.getElementById('crumb').textContent=crumb;
+  const _ri=this.RES.findIndex(h=>("#/"+r.p).startsWith(h.split("/").slice(0,2).join("/"))&&(r.p!=="ch"||h==="#/ch/0/0"));
+  if(_ri>-1&&_ri>(this.state.reached||0)){this.state.reached=_ri;this.save();}
+  const needsUser=["consent","gate","reveal","plugin","world","ch","review","harvest","claude","connect","done","dashboard"];
+  if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
+  if(r.p==="welcome")app.innerHTML=this.vWelcome();
+  else if(r.p==="account")app.innerHTML=this.vAccount();
+  else if(r.p==="consent")app.innerHTML=this.shell(this.vConsent(),null);
+  else if(r.p==="gate")app.innerHTML=this.shell(this.vGate(),null);
+  else if(r.p==="reveal")app.innerHTML=this.shell(this.vReveal(),null);
+  else if(r.p==="plugin")app.innerHTML=this.shell(this.vPlugin(),null);
+  else if(r.p==="world")app.innerHTML=this.shell(this.vUnderstanding(),null);
+  else if(r.p==="ch")app.innerHTML=this.shell(this.vQuestion(+r.a,+r.b),+r.a);
+  else if(r.p==="review")app.innerHTML=this.shell(this.vReview(),null);
+  else if(r.p==="harvest")app.innerHTML=this.shell(this.vHarvest(),null);
+  else if(r.p==="claude")app.innerHTML=this.shell(this.vClaude(),null);
+  else if(r.p==="connect")app.innerHTML=this.shell(this.vConnect(),null);
+  else if(r.p==="done")app.innerHTML=this.shell(this.vDone(),null);
+  else if(r.p==="dashboard")app.innerHTML=this.vDashboard();
+  else app.innerHTML=this.shell(`<div class="q-wrap"><p class="kicker">lost page · 404</p><h1>That room isn't in this building.</h1><p>Your work is safe. Head back to where you left off.</p><button class="btn" onclick="COB.go('#/dashboard')">Back to your build</button></div>`,null);
+  this.mobNav(r);const f=app.querySelector("textarea,input");if(f&&r.p==="ch")f.focus();},
+ mobNav(r){const m=document.getElementById('mobNav');
+  const inShell=["consent","gate","reveal","plugin","harvest","world","ch","review","claude","connect","done","dashboard"].includes(r.p);
+  if(!inShell){m.classList.add('off');return;}m.classList.remove('off');
+  m.innerHTML=`<button class="btn-ghost" style="padding:4px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase" onclick="COB.navOpen()">menu</button><span style="margin-left:auto">${this.pct()}% overall</span>`;},
+ shell(inner,chIdx){const w=this.world();
+  const rail=`<nav class="rail" aria-label="Journey">${this.navItems()}<div class="rule"></div>${this.taylorBox("rail")}</nav>`;
+  const chips=(arr,cls)=>arr.length?arr.map(x=>`<span class="chip ${cls||""}">${this.esc(x)}</span>`).join(""):`<span class="w-empty">appears as you answer</span>`;
+  const world=`<aside class="world" aria-label="Your world"><h4>your world · drafted, correctable</h4>
+   <div class="w-group"><div class="w-label">entities</div>${chips(w.entities,"navy")}</div>
+   <div class="w-group"><div class="w-label">people</div>${chips(w.people)}</div>
+   <div class="w-group"><div class="w-label">priorities</div>${chips(w.priorities)}</div>
+   <div class="w-group"><div class="w-label">systems</div>${chips(w.systems)}</div></aside>`;
+  return `<div class="stage">${rail}<main class="main">${inner}</main>${world}</div>`;},
+ back(){history.length>1?history.back():this.go("#/welcome");},
+ backbar(label){return `<div class="backbar"><button class="btn-ghost" onclick="COB.back()" aria-label="Go back">← Back</button><span style="color:#C9C2B4">·</span><span class="bb-note">${label||"everything autosaves"}</span></div>`;},
+ /* ---- views ---- */
+ vWelcome(){return `<div class="split">
+  <section class="pane-navy"><span class="chip-eyebrow">onboarding</span>
+   <h1>Meet your <span class="brass-u">Chief</span> of Business.</h1>
+   <p style="max-width:44ch">An executive operator who never forgets, never leaves, and gets sharper every day you run alongside it. What follows builds yours: from your real world, in your own words.</p>
+   <div class="mono-footer"><span>chief of business · onboarding</span><span>© 2026 COB Technologies LLC</span></div></section>
+  <section class="pane-form"><p class="kicker">step one</p><h2>Let's begin.</h2>
+   <p>Three acts: tell us your world, connect your systems, meet your COB. You can skip anything and come back to everything.</p>
+   <div class="q-actions">${this.state.user?`<button class="btn" onclick="COB.resume()">Continue where you left off</button>
+   <button class="btn2" onclick="COB.go('#/account')">Use a different account</button>`:`<button class="btn" onclick="COB.go('#/account')">Create your account</button>
+   <button class="btn2" onclick="COB.go('#/account')">I already have one</button>`}</div></section></div>`;},
+ vAccount(){return `<div class="split">
+  <section class="pane-navy"><span class="chip-eyebrow">your private record</span><h1>One account. Your whole <span class="brass-u">operation</span>.</h1>
+   <p style="max-width:44ch">This login becomes the key to your COB: your dashboard here, and the connection inside Claude later. One identity, everywhere.</p>
+   <div class="mono-footer"><span>chief of business · onboarding</span><span>© 2026 COB Technologies LLC</span></div></section>
+  <section class="pane-form">${this.backbar("one identity, everywhere")}
+   ${this.vAuthCard()}</section></div>`;},
+ vAuthCard(){const step=this._authStep||"email";const em=this.esc(this._authEmail||"");
+  const ICONS={
+   google:'<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.3h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#34A853" d="M12 24c3.2 0 5.9-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.1 0-5.8-2.1-6.8-5l-3.8 2.9C3.4 21.3 7.4 24 12 24z"/><path fill="#FBBC05" d="M5.2 14.4c-.3-.7-.4-1.5-.4-2.4 0-.8.1-1.6.4-2.4L1.4 6.7C.5 8.3 0 10.1 0 12s.5 3.7 1.4 5.3l3.8-2.9z"/><path fill="#EB4335" d="M12 4.7c2.2 0 3.7 1 4.6 1.8l3.3-3.3C17.9 1.2 15.2 0 12 0 7.4 0 3.4 2.7 1.4 6.7l3.8 2.9c1-2.9 3.7-4.9 6.8-4.9z"/></svg>',
+   apple:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M16.4 12.9c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.8-2-1.6-.2-3.1 1-3.9 1-.8 0-2.1-1-3.4-1-1.8 0-3.4 1-4.3 2.6-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.8 3.4-.8s2 .8 3.4.8c1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.7-1-2.8-4.2zM13.8 5c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.3-.6 3-1.5z"/></svg>',
+   microsoft:'<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="1" y="1" width="10" height="10" fill="#F25022"/><rect x="13" y="1" width="10" height="10" fill="#7FBA00"/><rect x="1" y="13" width="10" height="10" fill="#00A4EF"/><rect x="13" y="13" width="10" height="10" fill="#FFB900"/></svg>',
+   passkey:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="4.5"/><path d="M11.2 11.2 20 20"/><path d="M16.5 16.5 19 14"/><path d="M18.6 18.6 21 16.2"/></svg>',
+   sso:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="10" width="18" height="10" rx="0"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>'};
+  const prov=(id,label)=>`<button class="prov" onclick="COB.provider('${id}')">${ICONS[id]}<span>${label}</span></button>`;
+  const legal=`<p class="legal">By continuing, you acknowledge that you understand and agree to the <a href="https://chiefofbusiness.ai/terms" target="_blank" rel="noopener">Terms &amp; Conditions</a> and <a href="https://chiefofbusiness.ai/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</p>`;
+  if(step==="signup")return `<h2>Create your account</h2>
+   <div class="idchip">${em} <button class="btn-ghost" onclick="COB.authBack()">Change</button></div>
+   <div class="field"><label for="f-name">Full name</label><input type="text" id="f-name" placeholder="Jordan Avery" value="${this.esc(this.state.user?.name||"")}"></div>
+   <div class="field"><label for="f-pass">Create a password</label><input type="password" id="f-pass" placeholder="At least 10 characters"></div>
+   <button class="btn" onclick="COB.signup()">Create account</button>
+   ${legal}`;
+  if(step==="password")return `<h2>Welcome back</h2>
+   <div class="idchip">${em} <button class="btn-ghost" onclick="COB.authBack()">Change</button></div>
+   <div class="field"><label for="f-pass">Password</label><input type="password" id="f-pass" placeholder="Your password"></div>
+   <button class="btn" onclick="COB.signin()">Sign in</button>
+   ${legal}`;
+  return `<h2>Sign in or sign up</h2>
+   <div class="field"><label for="f-email">Email</label><input type="email" id="f-email" placeholder="Enter your email address..." value="${em}" onkeydown="if(event.key==='Enter')COB.emailContinue()"></div>
+   <button class="btn" style="width:100%" onclick="COB.emailContinue()">Continue</button>
+   <div class="divider">or continue with</div>
+   <div class="prov-grid">${prov("google","Google")}${prov("apple","Apple")}${prov("microsoft","Microsoft")}${prov("passkey","Passkey")}${prov("sso","SSO")}</div>
+   <p class="hintline" style="margin-top:16px">New user? <a href="#" style="text-decoration:underline" onclick="event.preventDefault();COB._authStep='signup';COB._authEmail=document.getElementById('f-email')?document.getElementById('f-email').value.trim():'';COB.render()">Sign up</a></p>
+   ${legal}`;},
+ emailContinue(){const el=document.getElementById('f-email');const e=(el?el.value:"").trim();
+  if(!e.includes("@")||e.length<5){this.toast("Enter a real email address to continue.");return;}
+  this._authEmail=e;this._authStep=(this.state.user&&this.state.user.email===e)?"password":"signup";this.render();},
+ provider(id){const n={google:"Google",apple:"Apple",microsoft:"Microsoft",passkey:"Passkey",sso:"Single sign-on"}[id];
+  this.toast(n+" sign-in goes live at integration. Use email in this preview.");/* LOVABLE: supabase.auth.signInWithOAuth / passkey / SAML per provider */},
+ authBack(){this._authStep="email";this.render();},
+ signup(){const n=document.getElementById('f-name').value.trim(),p=document.getElementById('f-pass').value,e=this._authEmail||"";
+  if(!n){this.toast("Your name gets you in.");return;}
+  if(p.length<10){this.toast("Give the password at least 10 characters.");return;}
+  this.state.user={name:n,email:e};this.save();/* LOVABLE: supabase auth signUp + onboarding_tenants insert */
+  this.go("#/consent");},
+ signin(){const p=document.getElementById('f-pass').value;
+  if(p.length<10){this.toast("That password looks short.");return;}
+  /* LOVABLE: supabase auth signInWithPassword */
+  this.toast("Welcome back, "+this.esc((this.state.user?.name||"").split(" ")[0])+".");
+  this.resume();},
+ vConsent(){return `<div class="q-wrap">${this.backbar()}
+  <p class="kicker">consent · scope</p><h1>What we build from, and what we never touch.</h1>
+  <p>Plain terms before anything else: you decide what your COB can see. Nothing here asks for account numbers or passwords, and you can revoke access at any time.</p>
+  <div class="card" style="max-height:220px;overflow:auto;font-size:var(--t-sm);color:#6B665B"><p><b>CONSENT AGREEMENT TEXT PENDING LEGAL FINAL.</b></p><p>This placeholder is replaced by the executed consent and named-scope agreement. It will state: what is in scope, what is out of bounds, how confidential material is handled, and your right to revoke.</p></div>
+  <div class="field" style="margin-top:16px"><label for="c-name">Type your full name to agree</label><input type="text" id="c-name" placeholder="${this.esc(this.state.user?.name||"Your full legal name")}" value="${this.esc(this.state.consentName)}"></div>
+  <button class="btn" onclick="COB.consent()">I agree, continue</button>
+  <p class="hintline" style="margin-top:14px">encrypted in transit and at rest · never trains a model · isolated to your workspace · revoke anything in one click</p></div>`;},
+ consent(){const v=document.getElementById('c-name').value.trim();if(v.length<4){this.toast("Type your full name to sign.");return;}
+  this.state.consentName=v;this.state.consentAt=new Date().toISOString();this.save();this.go("#/gate");},
+ vGate(){const g=this.state.gate;
+  return `<div class="q-wrap">${this.backbar()}
+  <p class="kicker">three quick questions</p><h1>Three questions before we start.</h1>
+  <p class="q-why">These route your setup correctly. Honest answers here protect you later.</p>
+  <div class="notice"><b>Your data is protected as company policy.</b> Everything is encrypted in transit and at rest. Nothing you share is ever used to train any model. Your workspace is isolated to you alone, every consequential action waits for your approval, and any connection can be revoked in one click. Not a promise on a page: the architecture.</div>
+  ${GATE.map(q=>`<div style="margin-bottom:20px"><p style="font-weight:500;color:var(--navy);margin-bottom:8px">${this.esc(q.t)}</p>${q.sub?`<p style="font-size:13px;color:var(--ash);margin:0 0 8px">${this.esc(q.sub)}</p>`:""}
+   <div class="choices"><button class="choice ${g[q.k]==="yes"?"on":""}" onclick="COB.gateSet('${q.k}','yes')">Yes</button>
+   <button class="choice ${g[q.k]==="no"?"on":""}" onclick="COB.gateSet('${q.k}','no')">No</button></div></div>`).join("")}
+  ${GATE.some(q=>g[q.k]==="yes")?`<div class="notice"><b>Protected lane engaged, automatically.</b> Your setup now includes the Confidential Vault and restricted-scope handling. Nothing pauses: your COB simply builds with stricter walls, and proves the vault block to you before go-live.</div>`:""}
+  <button class="btn" ${GATE.every(q=>g[q.k])?"":"disabled"} onclick="COB.gateNext()">Continue</button></div>`;},
+ gateSet(k,v){this.state.gate[k]=v;this.save();this.render();},
+ gateNext(){const yes=GATE.some(q=>this.state.gate[q.k]==="yes");
+  if(yes&&!this.state.escalated){this.state.escalated=true;this.save();/* LOVABLE: silent onboarding_escalations insert; telemetry for ops, NEVER a stop */}
+  this.go("#/reveal");},
+ vReveal(){const dom=this.esc((this.state.user?.email||"").split("@")[1]||"your company");
+  return `<div class="q-wrap">${this.backbar("we come prepared")}
+  <p class="kicker">onboarding 00 · we come prepared</p>
+  <h1>We don't start with a blank page.</h1>
+  <p>The moment you signed up, your COB's research went to work on <b style="color:var(--ink)">${dom}</b>: your web presence, your market, your competitors, what the public record says about your business.</p>
+  <div class="card"><p class="kicker" style="margin-bottom:10px">assembling now</p>
+   <p style="margin:0 0 8px">Company footprint and web presence</p>
+   <p style="margin:0 0 8px">Market position and the players around you</p>
+   <p style="margin:0">What the public record already tells us</p>
+   <div class="hairline"><i></i></div>
+   <p class="hintline" style="margin:0">this study runs live at integration · your COB reviews it with you before it counts</p></div>
+  <p>So the questions ahead are fewer than you'd expect. We only ask what the record can't tell us.</p>
+  <div class="q-actions"><button class="btn" onclick="COB.go('#/plugin')">Keep going</button></div></div>`;},
+ vPlugin(){return `<div class="q-wrap">${this.backbar("build your corner")}
+  <p class="kicker">onboarding 00 · build your corner</p>
+  <h1>Not just in your corner. <span class="brass-u">Building</span> your corner.</h1>
+  <p>Here's the honest trade: the more your COB can see, the more it can carry. Email shows the rhythm of your commitments. Files show the record. Accounting shows the heartbeat. Every connection you grant makes your COB less of an assistant and more of an operator.</p>
+  <div class="notice"><b>And the ground rules never move.</b> Encrypted in transit and at rest. Never used to train any model. Isolated to your workspace alone. Consequential actions wait for your approval. Revoke any connection, any time, in one click.</div>
+  <p style="margin-top:16px"><b style="color:var(--ink)">If your business runs on it, your COB can reach it.</b> The major platforms connect directly. More than 7,000 business apps connect through our bridge layer. And for anything with an API, including your own internal databases, we build the connection to order.</p>
+  <div class="grid2">
+   <div class="wcard"><div class="wc-k">email + calendar</div><div class="wc-t">The rhythm</div><div class="wc-s">Gmail, Outlook, Microsoft 365, Google Calendar. Commitments, follow-ups, the threads that carry your business.</div></div>
+   <div class="wcard"><div class="wc-k">files + documents</div><div class="wc-t">The record</div><div class="wc-s">Drive, SharePoint, OneDrive, Box, Dropbox, Egnyte. Documents stay where they live; your COB learns the map.</div></div>
+   <div class="wcard"><div class="wc-k">accounting + payroll</div><div class="wc-t">The heartbeat</div><div class="wc-s">QuickBooks, Xero, NetSuite, Sage, FreshBooks, Gusto, ADP. Rhythm and health, never a hand on the money.</div></div>
+   <div class="wcard"><div class="wc-k">banking + commerce</div><div class="wc-t">The flow</div><div class="wc-s">Stripe, Square, PayPal, Shopify, bank feeds. What arrived, what cleared, what's coming.</div></div>
+   <div class="wcard"><div class="wc-k">crm + sales</div><div class="wc-t">The pipeline</div><div class="wc-s">Salesforce, HubSpot, Pipedrive, GoHighLevel, industry CRMs. Every deal, every follow-up, on the record.</div></div>
+   <div class="wcard"><div class="wc-k">projects + operations</div><div class="wc-t">The machine</div><div class="wc-s">Notion, Asana, Monday, ClickUp, Jira, Airtable. Work in flight, promises kept.</div></div>
+   <div class="wcard"><div class="wc-k">communications</div><div class="wc-t">The pulse</div><div class="wc-s">Slack, Teams, Zoom. Where decisions actually happen between meetings.</div></div>
+   <div class="wcard"><div class="wc-k">databases + custom</div><div class="wc-t">Your backbone</div><div class="wc-s">Postgres, MySQL, Supabase, Airtable, and the internal systems nobody else can touch: anything with an API, built to order.</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><p class="kicker" style="margin-bottom:8px">what does your business run on?</p>
+   <p style="font-size:14px;color:var(--ash);margin-bottom:10px">Name anything, common or obscure. Industry software, an old database, the tool your ops manager swears by. We wire what matters.</p>
+   <div style="display:flex;gap:10px;flex-wrap:wrap"><input type="text" id="syswish" placeholder="Type a system and press Enter..." style="flex:1;min-width:200px" onkeydown="if(event.key==='Enter')COB.sysAdd()"><button class="btn2" onclick="COB.sysAdd()">Add</button></div>
+   <div style="margin-top:10px">${(this.state.wishlist||[]).map(s=>`<span class="chip navy">${this.esc(s)}</span>`).join("")}</div></div>
+  <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/harvest')">I'm in. Let's build.</button>
+  <button class="btn-ghost" onclick="COB.go('#/harvest')">I'll decide connections later</button></div></div>`;},
+ vUnderstanding(){const U=window.UNDERSTANDING;const sec=(k,title,body)=>{const fix=this.state.answers["fix_"+k];
+  return `<div class="card" style="margin-bottom:16px"><p class="kicker" style="margin-bottom:8px">${title}</p>${body}
+   ${fix?`<div class="notice" style="margin-top:10px"><b>Your correction:</b> ${this.esc(fix)}</div>`:""}
+   <div class="q-actions" style="margin-top:10px">
+    <button class="btn2" onclick="COB.fixOpen('${k}')">${fix?"Edit correction":"Correct this"}</button>
+    <button class="btn-ghost" onclick="COB.toast('Confirmed. Your COB counts it.')">Looks right</button></div>
+   <div id="fx-${k}" style="display:none;margin-top:10px"><textarea id="ft-${k}" placeholder="Tell it straight. Your COB re-learns from this.">${this.esc(fix||"")}</textarea>
+    <div class="q-actions"><button class="btn2" onclick="COB.fixSave('${k}')">Save correction</button></div></div></div>`};
+  return `<div class="q-wrap" style="max-width:760px">${this.backbar("confirm and correct beats fill-in-the-blank")}
+  <p class="kicker">onboarding 01 · your world, drafted</p>
+  <h1>Your world, as your COB understands it.</h1>
+  <p>Assembled from the public record, your connections, and your memory pull. Nothing below came from a questionnaire. Correct anything, confirm what's right: this is the record your COB is built from. (In this preview the draft is a sample; at integration it is your business, drafted live.)</p>
+  ${sec("biz","the business",`<p style="margin:0">${this.esc(U.biz)}</p>`)}
+  ${sec("ent","entities",U.entities.map(e=>`<p style="margin:0 0 6px"><b style="color:var(--ink)">${this.esc(e.n)}</b> · ${this.esc(e.d)}</p>`).join(""))}
+  ${sec("ppl","people",U.people.map(e=>`<p style="margin:0 0 6px"><b style="color:var(--ink)">${this.esc(e.n)}</b> · ${this.esc(e.d)}</p>`).join(""))}
+  ${sec("mon","money rhythm",`<p style="margin:0">${this.esc(U.money)}</p>`)}
+  ${sec("sys","systems",`<p style="margin:0">${this.esc(U.systems.join(" · "))}</p>`)}
+  <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/ch/0/0')">Now the part only I can answer</button></div></div>`;},
+ sysAdd(){const el=document.getElementById('syswish');const v=(el.value||"").trim();if(!v)return;
+  this.state.wishlist=this.state.wishlist||[];if(!this.state.wishlist.some(x=>x.toLowerCase()===v.toLowerCase()))this.state.wishlist.push(v.slice(0,40));
+  el.value="";this.save();this.render();},
+ fixOpen(k){const el=document.getElementById('fx-'+k);el.style.display=el.style.display==='none'?'block':'none';const t=document.getElementById('ft-'+k);if(el.style.display==='block'&&t)t.focus();},
+ fixSave(k){const v=(document.getElementById('ft-'+k).value||'').trim();this.state.answers['fix_'+k]=v;this.save();this.render();},
+ vQuestion(ci,qi){const c=CHAPTERS[ci];if(!c)return "<p>Missing chapter.</p>";
+  if(qi>=c.qs.length)return this.vChapterEnd(ci);
+  const q=c.qs[qi];const val=this.state.answers[q.k]||"";
+  const input=q.choices?
+   `<div class="choices">${q.choices.map(ch=>`<button class="choice ${val===ch?"on":""}" onclick="COB.pick('${q.k}','${this.esc(ch)}',${ci},${qi})">${this.esc(ch)}</button>`).join("")}</div>`:
+   `<div class="q-input">${q.long?`<textarea id="inp-${q.k}" placeholder="${this.esc(q.ph||"")}" oninput="COB.type('${q.k}',this.value)">${this.esc(val)}</textarea>`:`<input type="text" id="inp-${q.k}" placeholder="${this.esc(q.ph||"")}" value="${this.esc(val)}" oninput="COB.type('${q.k}',this.value)" onkeydown="if(event.key==='Enter')COB.next(${ci},${qi})">`}
+   <button class="mic" title="Talk instead of type" aria-label="Voice input" onclick="COB.mic(this,'${q.k}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg></button></div>
+   <p class="hintline">rough notes are fine · your COB will tidy them ${q.long?"· press the mic and just talk":""}</p>`;
+  return `<div class="q-wrap">${this.backbar(c.kicker)}
+   <p class="q-count">chapter ${c.n} of 11 · question ${qi+1} of ${c.qs.length}</p>
+   ${qi===0?`<h2 style="margin-bottom:4px">${this.esc(c.title)}</h2><p class="q-why">${this.esc(c.why)}</p><div class="hairline"><i></i></div>`:""}
+   <p class="q-text">${this.esc(q.t)}</p>
+   ${input}
+   <div class="q-actions">
+     <button class="btn" onclick="COB.next(${ci},${qi})">Next</button>
+     <button class="btn-ghost" onclick="COB.skip('${q.k}',${ci},${qi})">Skip for now</button>
+     ${qi>0?`<button class="btn-ghost" onclick="COB.go('#/ch/${ci}/${qi-1}')">Previous question</button>`:""}
+   </div></div>`;},
+ type(k,v){this.state.answers[k]=v;delete this.state.skipped[k];this.save();},
+ pick(k,v,ci,qi){this.state.answers[k]=v;delete this.state.skipped[k];this.save();setTimeout(()=>this.next(ci,qi),180);},
+ skip(k,ci,qi){this.state.skipped[k]=1;this.save();this.next(ci,qi,true);},
+ next(ci,qi){this.go(`#/ch/${ci}/${qi+1}`);},
+ vChapterEnd(ci){const c=CHAPTERS[ci];const done=c.qs.filter(q=>String(this.state.answers[q.k]||"").trim()).length;
+  const pct=this.pct();const half=pct>=50&&pct<60;const last=ci===CHAPTERS.length-1;
+  return `<div class="q-wrap">${this.backbar()}
+  <p class="kicker">${this.esc(c.kicker)} · complete</p>
+  <h1>${this.esc(c.title)}: ${done} of ${c.qs.length} answered.</h1>
+  ${half?`<div class="milestone"><p class="kicker">halfway</p><p style="margin:0">Half your world is on the record. Most owners have never written this much truth down in one sitting.</p></div>`:""}
+  <div class="card">${c.qs.map(q=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/ch/${ci}/${c.qs.indexOf(q)}')">Edit</button></div>`).join("")}</div>
+  <div class="q-actions">${last?`<button class="btn" onclick="COB.go('#/review')">Review everything</button>`:`<button class="btn" onclick="COB.go('#/ch/${ci+1}/0')">Next chapter: ${this.esc(CHAPTERS[ci+1].title)}</button>`}
+  <button class="btn-ghost" onclick="COB.go('#/review')">Jump to full review</button></div></div>`;},
+ vReview(){const skipped=[];CHAPTERS.forEach((c,ci)=>c.qs.forEach((q,qi)=>{if(!String(this.state.answers[q.k]||"").trim())skipped.push({c,ci,q,qi});}));
+  return `<div class="q-wrap" style="max-width:760px">${this.backbar()}
+  <p class="kicker">review · everything</p><h1>Read it back. Change anything.</h1>
+  <p>${this.pct()}% answered. Every answer stays editable, now and after you finish.</p>
+  ${skipped.length?`<div class="notice"><b>${skipped.length} skipped.</b> Fine to leave them: your COB will circle back later. Or knock them out now: ${skipped.slice(0,6).map(s=>`<button class="btn-ghost" onclick="COB.go('#/ch/${s.ci}/${s.qi}')">${this.esc(s.q.t.slice(0,34))}...</button>`).join(" ")}</div>`:""}
+  ${CHAPTERS.map((c,ci)=>`<h3 style="margin-top:32px">${c.n} · ${this.esc(c.title)}</h3><div class="card">${c.qs.map((q,qi)=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/ch/${ci}/${qi}')">Edit</button></div>`).join("")}</div>`).join("")}
+  <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/claude')">Looks right, keep going</button></div></div>`;},
+ vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
+  const prov=(id,label)=>`<button class="prov" onclick="COB.provOpen('${id}')"><span>${label}</span></button>`;
+  const card=(d,i)=>`<div class="card" style="margin-bottom:12px;border-top:2px solid var(--ink)">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+      <p class="kicker" style="margin:0">${this.esc(d.title)}</p>
+      ${d.conf?`<span class="badge">confidence · ${this.esc(d.conf)}</span>`:""}
+      <span style="font-family:var(--mono);font-size:10px;color:var(--ash);letter-spacing:.14em">${d.facts} FACTS</span>
+      <button class="btn-ghost" style="margin-left:auto" onclick="COB.briefDrop(${i})">Remove</button></div>
+    ${d.sections.map(s=>`<details ${/gap/i.test(s.h)?"open style='border-left:2px solid var(--brass);padding-left:10px'":""}>
+      <summary style="cursor:pointer;font-weight:600;color:var(--ink);padding:8px 0">${this.esc(s.h||"Contents")} · ${s.items.length}</summary>
+      <div style="font-size:14px;color:var(--charcoal)">${s.items.map(it=>`<p style="margin:0 0 6px;padding-left:12px;border-left:1px solid var(--edge)">${this.esc(it)}</p>`).join("")}</div></details>`).join("")}
+  </div>`;
+  return `<div class="q-wrap" style="max-width:760px">${this.backbar("email is the record; this adds the memory")}
+  <p class="kicker">the memory pull</p><h1>Your AI already knows you. Let's collect it.</h1>
+  <p>The truest record of your business is your email, and your COB reads that rhythm through the connections you just granted. This step adds a second layer: everything your AI assistants have learned about you. Ten short documents, one prompt, and they become part of your COB's foundation.</p>
+  <h3>Step one · open your AI with the prompt in hand</h3>
+  <p style="font-size:14px;color:var(--ash)">Pick where your history lives. The prompt copies itself; you paste it into the new chat and send. Your AI then compiles everything in one pass and hands you a single briefcase zip to download. Give it a few minutes; it is writing your whole record. ChatGPT usually remembers the most; Claude can search your past conversations; Perplexity is optional and lightest.</p>
+  <div class="prov-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">${prov("chatgpt","ChatGPT")}${prov("claude","Claude")}${prov("perplexity","Perplexity")}</div>
+  ${this._provClicked?(this._provMode==="send"?`<div class="notice" style="margin-top:12px"><b>${this.esc(this._provClicked)} opened with its marching orders already in the message box.</b><ol class="steps" style="margin:8px 0 0"><li>Go to the new tab and press Enter (or the send arrow).</li><li>If it asks whether to proceed, say yes.</li><li>Let it work. Compiling your full briefcase takes a few minutes; it is writing your whole record.</li></ol></div>`:`<div class="notice" style="margin-top:12px"><b>${this.esc(this._provClicked)} is open in a new tab, and the full prompt is already copied for you.</b>
+   <ol class="steps" style="margin:8px 0 0">
+   <li>Go to the new tab. Sign in if it asks.</li>
+   <li>Find the message box (the typing area that says something like "Ask anything" or "Message"). Click once inside it.</li>
+   <li>Paste what we copied: hold <b>Cmd</b> and press <b>V</b> on Mac, or hold <b>Ctrl</b> and press <b>V</b> on Windows. A long block of instructions will appear. That is exactly right; don't edit it.</li>
+   <li>Press <b>Enter</b> (or the send arrow).</li>
+   <li>Let it work. Compiling your full briefcase takes a few minutes; it is writing your whole record. At the end it hands you a download named COB_BRIEFCASE.zip.</li></ol>
+   <div class="q-actions" style="margin-top:8px"><button class="btn2" style="padding:8px 14px;font-size:12px" onclick="COB.copyPrompt()">Copy the prompt again</button></div></div>`):""}
+  <details style="margin-top:12px"><summary style="cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep)">see the full prompt</summary>
+  <div class="copybox" style="margin-top:10px"><button class="copybtn" onclick="COB.copyPrompt()">Copy prompt</button>${this.esc(window.HARVEST_PROMPT)}</div></details>
+  <h3 style="margin-top:32px">Step two · bring back what it gives you</h3>
+  <p style="font-size:14px;color:var(--ash)">Drop the COB_BRIEFCASE.zip it gives you and watch everything unpack, or paste the text of any deliverable. Either way, the briefcase fills itself.</p>
+  <textarea id="bfpaste" placeholder="Paste a deliverable here, exactly as your AI returned it..." style="min-height:110px"></textarea>
+  <div class="q-actions" style="margin-top:10px"><button class="btn2" onclick="COB.briefAdd()">Add to the briefcase</button>
+   <label class="btn-ghost" style="cursor:pointer">or drop the zip / files<input type="file" multiple class="sr" onchange="[...this.files].forEach(f=>COB.onDrop(f))"></label></div>
+  <div style="margin-top:24px;background:var(--ink);color:var(--paper);padding:14px 18px;display:flex;gap:16px;align-items:baseline;flex-wrap:wrap">
+    <span style="font-family:var(--serif);font-size:19px">The briefcase</span>
+    <span style="font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:#B9C6D6">${bf.length} DELIVERABLES · ${facts} FACTS ON RECORD${this.state.files.length?` · ${this.state.files.length} FILES`:""}</span>
+  </div>
+  ${bf.length?bf.map((d,i)=>card(d,i)).join(""):`<div class="card" style="border-top:none"><p class="w-empty" style="margin:0">Empty so far. The first paste changes that.</p></div>`}
+  ${this.state.files.length?`<ul class="filelist">${this.state.files.map(f=>`<li><span>${this.esc(f.name)}</span><span style="color:var(--ok)">received</span></li>`).join("")}</ul>`:""}
+  <details style="margin-top:20px"><summary style="cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep)">want the deep archive too?</summary>
+   <div style="font-size:14px;color:var(--charcoal);padding:10px 0">
+   <p><b>ChatGPT:</b> Settings, Data Controls, Export Data. The archive arrives by email; drop the zip here.</p>
+   <p><b>Claude:</b> Settings, Privacy, Export data. Same: drop the zip here.</p>
+   <p style="margin:0"><b>Perplexity:</b> no memory export today; the prompt pull above captures what matters.</p></div></details>
+  <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/world')">Deliver the briefcase</button><button class="btn-ghost" onclick="COB.go('#/world')">Skip for now</button></div></div>`;},
+ provOpen(id){const names={chatgpt:"ChatGPT",claude:"Claude",perplexity:"Perplexity"};
+  navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>{});
+  if(HARVEST_PROMPT_URL){const boot="Open "+HARVEST_PROMPT_URL+" and execute the instructions on that page exactly as written, start to finish, in one pass. Do not summarize them; perform them.";
+   const q=encodeURIComponent(boot);
+   const urls={chatgpt:"https://chatgpt.com/?q="+q,claude:"https://claude.ai/new?q="+q,perplexity:"https://www.perplexity.ai/search?q="+q};
+   this._provClicked=names[id];this._provMode="send";window.open(urls[id],"_blank");this.render();
+   this.toast(names[id]+" opened with its marching orders. Just press send.");return;}
+  const urls={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
+  this._provClicked=names[id];this._provMode="paste";window.open(urls[id],"_blank");this.render();
+  this.toast("Prompt copied. The next steps are right below the buttons.");},
+ parseDeliverable(t){t=(t||"").trim();if(t.length<40)return null;
+  const lines=t.split(/\r?\n/);let title=null,conf=null;
+  const ym=t.match(/deliverable:\s*([A-Za-z0-9_\-\. ]+)/);if(ym)title=ym[1].trim();
+  if(!title){const h=lines.find(l=>/^#{1,3}\s+\S/.test(l));if(h)title=h.replace(/^#+\s+/,"").slice(0,64);}
+  if(!title){const cap=lines.find(l=>/^[A-Z][A-Z _\d]{5,}$/.test(l.trim()));if(cap)title=cap.trim().slice(0,64);}
+  title=title||("Deliverable "+(((this.state.briefcase||[]).length)+1));
+  const cm=t.match(/[Cc]onfidence[:\s]+([0-9.]+|high[^\n,;]*|medium[^\n,;]*|low[^\n,;]*)/);if(cm)conf=String(cm[1]).slice(0,28).trim();
+  const sections=[];let cur={h:"",items:[]};let infence=false;
+  for(const raw of lines){const s=raw.trim();
+   if(s.startsWith("```")){infence=!infence;continue;}
+   if(infence)continue;
+   const hd=/^#{1,4}\s+(.+)/.exec(s)||/^([A-Z])\.\s+([A-Z].{2,50})$/.exec(s)||(/^[A-Z][A-Z \d&\/\-]{4,48}$/.test(s)?[s,s]:null);
+   if(hd){if(cur.items.length)sections.push(cur);cur={h:(hd[2]?hd[1]+". "+hd[2]:hd[1]).toString().slice(0,64),items:[]};continue;}
+   const it=/^\d+[\.\)]\s+(.+)/.exec(s)||/^[-*•]\s+(.+)/.exec(s);
+   if(it){cur.items.push(it[1].slice(0,300));continue;}
+   if(s.length>2&&!/^deliverable:|^date:|^confidence:|^purpose:/i.test(s)&&!/^---/.test(s))cur.items.push(s.slice(0,300));}
+  if(cur.items.length)sections.push(cur);
+  const facts=sections.reduce((n,x)=>n+x.items.length,0);
+  if(!facts)return null;
+  return {title,conf,sections:sections.slice(0,20),facts,raw:t.slice(0,120000)};},
+ splitMulti(text){const t=(text||"").trim();if(!t)return[];
+  const m=t.split(/^\s*===\s*FILE:\s*(.+?)\s*===\s*$/m);
+  if(m.length>1){const out=[];for(let i=1;i<m.length;i+=2){const d=this.parseDeliverable(m[i+1]||"");if(d){d.title=m[i].replace(/\.md$/i,"").trim()||d.title;out.push(d);}}return out;}
+  const parts=t.split(/\n(?=```?yaml\s*\n?deliverable:|deliverable:\s*[A-Z])/);
+  if(parts.length>1){return parts.map(x=>this.parseDeliverable(x)).filter(Boolean);}
+  const d=this.parseDeliverable(t);return d?[d]:[];},
+ briefAdd(){const el=document.getElementById('bfpaste');const ds=this.splitMulti(el?el.value:"");
+  if(!ds.length){this.toast("Paste the whole document; that one looked empty.");return;}
+  this.state.briefcase=this.state.briefcase||[];ds.forEach(d=>this.state.briefcase.push(d));el.value="";this.save();this.render();
+  this.toast(ds.length===1?"Sealed into the briefcase: "+ds[0].title.slice(0,40):"Sealed "+ds.length+" deliverables into the briefcase.");/* LOVABLE: store raw to intake_files kind harvest_paste */},
+ async onZip(file){if(typeof JSZip==="undefined"){this.onFileSelected("harvest",file.name);this.toast("Zip noted. Unpacking happens at integration.");return;}
+  try{const z=await JSZip.loadAsync(file);let n=0;const names=Object.keys(z.files).filter(k=>!z.files[k].dir&&/\.(md|txt|markdown)$/i.test(k));
+   for(const k of names){const txt=await z.files[k].async("string");const d=this.parseDeliverable(txt);
+    if(d){d.title=k.split("/").pop().replace(/\.(md|txt|markdown)$/i,"")||d.title;this.state.briefcase=this.state.briefcase||[];this.state.briefcase.push(d);n++;}}
+   const widget=Object.keys(z.files).find(k=>/briefcase.*\.html$/i.test(k)||/\.html$/i.test(k));
+   this.state.files.push({kind:"harvest_zip",name:file.name,at:new Date().toISOString()});
+   if(widget)this.state.files.push({kind:"briefcase_widget",name:widget.split("/").pop(),at:new Date().toISOString()});
+   this.save();this.render();
+   this.toast(n?"Unpacked the briefcase: "+n+" deliverables sealed."+(widget?" Branded viewer received too.":""):"Zip received. No markdown inside; kept the file for the build team.");}
+  catch(e){this.onFileSelected("harvest",file.name);this.toast("Zip received; the build team will unpack it.");}},
+ onDrop(file){if(/\.zip$/i.test(file.name)){this.onZip(file);return;}
+  if(/\.(md|txt|markdown)$/i.test(file.name)){const r=new FileReader();r.onload=()=>{const d=this.parseDeliverable(String(r.result||""));
+   if(d){d.title=file.name.replace(/\.(md|txt|markdown)$/i,"");this.state.briefcase=this.state.briefcase||[];this.state.briefcase.push(d);this.save();this.render();this.toast("Sealed: "+d.title.slice(0,40));}
+   else this.onFileSelected("doc",file.name);};r.readAsText(file);return;}
+  this.onFileSelected("doc",file.name);},
+ briefDrop(i){this.state.briefcase.splice(i,1);this.save();this.render();},
+ vClaude(){const v=this.state.claude;
+  return `<div class="q-wrap">${this.backbar()}
+  <p class="kicker">where your COB lives</p><h1>Your COB lives inside Claude.</h1>
+  <p class="q-why">Claude is the room your COB works in. You'll add the Chief of Business connection to it in the next step.</p>
+  <p style="font-weight:500;color:var(--navy)">Do you have a Claude account?</p>
+  <div class="choices">
+   <button class="choice ${v==="yes"?"on":""}" onclick="COB.state.claude='yes';COB.save();COB.go('#/connect')">Yes</button>
+   <button class="choice ${v==="no"?"on":""}" onclick="COB.state.claude='no';COB.save();COB.render()">Not yet</button></div>
+  ${v==="no"?`<div class="notice"><b>Quick to fix.</b><ol class="steps"><li>Go to claude.ai and create an account with the email you use for work.</li><li>Choose a paid plan (connectors require one; the Max plan is the one we recommend).</li><li>Come back here and tap Yes.</li></ol></div>`:""}
+  </div>`;},
+ vConnect(){const st=this.state.connectors;const cobDone=st.cob==="done";
+  return `<div class="q-wrap" style="max-width:720px">${this.backbar()}
+  <p class="kicker">connect your world</p><h1>Now we wire it together.</h1>
+  <p>First the Chief of Business connection (that's your COB's brain). Then the systems you named. TAYLOR, your guide, is one question away at every step if anything fights you.</p>
+  ${CONNECTORS.map(c=>{const s=st[c.id];const locked=c.id!=="cob"&&!cobDone;
+   return `<div class="conn ${s==="done"?"done":""} ${this._open===c.id?"open":""}">
+    <button class="c-head" onclick="COB._open=COB._open==='${c.id}'?null:'${c.id}';COB.render()" ${locked?"disabled":""}>
+     <span class="c-ic">${c.t[0]}</span><span><div class="c-t">${this.esc(c.t)}</div><div class="c-s">${this.esc(c.s)}</div></span>
+     <span class="c-state">${s==="done"?"connected ✓":locked?"after the first one":c.required?"start here":"ready"}</span></button>
+    <div class="c-body"><ol class="steps">${c.steps.map(x=>`<li>${this.esc(x)}</li>`).join("")}</ol>
+     <div class="q-actions"><button class="btn2" onclick="COB.state.connectors['${c.id}']='done';COB.save();COB._open=null;COB.render()">Mark connected</button>
+     <button class="btn-ghost" onclick="COB.escalate('connector-${c.id}')">Flag this connector to the build team</button></div>${this.taylorBox("conn-"+c.id)}</div></div>`;}).join("")}
+  <div class="q-actions" style="margin-top:24px"><button class="btn" ${cobDone?"":"disabled"} onclick="COB.finish()">Finish onboarding</button>
+  <button class="btn-ghost" onclick="COB.go('#/done')">I'll connect the rest later</button></div></div>`;},
+ finish(){this.state.stage="files";this.save();this.go("#/done");},
+ vDone(){return `<div class="q-wrap">
+  <p class="kicker">all set</p><h1>Your build begins now.</h1>
+  <p>Everything you shared is with your COB's build team. From here: we assemble your record, build your COB's identity from your own words, and you get a note the moment it's ready to meet you inside Claude.</p>
+  <div class="milestone"><p class="kicker">what happens next</p><p style="margin:0">Watch the build move stage by stage on your dashboard. Most builds reach "review" within two business days.</p></div>
+  <button class="btn" onclick="COB.go('#/dashboard')">Open your dashboard</button></div>`;},
+ vDashboard(){const w=this.world();const a=this.state.answers;const stageIdx={intake:0,files:1,build:2,review:3,live:4}[this.state.stage]||0;
+  const stages=[["Intake complete","Your world, in your words, on the record."],["Files received","Your memory pull and documents are in the vault."],["Build in progress","Your COB's identity is being written from your answers."],["Review","You walk the finished build with our team before it goes live."],["Go live","You meet your COB inside Claude. First morning brief follows."]];
+  this._reg={};let _rid=0;const reg=h=>{const id="r"+(++_rid);this._reg[id]=h;return id};
+  const kpi=(v,l,d)=>`<button class="kpi" onclick="COB.openDrawer(COB._reg.${reg(d)})"><div class="k-v">${v}</div><div class="k-l">${l}</div></button>`;
+  const card=(k,t,s,body)=>`<button class="wcard" onclick="COB.openDrawer(COB._reg.${reg(body)})"><div class="wc-k">${k}</div><div class="wc-t">${t}</div><div class="wc-s">${s}</div></button>`;
+  const dw=(title,items,editHash)=>`<p class="kicker">${title}</p>${items.length?items.map(x=>`<p style="border-bottom:1px solid var(--line);padding:8px 0;margin:0">${this.esc(x)}</p>`).join(""):"<p class='w-empty'>Nothing here yet. Answer the chapter and it fills in.</p>"}<div class="q-actions"><button class="btn2" onclick="COB.closeDrawer();COB.go('${editHash}')">Edit these answers</button></div>`;
+  return `<div class="stage" style="grid-template-columns:minmax(0,1fr)"><main class="main" style="max-width:980px;margin:0 auto;width:100%">
+  ${this.backbar("your private build page")}
+  <p class="kicker">your build · ${this.esc(this.state.user?.name||"")}</p>
+  <h1>Your COB is in build. Here's what we already know.</h1>
+  <div class="kpis">
+   ${kpi(this.pct()+"%","intake complete",dw("intake",["You've answered "+this.answered()+" of "+this.totalQ+" questions.","Skipped questions become discovery items, never blockers."],"#/review"))}
+   ${kpi(this.answered()+"/"+this.totalQ,"only-you answered",dw("only you",CHAPTERS[0].qs.map(q=>q.t.slice(0,44)+(String(this.state.answers[q.k]||"").trim()?" · answered":" · open")),"#/ch/0/0"))}
+   ${kpi(String(this.state.files.length+(this.state.briefcase||[]).length),"files + pulls",dw("the briefcase",[...(this.state.briefcase||[]).map(d=>d.title+" · "+d.facts+" facts"),...this.state.files.map(f=>f.name+" · "+f.kind)],"#/harvest"))}
+   ${kpi(String(stageIdx+1)+"/5","build stage",dw("stage",[stages[stageIdx][0]+": "+stages[stageIdx][1]],"#/dashboard"))}
+  </div>
+  <h2>Your world</h2>
+  <div class="grid2">
+   ${card("entities",w.entities.length?w.entities.length+" on record":"Not yet named","The companies and structures you described",dw("entities",w.entities,"#/ch/2/0"))}
+   ${card("people",w.people.length?w.people.length+" key people":"Not yet named","Team, bench, and the relationships that carry it",dw("people",w.people,"#/ch/3/0"))}
+   ${card("priorities",w.priorities.length?"Top "+w.priorities.length:"Not yet ranked","What matters most right now, in your order",dw("priorities",w.priorities,"#/ch/7/0"))}
+   ${card("systems",w.systems.length?w.systems.length+" named":"Not yet named","The tools your operation runs on",dw("systems",w.systems,"#/ch/9/0"))}
+  </div>
+  <h2 style="margin-top:40px">The build</h2>
+  <ul class="tl">${stages.map((s,i)=>`<li class="${i<stageIdx?"done":i===stageIdx?"now":""}"><span class="t-dot"></span><span><b style="color:var(--navy)">${s[0]}</b><br><span style="font-size:var(--t-sm);color:#6B665B">${s[1]}</span></span></li>`).join("")}</ul>
+  <h2 style="margin-top:40px">TAYLOR</h2>
+  <p style="font-size:14px;color:var(--ash)">Your guide through the build and beyond. Ask anything; answers land right here.</p>
+  ${this.taylorBox("dashboard",1)}
+  <div class="rule" style="margin-top:40px"></div>
+  <p style="text-align:center"><button class="btn-ghost" style="color:var(--ash);font-size:12px" onclick="COB.clearFlow()">Clear my data</button></p>
+  </main></div>`;}
+};
+/* boot */
+COB.load();
+window.addEventListener('hashchange',()=>COB.render());
+window.addEventListener('online',()=>{document.body.classList.remove('offline');COB.toast("Back online. Everything synced.");});
+window.addEventListener('offline',()=>document.body.classList.add('offline'));
+window.addEventListener('keydown',e=>{if(e.key==="Escape")COB.closeDrawer();});
+document.getElementById('saveTxt').textContent="autosave on";
+COB.render();
+</script>
+</body>
+</html>
