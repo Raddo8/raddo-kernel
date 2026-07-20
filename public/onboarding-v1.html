@@ -859,7 +859,7 @@ Implements the 7 integration contract points using Supabase JS (UMD).
   // Question-key -> chapter number (best-effort, defaults to 1)
   function chapterFor(k){
     try{
-      const chs=window.CHAPTERS||[];
+      const chs=(typeof CHAPTERS!=="undefined"?CHAPTERS:[]);
       for(let i=0;i<chs.length;i++){for(const q of (chs[i].qs||[])){if(q.k===k)return chs[i].n||(i+1);}}
     }catch(e){}
     return 1;
