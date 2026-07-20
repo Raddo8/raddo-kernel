@@ -347,7 +347,7 @@ The synthesis: if you were briefing my new chief of staff on day one, the twenty
 
 Begin now.`;
 window.HARVEST_PROMPT=HARVEST_PROMPT;
-const HARVEST_PROMPT_URL=null; /* LOVABLE: serve the prompt verbatim as text at https://chiefofbusiness.ai/harvest-prompt.txt and set this const to that URL. When set, the provider buttons switch to click-and-send: they open the AI with a one-line pointer that fetches and executes the hosted instructions. */
+const HARVEST_PROMPT_URL="https://chiefofbusiness.ai/harvest-prompt.txt"; /* LOVABLE WIRED: served verbatim at /harvest-prompt.txt · provider buttons now click-and-send. */
 const CONNECTORS=[
  {id:"cob",t:"Chief of Business",s:"Your COB's brain. This one comes first.",required:1,steps:[
    "Open Claude and sign in (claude.ai or the desktop app).",
