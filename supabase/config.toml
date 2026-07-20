@@ -66,3 +66,6 @@ verify_jwt = true
 
 [functions.send-invoice-email]
 verify_jwt = true
+
+[functions.tenant-status]
+verify_jwt = false
