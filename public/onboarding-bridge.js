@@ -134,7 +134,7 @@
       var timedOut = false;
       var timer = setTimeout(function () {
         timedOut = true;
-        markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+        markMostRecentUnanswered(TAYLOR_SNAG);
       }, TIMEOUT_MS);
       try {
         var s = await sb.auth.getSession();
