@@ -6,7 +6,7 @@
  * OAuth providers are left on their current in-file preview behavior.
  */
 (function () {
-  console.log("[bridge] loaded");
+  // console-quiet by default; the file's own toasts remain the client signal.
   function getCOB() {
     try { return new Function("return typeof COB!=='undefined'?COB:null")(); } catch(e){ return null; }
   }
