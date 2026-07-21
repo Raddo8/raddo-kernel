@@ -610,7 +610,10 @@ const COB={
    clearTimeout(this._st);this._st=setTimeout(()=>{s.classList.remove('ok');document.getElementById('saveTxt').textContent="autosave on";},1600);},
  load(){try{const r=localStorage.getItem(this.KEY);if(r)Object.assign(this.state,JSON.parse(r));}catch(e){}},
  answered(){return Object.keys(this.state.answers).filter(k=>!k.startsWith("fix_")&&String(this.state.answers[k]||"").trim()).length;},
- pct(){return Math.round(100*this.answered()/this.totalQ);},
+ pct(){const steps=this.J.map(x=>x[1]);const done=steps.filter(hh=>this.stepDone(hh)).length;
+  const pre=(this.state.consentAt?1:0)+(GATE.every(q=>this.state.gate[q.k])?1:0);
+  const total=steps.length+2;return Math.round(100*Math.min(total,done+pre)/total);},
+ firePct(){return Math.round(100*this.answered()/this.totalQ);},
  toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(this._tt);this._tt=setTimeout(()=>t.classList.remove('show'),2600);},
  escalate(reason){this.state.escalated=true;this.save();/* LOVABLE: insert onboarding_escalations */
    this.toast("Flagged to the build team. TAYLOR will track it for you.");},
