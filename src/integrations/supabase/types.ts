@@ -1208,6 +1208,7 @@ export type Database = {
           created_at: string
           current_step: string
           id: string
+          state: Json | null
           status: string
           step0_flags: Json
           tenant_key: string
@@ -1221,6 +1222,7 @@ export type Database = {
           created_at?: string
           current_step?: string
           id?: string
+          state?: Json | null
           status?: string
           step0_flags?: Json
           tenant_key: string
@@ -1234,6 +1236,7 @@ export type Database = {
           created_at?: string
           current_step?: string
           id?: string
+          state?: Json | null
           status?: string
           step0_flags?: Json
           tenant_key?: string
