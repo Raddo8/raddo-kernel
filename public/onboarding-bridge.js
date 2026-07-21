@@ -6,9 +6,17 @@
  * OAuth providers are left on their current in-file preview behavior.
  */
 (function () {
-  try { console.log("[bridge] boot", !!window.COB, !!window.__SB); } catch(e){}
-  if (!window.COB || !window.__SB) { console.log("[bridge] abort no COB/SB"); return; }
-  var sb = window.__SB;
+  var tries = 0;
+  function boot() {
+    if (!window.COB || !window.__SB) {
+      if (++tries > 100) { console.log("[bridge] gave up"); return; }
+      return setTimeout(boot, 50);
+    }
+    install(window.__SB);
+  }
+  boot();
+  function install(sb) {
+
 
 
   var HYDRATED = false;
