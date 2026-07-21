@@ -352,6 +352,34 @@
       if (v) askTaylorLive(ctx || "", v);
     };
 
+    // --- FIRESIDE reactions: wrap fireSend so TAYLOR reacts in one grounded sentence ---
+    var origFireSend = COB.fireSend && COB.fireSend.bind(COB);
+    COB.fireSend = function (k) {
+      var before = (COB.state.answers && COB.state.answers[k]) || "";
+      if (origFireSend) { try { origFireSend(k); } catch (e) {} }
+      var after = (COB.state.answers && COB.state.answers[k]) || "";
+      if (!after || after === before) return; // nudge/frustration/no-op
+      (async function () {
+        try {
+          var s = await sb.auth.getSession();
+          var user = s.data.session && s.data.session.user;
+          if (!user) return;
+          if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+          var instr = "React in ONE grounded sentence (under 25 words) to what the client just shared, as TAYLOR: specific to their words, warm, no questions, no advice, no em dashes. Client said: " + after;
+          var r = await sb.functions.invoke("taylor-chat", {
+            body: { question: instr, page_ctx: "fireside-reaction:" + k, tenant_id: TENANT ? TENANT.id : null },
+          });
+          var reaction = r && r.data && r.data.answer;
+          if (!reaction) return;
+          COB.state.fireReactions = COB.state.fireReactions || {};
+          COB.state.fireReactions[k] = String(reaction).trim();
+          try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+          try { COB.save(); } catch (e) {}
+          try { COB.render(); } catch (e) {}
+        } catch (e) { /* silent per spec */ }
+      })();
+    };
+
     // --- deletion request (schema: tenant_id, requested_by, status) ---
     var origClearConfirm = COB.clearConfirm.bind(COB);
     COB.clearConfirm = async function () {
