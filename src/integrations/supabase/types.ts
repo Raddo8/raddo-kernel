@@ -1906,6 +1906,8 @@ export type Database = {
       }
       taylor_questions: {
         Row: {
+          answer: string | null
+          answered_at: string | null
           context: string
           created_at: string
           id: string
@@ -1914,6 +1916,8 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          answer?: string | null
+          answered_at?: string | null
           context?: string
           created_at?: string
           id?: string
@@ -1922,6 +1926,8 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          answer?: string | null
+          answered_at?: string | null
           context?: string
           created_at?: string
           id?: string
