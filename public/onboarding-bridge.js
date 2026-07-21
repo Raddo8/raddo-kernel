@@ -14,11 +14,10 @@
   function boot() {
     var COB = getCOB();
     if (!COB || !window.__SB) {
-      if (++tries > 100) { console.log("[bridge] gave up", !!COB, !!window.__SB); return; }
+      if (++tries > 100) return;
       return setTimeout(boot, 50);
     }
     window.COB = COB;
-    console.log("[bridge] installing");
     install(window.__SB);
   }
   boot();
