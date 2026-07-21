@@ -119,6 +119,26 @@ export default function OnboardingAdmin() {
           ))}
         </div>
 
+        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-dossier-paper-edge pt-4">
+          <span className="text-xs uppercase tracking-widest text-dossier-ash">Test hook</span>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              const section = window.prompt("Section (e.g. people, systems, goals):", "people") || "notes";
+              const fact = window.prompt("Fact text:", "Test fact " + new Date().toLocaleTimeString());
+              if (!fact) return;
+              const { error } = await (supabase as any).from("intake_facts").insert({
+                tenant_id: selected.id, source: "admin_test", section, fact,
+              });
+              if (error) toast.error(error.message);
+              else toast.success("Fact inserted. Watch the briefcase on /onboarding.");
+            }}
+          >
+            Insert test fact
+          </Button>
+        </div>
+
         <section className="mt-8">
           <h2 className="font-display text-xl font-bold">Per-chapter metrics</h2>
           <p className="text-xs text-dossier-ash mt-1">Total answering span: {Math.round(totalSpan / 60)} min · Files: {files.length}</p>
