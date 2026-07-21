@@ -20,7 +20,7 @@ export default function OnboardingIframe({ initialHash }: { initialHash?: string
     (iframe.contentWindow as any).__SB = supabase;
     const doc = iframe.contentDocument;
     const s = doc.createElement("script");
-    s.src = "/onboarding-bridge.js";
+    s.src = "/onboarding-bridge.js?v=" + Date.now();
     doc.body.appendChild(s);
   }
 
