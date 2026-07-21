@@ -5,7 +5,9 @@ const SYSTEM = `You are TAYLOR, the onboarding guide for a Chief of Business (CO
 
 THE JOURNEY, by page id (the [context: page:<id>] line names the page the client is on right now). Pre-journey: welcome (sign in or create the account), consent (read and agree to how COB studies their world), gate (the study gate: a handful of grounding questions). The nine steps: 1 reveal (The study: COB reveals what it already found about their business), 2 plugin (Connections: what COB can reach; the client names what their business runs on and it lands in the briefcase), 3 harvest (First connection: the client brings their AI history and files; paste a conversation, upload exports or a zip, or run the harvest prompt in their other AI; everything lands in the briefcase), 4 world (Your world, drafted: COB's draft of their business; confirm or correct each card), 5 fireside (Fireside chat: personal questions answered in their own words, kept verbatim), 6 review (Review: what the briefcase holds so far), 7 claude (Claude: connecting their Claude account), 8 connect (Wire together: the first live connection comes online), 9 dashboard (Your build: the build begins). Also: ch (the guided conversation chapters), done (wrap).
 
-RULES: the [context] line is ground truth. The client IS on that page. Never deny a page exists. Answer for that page: what it is for and the next concrete action on it. "What do I do next" means the next action on their current page, then the next journey step. Unrelated questions: just answer plainly. Genuinely ambiguous: ask one short grounding question.`
+RULES: the [context] line is ground truth. The client IS on that page. Never deny a page exists. Answer for that page: what it is for and the next concrete action on it. "What do I do next" means the next action on their current page, then the next journey step. Unrelated questions: just answer plainly. Genuinely ambiguous: ask one short grounding question.
+
+OUTPUT FORMAT: Respond with a JSON object: {"answer": "<your reply to the client, exactly as you would have written it>", "fact": {"section": "<one of: business, people, systems, money, notes>", "fact": "<one durable business fact the client just revealed, stated in third person, under 200 characters>"} }. Set "fact": null unless the client's message actually revealed a NEW durable fact about their business, people, systems, or money. Questions about the product, navigation, or this onboarding are NOT facts. Never invent a fact.`
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -43,6 +45,8 @@ Deno.serve(async (req) => {
 
     const userMsg = page_ctx ? `[context: ${page_ctx}]\n\n${question}` : question
 
+    const isReaction = page_ctx.startsWith('fireside-reaction')
+
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
@@ -50,6 +54,7 @@ Deno.serve(async (req) => {
         model: 'gpt-4o',
         temperature: 0.5,
         max_tokens: 350,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: userMsg },
@@ -61,16 +66,41 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'openai_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const j = await r.json()
-    const answer = String(j?.choices?.[0]?.message?.content || '').trim()
+    const content = String(j?.choices?.[0]?.message?.content || '').trim()
 
-    if (question_id && tenant_id) {
+    let answer = content
+    let fact: { section?: string; fact?: string } | null = null
+    try {
+      const parsed = JSON.parse(content)
+      if (parsed && typeof parsed.answer === 'string') answer = parsed.answer.trim()
+      if (!isReaction && parsed && parsed.fact && typeof parsed.fact === 'object'
+          && typeof parsed.fact.fact === 'string' && parsed.fact.fact.trim()) {
+        fact = { section: String(parsed.fact.section || 'notes'), fact: parsed.fact.fact.trim().slice(0, 200) }
+      }
+    } catch {
+      // fall back to raw content as answer; no fact
+    }
+
+    if ((fact && tenant_id) || (question_id && tenant_id)) {
       const admin = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       )
-      await admin.from('taylor_questions')
-        .update({ answer, answered_at: new Date().toISOString(), status: 'answered' })
-        .eq('id', question_id)
+      if (question_id && tenant_id) {
+        await admin.from('taylor_questions')
+          .update({ answer, answered_at: new Date().toISOString(), status: 'answered' })
+          .eq('id', question_id)
+      }
+      if (fact && tenant_id) {
+        try {
+          await admin.from('intake_facts').insert({
+            tenant_id,
+            source: 'taylor',
+            section: fact.section,
+            fact: fact.fact,
+          })
+        } catch { /* swallow */ }
+      }
     }
 
     return new Response(JSON.stringify({ answer }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
