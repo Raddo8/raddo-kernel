@@ -637,9 +637,12 @@ const COB={
   const el=document.getElementById(elId);
   r.onresult=e=>{let t="";for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;
     el.value=(el.value?el.value+" ":"")+t.trim();if(onText)onText(el.value);};
-  const done=()=>{btn.classList.remove('rec');this._rec=null;
-    if(stat){stat.innerHTML='mic off · click the mic again to add more, or send when ready';stat.style.color='var(--ash)';}};
-  r.onend=done;r.onerror=done;r.start();},
+  const AUTOSEND={"fire-in":()=>this.fireSend(),"tside-in":()=>this.sideSend(),"tdock-in":()=>this.dockSend()};
+  const done=(auto)=>{btn.classList.remove('rec');this._rec=null;
+    if(stat){stat.innerHTML='mic off';stat.style.color='var(--ash)';}
+    if(auto&&AUTOSEND[elId]&&el.value.trim()){if(stat){stat.innerHTML='sent · on the record';}setTimeout(()=>AUTOSEND[elId](),350);}};
+  r.onend=()=>done(true);r.onerror=()=>done(false);r.start();
+  if(stat&&AUTOSEND[elId]){stat.innerHTML='<span class="reddot"></span> listening... pause and it sends itself · click mic to stop';}},
  mic(btn,key){this.micTo(btn,'inp-'+key,v=>{this.state.answers[key]=v;this.save();});},
  onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
  copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
