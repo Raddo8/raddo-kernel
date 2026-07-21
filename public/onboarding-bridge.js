@@ -236,6 +236,13 @@
       return (j && j.text) || "";
     };
 
+    // --- COB DEEPDIVE: reveal-page dossier fan-out ---
+    window.COB_DEEPDIVE = async function (payload) {
+      const r = await sb.functions.invoke("deepdive-cob", { body: payload });
+      if (r.error) throw new Error("deepdive_failed");
+      return (r.data && r.data.brief) || null;
+    };
+
 
 
 
