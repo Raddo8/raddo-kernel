@@ -142,9 +142,11 @@
     }
 
     async function hydrateFromServer() {
+      if (HYDRATED) return;
+      HYDRATED = true;
       var s = await sb.auth.getSession();
       var user = s.data.session && s.data.session.user;
-      if (!user) return;
+      if (!user) { HYDRATED = false; return; }
       TENANT = await loadOrCreateTenant(user.id, user.email || "");
       if (TENANT && TENANT.state && typeof TENANT.state === "object") {
         var local = COB.state || {};
@@ -158,11 +160,11 @@
       if (!COB.state.user) {
         COB.state.user = { email: user.email, first: (user.user_metadata||{}).first_name||"", last: (user.user_metadata||{}).last_name||"", name: (user.user_metadata||{}).full_name || (user.email||"") };
       }
-      HYDRATED = true;
       rerender();
       subscribeRealtime();
       loadFactsInitial();
     }
+
 
     // --- persistence bridge ---
     var origSave = COB.save.bind(COB);
