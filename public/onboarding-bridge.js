@@ -93,25 +93,30 @@
         .subscribe();
     }
 
+    const TAYLOR_SNAG = "I hit a snag just now. Ask me again in a moment.";
     function applyTaylorAnswer(qid, answer) {
       var qs = COB.state.taylor_qs || [];
-      var hit = false;
+      var i;
       if (qid) {
-        for (var i = qs.length - 1; i >= 0; i--) {
-          if (qs[i] && qs[i]._id === qid && !qs[i].a) { qs[i].a = answer; hit = true; break; }
+        for (i = qs.length - 1; i >= 0; i--) {
+          if (qs[i] && qs[i]._id === qid) {
+            if (qs[i].a && qs[i].a !== TAYLOR_SNAG) return; // duplicate delivery (invoke + realtime): already applied, never fall through
+            qs[i].a = answer; // fills empty or replaces a snag placeholder with the late real answer
+            commitTaylorAnswer(answer);
+            return;
+          }
         }
+        return; // qid known but no matching local row: drop rather than mis-attach to a different question
       }
-      if (!hit) {
-        // fallback: attach to most recent unanswered
-        for (var j = qs.length - 1; j >= 0; j--) {
-          if (qs[j] && !qs[j].a) { qs[j].a = answer; hit = true; break; }
-        }
+      for (i = qs.length - 1; i >= 0; i--) { if (qs[i] && qs[i].a === answer) return; } // no qid: text-dedupe
+      for (i = qs.length - 1; i >= 0; i--) {
+        if (qs[i] && !qs[i].a) { qs[i].a = answer; commitTaylorAnswer(answer); return; }
       }
-      if (hit) {
-        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
-        rerender();
-        try { if (typeof COB.speak === "function") COB.speak(answer); } catch (e) {}
-      }
+    }
+    function commitTaylorAnswer(answer) {
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      rerender();
+      try { if (typeof COB.speak === "function") COB.speak(answer); } catch (e) {}
     }
 
     function markMostRecentUnanswered(text) {
@@ -129,7 +134,7 @@
       var timedOut = false;
       var timer = setTimeout(function () {
         timedOut = true;
-        markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+        markMostRecentUnanswered(TAYLOR_SNAG);
       }, TIMEOUT_MS);
       try {
         var s = await sb.auth.getSession();
@@ -162,11 +167,11 @@
         if (answer) {
           applyTaylorAnswer(qid, answer);
         } else {
-          markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+          markMostRecentUnanswered(TAYLOR_SNAG);
         }
       } catch (e) {
         clearTimeout(timer);
-        if (!timedOut) markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+        if (!timedOut) markMostRecentUnanswered(TAYLOR_SNAG);
       }
     }
 
