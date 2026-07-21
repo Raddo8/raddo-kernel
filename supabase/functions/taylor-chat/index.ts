@@ -45,6 +45,8 @@ Deno.serve(async (req) => {
 
     const userMsg = page_ctx ? `[context: ${page_ctx}]\n\n${question}` : question
 
+    const isReaction = page_ctx.startsWith('fireside-reaction')
+
     const r = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
@@ -52,6 +54,7 @@ Deno.serve(async (req) => {
         model: 'gpt-4o',
         temperature: 0.5,
         max_tokens: 350,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: SYSTEM },
           { role: 'user', content: userMsg },
@@ -63,16 +66,41 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'openai_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const j = await r.json()
-    const answer = String(j?.choices?.[0]?.message?.content || '').trim()
+    const content = String(j?.choices?.[0]?.message?.content || '').trim()
 
-    if (question_id && tenant_id) {
+    let answer = content
+    let fact: { section?: string; fact?: string } | null = null
+    try {
+      const parsed = JSON.parse(content)
+      if (parsed && typeof parsed.answer === 'string') answer = parsed.answer.trim()
+      if (!isReaction && parsed && parsed.fact && typeof parsed.fact === 'object'
+          && typeof parsed.fact.fact === 'string' && parsed.fact.fact.trim()) {
+        fact = { section: String(parsed.fact.section || 'notes'), fact: parsed.fact.fact.trim().slice(0, 200) }
+      }
+    } catch {
+      // fall back to raw content as answer; no fact
+    }
+
+    if ((fact && tenant_id) || (question_id && tenant_id)) {
       const admin = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       )
-      await admin.from('taylor_questions')
-        .update({ answer, answered_at: new Date().toISOString(), status: 'answered' })
-        .eq('id', question_id)
+      if (question_id && tenant_id) {
+        await admin.from('taylor_questions')
+          .update({ answer, answered_at: new Date().toISOString(), status: 'answered' })
+          .eq('id', question_id)
+      }
+      if (fact && tenant_id) {
+        try {
+          await admin.from('intake_facts').insert({
+            tenant_id,
+            source: 'taylor',
+            section: fact.section,
+            fact: fact.fact,
+          })
+        } catch { /* swallow */ }
+      }
     }
 
     return new Response(JSON.stringify({ answer }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
