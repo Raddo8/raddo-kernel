@@ -1,0 +1,1 @@
+ALTER TABLE public.onboarding_tenants ADD COLUMN IF NOT EXISTS state jsonb;
