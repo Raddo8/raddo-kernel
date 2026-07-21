@@ -646,6 +646,7 @@ const COB={
   if(stat&&AUTOSEND[elId]){stat.innerHTML='<span class="reddot"></span> listening... pause and it sends itself · click mic to stop';}},
  mic(btn,key){this.micTo(btn,'inp-'+key,v=>{this.state.answers[key]=v;this.save();});},
  onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
+ copyConnUrl(){try{navigator.clipboard.writeText("https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council").then(()=>this.toast("Connector address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
  copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
  /* ---- router ---- */
  route(){const h=(location.hash||"#/welcome").slice(2).split("/");return{p:h[0]||"welcome",a:h[1],b:h[2]};},
@@ -1017,7 +1018,7 @@ const COB={
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/claude')">Looks right, keep going</button></div></div>`;},
  vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
   const PROV_URLS={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
-  const ftab=(id,label,num)=>`<a class="ftab ${this._provClicked===label?"on":""}" role="tab" aria-selected="${this._provClicked===label}" href="${PROV_URLS[id]}" target="_blank" rel="noopener noreferrer" onclick="COB.provPrep('${id}')"><span class="fn">${num}</span>${label}</a>`;
+  const ftab=(id,label,num)=>`<a class="ftab ${this._provClicked===label?"on":""}" role="tab" aria-selected="${this._provClicked===label}" href="${PROV_URLS[id]}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" onclick="COB.provPrep('${id}')"><span class="fn">${num}</span>${label}</a>`;
   const card=(d,i)=>`<div class="card" style="margin-bottom:12px;border-top:2px solid var(--ink)">
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
       <p class="kicker" style="margin:0">${this.esc(d.title)}</p>
@@ -1044,12 +1045,18 @@ const COB={
   </div>`:`
   <div class="card" style="border-left:3px solid var(--brass)">
    <div class="steps-c">
-    <div class="stc"><span class="stn">1</span><span>Open Claude, then <b>Settings → Connectors</b>.</span></div>
-    <div class="stc"><span class="stn">2</span><span>Add <b>Chief of Business</b> and sign in with this account. One identity, everywhere.</span></div>
-    <div class="stc"><span class="stn">3</span><span>Say hello. TAYLOR takes it from there, and the briefcase fills as you talk.</span></div>
+    <div class="stc"><span class="stn">1</span><span>Open Claude's connector settings with the button below.</span></div>
+    <div class="stc"><span class="stn">2</span><span>Find <b>Add custom connector</b> (under Connectors).</span></div>
+    <div class="stc"><span class="stn">3</span><span>Name it <b>Chief of Business</b> and paste the connector address. Copy it here:</span></div>
    </div>
+   <div class="copybox" style="margin-top:10px;font-size:12px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button>https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council</div>
+   <div class="steps-c" style="margin-top:10px">
+    <div class="stc"><span class="stn">4</span><span>Click <b>Add</b>, then <b>Connect</b>, and sign in with this account. One identity, everywhere.</span></div>
+    <div class="stc"><span class="stn">5</span><span>Say hello. TAYLOR takes it from there, and the briefcase fills as you talk. Then come back and press I'm connected.</span></div>
+   </div>
+   <p class="hintline" style="margin:10px 0 0">using ChatGPT instead? its connector home is <a href="https://chatgpt.com/plugins" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" style="color:var(--brass-deep)">chatgpt.com/plugins</a></p>
    <div class="q-actions" style="margin-top:14px">
-    <a class="btn" href="https://claude.ai/settings/connectors" target="_blank" rel="noopener">Open Claude connectors</a>
+    <a class="btn" href="https://claude.ai/new#settings/customize-connectors" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Open Claude connectors</a>
     <button class="btn2" onclick="COB.firstConnected()">I'm connected</button>
    </div>
   </div>`}
