@@ -343,7 +343,7 @@ body.offline .offline{display:block}
 input.jsaved,textarea.jsaved{animation:flash 1s ease both}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .btn:active,.btn2:active,.prov:active{transform:scale(.98)}
-.btn,.btn2,.prov{transition:transform .12s ease,background .15s ease,border-color .15s ease}.prov-ai{border:1.5px solid var(--brass);color:var(--ink);font-weight:600;font-size:14px;letter-spacing:.01em}.prov-ai:hover{border-color:var(--brass-deep);background:rgba(239,155,37,.08)}.linky{color:var(--brass-deep);text-decoration:underline;text-underline-offset:3px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;cursor:pointer}.linky:hover{color:var(--brass)}
+.btn,.btn2,.prov{transition:transform .12s ease,background .15s ease,border-color .15s ease}.ftabs{display:flex;align-items:flex-end;gap:6px;margin-top:14px;position:relative;z-index:2}.ftab{flex:1 1 0;min-width:0;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:9px 14px 11px;color:var(--ash);background:#ECE8DF;border:1px solid var(--edge);border-radius:6px 6px 0 0;cursor:pointer;text-decoration:none;display:block;transition:color .15s var(--ease),background .15s var(--ease)}.ftab .fn{opacity:.55;margin-right:8px}.ftab:hover{color:var(--ink)}.ftab.on{color:var(--ink);background:var(--white);border-top:2px solid var(--brass);border-bottom:1px solid var(--white);padding-top:10px;padding-bottom:13px;margin-bottom:-1px}.fbody{position:relative;z-index:1;background:var(--white);border:1px solid var(--edge);border-radius:0 8px 8px 8px;padding:16px 18px}.linky{color:var(--brass-deep);text-decoration:underline;text-underline-offset:3px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;cursor:pointer}.linky:hover{color:var(--brass)}
 input,textarea{transition:border-color .15s ease,box-shadow .15s ease}
 input:focus,textarea:focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(239,159,39,.18);outline:none}
 .rsame .q-wrap,.rsame .chat,.rsame .split>.pane-form,.rsame .grid2 .wcard,.rsame .cb,.rsame .filelist li,.rsame .bp-row{animation:none!important}
@@ -573,7 +573,7 @@ const COB={
   if(!v){this.toast("Type or speak the question first.");return;}
   this.state.taylor_qs=this.state.taylor_qs||[];this.state.taylor_qs.push({ctx:"page:"+this.route().p,q:v.slice(0,500),at:new Date().toISOString()});
   el.value="";this.save();this.sideRender();/* LOVABLE: taylor_questions insert with page context; TAYLOR LIVE streams back here */},
- firstConnected(){this.state.connectors=this.state.connectors||{};this.state.connectors.cob="done";this.state.claude="yes";
+ firstConnected(){this.state.connectors=this.state.connectors||{};this.state.connectors.cob="done";this.state.claude="yes";this.state.connectedAt=new Date().toISOString();
   this.save();this.toast("Connected. TAYLOR is with you now.");this.render();
   /* LOVABLE: do NOT trust this click alone. Poll GET /functions/v1/tenant-status for a live connector handshake;
      flip connectors.cob on the server event. Then STREAM the first-conversation intake: every fact TAYLOR/COB
@@ -1016,7 +1016,8 @@ const COB={
   ${CHAPTERS.map((c,ci)=>`<h3 style="margin-top:32px">${c.n} · ${this.esc(c.title)}</h3><div class="card">${c.qs.map((q,qi)=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/fireside')">Edit</button></div>`).join("")}</div>`).join("")}
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/claude')">Looks right, keep going</button></div></div>`;},
  vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
-  const prov=(id,label)=>`<button class="prov prov-ai" onclick="COB.provOpen('${id}')"><span>${label}</span></button>`;
+  const PROV_URLS={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
+  const ftab=(id,label,num)=>`<a class="ftab ${this._provClicked===label?"on":""}" role="tab" aria-selected="${this._provClicked===label}" href="${PROV_URLS[id]}" target="_blank" rel="noopener noreferrer" onclick="COB.provPrep('${id}')"><span class="fn">${num}</span>${label}</a>`;
   const card=(d,i)=>`<div class="card" style="margin-bottom:12px;border-top:2px solid var(--ink)">
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
       <p class="kicker" style="margin:0">${this.esc(d.title)}</p>
@@ -1034,6 +1035,12 @@ const COB={
   <div class="card" style="border-left:3px solid var(--ok)">
    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you in claude</p>
    <p style="margin:0">Talk to TAYLOR there. Everything you two put on the record lands in the briefcase on the right, as you speak.</p>
+   <p class="hintline" style="margin:8px 0 0">on your confirmation${this.state.connectedAt?` · ${new Date(this.state.connectedAt).toLocaleString()}`:""} · verify it live below</p>
+   <div class="q-actions" style="margin-top:12px">
+    <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+    <button class="btn-ghost" onclick="COB.connDisconnect()">Disconnect</button>
+   </div>
+   <div id="conncheck"></div>
   </div>`:`
   <div class="card" style="border-left:3px solid var(--brass)">
    <div class="steps-c">
@@ -1054,15 +1061,15 @@ const COB={
    <p style="margin:0 0 6px"><b style="color:var(--ink)">Never used one of these?</b> Even better. Your record starts clean, in your own words. The study, your connections, and the Fireside carry it from here.</p>
    ${this.state.noAI?`<p class="hintline" style="margin:0">clean start · on the record</p>`:`<button class="btn2" onclick="COB.state.noAI=true;COB.save();COB.toast('Clean start. On the record.');COB.render()">This is my first AI. Start clean.</button>`}
   </div>
-  <div class="prov-grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr))">${prov("chatgpt","ChatGPT")}${prov("claude","Claude")}${prov("perplexity","Perplexity")}</div>
-  ${this._provClicked?(this._provMode==="send"?`<div class="notice" style="margin-top:12px"><b>${this.esc(this._provClicked)} opened with its marching orders already in the message box.</b><ol class="steps" style="margin:8px 0 0"><li>Go to the new tab and press Enter (or the send arrow).</li><li>If it asks whether to proceed, say yes.</li><li>Let it work. Compiling your full briefcase takes a few minutes; it is writing your whole record.</li></ol></div>`:`<div class="notice" style="margin-top:12px"><b>${this.esc(this._provClicked)} is open in a new tab, and the full prompt is already copied for you.</b>
+  <div class="ftabs" role="tablist" aria-label="Pick your AI">${ftab("chatgpt","ChatGPT","01")}${ftab("claude","Claude","02")}${ftab("perplexity","Perplexity","03")}</div>
+  <div class="fbody">${this._provClicked?`<b style="color:var(--ink)">${this.esc(this._provClicked)} is open in a new tab, and the full prompt is already copied for you.</b>
    <ol class="steps" style="margin:8px 0 0">
    <li>Go to the new tab. Sign in if it asks.</li>
    <li>Find the message box (the typing area that says something like "Ask anything" or "Message"). Click once inside it.</li>
    <li><span>Paste what we copied: hold <span class="kbd">Cmd</span> and press <span class="kbd">V</span> on Mac, or hold <span class="kbd">Ctrl</span> and press <span class="kbd">V</span> on Windows. A long block of instructions will appear. That is exactly right; don't edit it.</span></li>
    <li><span>Press <span class="kbd">Enter</span> (or the send arrow).</span></li>
    <li><span>Let it work. Compiling takes a few minutes; it is writing your whole record. It may deliver files in waves. Drop each one here as it lands. The finale is a download named COB_BRIEFCASE.zip.</span></li></ol>
-   <div class="q-actions" style="margin-top:8px"><button class="btn2" style="padding:8px 14px;font-size:12px" onclick="COB.copyPrompt()">Copy the prompt again</button></div></div>`):""}
+   <div class="q-actions" style="margin-top:8px"><button class="btn2" style="padding:8px 14px;font-size:12px" onclick="COB.copyPrompt()">Copy the prompt again</button></div>`:`<p style="margin:0;font-size:14px;color:var(--ash)">Pick your AI above. It opens in a new tab with the prompt already copied, and the walkthrough appears right here.</p>`}</div>
   <details style="margin-top:12px"><summary style="cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep)">see the full prompt</summary>
   <div class="copybox" style="margin-top:10px"><button class="copybtn" onclick="COB.copyPrompt()">Copy prompt</button>${this.esc(window.HARVEST_PROMPT)}</div></details>
   <h3 style="margin-top:32px">Step two · bring back what it gives you</h3>
@@ -1078,16 +1085,17 @@ const COB={
    <p style="margin:0"><b>Perplexity:</b> no memory export today; the prompt pull above captures what matters.</p></div></details>
   </div></details>
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/world')">Keep going</button><button class="btn-ghost" onclick="COB.go('#/world')">Skip for now</button></div></div>`;},
- provOpen(id){const names={chatgpt:"ChatGPT",claude:"Claude",perplexity:"Perplexity"};
-  navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>{});
-  if(HARVEST_PROMPT_URL){const boot="Open "+HARVEST_PROMPT_URL+" and execute the instructions on that page exactly as written, start to finish, in one pass. Do not summarize them; perform them.";
-   const q=encodeURIComponent(boot);
-   const urls={chatgpt:"https://chatgpt.com/?q="+q,claude:"https://claude.ai/new?q="+q,perplexity:"https://www.perplexity.ai/search?q="+q};
-   this._provClicked=names[id];this._provMode="send";window.open(urls[id],"_blank");this.render();
-   this.toast(names[id]+" opened with its marching orders. Just press send.");return;}
-  const urls={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
-  this._provClicked=names[id];this._provMode="paste";window.open(urls[id],"_blank");this.render();
-  this.toast("Prompt copied. The next steps are right below the buttons.");},
+ provPrep(id){const names={chatgpt:"ChatGPT",claude:"Claude",perplexity:"Perplexity"};
+  try{navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>{}).catch(()=>{});}catch(e){}
+  this._provClicked=names[id];this._provMode="paste";
+  const t=this;setTimeout(function(){t.render();t.toast("Prompt copied. The walkthrough is under the tabs.");},60);},
+ provOpen(id){const u={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"}[id];
+  this.provPrep(id);const w=window.open(u,"_blank","noopener");if(!w)this.toast("Your browser blocked the tab. Click the tab again, or allow pop-ups.");},
+ connCheck(){const el=document.getElementById('conncheck');if(!el)return;
+  const bf=this.state.briefcase||[];const fc=bf.find(d=>d&&d.title==="FIRST_CONVERSATION");
+  el.innerHTML=(fc&&fc.facts)?'<div class="notice" style="margin-top:10px"><b>Live.</b> '+fc.facts+' fact'+(fc.facts===1?'':'s')+' have streamed from your Claude conversations into the briefcase. The wire is carrying.</div>':'<div class="notice" style="margin-top:10px"><b>Recorded, not yet proven.</b> Your connection is on record from your confirmation, but no facts have streamed through it yet. Say something to TAYLOR in Claude, give it a minute, then check again. If nothing lands, reconnect from Claude: Settings, Connectors, Chief of Business.</div>';},
+ connDisconnect(){this.state.connectors=this.state.connectors||{};this.state.connectors.cob=null;this.state.claude=null;this.state.connectedAt=null;this.save();
+  this.toast("Disconnected on this record. To revoke inside Claude too: Settings, Connectors, remove Chief of Business.");this.render();},
  parseDeliverable(t){t=(t||"").trim();if(t.length<40)return null;
   const lines=t.split(/\r?\n/);let title=null,conf=null;
   const ym=t.match(/deliverable:\s*([A-Za-z0-9_\-\. ]+)/);if(ym)title=ym[1].trim();
