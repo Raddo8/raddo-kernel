@@ -7,12 +7,17 @@
  */
 (function () {
   console.log("[bridge] loaded");
+  function getCOB() {
+    try { return new Function("return typeof COB!=='undefined'?COB:null")(); } catch(e){ return null; }
+  }
   var tries = 0;
   function boot() {
-    if (!window.COB || !window.__SB) {
-      if (++tries > 100) { console.log("[bridge] gave up", !!window.COB, !!window.__SB); return; }
+    var COB = getCOB();
+    if (!COB || !window.__SB) {
+      if (++tries > 100) { console.log("[bridge] gave up", !!COB, !!window.__SB); return; }
       return setTimeout(boot, 50);
     }
+    window.COB = COB;
     console.log("[bridge] installing");
     install(window.__SB);
   }
