@@ -167,11 +167,11 @@
         if (answer) {
           applyTaylorAnswer(qid, answer);
         } else {
-          markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+          markMostRecentUnanswered(TAYLOR_SNAG);
         }
       } catch (e) {
         clearTimeout(timer);
-        if (!timedOut) markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+        if (!timedOut) markMostRecentUnanswered(TAYLOR_SNAG);
       }
     }
 
