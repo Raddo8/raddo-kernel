@@ -134,7 +134,7 @@
       try {
         var s = await sb.auth.getSession();
         var user = s.data.session && s.data.session.user;
-        if (!user) { clearTimeout(timer); return; }
+        if (!user) { clearTimeout(timer); markMostRecentUnanswered("Sign in first, then I'm all yours."); return; }
         if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
         if (!TENANT) { clearTimeout(timer); return; }
 
