@@ -284,6 +284,9 @@
         if (uid) TENANT = await loadOrCreateTenant(uid, email);
         COB.state.user = { first: first, last: last, name: first + " " + last, email: email };
         COB.save();
+        // Fire-and-forget: mirror this identity onto the Authorization Server so
+        // the client's Claude MCP connector signs in with the same credentials.
+        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass } }); } catch (e) {}
         COB.go("#/consent");
       } catch (e) {
         COB.toast(e && e.message ? e.message : "Sign-up failed.");
@@ -301,6 +304,9 @@
         var u = r.data.user;
         COB.state.user = COB.state.user || { email: u.email, first: (u.user_metadata||{}).first_name||"", last: (u.user_metadata||{}).last_name||"", name: (u.user_metadata||{}).full_name||u.email };
         COB.save();
+        // Retroactively mirror identity onto the AS for accounts created before
+        // this circuit existed. Idempotent server-side (already-exists path).
+        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass } }); } catch (e) {}
         await hydrateFromServer();
         COB.toast("Welcome back.");
         COB.resume();
