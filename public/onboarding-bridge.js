@@ -256,6 +256,27 @@
       return (r.data && r.data.brief) || null;
     };
 
+    window.COB_ASK = async function (question, ctx) {
+      try {
+        var s = await sb.auth.getSession();
+        var user = s.data.session && s.data.session.user;
+        if (!user) return "Sign in first and I'm all yours.";
+        if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+        var st = COB.state || {}; var study = st.study || {};
+        var page_state = {
+          page: (COB.route ? COB.route().p : ""), first: (st.user && st.user.first) || "",
+          entered: { area: study.area||"", role: study.prof||"", website: study.web||"", linkedin: study.li||"" },
+          systems_named: (st.wishlist || []).slice(0,20),
+          briefcase: (st.briefcase||[]).map(function(d){return d.title+" ("+(d.facts||0)+")";}),
+          briefcase_facts: (st.briefcase||[]).reduce(function(a,d){return a+(d.facts||0);},0),
+          deep_dive: (st.dive && st.dive.status) || "not started",
+          fireside_answered: Object.keys(st.answers||{}).filter(function(k){return !k.startsWith("fix_") && String((st.answers||{})[k]||"").trim();}).length
+        };
+        var r = await sb.functions.invoke("taylor-chat", { body: { question: question, page_ctx: "page:"+(ctx||"fireside"), tenant_id: TENANT ? TENANT.id : null, page_state: page_state } });
+        return (r && r.data && r.data.answer) || "I'm here. Tell me what's going on, or answer the question above when you're ready.";
+      } catch (e) { return "I'm here with you. Type it for now and let's keep going."; }
+    };
+
 
 
 
