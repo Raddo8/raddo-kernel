@@ -25,9 +25,9 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
       body: JSON.stringify({
         model: 'gpt-4o-mini-tts',
-        voice: 'alloy',
+        voice: 'nova',
         input: text,
-        speed: 1.05,
+        speed: 1.0,
         response_format: 'mp3',
       }),
     })
