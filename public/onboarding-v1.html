@@ -1020,10 +1020,15 @@ const COB={
   <div id="fire-scroll">${log}</div>
   <div class="chatin">${input}</div></div>`;},
  fireTalk(){const el=document.getElementById('fire-in');const v=(el&&el.value||"").trim();if(!v){this.toast("Say it your way, or press the mic.");return;}
-  this.state.fireChat=this.state.fireChat||[];this.state.fireChat.push({r:"u",t:v});if(el)el.value="";this._fireBusy=true;this.save();this.render();this.fireScroll();
+  this.state.fireChat=this.state.fireChat||[];this.state.fireChat.push({r:"u",t:v});if(el)el.value="";this.save();
+  const s=document.getElementById('fire-scroll');
+  if(s){s.insertAdjacentHTML('beforeend',`<div class="cb u"><div class="b">${this.esc(v)}</div></div><div class="cb t" id="fire-think"><div class="b" style="color:var(--ash)">TAYLOR is thinking...</div></div>`);s.scrollTop=s.scrollHeight;}
   const hist=this.state.fireChat.slice(-16).map(m=>({role:m.r==="u"?"user":"assistant",content:m.t}));
   const call=window.COB_FIRE;
-  const land=(a)=>{this._fireBusy=false;a=(a||"").toString().trim()||"I'm right here. Keep going, or tell me what's on your mind.";this.state.fireChat.push({r:"t",t:a});this.save();this.render();this.fireScroll();if(this.state.voiceOn){try{this.speak(a);}catch(e){}}};
+  const land=(a)=>{a=(a||"").toString().trim()||"I'm right here. Keep going.";this.state.fireChat.push({r:"t",t:a});this.save();
+    const th=document.getElementById('fire-think');if(th)th.remove();
+    const sc=document.getElementById('fire-scroll');if(sc){sc.insertAdjacentHTML('beforeend',`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(a)}</div></div>`);sc.scrollTop=sc.scrollHeight;}
+    if(this.state.voiceOn){try{this.speak(a);}catch(e){}}};
   if(call){call(hist,v).then(land).catch(()=>land(null));}else{setTimeout(()=>land(null),400);}},
  fireWrap(){this.go('#/review');},
  fireScroll(){var t=this;setTimeout(function(){var s=document.getElementById('fire-scroll');if(s)s.scrollTop=s.scrollHeight;},70);},
