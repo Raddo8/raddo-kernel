@@ -6,18 +6,15 @@
  * OAuth providers are left on their current in-file preview behavior.
  */
 (function () {
-  var CFG = window.__SUPABASE_CONFIG__ || {};
-  if (!CFG.url || !CFG.key || !window.COB) return;
+  if (!window.COB || !window.__SB) return;
+  var sb = window.__SB;
 
   var HYDRATED = false;
   var TENANT = null;
   var SAVE_T = null;
 
-  import("https://esm.sh/@supabase/supabase-js@2.45.4").then(function (mod) {
-    var sb = mod.createClient(CFG.url, CFG.key, {
-      auth: { persistSession: true, autoRefreshToken: true, storageKey: "cob-onboarding-auth" },
-    });
-    window.__SB = sb;
+  (function init() {
+
 
     function slugify(s) {
       var b = (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
