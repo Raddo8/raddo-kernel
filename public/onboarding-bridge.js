@@ -220,6 +220,24 @@
       });
     };
 
+    // --- TAYLOR's ear: MediaRecorder blob -> taylor-ear transcription ---
+    window.COB_EAR = async function (blob) {
+      const s = await sb.auth.getSession();
+      const token = s.data.session && s.data.session.access_token;
+      if (!token) throw new Error("no_session");
+      const base = (sb.supabaseUrl || "").replace(/\/$/, "");
+      const resp = await fetch(base + "/functions/v1/taylor-ear", {
+        method: "POST",
+        headers: { "Content-Type": blob.type || "audio/webm", Authorization: "Bearer " + token },
+        body: blob,
+      });
+      if (!resp.ok) throw new Error("ear_failed");
+      const j = await resp.json();
+      return (j && j.text) || "";
+    };
+
+
+
 
     async function hydrateFromServer() {
       if (HYDRATED) return;
