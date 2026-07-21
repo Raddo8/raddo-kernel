@@ -1,12 +1,11 @@
 /*
  * onboarding-bridge.js
  * Injected into public/onboarding-v1.html AFTER its own <script> runs.
- * Purpose (Circuit 1): wire COB.signup / COB.signin / COB.save / uploads /
- * deletion to the project Supabase, without editing the HTML file's bytes.
- * OAuth providers are left on their current in-file preview behavior.
+ * Circuit 1 + Circuit 2: auth, persistence, uploads, deletion (schema-correct),
+ * TAYLOR live (taylor-chat edge fn), realtime briefcase stream from intake_facts.
+ * Never edits the HTML file's bytes.
  */
 (function () {
-  // console-quiet by default; the file's own toasts remain the client signal.
   function getCOB() {
     try { return new Function("return typeof COB!=='undefined'?COB:null")(); } catch(e){ return null; }
   }
@@ -23,15 +22,11 @@
   boot();
 
   function install(sb) {
-
-
-
-  var HYDRATED = false;
-  var TENANT = null;
-  var SAVE_T = null;
-
-  (function init() {
-
+    var HYDRATED = false;
+    var TENANT = null;
+    var SAVE_T = null;
+    var FACTS_CHAN = null;
+    var TAY_CHAN = null;
 
     function slugify(s) {
       var b = (s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -48,6 +43,101 @@
       return ins.data;
     }
 
+    function rerender() {
+      try { COB.render(); } catch (e) {}
+      try { COB.sideRender && COB.sideRender(); } catch (e) {}
+      try { COB.dockRender && COB.dockRender(); } catch (e) {}
+    }
+
+    // --- realtime: briefcase from intake_facts, and answers to taylor_questions ---
+    async function loadFactsInitial() {
+      if (!TENANT) return;
+      var r = await sb.from("intake_facts").select("section,fact,created_at").eq("tenant_id", TENANT.id).order("created_at", { ascending: true });
+      if (r.error || !r.data) return;
+      applyFacts(r.data);
+    }
+    function applyFacts(rows) {
+      COB.state.briefcase = COB.state.briefcase || [];
+      var i = COB.state.briefcase.findIndex(function (d) { return d && d.title === "FIRST_CONVERSATION"; });
+      var sectionsMap = {};
+      rows.forEach(function (row) {
+        var k = row.section || "notes";
+        sectionsMap[k] = sectionsMap[k] || [];
+        sectionsMap[k].push(row.fact);
+      });
+      var sections = Object.keys(sectionsMap).map(function (k) { return { name: k, items: sectionsMap[k] }; });
+      var deliv = { title: "FIRST_CONVERSATION", facts: rows.length, sections: sections };
+      if (i > -1) COB.state.briefcase[i] = deliv;
+      else COB.state.briefcase.push(deliv);
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      rerender();
+    }
+    function subscribeRealtime() {
+      if (!TENANT) return;
+      if (FACTS_CHAN) { try { sb.removeChannel(FACTS_CHAN); } catch(e){} }
+      FACTS_CHAN = sb.channel("intake_facts_" + TENANT.id)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "intake_facts", filter: "tenant_id=eq." + TENANT.id }, function () {
+          loadFactsInitial();
+        })
+        .subscribe();
+      if (TAY_CHAN) { try { sb.removeChannel(TAY_CHAN); } catch(e){} }
+      TAY_CHAN = sb.channel("taylor_q_" + TENANT.id)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "taylor_questions", filter: "tenant_id=eq." + TENANT.id }, function (payload) {
+          var row = payload && payload.new;
+          if (!row || !row.answer) return;
+          applyTaylorAnswer(row.id, row.answer);
+        })
+        .subscribe();
+    }
+
+    function applyTaylorAnswer(qid, answer) {
+      var qs = COB.state.taylor_qs || [];
+      var hit = false;
+      for (var i = qs.length - 1; i >= 0; i--) {
+        if (qs[i]._id === qid && !qs[i].a) { qs[i].a = answer; hit = true; break; }
+      }
+      if (!hit) {
+        // fallback: attach to most recent unanswered
+        for (var j = qs.length - 1; j >= 0; j--) {
+          if (!qs[j].a) { qs[j].a = answer; hit = true; break; }
+        }
+      }
+      if (hit) {
+        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+        rerender();
+      }
+    }
+
+    async function askTaylorLive(ctx, question) {
+      try {
+        var s = await sb.auth.getSession();
+        var user = s.data.session && s.data.session.user;
+        if (!user) return;
+        if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+        if (!TENANT) return;
+
+        // insert row so admin can see the trail, and to get an id
+        var ins = await sb.from("taylor_questions")
+          .insert({ tenant_id: TENANT.id, context: ctx || "", question: question.slice(0, 2000) })
+          .select("id").single();
+        var qid = ins.data && ins.data.id;
+
+        // attach id to the last pushed local entry (the file just pushed it before calling save)
+        var qs = COB.state.taylor_qs || [];
+        for (var i = qs.length - 1; i >= 0; i--) {
+          if (qs[i] && qs[i].q === question.slice(0, 500) && !qs[i]._id) { qs[i]._id = qid; break; }
+        }
+        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+
+        // invoke edge function
+        var r = await sb.functions.invoke("taylor-chat", {
+          body: { question: question, page_ctx: ctx || "", tenant_id: TENANT.id, question_id: qid },
+        });
+        var answer = r && r.data && r.data.answer;
+        if (answer && qid) applyTaylorAnswer(qid, answer);
+      } catch (e) { /* silent per brand */ }
+    }
+
     async function hydrateFromServer() {
       var s = await sb.auth.getSession();
       var user = s.data.session && s.data.session.user;
@@ -62,12 +152,13 @@
           try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
         }
       }
-      // reflect session user in COB
       if (!COB.state.user) {
         COB.state.user = { email: user.email, first: (user.user_metadata||{}).first_name||"", last: (user.user_metadata||{}).last_name||"", name: (user.user_metadata||{}).full_name || (user.email||"") };
       }
       HYDRATED = true;
-      try { COB.render(); } catch (e) {}
+      rerender();
+      subscribeRealtime();
+      loadFactsInitial();
     }
 
     // --- persistence bridge ---
@@ -99,7 +190,7 @@
         var r = await sb.auth.signUp({
           email: email, password: pass,
           options: {
-            emailRedirectTo: window.location.origin + "/onboarding-v1.html",
+            emailRedirectTo: window.location.origin + "/onboarding",
             data: { first_name: first, last_name: last, full_name: first + " " + last },
           },
         });
@@ -133,9 +224,6 @@
       }
     };
 
-    // Providers: preview-only for now (OAuth apps not registered). Keep file's toast.
-    // COB.provider is left as-is.
-
     // --- file uploads ---
     var origOnDrop = COB.onDrop && COB.onDrop.bind(COB);
     var origOnFile = COB.onFileSelected && COB.onFileSelected.bind(COB);
@@ -158,7 +246,33 @@
     COB.onDrop = function (file) { uploadOne("harvest", file); if (origOnDrop) try { origOnDrop(file); } catch (e) {} };
     COB.onFileSelected = function (kind, file) { uploadOne(kind, file); if (origOnFile) try { origOnFile(kind, file); } catch (e) {} };
 
-    // --- deletion request ---
+    // --- TAYLOR wrappers ---
+    var origSideSend = COB.sideSend && COB.sideSend.bind(COB);
+    var origDockSend = COB.dockSend && COB.dockSend.bind(COB);
+    var origAsk = COB.askTaylor && COB.askTaylor.bind(COB);
+
+    COB.sideSend = function () {
+      var el = document.getElementById("tside-in");
+      var v = (el && el.value || "").trim();
+      var ctx = "page:" + (COB.route ? COB.route().p : "");
+      if (origSideSend) { try { origSideSend(); } catch (e) {} }
+      if (v) askTaylorLive(ctx, v);
+    };
+    COB.dockSend = function () {
+      var el = document.getElementById("tdock-in");
+      var v = (el && el.value || "").trim();
+      var ctx = "page:" + (COB.route ? COB.route().p : "");
+      if (origDockSend) { try { origDockSend(); } catch (e) {} }
+      if (v) askTaylorLive(ctx, v);
+    };
+    COB.askTaylor = function (ctx, id) {
+      var el = document.getElementById(id);
+      var v = (el && el.value || "").trim();
+      if (origAsk) { try { origAsk(ctx, id); } catch (e) {} }
+      if (v) askTaylorLive(ctx || "", v);
+    };
+
+    // --- deletion request (schema: tenant_id, requested_by, status) ---
     var origClearConfirm = COB.clearConfirm.bind(COB);
     COB.clearConfirm = async function () {
       var vEl = document.getElementById("clr-in");
@@ -168,7 +282,14 @@
           var s = await sb.auth.getSession();
           var user = s.data.session && s.data.session.user;
           if (user) {
-            await sb.from("deletion_requests").insert({ user_id: user.id, reason: "onboarding clear-my-data" });
+            if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+            if (TENANT) {
+              await sb.from("deletion_requests").insert({
+                tenant_id: TENANT.id,
+                requested_by: user.id,
+                status: "open",
+              });
+            }
           }
         } catch (e) {}
       }
@@ -180,8 +301,5 @@
     sb.auth.onAuthStateChange(function (_evt, sess) {
       if (sess && !HYDRATED) hydrateFromServer();
     });
-  })();
-  } // end install
+  }
 })();
-
-
