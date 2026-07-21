@@ -636,7 +636,7 @@ const COB={
   const wrap=btn.closest('.q-input')||btn.closest('.chatin')||btn.closest('.tay');
   const stat=wrap?wrap.querySelector('.micstat'):null;
   const el=document.getElementById(elId);
-  const AUTOSEND={"fire-in":()=>this.fireSend(),"tside-in":()=>this.sideSend(),"tdock-in":()=>this.dockSend()};
+  const AUTOSEND={"tside-in":()=>this.sideSend(),"tdock-in":()=>this.dockSend()};
   const setStat=(html,color)=>{if(stat){stat.style.display='flex';stat.innerHTML=html;stat.style.color=color||'var(--ash)';}};
   const autoSend=()=>{if(AUTOSEND[elId]&&el.value.trim()){setStat('sent · on the record');setTimeout(()=>AUTOSEND[elId](),350);}else{setStat(el.value.trim()?'got it · press send when ready':'mic off');}};
   if(this._mrec){try{this._mrec.stop();}catch(e){}return;}
@@ -650,7 +650,11 @@ const COB={
       mr.onstop=()=>{this._mrec=null;stream.getTracks().forEach(t=>t.stop());btn.classList.remove('rec');
         setStat('writing it down...');
         const blob=new Blob(chunks,{type:mr.mimeType||'audio/webm'});
-        T(blob).then(text=>{if(text&&text.trim()){el.value=(el.value?el.value+" ":"")+text.trim();if(onText)onText(el.value);autoSend();}else{setStat('I could not catch that. Try once more, or type it.');}}).catch(()=>{setStat('I could not catch that. Try once more, or type it.');});};
+        if(!blob.size){setStat('I did not catch any audio. Check the mic and try again, or type it.');return;}
+        T(blob).then(text=>{const live=document.getElementById(elId)||el;
+          if(text&&text.trim()){live.value=(live.value?live.value+" ":"")+text.trim();if(onText)onText(live.value);
+            if(AUTOSEND[elId]){setStat('sent');setTimeout(()=>AUTOSEND[elId](),300);}else{setStat('got it · review and press Send');live.focus();}}
+          else{setStat('I could not make out the words. Try again, a little closer, or type it.');}}).catch(err=>{setStat('The transcriber did not answer just now. Type it for now; I am on the mic.');try{console.warn("COB_EAR error",err);}catch(e){}});};
       mr.start();
     }).catch(()=>{setStat('Your browser blocked the microphone. Allow mic access for this page, or type it.');});
     return;}
@@ -1015,6 +1019,7 @@ const COB={
    if(v||this.state.skipped[q.k]||i===next){log+=`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(q.t)}</div></div>`;}
    if(v){log+=`<div class="cb u"><div class="b">${this.esc(v)}</div></div>${(this.state.fireReactions||{})[q.k]?`<div class=\"cb t\"><div class=\"b\"><div class=\"who\">taylor</div>${this.esc(this.state.fireReactions[q.k])}</div></div>`:``}<div class="cb t"><div class="b" style="padding:8px 14px;font-size:13px;color:var(--ash)">${this.FIRE_ACKS[i%this.FIRE_ACKS.length]} <button class="btn-ghost" style="padding:0 4px;font-size:12px" onclick="COB.fireEdit('${q.k}')">edit</button></div></div>`;}
    else if(this.state.skipped[q.k]){log+=`<div class="cb u"><div class="b" style="opacity:.6">Skipped for now.</div></div>`;}});
+  (this._fireHelp||[]).forEach(hp=>{log+=`<div class="cb u"><div class="b">${this.esc(hp.q)}</div></div>`+(hp.a?`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(hp.a)}</div></div>`:`<div class="cb t"><div class="b" style="color:var(--ash)">TAYLOR is thinking...</div></div>`);});
   const q=next>-1?qs[next]:null;
   const N=this._fireNudge&&q&&this._fireNudge.k===q.k?this._fireNudge:null;
   if(N){log+=N.type==="frus"
@@ -1046,6 +1051,12 @@ const COB={
   <div class="chatin">${inputFinal}</div></div>`;},
  fireSend(k){const el=document.getElementById('fire-in');const v=(el&&el.value||"").trim();
   if(!v){this.toast("Say it your way, or skip for now.");return;}
+  const meta=/\?\s*$/.test(v)||/(not|isn'?t|does\s?n'?t|wo\s?n'?t|ca\s?n'?t)\s+work|broken|the mic|microphone|voice (is|isn|not)|why are you|are you even|this is (insane|frustrating|ridiculous|beyond|crazy)|help me|i'?m (confused|lost)|confusing|what do you mean|can you (see|hear|do)|hold on|wait a|stop asking|not a (convo|conversation)|supposed to be a/i.test(v);
+  if(meta){this._fireHelp=this._fireHelp||[];this._fireHelp.push({q:v,a:null});if(el)el.value="";this.render();window.scrollTo(0,document.body.scrollHeight);
+   const ask=window.COB_ASK;const idx=this._fireHelp.length-1;
+   const land=(a)=>{this._fireHelp[idx].a=a||"I'm right here with you. Answer the question above whenever you're ready, or tell me what's going on and I'll help.";this.render();window.scrollTo(0,document.body.scrollHeight);};
+   if(ask){ask(v,"fireside-help").then(land).catch(()=>land(null));}else{land(null);}
+   return;}
   const frus=/not listening|listening to me|crazy|cray\b|wtf|stupid|ridiculous|are you even/i.test(v);
   const words=v.toLowerCase().split(/\s+/);const junk=v.length<12||(words.length>1&&new Set(words).size===1);
   this._nudgeSeen=this._nudgeSeen||{};

@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     const fd = new FormData()
     fd.append('file', blob, 'audio.webm')
-    fd.append('model', 'gpt-4o-mini-transcribe')
+    fd.append('model', 'whisper-1')
 
     const r = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -35,7 +35,8 @@ Deno.serve(async (req) => {
     })
     if (!r.ok) {
       const t = await r.text()
-      return new Response(JSON.stringify({ error: 'ear_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      console.error('[taylor-ear] upstream failure', r.status, t.slice(0, 300))
+      return new Response(JSON.stringify({ error: 'ear_failed', status: r.status, detail: t.slice(0, 300) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const j = await r.json()
     return new Response(JSON.stringify({ text: (j && j.text) || '' }), {
