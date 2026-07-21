@@ -158,8 +158,21 @@
           }
         } catch (e) { /* logging failure must not drop the answer */ }
 
+        var st = COB.state || {};
+        var study = st.study || {};
+        var bc = (st.briefcase || []).map(function(d){ return d.title + " (" + (d.facts||0) + ")"; });
+        var page_state = {
+          page: (COB.route ? COB.route().p : ""),
+          first: (st.user && st.user.first) || "",
+          entered: { area: study.area||"", role: study.prof||"", website: study.web||"", linkedin: study.li||"" },
+          systems_named: (st.wishlist || []).slice(0, 20),
+          briefcase: bc,
+          briefcase_facts: (st.briefcase||[]).reduce(function(a,d){return a+(d.facts||0);},0),
+          deep_dive: (st.dive && st.dive.status) || "not started",
+          fireside_answered: Object.keys(st.answers||{}).filter(function(k){return !k.startsWith("fix_") && String((st.answers||{})[k]||"").trim();}).length
+        };
         var r = await sb.functions.invoke("taylor-chat", {
-          body: { question: question, page_ctx: ctx || "", tenant_id: TENANT ? TENANT.id : null, question_id: qid },
+          body: { question: question, page_ctx: ctx || "", tenant_id: TENANT ? TENANT.id : null, question_id: qid, page_state: page_state },
         });
         clearTimeout(timer);
         if (timedOut) return;
