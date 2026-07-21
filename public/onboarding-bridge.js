@@ -199,10 +199,12 @@
         return true;
       } catch (e) { return false; }
     }
-    var origSpeak = (typeof COB.speak === "function") ? COB.speak.bind(COB) : null;
-    COB.speak = function (text) {
+    // Override the ENGINE (_speakImpl), not the POLICY (COB.speak). The client's
+    // voice toggle lives in COB.speak; overriding it would bypass the toggle.
+    var origSpeakImpl = (typeof COB._speakImpl === "function") ? COB._speakImpl.bind(COB) : null;
+    COB._speakImpl = function (text) {
       speakLive(text).then(function (ok) {
-        if (!ok && origSpeak) { try { origSpeak(text); } catch (e) {} }
+        if (!ok && origSpeakImpl) { try { origSpeakImpl(text); } catch (e) {} }
         else if (!ok && typeof window.speechSynthesis !== "undefined") {
           try {
             window.speechSynthesis.cancel();
