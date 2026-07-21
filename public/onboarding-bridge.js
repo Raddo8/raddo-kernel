@@ -96,50 +96,123 @@
     function applyTaylorAnswer(qid, answer) {
       var qs = COB.state.taylor_qs || [];
       var hit = false;
-      for (var i = qs.length - 1; i >= 0; i--) {
-        if (qs[i]._id === qid && !qs[i].a) { qs[i].a = answer; hit = true; break; }
+      if (qid) {
+        for (var i = qs.length - 1; i >= 0; i--) {
+          if (qs[i] && qs[i]._id === qid && !qs[i].a) { qs[i].a = answer; hit = true; break; }
+        }
       }
       if (!hit) {
         // fallback: attach to most recent unanswered
         for (var j = qs.length - 1; j >= 0; j--) {
-          if (!qs[j].a) { qs[j].a = answer; hit = true; break; }
+          if (qs[j] && !qs[j].a) { qs[j].a = answer; hit = true; break; }
         }
       }
       if (hit) {
         try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
         rerender();
+        try { if (typeof COB.speak === "function") COB.speak(answer); } catch (e) {}
       }
     }
 
+    function markMostRecentUnanswered(text) {
+      var qs = COB.state.taylor_qs || [];
+      for (var i = qs.length - 1; i >= 0; i--) {
+        if (qs[i] && !qs[i].a) { qs[i].a = text; break; }
+      }
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      rerender();
+    }
+
     async function askTaylorLive(ctx, question) {
+      var qid = null;
+      var TIMEOUT_MS = 15000;
+      var timedOut = false;
+      var timer = setTimeout(function () {
+        timedOut = true;
+        markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+      }, TIMEOUT_MS);
       try {
         var s = await sb.auth.getSession();
         var user = s.data.session && s.data.session.user;
-        if (!user) return;
+        if (!user) { clearTimeout(timer); return; }
         if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
-        if (!TENANT) return;
+        if (!TENANT) { clearTimeout(timer); return; }
 
-        // insert row so admin can see the trail, and to get an id
-        var ins = await sb.from("taylor_questions")
-          .insert({ tenant_id: TENANT.id, context: ctx || "", question: question.slice(0, 2000) })
-          .select("id").single();
-        var qid = ins.data && ins.data.id;
+        // Log row (best-effort; must NOT block the answer)
+        try {
+          var ins = await sb.from("taylor_questions")
+            .insert({ tenant_id: TENANT.id, context: ctx || "", question: question.slice(0, 2000) })
+            .select("id").single();
+          qid = ins && ins.data && ins.data.id;
+          if (qid) {
+            var qs = COB.state.taylor_qs || [];
+            for (var i = qs.length - 1; i >= 0; i--) {
+              if (qs[i] && qs[i].q === question.slice(0, 500) && !qs[i]._id) { qs[i]._id = qid; break; }
+            }
+            try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+          }
+        } catch (e) { /* logging failure must not drop the answer */ }
 
-        // attach id to the last pushed local entry (the file just pushed it before calling save)
-        var qs = COB.state.taylor_qs || [];
-        for (var i = qs.length - 1; i >= 0; i--) {
-          if (qs[i] && qs[i].q === question.slice(0, 500) && !qs[i]._id) { qs[i]._id = qid; break; }
-        }
-        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
-
-        // invoke edge function
         var r = await sb.functions.invoke("taylor-chat", {
-          body: { question: question, page_ctx: ctx || "", tenant_id: TENANT.id, question_id: qid },
+          body: { question: question, page_ctx: ctx || "", tenant_id: TENANT ? TENANT.id : null, question_id: qid },
         });
+        clearTimeout(timer);
+        if (timedOut) return;
         var answer = r && r.data && r.data.answer;
-        if (answer && qid) applyTaylorAnswer(qid, answer);
-      } catch (e) { /* silent per brand */ }
+        if (answer) {
+          applyTaylorAnswer(qid, answer);
+        } else {
+          markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+        }
+      } catch (e) {
+        clearTimeout(timer);
+        if (!timedOut) markMostRecentUnanswered("I hit a snag just now. Ask me again in a moment.");
+      }
     }
+
+    // --- real voice: OpenAI TTS via edge fn, fallback to speechSynthesis ---
+    var VOICE_AUDIO = null;
+    async function speakLive(text) {
+      var t = String(text || "").trim();
+      if (!t) return false;
+      try {
+        var s = await sb.auth.getSession();
+        var token = s.data.session && s.data.session.access_token;
+        if (!token) return false;
+        var url = (sb && sb.functions && sb.functions.url) ? (sb.functions.url + "/taylor-voice") : null;
+        if (!url) {
+          // derive from supabase client
+          var base = (sb.supabaseUrl || "").replace(/\/$/, "");
+          url = base + "/functions/v1/taylor-voice";
+        }
+        var resp = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+          body: JSON.stringify({ text: t.slice(0, 4000) }),
+        });
+        if (!resp.ok) return false;
+        var blob = await resp.blob();
+        if (!blob || !blob.size) return false;
+        try { if (VOICE_AUDIO) { VOICE_AUDIO.pause(); VOICE_AUDIO.src = ""; } } catch (e) {}
+        VOICE_AUDIO = new Audio(URL.createObjectURL(blob));
+        try { await VOICE_AUDIO.play(); } catch (e) { return false; }
+        return true;
+      } catch (e) { return false; }
+    }
+    var origSpeak = (typeof COB.speak === "function") ? COB.speak.bind(COB) : null;
+    COB.speak = function (text) {
+      speakLive(text).then(function (ok) {
+        if (!ok && origSpeak) { try { origSpeak(text); } catch (e) {} }
+        else if (!ok && typeof window.speechSynthesis !== "undefined") {
+          try {
+            window.speechSynthesis.cancel();
+            var u = new SpeechSynthesisUtterance(String(text || ""));
+            window.speechSynthesis.speak(u);
+          } catch (e) {}
+        }
+      });
+    };
+
 
     async function hydrateFromServer() {
       if (HYDRATED) return;
