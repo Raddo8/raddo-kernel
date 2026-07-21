@@ -343,7 +343,7 @@ body.offline .offline{display:block}
 input.jsaved,textarea.jsaved{animation:flash 1s ease both}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .btn:active,.btn2:active,.prov:active{transform:scale(.98)}
-.btn,.btn2,.prov{transition:transform .12s ease,background .15s ease,border-color .15s ease}
+.btn,.btn2,.prov{transition:transform .12s ease,background .15s ease,border-color .15s ease}.prov-ai{border:1.5px solid var(--brass);color:var(--ink);font-weight:600;font-size:14px;letter-spacing:.01em}.prov-ai:hover{border-color:var(--brass-deep);background:rgba(239,155,37,.08)}.linky{color:var(--brass-deep);text-decoration:underline;text-underline-offset:3px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;cursor:pointer}.linky:hover{color:var(--brass)}
 input,textarea{transition:border-color .15s ease,box-shadow .15s ease}
 input:focus,textarea:focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(239,159,39,.18);outline:none}
 .rsame .q-wrap,.rsame .chat,.rsame .split>.pane-form,.rsame .grid2 .wcard,.rsame .cb,.rsame .filelist li,.rsame .bp-row{animation:none!important}
@@ -1016,7 +1016,7 @@ const COB={
   ${CHAPTERS.map((c,ci)=>`<h3 style="margin-top:32px">${c.n} · ${this.esc(c.title)}</h3><div class="card">${c.qs.map((q,qi)=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/fireside')">Edit</button></div>`).join("")}</div>`).join("")}
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/claude')">Looks right, keep going</button></div></div>`;},
  vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
-  const prov=(id,label)=>`<button class="prov" onclick="COB.provOpen('${id}')"><span>${label}</span></button>`;
+  const prov=(id,label)=>`<button class="prov prov-ai" onclick="COB.provOpen('${id}')"><span>${label}</span></button>`;
   const card=(d,i)=>`<div class="card" style="margin-bottom:12px;border-top:2px solid var(--ink)">
     <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
       <p class="kicker" style="margin:0">${this.esc(d.title)}</p>
@@ -1066,10 +1066,10 @@ const COB={
   <details style="margin-top:12px"><summary style="cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep)">see the full prompt</summary>
   <div class="copybox" style="margin-top:10px"><button class="copybtn" onclick="COB.copyPrompt()">Copy prompt</button>${this.esc(window.HARVEST_PROMPT)}</div></details>
   <h3 style="margin-top:32px">Step two · bring back what it gives you</h3>
-  <p style="font-size:14px;color:var(--ash)">Drop the zip here. Files coming in waves? Drop each batch; the briefcase keeps count. Pasted text works too.</p>
+  <p style="font-size:14px;color:var(--ash)">Files coming in waves? Drop each batch; the briefcase keeps count. Pasted text works too. Click the link below to load in the zip / files.</p>
   <textarea id="bfpaste" placeholder="Paste a deliverable here, exactly as your AI returned it..." style="min-height:110px"></textarea>
   <div class="q-actions" style="margin-top:10px"><button class="btn2" onclick="COB.briefAdd()">Add to the briefcase</button>
-   <label class="btn-ghost" style="cursor:pointer">or drop the zip / files<input type="file" multiple class="sr" onchange="[...this.files].forEach(f=>COB.onDrop(f))"></label></div>
+   <label class="linky">load in the zip / files<input type="file" multiple class="sr" onchange="[...this.files].forEach(f=>COB.onDrop(f))"></label></div>
   <p class="hintline" style="margin-top:14px">everything you add files itself into the briefcase on the right</p>
   <details style="margin-top:20px"><summary style="cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-deep)">want the deep archive too?</summary>
    <div style="font-size:14px;color:var(--charcoal);padding:10px 0">
