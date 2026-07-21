@@ -6,8 +6,10 @@
  * OAuth providers are left on their current in-file preview behavior.
  */
 (function () {
-  if (!window.COB || !window.__SB) return;
+  try { console.log("[bridge] boot", !!window.COB, !!window.__SB); } catch(e){}
+  if (!window.COB || !window.__SB) { console.log("[bridge] abort no COB/SB"); return; }
   var sb = window.__SB;
+
 
   var HYDRATED = false;
   var TENANT = null;
