@@ -59,6 +59,8 @@
     function applyFacts(rows) {
       COB.state.briefcase = COB.state.briefcase || [];
       var i = COB.state.briefcase.findIndex(function (d) { return d && d.title === "FIRST_CONVERSATION"; });
+      if ((!rows || rows.length === 0) && i === -1) return;
+      if (i > -1 && COB.state.briefcase[i] && COB.state.briefcase[i].facts === rows.length) return;
       var sectionsMap = {};
       rows.forEach(function (row) {
         var k = row.section || "notes";
@@ -72,6 +74,7 @@
       try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
       rerender();
     }
+
     function subscribeRealtime() {
       if (!TENANT) return;
       if (FACTS_CHAN) { try { sb.removeChannel(FACTS_CHAN); } catch(e){} }
