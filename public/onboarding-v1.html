@@ -879,30 +879,27 @@ const COB={
     <p class="kicker" style="margin-bottom:8px">the dive is running</p>
     <div id="dive-stat" style="font-size:15px;color:var(--ink);min-height:24px">Reading the open web...</div>
     <div class="r-prog" style="padding:12px 0 0"><i style="background:rgba(4,44,83,.1)"><b style="width:${d.pct||8}%;background:var(--brass)"></b></i></div>
-    <p class="hintline" style="margin-top:10px">this takes a moment. COB is studying you, your company, your market, and the public record.</p></div>`;}
+    <p class="hintline" style="margin-top:10px">this takes a moment. COB is combing the open web: you, your work, your ventures, your public and social footprint, the record.</p></div>`;}
   if(d.status==="done"&&d.brief){const B=d.brief;const li=(arr)=>(arr||[]).map(x=>`<li style="margin-bottom:6px">${this.esc(x)}</li>`).join("");
+   const secs=(B.sections||[]).filter(s=>s&&s.items&&s.items.length);
+   const facts=secs.reduce((a,s)=>a+s.items.length,0);
    return `<div class="card" style="margin-top:16px;border-left:3px solid var(--ok)">
-    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> your dive is on the record</p>
-    <p style="margin:0;font-size:16px;color:var(--ink)">${this.esc(B.welcome||"")}</p></div>
-   ${(B.found&&B.found.length)?`<div class="card" style="margin-top:12px"><p class="kicker" style="margin-bottom:8px">what we found</p><ul style="margin:0;padding-left:18px;font-size:15px;color:var(--charcoal)">${li(B.found)}</ul></div>`:""}
-   ${B.read?`<div class="card" style="margin-top:12px"><p class="kicker" style="margin-bottom:8px">the read</p><p style="margin:0;font-size:15px;color:var(--charcoal)">${this.esc(B.read)}</p></div>`:""}
-   <div class="grid2" style="margin-top:12px">
-    ${(B.wins&&B.wins.length)?`<div class="card"><p class="kicker" style="margin-bottom:8px">where AI pays off</p><ul style="margin:0;padding-left:18px;font-size:14px;color:var(--charcoal)">${li(B.wins)}</ul></div>`:""}
-    ${(B.exposures&&B.exposures.length)?`<div class="card"><p class="kicker" style="margin-bottom:8px">where you're exposed</p><ul style="margin:0;padding-left:18px;font-size:14px;color:var(--charcoal)">${li(B.exposures)}</ul></div>`:""}
-   </div>
-   ${(B.deliverables&&B.deliverables.length)?`<div class="card" style="margin-top:12px;border-left:3px solid var(--brass)"><p class="kicker" style="margin-bottom:8px">what COB would build first</p><ul style="margin:0;padding-left:18px;font-size:15px;color:var(--charcoal)">${li(B.deliverables)}</ul></div>`:""}
-   ${B.line?`<p style="margin:14px 2px 0;font-family:var(--serif);font-size:17px;color:var(--ink)">${this.esc(B.line)}</p>`:""}
-   <div class="q-actions" style="margin-top:20px"><button class="btn" onclick="COB.go('#/plugin')">Your world is taking shape. Continue →</button></div>`;}
+    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> your dossier is on the record · ${facts} findings</p>
+    <p style="margin:0;font-size:16px;color:var(--ink)">${this.esc(B.headline||B.welcome||"")}</p></div>
+   ${secs.map(s=>`<div class="card" style="margin-top:12px"><p class="kicker" style="margin-bottom:8px">${this.esc(s.label)}</p><ul style="margin:0;padding-left:18px;font-size:15px;color:var(--charcoal)">${li(s.items)}</ul></div>`).join("")}
+   <p class="hintline" style="margin-top:14px">everything here is public, on the record, and yours. correct anything that is off in your world, drafted.</p>
+   <div class="q-actions" style="margin-top:16px"><button class="btn" onclick="COB.go('#/plugin')">This is a strong start. Continue →</button></div>`;}
   return `<p class="kicker" style="margin:22px 0 10px">what the dive covers</p>
+  <p style="font-size:14px;color:var(--ash);margin-bottom:12px">Press Proceed and COB combs the open web to build your dossier: who you are, your work and ventures, your public and social footprint, the news and the record. Public sources only, on the record, yours to correct.</p>
   <div class="grid2">
-   <div class="wcard"><div class="wc-k">you</div><div class="wc-t">The operator</div><div class="wc-s">Profile, track record, public footprint.</div></div>
-   <div class="wcard"><div class="wc-k">your company</div><div class="wc-t">The company</div><div class="wc-s">Website, presence, reputation.</div></div>
-   <div class="wcard"><div class="wc-k">your market</div><div class="wc-t">The market</div><div class="wc-s">The territory and the players around you.</div></div>
-   <div class="wcard"><div class="wc-k">the public record</div><div class="wc-t">The paper trail</div><div class="wc-s">What the record already tells us.</div></div>
+   <div class="wcard"><div class="wc-k">you</div><div class="wc-t">Identity</div><div class="wc-s">Who you are, where you are, what you're known for.</div></div>
+   <div class="wcard"><div class="wc-k">work + ventures</div><div class="wc-t">The record of building</div><div class="wc-s">Companies, roles, current and past.</div></div>
+   <div class="wcard"><div class="wc-k">digital + social</div><div class="wc-t">The footprint</div><div class="wc-s">Sites, profiles, and public posts.</div></div>
+   <div class="wcard"><div class="wc-k">news + public record</div><div class="wc-t">The paper trail</div><div class="wc-s">Press, filings, and what's on record.</div></div>
   </div>
   <div class="q-actions" style="margin-top:18px"><button class="btn" onclick="COB.proceedDive()">Proceed</button>
   <button class="btn-ghost" onclick="COB.go('#/plugin')">Skip for now</button></div>`;},
- DIVE_STAT:["Reading the open web...","Studying your company...","Mapping your market...","Pulling the public record...","Reading reviews and reputation...","Finding where AI pays off...","Naming your exposures...","Drafting what COB would build first...","Filing it to your briefcase..."],
+ DIVE_STAT:["Reading the open web...","Studying your work and ventures...","Scanning your public and social footprint...","Pulling news and the public record...","Reading reviews and reputation...","Mapping the people around you...","Building your timeline...","Assembling the dossier...","Filing it to your briefcase..."],
  proceedDive(){if(this._diveT)return;const st=this.state.study||{};const u=this.state.user||{};
   const domain=(u.email||"").split("@")[1]||"";
   const payload={first:u.first||(u.name||"").split(" ")[0]||"",last:u.last||"",business:st.prof&&/(company|llc|inc|co\.|group|studio|shop|firm)/i.test(st.prof)?st.prof:(domain&&!/gmail|outlook|yahoo|hotmail|icloud|proton/i.test(domain)?domain.split(".")[0]:(st.prof||"")),city:st.area||"",industry:st.prof||"",website:st.web||"",linkedin:st.li||"",name:u.name||""};
@@ -914,12 +911,8 @@ const COB={
     if(!brief){this.state.dive={status:"idle"};this.save();this.render();this.toast("The dive hit a snag. Try again in a moment.");return;}
     // world panel + understanding page
     if(brief.world&&typeof brief.world==="object"){window.UNDERSTANDING=brief.world;this.state.understanding=brief.world;}
-    // briefcase deliverable
-    const secs=[];
-    if(brief.found&&brief.found.length)secs.push({name:"what we found",items:brief.found});
-    if(brief.wins&&brief.wins.length)secs.push({name:"where AI pays off",items:brief.wins});
-    if(brief.exposures&&brief.exposures.length)secs.push({name:"where you're exposed",items:brief.exposures});
-    if(brief.deliverables&&brief.deliverables.length)secs.push({name:"what COB would build first",items:brief.deliverables});
+    // briefcase dossier from the generic sections
+    const secs=(brief.sections||[]).filter(s=>s&&s.items&&s.items.length).map(s=>({name:s.label,items:s.items}));
     const facts=secs.reduce((a,s)=>a+s.items.length,0);
     const bc=this.state.briefcase=this.state.briefcase||[];const bi=bc.findIndex(x=>x&&x.title==="DEEP_DIVE");
     const deliv={title:"DEEP_DIVE",facts:facts,sections:secs};if(bi>-1)bc[bi]=deliv;else bc.unshift(deliv);
