@@ -174,5 +174,7 @@
       if (sess && !HYDRATED) hydrateFromServer();
     });
   })();
+  } // end install
 })();
+
 
