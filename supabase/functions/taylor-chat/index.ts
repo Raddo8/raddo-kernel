@@ -54,10 +54,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'question required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const key = Deno.env.get('OPENAI_API_KEY')
+    const key = Deno.env.get('ANTHROPIC_API_KEY')
     if (!key) {
-      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'ANTHROPIC_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+    const model = Deno.env.get('COB_MODEL') || 'claude-sonnet-4-5'
 
     let userMsg = page_ctx ? `[context: ${page_ctx}]\n\n${question}` : question
     if (page_state && typeof page_state === 'object') {
@@ -73,44 +74,64 @@ Deno.serve(async (req) => {
     const isFireside = mode === 'fireside'
     const systemPrompt = isFireside ? FIRESIDE_SYSTEM : SYSTEM
 
-    const messages: Array<{ role: string; content: string }> = [{ role: 'system', content: systemPrompt }]
+    const messages: Array<{ role: string; content: string }> = []
     if (isFireside && history.length > 0) {
-      // Include prior turns except the last user turn (which we augment with knowledge/ctx below)
       const prior = history[history.length - 1]?.role === 'user' ? history.slice(0, -1) : history
-      for (const m of prior) messages.push(m)
+      for (const m of prior) messages.push({ role: m.role, content: m.content })
     }
     messages.push({ role: 'user', content: userMsg })
 
-    const r = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        temperature: 0.6,
-        max_tokens: 400,
-        response_format: { type: 'json_object' },
-        messages,
-      }),
-    })
+    async function callClaude(attempt = 0): Promise<Response> {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 500,
+          temperature: 0.7,
+          system: systemPrompt,
+          messages,
+        }),
+      })
+      if ((res.status === 429 || res.status === 529) && attempt < 2) {
+        await new Promise((r) => setTimeout(r, 700 * (attempt + 1) + Math.random() * 400))
+        return callClaude(attempt + 1)
+      }
+      return res
+    }
 
+    const r = await callClaude()
     if (!r.ok) {
       const t = await r.text()
-      return new Response(JSON.stringify({ error: 'openai_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'anthropic_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const j = await r.json()
-    const content = String(j?.choices?.[0]?.message?.content || '').trim()
+    const content = String(
+      (Array.isArray(j?.content) ? j.content : [])
+        .filter((p: any) => p && p.type === 'text' && typeof p.text === 'string')
+        .map((p: any) => p.text)
+        .join('')
+    ).trim()
 
     let answer = content
     let fact: { section?: string; fact?: string } | null = null
-    try {
-      const parsed = JSON.parse(content)
-      if (parsed && typeof parsed.answer === 'string') answer = parsed.answer.trim()
-      if (!isReaction && parsed && parsed.fact && typeof parsed.fact === 'object'
-          && typeof parsed.fact.fact === 'string' && parsed.fact.fact.trim()) {
-        fact = { section: String(parsed.fact.section || 'notes'), fact: parsed.fact.fact.trim().slice(0, 200) }
+    const a = content.indexOf('{')
+    const b = content.lastIndexOf('}')
+    if (a !== -1 && b > a) {
+      try {
+        const parsed = JSON.parse(content.slice(a, b + 1))
+        if (parsed && typeof parsed.answer === 'string') answer = parsed.answer.trim()
+        if (!isReaction && parsed && parsed.fact && typeof parsed.fact === 'object'
+            && typeof parsed.fact.fact === 'string' && parsed.fact.fact.trim()) {
+          fact = { section: String(parsed.fact.section || 'notes'), fact: parsed.fact.fact.trim().slice(0, 200) }
+        }
+      } catch {
+        // fall back to raw content as answer; no fact
       }
-    } catch {
-      // fall back to raw content as answer; no fact
     }
 
     if ((fact && tenant_id) || (question_id && tenant_id)) {
