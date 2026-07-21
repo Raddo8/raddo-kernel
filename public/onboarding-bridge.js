@@ -163,5 +163,6 @@
     sb.auth.onAuthStateChange(function (_evt, sess) {
       if (sess && !HYDRATED) hydrateFromServer();
     });
-  }).catch(function () { /* offline; file behavior only */ });
+  })();
 })();
+
