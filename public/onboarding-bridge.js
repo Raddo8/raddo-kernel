@@ -304,6 +304,9 @@
         var u = r.data.user;
         COB.state.user = COB.state.user || { email: u.email, first: (u.user_metadata||{}).first_name||"", last: (u.user_metadata||{}).last_name||"", name: (u.user_metadata||{}).full_name||u.email };
         COB.save();
+        // Retroactively mirror identity onto the AS for accounts created before
+        // this circuit existed. Idempotent server-side (already-exists path).
+        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass } }); } catch (e) {}
         await hydrateFromServer();
         COB.toast("Welcome back.");
         COB.resume();
