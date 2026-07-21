@@ -318,6 +318,8 @@ body.offline .offline{display:block}
 .pane-navy .exhibit .cap{color:var(--brass)}
 .logo-mark{width:20px;height:20px;object-fit:contain;flex:none}
 .ghostwrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:200px}
+.pane-form .q-actions{flex-direction:column;align-items:flex-start;gap:10px}
+.pane-form .q-actions .btn,.pane-form .q-actions .btn2{width:300px;max-width:100%;text-align:center;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
 .wc-i{margin-bottom:10px}.wc-i svg,.wc-i img{width:40px;height:40px;display:block}
 .steps-c{display:flex;flex-direction:column;gap:12px}
 .stc{display:flex;gap:12px;align-items:baseline;font-size:15px}
@@ -344,6 +346,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .btn,.btn2,.prov{transition:transform .12s ease,background .15s ease,border-color .15s ease}
 input,textarea{transition:border-color .15s ease,box-shadow .15s ease}
 input:focus,textarea:focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(239,159,39,.18);outline:none}
+.rsame .q-wrap,.rsame .chat,.rsame .split>.pane-form,.rsame .grid2 .wcard,.rsame .cb,.rsame .filelist li,.rsame .bp-row{animation:none!important}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .ghostmark{width:min(62%,400px);max-height:56vh;object-fit:contain;opacity:.3;filter:brightness(0) invert(1);pointer-events:none;user-select:none}
 .firebanner{width:100%;height:150px;object-fit:cover;object-position:center 62%;border-radius:14px;border:1px solid rgba(4,44,83,.14);box-shadow:0 10px 28px rgba(4,44,83,.12);display:block;margin:2px 0 14px}
@@ -654,6 +657,7 @@ const COB={
    if(!this.state.seen[r.p]){this.state.seen[r.p]=1;this.save();}}
   const needsUser=["consent","gate","reveal","plugin","world","fireside","ch","review","harvest","claude","connect","done","dashboard"];
   if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
+  const _rp=(location.hash||"#/welcome").split("/")[1]||"welcome";document.documentElement.classList.toggle('rsame',this._lastR===_rp);this._lastR=_rp;
   document.body.classList.toggle('withrail',["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p));
   if(r.p==="welcome")app.innerHTML=this.vWelcome();
   else if(r.p==="account")app.innerHTML=this.vAccount();
