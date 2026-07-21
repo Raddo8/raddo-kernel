@@ -284,6 +284,9 @@
         if (uid) TENANT = await loadOrCreateTenant(uid, email);
         COB.state.user = { first: first, last: last, name: first + " " + last, email: email };
         COB.save();
+        // Fire-and-forget: mirror this identity onto the Authorization Server so
+        // the client's Claude MCP connector signs in with the same credentials.
+        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass } }); } catch (e) {}
         COB.go("#/consent");
       } catch (e) {
         COB.toast(e && e.message ? e.message : "Sign-up failed.");
