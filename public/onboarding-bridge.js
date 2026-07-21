@@ -256,6 +256,24 @@
       return (r.data && r.data.brief) || null;
     };
 
+    function cobKnowledge() {
+      var st = COB.state || {}; var out = [];
+      (st.briefcase || []).forEach(function(d){
+        (d.sections || []).forEach(function(s){
+          if (s && s.items && s.items.length) out.push((s.name || s.label || "notes") + ": " + s.items.slice(0,8).join(" | "));
+        });
+      });
+      var u = st.understanding || {};
+      if (u.biz) out.push("who they are: " + u.biz);
+      if (u.entities) out.push("entities: " + u.entities.map(function(e){return e.n+" ("+(e.d||"")+")";}).join(", "));
+      if (u.people) out.push("people: " + u.people.map(function(e){return e.n+" ("+(e.d||"")+")";}).join(", "));
+      if (st.wishlist && st.wishlist.length) out.push("systems they named: " + st.wishlist.slice(0,20).join(", "));
+      var study = st.study || {};
+      if (study.prof) out.push("role: " + study.prof);
+      if (study.area) out.push("location: " + study.area);
+      return out.join("\n").slice(0, 2500);
+    }
+
     window.COB_ASK = async function (question, ctx) {
       try {
         var s = await sb.auth.getSession();
@@ -272,10 +290,30 @@
           deep_dive: (st.dive && st.dive.status) || "not started",
           fireside_answered: Object.keys(st.answers||{}).filter(function(k){return !k.startsWith("fix_") && String((st.answers||{})[k]||"").trim();}).length
         };
-        var r = await sb.functions.invoke("taylor-chat", { body: { question: question, page_ctx: "page:"+(ctx||"fireside"), tenant_id: TENANT ? TENANT.id : null, page_state: page_state } });
+        var r = await sb.functions.invoke("taylor-chat", { body: { question: question, page_ctx: "page:"+(ctx||"fireside"), tenant_id: TENANT ? TENANT.id : null, page_state: page_state, knowledge: cobKnowledge() } });
         return (r && r.data && r.data.answer) || "I'm here. Tell me what's going on, or answer the question above when you're ready.";
       } catch (e) { return "I'm here with you. Type it for now and let's keep going."; }
     };
+
+    window.COB_FIRE = async function (history, latest) {
+      try {
+        var s = await sb.auth.getSession(); var user = s.data.session && s.data.session.user;
+        if (!user) return "Sign in first and I'm all yours.";
+        if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+        var st = COB.state || {};
+        var r = await sb.functions.invoke("taylor-chat", { body: {
+          mode: "fireside",
+          history: history || [],
+          question: latest || "",
+          page_ctx: "page:fireside",
+          tenant_id: TENANT ? TENANT.id : null,
+          knowledge: cobKnowledge(),
+          first: (st.user && st.user.first) || ""
+        }});
+        return (r && r.data && r.data.answer) || "I'm right here with you. Keep going.";
+      } catch (e) { return "I'm here with you. Say more when you're ready."; }
+    };
+
 
 
 
