@@ -122,7 +122,7 @@ body.withrail .top .logo-mark,body.withrail .top .mark{display:none}
 .bp{flex:1;min-height:0;display:flex;flex-direction:column}
 .bp-body{flex:1;min-height:0;overflow-y:auto}
 .tside{flex:none;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--edge);border-top:2px solid var(--brass);box-shadow:0 8px 24px rgba(4,44,83,.08);height:58px;overflow:hidden;transition:height .32s ease}
-.tside.open{height:calc(50% - 6px)}.world .bp{min-height:150px}
+.tside.open{flex:1;height:auto}.world.tay-open .bp{flex:none}.world.tay-open .bp .bp-body{display:none}.bp{transition:flex .4s var(--ease)}.bp-head{cursor:pointer}.world .bp{min-height:150px}.world.tay-open .bp{min-height:0}
 .ts-head{height:58px;flex:none;background:var(--ink);color:var(--paper);display:flex;align-items:center;gap:11px;padding:0 16px;border:none;width:100%;cursor:pointer;text-align:left}
 .ts-head img{width:32px;height:32px;object-fit:contain}
 .ts-t{font-family:var(--serif);font-size:18px;flex:1;line-height:1.1}
@@ -144,7 +144,7 @@ body.withrail .top .logo-mark,body.withrail .top .mark{display:none}
 .bp-head{background:var(--ink);color:var(--paper);padding:13px 16px;display:flex;flex-direction:column;gap:3px}
 .bp-head .bp-t{font-family:var(--serif);font-size:18px;line-height:1.1}
 .bp-head .bp-c{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:#B9C6D6;text-transform:uppercase}
-.bp-body{padding:14px 16px;min-height:180px}
+.bp-body{padding:14px 16px;min-height:180px}.world.tay-open .bp-body{min-height:0}
 .bp-sec{margin-bottom:14px}
 .bp-row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--edge);animation:rise .3s ease both}
 .bp-row .ok{color:var(--ok);font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase}
@@ -564,6 +564,7 @@ const COB={
   const hide=!this.state.user||["welcome","account","fireside"].includes(r.p);
   d.style.display=hide?"none":"block";if(hide)this.dockClose();if(this._tayOpen)this.sideRender();},
  tayToggle(){this._tayOpen=!this._tayOpen;const e=document.getElementById('tside');if(e){e.classList.toggle('open',this._tayOpen);}
+  const w=document.querySelector('.world');if(w){w.classList.toggle('tay-open',this._tayOpen);}
   if(this._tayOpen){this.sideRender();setTimeout(()=>{const i=document.getElementById('tside-in');i&&i.focus();},320);}},
  sideRender(){const m=document.getElementById('tsm');if(!m)return;const qs=(this.state.taylor_qs||[]).slice(-8);
   m.innerHTML=`<div class="ts-hello">I'm TAYLOR. I can see the page you're on, and I know this whole build. Ask me anything.</div>`+
@@ -712,8 +713,8 @@ const COB={
    <div class="r-copy">© COB Technologies LLC</div></nav>`;
   const chips=(arr,cls)=>arr.length?arr.slice(0,5).map(x=>`<span class="chip ${cls||""}">${this.esc(x)}</span>`).join("")+(arr.length>5?`<span class="chip" style="color:var(--ash)">+${arr.length-5} more</span>`:""):`<span class="w-empty">· · ·</span>`;
   const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+(d.facts||0),0);const fl=this.state.files||[];
-  const world=`<aside class="world" aria-label="The briefcase"><div class="bp">
-   <div class="bp-head"><span class="bp-t">The briefcase</span><span class="bp-c">${bf.length||fl.length||!this.state.noAI?`${bf.length} deliverables · ${facts} facts on record${fl.length?` · ${fl.length} files`:""}`:`clean start · building from zero`}</span></div>
+  const world=`<aside class="world${this._tayOpen?' tay-open':''}" aria-label="The briefcase"><div class="bp">
+   <div class="bp-head" onclick="if(COB._tayOpen)COB.tayToggle()"><span class="bp-t">The briefcase</span><span class="bp-c">${bf.length||fl.length||!this.state.noAI?`${bf.length} deliverables · ${facts} facts on record${fl.length?` · ${fl.length} files`:""}`:`clean start · building from zero`}</span></div>
    <div class="bp-body">
     ${bf.length||fl.length?`<div class="bp-sec">${bf.map(d=>`<div class="bp-row"><span>${this.esc(d.title)}</span><span class="ok">filed</span></div>`).join("")}${fl.map(f=>`<div class="bp-row"><span>${this.esc(f.name)}</span><span class="ok">received</span></div>`).join("")}</div>`:""}
     <div class="w-group"><div class="w-label">entities</div>${chips(w.entities,"navy")}</div>
