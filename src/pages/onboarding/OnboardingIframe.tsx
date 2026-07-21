@@ -11,7 +11,7 @@ export default function OnboardingIframe({ initialHash }: { initialHash?: string
   useEffect(() => {
     document.title = "Meet your COB · onboarding";
   }, []);
-  const src = "/onboarding-v1.html" + (initialHash ? "#/" + initialHash : "");
+  const src = "/onboarding-v1.html?v=" + Date.now() + (initialHash ? "#/" + initialHash : "");
 
   function onLoad() {
     const iframe = ref.current;
