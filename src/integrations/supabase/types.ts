@@ -1200,6 +1200,27 @@ export type Database = {
           },
         ]
       }
+      onboarding_state: {
+        Row: {
+          email: string | null
+          state: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          email?: string | null
+          state?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          email?: string | null
+          state?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       onboarding_tenants: {
         Row: {
           connectors: Json

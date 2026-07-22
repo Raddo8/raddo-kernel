@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
 
   try {
     if (!AS_SERVICE_ROLE_KEY) {
-      return ok({ provisioned: false, error: "as_not_configured" });
+      return ok({ provisioned: false, error: "as_key_missing" });
     }
 
     // --- Auth guard: caller must be signed in, and claims email must match body email.
