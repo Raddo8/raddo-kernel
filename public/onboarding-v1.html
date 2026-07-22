@@ -1022,8 +1022,10 @@ const COB={
   <button class="btn-ghost" style="font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase" onclick="COB.voiceToggle()">${voice?"voice on · click to mute":"voice off · click and TAYLOR speaks"}</button></div>
   <div id="fire-scroll">${log}</div>
   <div class="chatin">${input}</div></div>`;},
+ vSetVoiceBtn(on){var vb=document.querySelector('.fbtn-voice');if(!vb)return;if(on)vb.classList.add('on');else vb.classList.remove('on');vb.setAttribute('title',on?"TAYLOR speaks her replies. Click to mute.":"Turn on TAYLOR's voice.");var wave=on?'<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>':'<path d="M22 9l-6 6M16 9l6 6"/>';vb.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/>'+wave+'</svg>'+(on?'Voice on':'Voice off');},
  fireDictate(btn){
   if(this._dg){if(this._dgStop)this._dgStop();return;}
+  if(!this.state.voiceOn){this.state.voiceOn=true;this.save();this.vSetVoiceBtn(true);}
   const el=document.getElementById('fire-in');
   const wrap=btn.closest('.chatin');const stat=wrap?wrap.querySelector('.micstat'):null;
   const setStat=(hh,c)=>{if(stat){stat.style.display='flex';stat.innerHTML=hh;stat.style.color=c||'var(--ash)';}};
