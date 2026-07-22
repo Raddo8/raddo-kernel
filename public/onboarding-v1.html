@@ -857,12 +857,13 @@ const COB={
   ${GATE.some(q=>g[q.k]==="yes")?`<div class="notice"><b>Protected lane engaged, automatically.</b> Your setup now includes the Confidential Vault and restricted-scope handling. Nothing pauses: your COB simply builds with stricter walls, and proves the vault block to you before go-live.</div>`:""}
   <button class="btn" ${GATE.every(q=>g[q.k])?"":"disabled"} onclick="COB.gateNext()">Continue</button></div>`;},
  gateSet(k,v){this.state.gate[k]=v;this.save();this.render();},
+ suggestCompany(){var u=this.state.user||{};var dom=(u.email||"").split("@")[1]||"";if(!dom||/gmail|outlook|yahoo|hotmail|icloud|proton|live\.com|aol|me\.com|msn|ymail|gmx|mail\.com/i.test(dom))return "";var parts=dom.split(".");var sld=parts[0]||"";var tld=parts.length>1?parts[parts.length-1]:"";if(!sld)return "";var title=function(s){return s.split(/[-_]+/).map(function(w){return w?w.charAt(0).toUpperCase()+w.slice(1):w;}).join(" ");};var WORD_TLD={capital:1,ventures:1,group:1,agency:1,studio:1,law:1,holdings:1,partners:1,consulting:1,solutions:1,systems:1,labs:1,media:1,digital:1,works:1,health:1,finance:1,realty:1,homes:1,properties:1,build:1,coach:1};var base=title(sld);if(WORD_TLD[(tld||"").toLowerCase()])base=base+" "+title(tld);return base;},
  studySet(k,v){this.state.study=this.state.study||{};this.state.study[k]=v.slice(0,120);this.save();},
  gateNext(){const yes=GATE.some(q=>this.state.gate[q.k]==="yes");
   if(yes&&!this.state.escalated){this.state.escalated=true;this.save();/* LOVABLE: silent onboarding_escalations insert; telemetry for ops, NEVER a stop */}
   this.go("#/reveal");},
  vReveal(){const dom=this.esc((this.state.user?.email||"").split("@")[1]||"your company");
-  const st=this.state.study||{};const sv=(k)=>`oninput="COB.studySet('${k}',this.value)" onchange="this.classList.remove('jsaved');void this.offsetWidth;this.classList.add('jsaved')"`;
+  const st=this.state.study=this.state.study||{};if(st.company===undefined){const _sc=this.suggestCompany();if(_sc)st.company=_sc;}const sv=(k)=>`oninput="COB.studySet('${k}',this.value)" onchange="this.classList.remove('jsaved');void this.offsetWidth;this.classList.add('jsaved')"`;
   const who=this.esc(this.state.user?.first||this.state.user?.name||"you");
   return `<div class="q-wrap">${this.backbar("we come prepared")}
   <p class="kicker">onboarding 01 · diving in</p>
@@ -873,7 +874,7 @@ const COB={
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
     <div class="field" style="margin:0"><label for="st-homecity">Home city (where you live)</label><input type="text" id="st-homecity" placeholder="Frisco, TX" value="${this.esc(st.homecity||"")}" ${sv("homecity")}></div>
     <div class="field" style="margin:0"><label for="st-prof">What you do</label><input type="text" id="st-prof" placeholder="Roofing company owner" value="${this.esc(st.prof||"")}" ${sv("prof")}></div>
-    <div class="field" style="margin:0"><label for="st-co">Company or business name</label><input type="text" id="st-co" placeholder="818 Capital" value="${this.esc(st.company||"")}" ${sv("company")}></div>
+    <div class="field" style="margin:0"><label for="st-co">Company or business name</label><input type="text" id="st-co" placeholder="Your company or LLC" value="${this.esc(st.company||"")}" ${sv("company")}></div>
     <div class="field" style="margin:0"><label for="st-ind">Work industry</label><input type="text" id="st-ind" placeholder="Commercial real estate" value="${this.esc(st.industry||"")}" ${sv("industry")}></div>
     <div class="field" style="margin:0"><label for="st-wa">Work area (where you operate)</label><input type="text" id="st-wa" placeholder="DFW metroplex" value="${this.esc(st.workarea||"")}" ${sv("workarea")}></div>
     <div class="field" style="margin:0"><label for="st-add">Anything to add?</label><input type="text" id="st-add" placeholder="Website, handles, anything that helps" value="${this.esc(st.notes||"")}" ${sv("notes")}></div>
