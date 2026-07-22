@@ -659,7 +659,7 @@ const COB={
             if(AUTOSEND[elId]){setStat('sent');setTimeout(()=>AUTOSEND[elId](),300);}else{setStat('got it · review and press Send');live.focus();}}
           else{setStat('I could not make out the words. Try again, a little closer, or type it.');}}).catch(err=>{setStat('The transcriber did not answer just now. Type it for now; I am on the mic.');try{console.warn("COB_EAR error",err);}catch(e){}});};
       mr.start();
-      try{const AC2=window.AudioContext||window.webkitAudioContext;const actx=new AC2();const an=actx.createAnalyser();an.fftSize=512;actx.createMediaStreamSource(stream).connect(an);const buf=new Uint8Array(an.fftSize);let spoke=false,sil=0;const tick=()=>{if(this._mrec!==mr){try{actx.close();}catch(e){}return;}an.getByteTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++){const x=(buf[i]-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/buf.length);if(rms>0.035){spoke=true;sil=0;}else if(spoke){sil+=130;if(sil>1800){try{mr.stop();}catch(e){}try{actx.close();}catch(e){}return;}}setTimeout(tick,130);};setTimeout(tick,400);}catch(e){}
+      try{const AC2=window.AudioContext||window.webkitAudioContext;const actx=new AC2();const an=actx.createAnalyser();an.fftSize=512;actx.createMediaStreamSource(stream).connect(an);const buf=new Uint8Array(an.fftSize);let spoke=false,sil=0;const tick=()=>{if(this._mrec!==mr){try{actx.close();}catch(e){}return;}an.getByteTimeDomainData(buf);let sum=0;for(let i=0;i<buf.length;i++){const x=(buf[i]-128)/128;sum+=x*x;}const rms=Math.sqrt(sum/buf.length);if(rms>0.035){spoke=true;sil=0;}else if(spoke){sil+=130;if(sil>3000){try{mr.stop();}catch(e){}try{actx.close();}catch(e){}return;}}setTimeout(tick,130);};setTimeout(tick,400);}catch(e){}
     }).catch(()=>{setStat('Your browser blocked the microphone. Allow mic access for this page, or type it.');});
     return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -1045,7 +1045,7 @@ const COB={
       const cleanup=()=>{try{if(proc)proc.disconnect();}catch(e){}try{if(src)src.disconnect();}catch(e){}try{if(ctx)ctx.close();}catch(e){}try{stream.getTracks().forEach(t=>t.stop());}catch(e){}btn.classList.remove('rec');this._dg=null;this._dgStop=null;};
       try{ctx=new AC({sampleRate:16000});}catch(e){try{ctx=new AC();}catch(e2){cleanup();return batch();}}
       const sr=ctx.sampleRate;
-      const url='wss://api.deepgram.com/v1/listen?model=nova-2&encoding=linear16&sample_rate='+sr+'&interim_results=true&utterance_end_ms=1800&vad_events=true&smart_format=true&punctuate=true';
+      const url='wss://api.deepgram.com/v1/listen?model=nova-2&encoding=linear16&sample_rate='+sr+'&interim_results=true&utterance_end_ms=3000&vad_events=true&smart_format=true&punctuate=true';
       try{ws=new WebSocket(url,['token',tok.token]);}catch(e){cleanup();return batch();}
       this._dg=ws;const base=(el.value||'').trim();let finalTxt='';
       btn.classList.add('rec');
