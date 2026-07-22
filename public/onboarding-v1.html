@@ -305,7 +305,7 @@ body.offline .offline{display:block}
 .cb.u .b{background:var(--ink);color:var(--paper);border-radius:10px 10px 2px 10px;max-width:85%;padding:12px 16px;white-space:pre-wrap}
 .cb.t .b{max-width:85%}
 #fire-scroll{max-height:54vh;overflow-y:auto;padding:4px 2px 8px;margin-top:4px;scroll-behavior:smooth}.chatin{position:sticky;bottom:0;background:var(--paper);padding:12px 0;border-top:1px solid var(--edge)}
-.chatin .row{display:flex;gap:8px;align-items:flex-end}
+.chatin .row{display:flex;gap:8px;align-items:flex-end}.fctrls{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.fbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 22px;border-radius:8px;font-weight:600;font-size:15px;cursor:pointer;border:1.5px solid transparent;transition:filter .15s var(--ease),background .15s var(--ease)}.fbtn svg{width:18px;height:18px;flex:none}.fbtn:hover{filter:brightness(.96)}.fbtn-mic{background:var(--brass);color:var(--ink);border-color:var(--brass)}.fbtn-mic.rec{background:#C23B3B;color:#fff;border-color:#C23B3B;animation:pulse 1.2s infinite}.fbtn-send{background:var(--ink);color:var(--paper);border-color:var(--ink)}.fbtn-voice{background:transparent;color:var(--ash);border-color:var(--edge);margin-left:auto}.fbtn-voice.on{color:var(--brass-deep);border-color:var(--brass);background:rgba(239,155,37,.08)}
 .chatin textarea{min-height:52px;max-height:160px;flex:1}
 .micstat{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:6px;color:var(--ash);display:flex;align-items:center;gap:7px}
 .micstat .reddot{width:8px;height:8px;border-radius:50%;background:#C23B3B;animation:blink 1s infinite}
@@ -1007,10 +1007,12 @@ const COB={
   const voice=this.state.voiceOn;
   let log=chat.map(m=>m.r==="u"?`<div class="cb u"><div class="b">${this.esc(m.t)}</div></div>`:`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(m.t)}</div></div>`).join("");
   if(this._fireBusy)log+=`<div class="cb t"><div class="b" style="color:var(--ash)">TAYLOR is thinking...</div></div>`;
-  const input=`<div class="row"><textarea id="fire-in" placeholder="Say it your way, or press the mic and talk..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();COB.fireTalk();}"></textarea>
-    <button class="mic" style="position:static;flex:none;display:inline-flex;align-items:center;gap:7px;padding:12px 18px;background:var(--brass);color:var(--ink);border:1px solid var(--brass);font-weight:600;font-size:14px" title="Speak your answer" onclick="COB.fireDictate(this)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>Speak</button>
-    <button class="btn" style="flex:none;padding:12px 22px" onclick="COB.fireTalk()">Send</button>
-    <button class="btn-ghost" style="flex:none;padding:12px 14px;display:inline-flex;align-items:center;gap:7px;${voice?'border-color:var(--brass);color:var(--brass-deep)':''}" title="${voice?'TAYLOR is speaking her replies. Click to mute.':'Turn on TAYLOR\'s voice.'}" onclick="COB.voiceToggle()"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/>${voice?'<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>':'<path d="M22 9l-6 6M16 9l6 6"/>'}</svg>${voice?'Voice on':'Voice off'}</button></div>
+  const input=`<textarea id="fire-in" style="width:100%;min-height:64px" placeholder="Say it your way, or press Speak and just talk..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();COB.fireTalk();}"></textarea>
+    <div class="fctrls">
+     <button class="fbtn fbtn-mic" title="Speak your answer" onclick="COB.fireDictate(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>Speak</button>
+     <button class="fbtn fbtn-send" onclick="COB.fireTalk()">Send</button>
+     <button class="fbtn fbtn-voice ${voice?'on':''}" title="${voice?'TAYLOR speaks her replies. Click to mute.':'Turn on TAYLOR\'s voice.'}" onclick="COB.voiceToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/>${voice?'<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>':'<path d="M22 9l-6 6M16 9l6 6"/>'}</svg>${voice?'Voice on':'Voice off'}</button>
+    </div>
     <div class="micstat">press the mic and just talk. your words load in, then it sends.</div>
     <div style="margin-top:10px"><button class="btn-ghost" onclick="COB.fireWrap()">That's enough for now. Move on →</button></div>`;
   return `<div class="chat">${this.backbar("fireside chat")}
@@ -1042,7 +1044,7 @@ const COB={
       this._dg=ws;const base=(el.value||'').trim();let finalTxt='';
       btn.classList.add('rec');
       this._dgStop=()=>{try{ws.send(JSON.stringify({type:'CloseStream'}));}catch(e){}try{ws.close();}catch(e){}};
-      ws.onopen=()=>{setStat('<span class="reddot"></span> listening... just talk. click the mic to finish','#C23B3B');
+      ws.onopen=()=>{try{if(ctx.state==='suspended')ctx.resume();}catch(e){}setStat('<span class="reddot"></span> listening... just talk. click the mic to finish','#C23B3B');
         src=ctx.createMediaStreamSource(stream);proc=ctx.createScriptProcessor(4096,1,1);
         proc.onaudioprocess=(e)=>{if(!ws||ws.readyState!==1)return;const inp=e.inputBuffer.getChannelData(0);const pcm=new Int16Array(inp.length);for(let i=0;i<inp.length;i++){let s=Math.max(-1,Math.min(1,inp[i]));pcm[i]=s<0?s*0x8000:s*0x7FFF;}ws.send(pcm.buffer);};
         src.connect(proc);proc.connect(ctx.destination);};
