@@ -15,26 +15,47 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'text required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const key = Deno.env.get('OPENAI_API_KEY')
+    const key = Deno.env.get('ELEVENLABS_API_KEY')
     if (!key) {
-      return new Response(JSON.stringify({ error: 'OPENAI_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'ELEVENLABS_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const r = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini-tts',
-        voice: 'nova',
-        input: text,
-        speed: 1.0,
-        response_format: 'mp3',
-      }),
+    const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || '56AoDkrOh6qfVPDXZ7Pt'
+    const model = Deno.env.get('ELEVENLABS_MODEL') || 'eleven_turbo_v2_5'
+
+    const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`
+    const payload = JSON.stringify({
+      text,
+      model_id: model,
+      voice_settings: {
+        stability: 0.4,
+        similarity_boost: 0.75,
+        style: 0.0,
+        use_speaker_boost: true,
+      },
     })
-    if (!r.ok) {
-      const t = await r.text()
-      return new Response(JSON.stringify({ error: 'tts_failed', detail: t.slice(0, 500) }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+
+    let r: Response | null = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      r = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'xi-api-key': key,
+          'content-type': 'application/json',
+          'accept': 'audio/mpeg',
+        },
+        body: payload,
+      })
+      if (r.status !== 429) break
+      await new Promise((res) => setTimeout(res, 600 * (attempt + 1) + Math.random() * 300))
     }
+
+    if (!r || !r.ok) {
+      const detail = r ? (await r.text()).slice(0, 300) : 'no response'
+      console.error('elevenlabs tts failed', r?.status, detail)
+      return new Response(JSON.stringify({ error: 'tts_failed', detail }), { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     const audio = await r.arrayBuffer()
     return new Response(audio, {
       headers: { ...corsHeaders, 'Content-Type': 'audio/mpeg', 'Cache-Control': 'no-store' },
