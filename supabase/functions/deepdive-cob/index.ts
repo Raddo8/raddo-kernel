@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
     return json({ error: "First name and industry are required." }, 400);
   }
 
-  const notes = await lookup({ business, city, industry, name, website, linkedin, company, emailDomain });
+  const notes = await lookup({ business, city, industry, name, website, linkedin, company, emailDomain, workArea });
 
   const anchorsList = [
     company ? `company="${company}"` : "",
