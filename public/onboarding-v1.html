@@ -873,6 +873,7 @@ const COB={
    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
     <div class="field" style="margin:0"><label for="st-area">City or area you live and work</label><input type="text" id="st-area" placeholder="Frisco, TX" value="${this.esc(st.area||"")}" ${sv("area")}></div>
     <div class="field" style="margin:0"><label for="st-prof">What you do</label><input type="text" id="st-prof" placeholder="Roofing company owner" value="${this.esc(st.prof||"")}" ${sv("prof")}></div>
+    <div class="field" style="margin:0"><label for="st-co">Company or business name</label><input type="text" id="st-co" placeholder="818 Capital" value="${this.esc(st.company||"")}" ${sv("company")}></div>
     <div class="field" style="margin:0"><label for="st-li">Your LinkedIn (optional)</label><input type="text" id="st-li" placeholder="linkedin.com/in/..." value="${this.esc(st.li||"")}" ${sv("li")}></div>
     <div class="field" style="margin:0"><label for="st-web">Your website (optional)</label><input type="text" id="st-web" placeholder="yourcompany.com" value="${this.esc(st.web||"")}" ${sv("web")}></div>
    </div></div>
@@ -906,8 +907,7 @@ const COB={
   <button class="btn-ghost" onclick="COB.go('#/plugin')">Skip for now</button></div>`;},
  DIVE_STAT:["Reading the open web...","Studying your work and ventures...","Scanning your public and social footprint...","Pulling news and the public record...","Reading reviews and reputation...","Mapping the people around you...","Building your timeline...","Assembling the dossier...","Filing it to your briefcase..."],
  proceedDive(){if(this._diveT)return;const st=this.state.study||{};const u=this.state.user||{};
-  const domain=(u.email||"").split("@")[1]||"";
-  const payload={first:u.first||(u.name||"").split(" ")[0]||"",last:u.last||"",business:st.prof&&/(company|llc|inc|co\.|group|studio|shop|firm)/i.test(st.prof)?st.prof:(domain&&!/gmail|outlook|yahoo|hotmail|icloud|proton/i.test(domain)?domain.split(".")[0]:(st.prof||"")),city:st.area||"",industry:st.prof||"",website:st.web||"",linkedin:st.li||"",name:u.name||""};
+  const domain=(u.email||"").split("@")[1]||"";const genericDom=/gmail|outlook|yahoo|hotmail|icloud|proton|live\.com|aol/i.test(domain);const customDom=(domain&&!genericDom)?domain:"";const website=st.web||(customDom?("https://"+customDom):"");const company=st.company||"";const payload={first:u.first||(u.name||"").split(" ")[0]||"",last:u.last||"",name:u.name||"",email:u.email||"",email_domain:customDom,company:company,business:company||(customDom||(st.prof||"")),city:st.area||"",industry:st.prof||"",website:website,linkedin:st.li||""};
   this.state.dive={status:"running",pct:8};this.save();this.render();
   let n=0;this._diveT=setInterval(()=>{n=(n+1)%this.DIVE_STAT.length;const el=document.getElementById('dive-stat');
     if(el)el.textContent=this.DIVE_STAT[n];this.state.dive.pct=Math.min(92,(this.state.dive.pct||8)+7);
