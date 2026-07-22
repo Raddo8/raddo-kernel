@@ -22,6 +22,7 @@
   boot();
 
   function install(sb) {
+    var SB_FN = "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1";
     var HYDRATED = false;
     var TENANT = null;
     var SAVE_T = null;
@@ -197,12 +198,7 @@
         var s = await sb.auth.getSession();
         var token = s.data.session && s.data.session.access_token;
         if (!token) return false;
-        var url = (sb && sb.functions && sb.functions.url) ? (sb.functions.url + "/taylor-voice") : null;
-        if (!url) {
-          // derive from supabase client
-          var base = (sb.supabaseUrl || "").replace(/\/$/, "");
-          url = base + "/functions/v1/taylor-voice";
-        }
+        var url = SB_FN + "/taylor-voice";
         var resp = await fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
@@ -238,8 +234,7 @@
       const s = await sb.auth.getSession();
       const token = s.data.session && s.data.session.access_token;
       if (!token) throw new Error("no_session");
-      const base = (sb.supabaseUrl || "").replace(/\/$/, "");
-      const resp = await fetch(base + "/functions/v1/taylor-ear", {
+      const resp = await fetch(SB_FN + "/taylor-ear", {
         method: "POST",
         headers: { "Content-Type": blob.type || "audio/webm", Authorization: "Bearer " + token },
         body: blob,
@@ -255,8 +250,7 @@
         var s = await sb.auth.getSession();
         var token = s.data.session && s.data.session.access_token;
         if (!token) return null;
-        var base = (sb.supabaseUrl || "").replace(/\/$/, "");
-        var resp = await fetch(base + "/functions/v1/deepgram-token", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: "{}" });
+        var resp = await fetch(SB_FN + "/deepgram-token", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: "{}" });
         if (!resp.ok) return null;
         var j = await resp.json();
         return (j && j.token) ? j : null;
