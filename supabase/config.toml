@@ -72,3 +72,6 @@ verify_jwt = false
 
 [functions.provision-connector-identity]
 verify_jwt = true
+
+[functions.deepgram-token]
+verify_jwt = true
