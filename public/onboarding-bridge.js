@@ -249,6 +249,20 @@
       return (j && j.text) || "";
     };
 
+    // --- Deepgram short-lived token: enables browser-side streaming dictation ---
+    window.COB_DGTOKEN = async function () {
+      try {
+        var s = await sb.auth.getSession();
+        var token = s.data.session && s.data.session.access_token;
+        if (!token) return null;
+        var base = (sb.supabaseUrl || "").replace(/\/$/, "");
+        var resp = await fetch(base + "/functions/v1/deepgram-token", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: "{}" });
+        if (!resp.ok) return null;
+        var j = await resp.json();
+        return (j && j.token) ? j : null;
+      } catch (e) { return null; }
+    };
+
     // --- COB DEEPDIVE: reveal-page dossier fan-out ---
     window.COB_DEEPDIVE = async function (payload) {
       const r = await sb.functions.invoke("deepdive-cob", { body: payload });
