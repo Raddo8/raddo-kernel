@@ -518,8 +518,8 @@ const COB={
  state:{user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false},
  KEY:"cob_onboarding_v1",
  totalQ:CHAPTERS.reduce((a,c)=>a+c.qs.length,0),
- RES:["#/consent","#/gate","#/reveal","#/plugin","#/harvest","#/world","#/fireside","#/review","#/claude","#/connect","#/dashboard"],
- J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/harvest"],["Your world","#/world"],["Fireside chat","#/fireside"],["Review","#/review"],["Claude","#/claude"],["Wire together","#/connect"],["Your build","#/dashboard"]],
+ RES:["#/consent","#/gate","#/reveal","#/plugin","#/harvest","#/world","#/fireside","#/claude","#/connect","#/dashboard"],
+ J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/harvest"],["Your world","#/world"],["Fireside chat","#/fireside"],["Claude","#/claude"],["Wire together","#/connect"],["Your build","#/dashboard"]],
  stepDone(hash){const s=this.state;const seen=s.seen||{};const qs=CHAPTERS[0].qs;
   switch(hash){
    case "#/consent":return !!s.consentAt;
@@ -1035,6 +1035,8 @@ const COB={
  _afterSpeak(){if(!this.state||!this.state.convoMode)return;var self=this;setTimeout(function(){self._reArm();},450);},
  fireTopicsHtml(){var fs=(CHAPTERS.filter(function(c){return c.id==="fireside";})[0]||{}).qs||[];var L={hq1:"Winning",hq2:"Priorities",hq3:"Won't sacrifice",hq4:"Values & lines",hq5:"Weekly breakdowns",hq6:"Hand off first",hq7:"Stuck decision",hq8:"Comm style",hq9:"Hard truths",hq10:"Brief cadence",hq11:"Never-do list",hq12:"Your skepticism"};var items=[{k:"name",label:"Name your COB"}].concat(fs.map(function(q){return {k:q.k,label:L[q.k]||q.t};}));var done=this.state.fireTopics||{};var act=this.state.fireActive;var self=this;var chips=items.map(function(it){var cls="ft"+(done[it.k]?" done":"")+(act===it.k?" active":"");return "<button class=\""+cls+"\" onclick=\"COB.fireTopic('"+it.k+"')\">"+(done[it.k]?"<span class=\"ftck\">\u2713</span> ":"")+self.esc(it.label)+"</button>";}).join("");return "<div class=\"ft-h\">what we'll cover, tap any to get into it</div><div class=\"ft-row\">"+chips+"</div>";},
  renderFireTopics(){var el=document.getElementById("fire-topics");if(el)el.innerHTML=this.fireTopicsHtml();},
+ fireFact(topicKey,text){text=(text||"").toString().trim();if(!text)return;var L={hq1:"What winning looks like",hq2:"Priorities",hq3:"Won't sacrifice",hq4:"Values & lines",hq5:"Weekly breakdowns",hq6:"First to hand off",hq7:"The stuck decision",hq8:"Comm style",hq9:"How to be told hard things",hq10:"Brief cadence",hq11:"Never-do list",hq12:"Skepticism",name:"COB name"};var secName=L[topicKey]||"Conversation";var bc=this.state.briefcase=this.state.briefcase||[];var d=bc.filter(function(x){return x&&x.title==="FIRESIDE_CHAT";})[0];if(!d){d={title:"FIRESIDE_CHAT",facts:0,sections:[]};bc.push(d);}d.sections=d.sections||[];var sec=d.sections.filter(function(s){return s.name===secName;})[0];if(!sec){sec={name:secName,items:[]};d.sections.push(sec);}sec.items.push(text.slice(0,400));d.facts=(d.facts||0)+1;this.save();this.refreshBriefcase();},
+ refreshBriefcase(){var bf=this.state.briefcase||[];var facts=bf.reduce(function(n,d){return n+(d.facts||0);},0);var fl=this.state.files||[];var c=document.querySelector(".bp-c");if(c){c.textContent=(bf.length||fl.length||!this.state.noAI)?(bf.length+" deliverables \u00b7 "+facts+" facts on record"+(fl.length?" \u00b7 "+fl.length+" files":"")):"clean start \u00b7 building from zero";}var body=document.querySelector(".bp-body");if(body){var rows=bf.map((d)=>"<div class=\"bp-row\"><span>"+this.esc(d.title)+"</span><span class=\"ok\">filed</span></div>").join("")+fl.map((f)=>"<div class=\"bp-row\"><span>"+this.esc(f.name)+"</span><span class=\"ok\">received</span></div>").join("");var sec=body.querySelector(".bp-sec");if(sec){sec.innerHTML=rows;}else if(rows){var nd=document.createElement("div");nd.className="bp-sec";nd.innerHTML=rows;body.insertBefore(nd,body.firstChild);}}},
  fireTopic(k){if(!k)return;this.state.fireActive=k;this.save();this.renderFireTopics();var fs=(CHAPTERS.filter(function(c){return c.id==="fireside";})[0]||{}).qs||[];var q=fs.filter(function(x){return x.k===k;})[0]||{};var directive;if(k==="name"){directive="[The person wants to name their COB. Warmly invite them to give their COB a name, offer three quick example names as sparks (for instance Atlas, Ivy, or Sarge), make clear it can be anything and they can change it later. One or two sentences.]";}else{directive="[The person tapped a topic to get into: \""+(q.t||"")+"\". Ask it now, woven naturally into our conversation and in your own words, not read verbatim. Acknowledge the thread we are already on.]";}var s=document.getElementById("fire-scroll");if(s){s.insertAdjacentHTML("beforeend","<div class=\"cb t\" id=\"fire-think\"><div class=\"b\" style=\"color:var(--ash)\">TAYLOR is thinking...</div></div>");s.scrollTop=s.scrollHeight;}var hist=(this.state.fireChat||[]).slice(-16).map(function(m){return {role:m.r==="u"?"user":"assistant",content:m.t};});hist.push({role:"user",content:directive});var self=this;var land=function(a){a=(a||"").toString().trim()||"Alright, let's get into it.";self.state.fireChat.push({r:"t",t:a});self.save();var th=document.getElementById("fire-think");if(th)th.remove();var sc=document.getElementById("fire-scroll");if(sc){sc.insertAdjacentHTML("beforeend","<div class=\"cb t\"><div class=\"b\"><div class=\"who\">taylor</div>"+self.esc(a)+"</div></div>");sc.scrollTop=sc.scrollHeight;}if(self.state.voiceOn){try{self.speak(a);}catch(e){}}};var call=window.COB_FIRE;if(call){call(hist,directive).then(land).catch(function(){land(null);});}else{setTimeout(function(){land(null);},400);}},
  sDictate(btn,elId,sendFn){
   if(this._dg){if(this._dgStop)this._dgStop();return;}
@@ -1073,7 +1075,7 @@ const COB={
  },
  fireDictate(btn){return this.sDictate(btn,'fire-in',()=>this.fireTalk());},
  fireTalk(){const el=document.getElementById('fire-in');const v=(el&&el.value||"").trim();if(!v){this.toast("Say it your way, or press the mic.");return;}
-  this.state.fireChat=this.state.fireChat||[];this.state.fireChat.push({r:"u",t:v});if(el)el.value="";this.save();if(this.state.fireActive){this.state.fireTopics=this.state.fireTopics||{};this.state.fireTopics[this.state.fireActive]="done";this.state.fireActive=null;this.save();this.renderFireTopics();}
+  this.state.fireChat=this.state.fireChat||[];this.state.fireChat.push({r:"u",t:v});if(el)el.value="";this.save();var _ft=this.state.fireActive||null;if(_ft){this.state.fireTopics=this.state.fireTopics||{};this.state.fireTopics[_ft]="done";this.state.fireActive=null;this.renderFireTopics();if(_ft==="name"){this.state.cobName=v.slice(0,60);}}this.fireFact(_ft,v);
   const s=document.getElementById('fire-scroll');
   if(s){s.insertAdjacentHTML('beforeend',`<div class="cb u"><div class="b">${this.esc(v)}</div></div><div class="cb t" id="fire-think"><div class="b" style="color:var(--ash)">TAYLOR is thinking...</div></div>`);s.scrollTop=s.scrollHeight;}
   const hist=this.state.fireChat.slice(-16).map(m=>({role:m.r==="u"?"user":"assistant",content:m.t}));
@@ -1083,7 +1085,7 @@ const COB={
     const sc=document.getElementById('fire-scroll');if(sc){sc.insertAdjacentHTML('beforeend',`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(a)}</div></div>`);sc.scrollTop=sc.scrollHeight;}
     if(this.state.voiceOn){try{this.speak(a);}catch(e){}}else if(this.state.convoMode){var self=this;setTimeout(function(){self._reArm();},500);}};
   if(call){call(hist,v).then(land).catch(()=>land(null));}else{setTimeout(()=>land(null),400);}},
- fireWrap(){this.go('#/review');},
+ fireWrap(){this.go('#/claude');},
  fireScroll(){var t=this;setTimeout(function(){var s=document.getElementById('fire-scroll');if(s)s.scrollTop=s.scrollHeight;},70);},
   fireSend(k){const el=document.getElementById('fire-in');const v=(el&&el.value||"").trim();
   if(!v){this.toast("Say it your way, or skip for now.");return;}
@@ -1114,7 +1116,7 @@ const COB={
   d.title="FIRESIDE_CHAT";this.state.briefcase=this.state.briefcase||[];
   const i=this.state.briefcase.findIndex(x=>x.title==="FIRESIDE_CHAT");if(i>-1)this.state.briefcase.splice(i,1);
   this.state.briefcase.push(d);this.save();/* LOVABLE: store raw to intake_files kind fireside */
-  this.toast("Our chat is sealed in the briefcase.");this.go("#/review");},
+  this.toast("Our chat is sealed in the briefcase.");this.go("#/claude");},
  vQuestion(ci,qi){const c=CHAPTERS[ci];if(!c)return "<p>Missing chapter.</p>";
   if(qi>=c.qs.length)return this.vChapterEnd(ci);
   const q=c.qs[qi];const val=this.state.answers[q.k]||"";
@@ -1144,8 +1146,8 @@ const COB={
   <h1>${this.esc(c.title)}: ${done} of ${c.qs.length} answered.</h1>
   ${half?`<div class="milestone"><p class="kicker">halfway</p><p style="margin:0">Half your world is on the record. Most owners have never written this much truth down in one sitting.</p></div>`:""}
   <div class="card">${c.qs.map(q=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/fireside')">Edit</button></div>`).join("")}</div>
-  <div class="q-actions">${last?`<button class="btn" onclick="COB.go('#/review')">Review everything</button>`:`<button class="btn" onclick="COB.go('#/ch/${ci+1}/0')">Next chapter: ${this.esc(CHAPTERS[ci+1].title)}</button>`}
-  <button class="btn-ghost" onclick="COB.go('#/review')">Jump to full review</button></div></div>`;},
+  <div class="q-actions">${last?`<button class="btn" onclick="COB.go('#/claude')">Continue</button>`:`<button class="btn" onclick="COB.go('#/ch/${ci+1}/0')">Next chapter: ${this.esc(CHAPTERS[ci+1].title)}</button>`}
+  <button class="btn-ghost" onclick="COB.go('#/claude')">Continue</button></div></div>`;},
  vReview(){const skipped=[];CHAPTERS.forEach((c,ci)=>c.qs.forEach((q,qi)=>{if(!String(this.state.answers[q.k]||"").trim())skipped.push({c,ci,q,qi});}));
   return `<div class="q-wrap" style="max-width:760px">${this.backbar()}
   <p class="kicker">onboarding 06 · review</p><h1>Read it back. Change anything.</h1>
