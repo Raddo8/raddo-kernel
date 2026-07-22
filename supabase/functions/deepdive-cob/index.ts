@@ -120,31 +120,42 @@ async function fcScrape(url: string, max = 1800): Promise<string> {
 async function lookup(opts: {
   business: string; city: string; industry: string;
   name: string; website: string; linkedin: string;
+  company: string; emailDomain: string;
 }): Promise<string> {
   if (!FIRECRAWL_API_KEY) return "";
-  const { business, city, industry, name, website, linkedin } = opts;
+  const { business, city, industry, name, website, linkedin, company, emailDomain } = opts;
+
+  // ANCHOR sources: full domain (never truncated), company name, website, linkedin.
+  const anchorDomain = emailDomain || (website ? domainFromUrl(website) : "");
+  const anchorCompany = company || business;
+  const siteUrl = website || (emailDomain ? `https://${emailDomain}` : "");
 
   const rawQueries: Array<[string, number]> = [
-    [name ? name : "", 4],
-    [name && city ? `${name} ${city}` : "", 4],
-    [name && industry ? `${name} ${industry}` : "", 3],
-    [name && business ? `${name} ${business}` : "", 3],
-    [business && city ? `${business} ${city}` : "", 4],
-    [business ? `${business} reviews` : "", 3],
-    [business ? `${business} about` : "", 3],
-    [name ? `site:linkedin.com "${name}"` : "", 3],
-    [name ? `site:x.com OR site:twitter.com "${name}"` : "", 3],
-    [name || business ? `site:facebook.com "${name || business}"` : "", 3],
-    [business ? `site:instagram.com "${business}"` : "", 2],
-    [name ? `"${name}" news OR press OR interview` : "", 3],
-    [name || business ? `"${name || business}" lawsuit OR filing OR bankruptcy OR acquisition` : "", 3],
-    [industry && city ? `${industry} ${city}` : "", 3],
+    // Anchor-first: company/domain queries take priority
+    anchorCompany ? [`"${anchorCompany}"`, 4] : ["", 0],
+    anchorCompany && name ? [`"${name}" "${anchorCompany}"`, 4] : ["", 0],
+    anchorDomain ? [`site:${anchorDomain}`, 4] : ["", 0],
+    anchorDomain ? [`"${anchorDomain}"`, 3] : ["", 0],
+    anchorCompany ? [`"${anchorCompany}" founder OR owner OR principal OR CEO`, 3] : ["", 0],
+    anchorCompany && city ? [`"${anchorCompany}" ${city}`, 3] : ["", 0],
+    // Name searches, always paired with an anchor when possible
+    name && anchorCompany ? [`"${name}" "${anchorCompany}" linkedin`, 3] : ["", 0],
+    name && city ? [`"${name}" ${city}`, 3] : ["", 0],
+    name && industry ? [`"${name}" ${industry}`, 3] : ["", 0],
+    name ? [`site:linkedin.com "${name}"${anchorCompany ? ` "${anchorCompany}"` : ""}`, 3] : ["", 0],
+    name ? [`site:x.com OR site:twitter.com "${name}"`, 2] : ["", 0],
+    anchorCompany ? [`site:facebook.com "${anchorCompany}"`, 2] : ["", 0],
+    anchorCompany ? [`site:instagram.com "${anchorCompany}"`, 2] : ["", 0],
+    anchorCompany ? [`"${anchorCompany}" news OR press OR interview`, 3] : ["", 0],
+    anchorCompany ? [`"${anchorCompany}" lawsuit OR filing OR acquisition`, 2] : ["", 0],
+    // Fallback bare-name only if we truly have no anchor
+    !anchorCompany && !anchorDomain && name ? [name, 3] : ["", 0],
   ];
   const queries = rawQueries.filter(([q]) => q && q.trim().length > 0);
 
   const [searchResults, siteMd, liMd] = await Promise.all([
-    Promise.all(queries.map(([q, l]) => fcSearch(q, l))),
-    website ? fcScrape(website, 1800) : Promise.resolve(""),
+    Promise.all(queries.map(([q, l]) => fcSearch(q, l as number))),
+    siteUrl ? fcScrape(siteUrl, 2400) : Promise.resolve(""),
     linkedin ? fcScrape(linkedin, 1200) : Promise.resolve(""),
   ]);
 
@@ -163,12 +174,13 @@ async function lookup(opts: {
       `${clean(i.title, 140)} [${clean(i.url, 110)}] :: ${clean(i.description ?? i.snippet, 260)}`
     )
     .join("\n");
+  // Anchor site content goes FIRST so the model treats it as ground truth.
   const combined = [
-    notes,
-    siteMd ? `\n--- website (${domainFromUrl(website)}) ---\n${siteMd}` : "",
-    liMd ? `\n--- linkedin (${domainFromUrl(linkedin)}) ---\n${liMd}` : "",
+    siteMd ? `--- ANCHOR SITE (${domainFromUrl(siteUrl)}) · treat as ground truth for identity/company ---\n${siteMd}\n` : "",
+    liMd ? `--- ANCHOR LINKEDIN (${domainFromUrl(linkedin)}) ---\n${liMd}\n` : "",
+    notes ? `--- web search results (verify against anchors above; drop any that don't match) ---\n${notes}` : "",
   ].join("");
-  return clean(combined, 6000);
+  return clean(combined, 6500);
 }
 
 async function callClaude(userBlock: string, attempt = 0): Promise<Response> {
