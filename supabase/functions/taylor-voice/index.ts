@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'ELEVENLABS_API_KEY missing' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || '56AoDkrOh6qfVPDXZ7Pt'
+    const voiceId = Deno.env.get('ELEVENLABS_VOICE_ID') || '21m00Tcm4TlvDq8ikWAM'
     const model = Deno.env.get('ELEVENLABS_MODEL') || 'eleven_turbo_v2_5'
 
     const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`
