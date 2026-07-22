@@ -339,15 +339,42 @@
       var user = s.data.session && s.data.session.user;
       if (!user) { HYDRATED = false; return; }
       TENANT = await loadOrCreateTenant(user.id, user.email || "");
-      if (TENANT && TENANT.state && typeof TENANT.state === "object") {
-        var local = COB.state || {};
-        var localTs = local._savedAt || 0;
-        var serverTs = TENANT.state._savedAt || 0;
-        if (!localTs || serverTs >= localTs) {
+
+      // Pull the authoritative onboarding_state row.
+      var serverState = null;
+      var serverTs = 0;
+      try {
+        var row = await sb.from("onboarding_state").select("state,updated_at").eq("user_id", user.id).maybeSingle();
+        if (row && row.data && row.data.state && typeof row.data.state === "object") {
+          serverState = row.data.state;
+          serverTs = row.data.state._savedAt || (row.data.updated_at ? Date.parse(row.data.updated_at) : 0);
+        }
+      } catch (e) {}
+
+      var local = COB.state || {};
+      var localTs = local._savedAt || 0;
+      var localEmail = (local.user && local.user.email || "").toLowerCase();
+      var signedInEmail = (user.email || "").toLowerCase();
+      var replace = false;
+      if (serverState) {
+        if (!localTs) replace = true;
+        else if (localEmail && signedInEmail && localEmail !== signedInEmail) replace = true;
+        else if (serverTs && serverTs > localTs) replace = true;
+      }
+      if (replace) {
+        // Wipe first so stale keys from a different user do not leak through.
+        for (var k in COB.state) { if (Object.prototype.hasOwnProperty.call(COB.state, k)) delete COB.state[k]; }
+        Object.assign(COB.state, serverState);
+        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      } else if (TENANT && TENANT.state && typeof TENANT.state === "object" && !serverState) {
+        // Legacy fallback: onboarding_tenants.state was the old home before onboarding_state.
+        var tTs = TENANT.state._savedAt || 0;
+        if (!localTs || tTs >= localTs) {
           Object.assign(COB.state, TENANT.state);
           try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
         }
       }
+
       if (!COB.state.user) {
         COB.state.user = { email: user.email, first: (user.user_metadata||{}).first_name||"", last: (user.user_metadata||{}).last_name||"", name: (user.user_metadata||{}).full_name || (user.email||"") };
       }
@@ -358,21 +385,37 @@
 
 
     // --- persistence bridge ---
-    var origSave = COB.save.bind(COB);
-    COB.save = function () {
-      COB.state._savedAt = Date.now();
-      origSave();
-      clearTimeout(SAVE_T);
-      SAVE_T = setTimeout(async function () {
+    // Debounced (1500ms) full-state upsert into onboarding_state for the signed-in user.
+    var PERSIST_T = null;
+    window.COB_PERSIST = function () {
+      clearTimeout(PERSIST_T);
+      PERSIST_T = setTimeout(async function () {
         try {
           var s = await sb.auth.getSession();
           var user = s.data.session && s.data.session.user;
           if (!user) return;
-          if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
-          if (!TENANT) return;
-          await sb.from("onboarding_tenants").update({ state: COB.state }).eq("id", TENANT.id);
+          COB.state._savedAt = Date.now();
+          try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+          await sb.from("onboarding_state").upsert({
+            user_id: user.id,
+            email: user.email || null,
+            state: COB.state,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: "user_id" });
+          // Legacy mirror kept during transition.
+          try {
+            if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+            if (TENANT) await sb.from("onboarding_tenants").update({ state: COB.state }).eq("id", TENANT.id);
+          } catch (e) {}
         } catch (e) { /* silent */ }
-      }, 1000);
+      }, 1500);
+    };
+
+    var origSave = COB.save.bind(COB);
+    COB.save = function () {
+      COB.state._savedAt = Date.now();
+      origSave();
+      window.COB_PERSIST();
     };
 
     // --- auth bridge ---
