@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
         'Authorization': `Token ${key}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ttl_seconds: 60 }),
+      body: JSON.stringify({ ttl_seconds: 300 }),
     })
 
     if (!r.ok) {
