@@ -1193,7 +1193,7 @@ const COB={
    <div class="steps-c">
     <div class="stc ${(this.state.checks||{}).conn1?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn1')"><span class="stn">${(this.state.checks||{}).conn1?"✓":"1"}</span><span><b>Open Claude's connector settings.</b> Use the button below; a new tab opens. If Claude asks you to sign in, sign in to your Claude account first, then come back to that tab.</span></div>
     <div class="stc ${(this.state.checks||{}).conn2?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn2')"><span class="stn">${(this.state.checks||{}).conn2?"✓":"2"}</span><span><b>Find "Add custom connector."</b> On the settings page, scroll to the Connectors section and click <b>Add custom connector</b>.</span></div>
-    <div class="stc ${(this.state.checks||{}).conn3?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn3')"><span class="stn">${(this.state.checks||{}).conn3?"✓":"3"}</span><span><b>Fill in the two boxes.</b> Name: <b>COB</b>. URL: the connector address. Copy it with one click:</span></div>
+    <div class="stc ${(this.state.checks||{}).conn3?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn3')"><span class="stn">${(this.state.checks||{}).conn3?"✓":"3"}</span><span><b>Fill in the top two boxes.</b> Name: <b>COB</b>. URL: the connector address below. Copy it with one click (do not fill in the bottom two boxes):</span></div>
    </div>
    <div class="copybox" style="margin-top:10px;font-size:16px;text-align:center;padding:20px 16px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button><div style="padding-top:6px">https://mcp.chiefofbusiness.ai/</div></div>
    <div class="steps-c" style="margin-top:10px">
