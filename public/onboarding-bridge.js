@@ -217,58 +217,66 @@
     }
     // Override the ENGINE (_speakImpl), not the POLICY (COB.speak). The client's
     // voice toggle lives in COB.speak; overriding it would bypass the toggle.
-    var origSpeakImpl = (typeof COB._speakImpl === "function") ? COB._speakImpl.bind(COB) : null;
-    COB._speakImpl = function (text) {
-      speakLive(text).then(function (ok) {
-        if (ok) return; // onended will fire speakDone
-        if (typeof window.speechSynthesis !== "undefined") {
-          try {
-            window.speechSynthesis.cancel();
-            var u = new SpeechSynthesisUtterance(String(text || ""));
-            u.onend = speakDone;
-            window.speechSynthesis.speak(u);
-            return;
-          } catch (e) {}
-        }
-        if (origSpeakImpl) { try { origSpeakImpl(text); } catch (e) {} }
-        setTimeout(speakDone, Math.min(9000, 1200 + String(text || "").length * 55));
-      });
-    };
+    try {
+      var origSpeakImpl = (typeof COB._speakImpl === "function") ? COB._speakImpl.bind(COB) : null;
+      COB._speakImpl = function (text) {
+        speakLive(text).then(function (ok) {
+          if (ok) return; // onended will fire speakDone
+          if (typeof window.speechSynthesis !== "undefined") {
+            try {
+              window.speechSynthesis.cancel();
+              var u = new SpeechSynthesisUtterance(String(text || ""));
+              u.onend = speakDone;
+              window.speechSynthesis.speak(u);
+              return;
+            } catch (e) {}
+          }
+          if (origSpeakImpl) { try { origSpeakImpl(text); } catch (e) {} }
+          setTimeout(speakDone, Math.min(9000, 1200 + String(text || "").length * 55));
+        });
+      };
+    } catch (e) { /* never block install */ }
 
     // --- TAYLOR's ear: MediaRecorder blob -> taylor-ear transcription ---
-    window.COB_EAR = async function (blob) {
-      const s = await sb.auth.getSession();
-      const token = s.data.session && s.data.session.access_token;
-      if (!token) throw new Error("no_session");
-      const resp = await fetch(SB_FN + "/taylor-ear", {
-        method: "POST",
-        headers: { "Content-Type": blob.type || "audio/webm", Authorization: "Bearer " + token },
-        body: blob,
-      });
-      if (!resp.ok) throw new Error("ear_failed");
-      const j = await resp.json();
-      return (j && j.text) || "";
-    };
+    try {
+      window.COB_EAR = async function (blob) {
+        const s = await sb.auth.getSession();
+        const token = s.data.session && s.data.session.access_token;
+        if (!token) throw new Error("no_session");
+        const resp = await fetch(SB_FN + "/taylor-ear", {
+          method: "POST",
+          headers: { "Content-Type": blob.type || "audio/webm", Authorization: "Bearer " + token },
+          body: blob,
+        });
+        if (!resp.ok) throw new Error("ear_failed");
+        const j = await resp.json();
+        return (j && j.text) || "";
+      };
+    } catch (e) { /* never block install */ }
 
     // --- Deepgram short-lived token: enables browser-side streaming dictation ---
-    window.COB_DGTOKEN = async function () {
-      try {
-        var s = await sb.auth.getSession();
-        var token = s.data.session && s.data.session.access_token;
-        if (!token) return null;
-        var resp = await fetch(SB_FN + "/deepgram-token", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: "{}" });
-        if (!resp.ok) return null;
-        var j = await resp.json();
-        return (j && j.token) ? j : null;
-      } catch (e) { return null; }
-    };
+    try {
+      window.COB_DGTOKEN = async function () {
+        try {
+          var s = await sb.auth.getSession();
+          var token = s.data.session && s.data.session.access_token;
+          if (!token) return null;
+          var resp = await fetch(SB_FN + "/deepgram-token", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: "{}" });
+          if (!resp.ok) return null;
+          var j = await resp.json();
+          return (j && j.token) ? j : null;
+        } catch (e) { return null; }
+      };
+    } catch (e) { /* never block install */ }
 
     // --- COB DEEPDIVE: reveal-page dossier fan-out ---
-    window.COB_DEEPDIVE = async function (payload) {
-      const r = await sb.functions.invoke("deepdive-cob", { body: payload });
-      if (r.error) throw new Error("deepdive_failed");
-      return (r.data && r.data.brief) || null;
-    };
+    try {
+      window.COB_DEEPDIVE = async function (payload) {
+        const r = await sb.functions.invoke("deepdive-cob", { body: payload });
+        if (r.error) throw new Error("deepdive_failed");
+        return (r.data && r.data.brief) || null;
+      };
+    } catch (e) { /* never block install */ }
 
     function cobKnowledge() {
       var st = COB.state || {}; var out = [];
@@ -288,45 +296,49 @@
       return out.join("\n").slice(0, 2500);
     }
 
-    window.COB_ASK = async function (question, ctx) {
-      try {
-        var s = await sb.auth.getSession();
-        var user = s.data.session && s.data.session.user;
-        if (!user) return "Sign in first and I'm all yours.";
-        if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
-        var st = COB.state || {}; var study = st.study || {};
-        var page_state = {
-          page: (COB.route ? COB.route().p : ""), first: (st.user && st.user.first) || "",
-          entered: { area: study.area||"", role: study.prof||"", website: study.web||"", linkedin: study.li||"" },
-          systems_named: (st.wishlist || []).slice(0,20),
-          briefcase: (st.briefcase||[]).map(function(d){return d.title+" ("+(d.facts||0)+")";}),
-          briefcase_facts: (st.briefcase||[]).reduce(function(a,d){return a+(d.facts||0);},0),
-          deep_dive: (st.dive && st.dive.status) || "not started",
-          fireside_answered: Object.keys(st.answers||{}).filter(function(k){return !k.startsWith("fix_") && String((st.answers||{})[k]||"").trim();}).length
-        };
-        var r = await sb.functions.invoke("taylor-chat", { body: { question: question, page_ctx: "page:"+(ctx||"fireside"), tenant_id: TENANT ? TENANT.id : null, page_state: page_state, knowledge: cobKnowledge() } });
-        return (r && r.data && r.data.answer) || "I'm here. Tell me what's going on, or answer the question above when you're ready.";
-      } catch (e) { return "I'm here with you. Type it for now and let's keep going."; }
-    };
+    try {
+      window.COB_ASK = async function (question, ctx) {
+        try {
+          var s = await sb.auth.getSession();
+          var user = s.data.session && s.data.session.user;
+          if (!user) return "Sign in first and I'm all yours.";
+          if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+          var st = COB.state || {}; var study = st.study || {};
+          var page_state = {
+            page: (COB.route ? COB.route().p : ""), first: (st.user && st.user.first) || "",
+            entered: { area: study.area||"", role: study.prof||"", website: study.web||"", linkedin: study.li||"" },
+            systems_named: (st.wishlist || []).slice(0,20),
+            briefcase: (st.briefcase||[]).map(function(d){return d.title+" ("+(d.facts||0)+")";}),
+            briefcase_facts: (st.briefcase||[]).reduce(function(a,d){return a+(d.facts||0);},0),
+            deep_dive: (st.dive && st.dive.status) || "not started",
+            fireside_answered: Object.keys(st.answers||{}).filter(function(k){return !k.startsWith("fix_") && String((st.answers||{})[k]||"").trim();}).length
+          };
+          var r = await sb.functions.invoke("taylor-chat", { body: { question: question, page_ctx: "page:"+(ctx||"fireside"), tenant_id: TENANT ? TENANT.id : null, page_state: page_state, knowledge: cobKnowledge() } });
+          return (r && r.data && r.data.answer) || "I'm here. Tell me what's going on, or answer the question above when you're ready.";
+        } catch (e) { return "I'm here with you. Type it for now and let's keep going."; }
+      };
+    } catch (e) { /* never block install */ }
 
-    window.COB_FIRE = async function (history, latest) {
-      try {
-        var s = await sb.auth.getSession(); var user = s.data.session && s.data.session.user;
-        if (!user) return "Sign in first and I'm all yours.";
-        if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
-        var st = COB.state || {};
-        var r = await sb.functions.invoke("taylor-chat", { body: {
-          mode: "fireside",
-          history: history || [],
-          question: latest || "",
-          page_ctx: "page:fireside",
-          tenant_id: TENANT ? TENANT.id : null,
-          knowledge: cobKnowledge(),
-          first: (st.user && st.user.first) || ""
-        }});
-        return (r && r.data && r.data.answer) || "I'm right here with you. Keep going.";
-      } catch (e) { return "I'm here with you. Say more when you're ready."; }
-    };
+    try {
+      window.COB_FIRE = async function (history, latest) {
+        try {
+          var s = await sb.auth.getSession(); var user = s.data.session && s.data.session.user;
+          if (!user) return "Sign in first and I'm all yours.";
+          if (!TENANT) TENANT = await loadOrCreateTenant(user.id, user.email || "");
+          var st = COB.state || {};
+          var r = await sb.functions.invoke("taylor-chat", { body: {
+            mode: "fireside",
+            history: history || [],
+            question: latest || "",
+            page_ctx: "page:fireside",
+            tenant_id: TENANT ? TENANT.id : null,
+            knowledge: cobKnowledge(),
+            first: (st.user && st.user.first) || ""
+          }});
+          return (r && r.data && r.data.answer) || "I'm right here with you. Keep going.";
+        } catch (e) { return "I'm here with you. Say more when you're ready."; }
+      };
+    } catch (e) { /* never block install */ }
 
 
 
@@ -411,12 +423,8 @@
       }, 1500);
     };
 
-    var origSave = COB.save.bind(COB);
-    COB.save = function () {
-      COB.state._savedAt = Date.now();
-      origSave();
-      window.COB_PERSIST();
-    };
+    // COB.save monkey-patch is deferred to the very end of install() so a
+    // failure here can never abort any preceding wiring (see bottom of install).
 
     // --- auth bridge ---
     COB.signup = async function () {
@@ -571,10 +579,34 @@
       return origClearConfirm();
     };
 
+    // --- COB.save monkey-patch: LAST, defensively wrapped so a throw here
+    // cannot prevent boot / auth-listener wiring below. ---
+    try {
+      if (COB && typeof COB.save === "function") {
+        var origSave = COB.save.bind(COB);
+        COB.save = function () {
+          try { COB.state._savedAt = Date.now(); } catch (e) {}
+          origSave();
+          try { window.COB_PERSIST && window.COB_PERSIST(); } catch (e) {}
+        };
+      }
+    } catch (e) { /* never block install */ }
+
     // --- boot ---
     hydrateFromServer();
     sb.auth.onAuthStateChange(function (_evt, sess) {
       if (sess && !HYDRATED) hydrateFromServer();
     });
+
+    try {
+      console.log("[COB bridge] installed", {
+        speak: typeof COB._speakImpl,
+        ear: typeof window.COB_EAR,
+        dg: typeof window.COB_DGTOKEN,
+        ask: typeof window.COB_ASK,
+        fire: typeof window.COB_FIRE,
+        persist: typeof window.COB_PERSIST
+      });
+    } catch (e) {}
   }
 })();
