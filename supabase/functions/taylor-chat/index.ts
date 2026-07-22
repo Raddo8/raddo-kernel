@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
 
     const isReaction = page_ctx.startsWith('fireside-reaction')
     const isFireside = mode === 'fireside'
-    const systemPrompt = isFireside ? FIRESIDE_SYSTEM : SYSTEM
+    const systemPrompt = (isFireside ? FIRESIDE_SYSTEM : SYSTEM) + "\n\n" + KNOWHOW
 
     const messages: Array<{ role: string; content: string }> = []
     if (isFireside && history.length > 0) {
