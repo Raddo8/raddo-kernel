@@ -240,6 +240,10 @@ Deno.serve(async (req) => {
   const email = clean(body.email, 160);
   const emailDomain = clean(body.email_domain, 120);
   const linkedin = clean(body.linkedin, 200);
+  const homeCity = clean(body.home_city, 80);
+  const workArea = clean(body.work_area, 80);
+  const whatYouDo = clean(body.what_you_do, 120);
+  const extra = clean(body.extra, 400);
   const name = clean(body.name ?? `${first} ${last}`.trim(), 120);
 
   // If website is empty but we have a real (non-generic) email domain, use it.
