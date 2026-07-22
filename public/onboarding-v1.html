@@ -305,7 +305,7 @@ body.offline .offline{display:block}
 .cb.u .b{background:var(--ink);color:var(--paper);border-radius:10px 10px 2px 10px;max-width:85%;padding:12px 16px;white-space:pre-wrap}
 .cb.t .b{max-width:85%}
 #fire-scroll{max-height:54vh;overflow-y:auto;padding:4px 2px 8px;margin-top:4px;scroll-behavior:smooth}.chatin{position:sticky;bottom:0;background:var(--paper);padding:12px 0;border-top:1px solid var(--edge)}
-.chatin .row{display:flex;gap:8px;align-items:flex-end}.fctrls{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.fbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 22px;border-radius:8px;font-weight:600;font-size:15px;cursor:pointer;border:1.5px solid transparent;transition:filter .15s var(--ease),background .15s var(--ease)}.fbtn svg{width:18px;height:18px;flex:none}.fbtn:hover{filter:brightness(.96)}.fbtn-mic{background:var(--brass);color:var(--ink);border-color:var(--brass)}.fbtn-mic.rec{background:#C23B3B;color:#fff;border-color:#C23B3B;animation:pulse 1.2s infinite}.fbtn-send{background:var(--ink);color:var(--paper);border-color:var(--ink)}.fbtn-voice{background:transparent;color:var(--ash);border-color:var(--edge);margin-left:auto}.fbtn-voice.on{color:var(--brass-deep);border-color:var(--brass);background:rgba(239,155,37,.08)}
+.chatin .row{display:flex;gap:8px;align-items:flex-end}.fctrls{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}.fbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 22px;border-radius:8px;font-weight:600;font-size:15px;cursor:pointer;border:1.5px solid transparent;transition:filter .15s var(--ease),background .15s var(--ease)}.fbtn svg{width:18px;height:18px;flex:none}.fbtn:hover{filter:brightness(.96)}.fbtn-mic{background:var(--brass);color:var(--ink);border-color:var(--brass)}.fbtn-mic.rec{background:#C23B3B;color:#fff;border-color:#C23B3B;animation:pulse 1.2s infinite}.fbtn-send{background:var(--ink);color:var(--paper);border-color:var(--ink)}.fbtn-voice{background:transparent;color:var(--ash);border-color:var(--edge);margin-left:auto}.fbtn-voice.on{color:var(--brass-deep);border-color:var(--brass);background:rgba(239,155,37,.08)}.fbtn-convo{background:transparent;color:var(--ash);border-color:var(--edge)}.fbtn-convo.on{color:#1f7a4d;border-color:#1f7a4d;background:rgba(31,122,77,.09)}
 .chatin textarea{min-height:52px;max-height:160px;flex:1}
 .micstat{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;margin-top:6px;color:var(--ash);display:flex;align-items:center;gap:7px}
 .micstat .reddot{width:8px;height:8px;border-radius:50%;background:#C23B3B;animation:blink 1s infinite}
@@ -1008,7 +1008,7 @@ const COB={
   this.render();},
  vFireside(){var chat=this.state.fireChat;
   if(!chat||!chat.length){chat=this.state.fireChat=[{r:"t",t:"Pull up a chair. This part is just us, talking. No script, no forms. Tell me in your own words: a year from now, what does winning look like for you? Type it, or press the mic and just talk."}];}
-  const voice=this.state.voiceOn;
+  const voice=this.state.voiceOn;const convo=this.state.convoMode;
   let log=chat.map(m=>m.r==="u"?`<div class="cb u"><div class="b">${this.esc(m.t)}</div></div>`:`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(m.t)}</div></div>`).join("");
   if(this._fireBusy)log+=`<div class="cb t"><div class="b" style="color:var(--ash)">TAYLOR is thinking...</div></div>`;
   const input=`<textarea id="fire-in" style="width:100%;min-height:64px" placeholder="Say it your way, or press Speak and just talk..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();COB.fireTalk();}"></textarea>
@@ -1016,6 +1016,7 @@ const COB={
      <button class="fbtn fbtn-mic" title="Speak your answer" onclick="COB.fireDictate(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>Speak</button>
      <button class="fbtn fbtn-send" onclick="COB.fireTalk()">Send</button>
      <button class="fbtn fbtn-voice ${voice?'on':''}" title="${voice?'TAYLOR speaks her replies. Click to mute.':'Turn on TAYLOR\'s voice.'}" onclick="COB.voiceToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/>${voice?'<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>':'<path d="M22 9l-6 6M16 9l6 6"/>'}</svg>${voice?'Voice on':'Voice off'}</button>
+     <button class="fbtn fbtn-convo ${convo?'on':''}" title="${convo?'Hands-free is on. Talk, I answer, then the mic reopens on its own. Click to stop.':'Hands-free: talk back and forth without pressing the mic each time.'}" onclick="COB.convoToggle()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>${convo?'Hands-free on':'Hands-free'}</button>
     </div>
     <div class="micstat">press the mic and just talk. your words load in, then it sends.</div>
     <div style="margin-top:10px"><button class="btn-ghost" onclick="COB.fireWrap()">That's enough for now. Move on →</button></div>`;
@@ -1027,10 +1028,14 @@ const COB={
   <div id="fire-scroll">${log}</div>
   <div class="chatin">${input}</div></div>`;},
  vSetVoiceBtn(on){var vb=document.querySelector('.fbtn-voice');if(!vb)return;if(on)vb.classList.add('on');else vb.classList.remove('on');vb.setAttribute('title',on?"TAYLOR speaks her replies. Click to mute.":"Turn on TAYLOR's voice.");var wave=on?'<path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>':'<path d="M22 9l-6 6M16 9l6 6"/>';vb.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/>'+wave+'</svg>'+(on?'Voice on':'Voice off');},
+ vSetConvoBtn(on){var b=document.querySelector('.fbtn-convo');if(!b)return;if(on)b.classList.add('on');else b.classList.remove('on');b.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>'+(on?'Hands-free on':'Hands-free');},
+ convoToggle(){this.state.convoMode=!this.state.convoMode;if(this.state.convoMode){this.state.voiceOn=true;this.vSetVoiceBtn(true);}this.save();this.vSetConvoBtn(this.state.convoMode);var st=document.querySelector('.chatin .micstat');if(this.state.convoMode){if(st){st.style.display='flex';st.innerHTML='hands-free on. talk, pause, I answer, then just keep going.';st.style.color='var(--ash)';}var m=document.querySelector('.fbtn-mic');if(m&&!this._dg&&!this._mrec&&!this._rec){this.sDictate(m,'fire-in',()=>this.fireTalk());}}else{try{if(this._dgStop)this._dgStop();}catch(e){}try{if(this._mrec)this._mrec.stop();}catch(e){}if(st){st.innerHTML='hands-free off.';}}},
+ _reArm(){if(!this.state.convoMode)return;var t=this._convoTarget;if(!t||!t.btn||!document.contains(t.btn))return;if(this._dg||this._mrec||this._rec)return;this.sDictate(t.btn,t.elId,t.sendFn);},
+ _afterSpeak(){if(!this.state||!this.state.convoMode)return;var self=this;setTimeout(function(){self._reArm();},450);},
  sDictate(btn,elId,sendFn){
   if(this._dg){if(this._dgStop)this._dgStop();return;}
   if(!this.state.voiceOn){this.state.voiceOn=true;this.save();this.vSetVoiceBtn(true);}
-  const el=document.getElementById(elId);if(!el){return;}
+  const el=document.getElementById(elId);if(!el){return;}this._convoTarget={btn:btn,elId:elId,sendFn:sendFn};
   const wrap=btn.closest('.chatin')||btn.closest('.tdock')||btn.closest('.tay')||btn.closest('.q-input');const stat=wrap?wrap.querySelector('.micstat'):null;
   const setStat=(hh,c)=>{if(stat){stat.style.display='flex';stat.innerHTML=hh;stat.style.color=c||'var(--ash)';}};
   const AC=window.AudioContext||window.webkitAudioContext;
@@ -1072,7 +1077,7 @@ const COB={
   const land=(a)=>{a=(a||"").toString().trim()||"I'm right here. Keep going.";this.state.fireChat.push({r:"t",t:a});this.save();
     const th=document.getElementById('fire-think');if(th)th.remove();
     const sc=document.getElementById('fire-scroll');if(sc){sc.insertAdjacentHTML('beforeend',`<div class="cb t"><div class="b"><div class="who">taylor</div>${this.esc(a)}</div></div>`);sc.scrollTop=sc.scrollHeight;}
-    if(this.state.voiceOn){try{this.speak(a);}catch(e){}}};
+    if(this.state.voiceOn){try{this.speak(a);}catch(e){}}else if(this.state.convoMode){var self=this;setTimeout(function(){self._reArm();},500);}};
   if(call){call(hist,v).then(land).catch(()=>land(null));}else{setTimeout(()=>land(null),400);}},
  fireWrap(){this.go('#/review');},
  fireScroll(){var t=this;setTimeout(function(){var s=document.getElementById('fire-scroll');if(s)s.scrollTop=s.scrollHeight;},70);},

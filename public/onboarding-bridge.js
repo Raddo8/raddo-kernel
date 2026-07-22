@@ -191,6 +191,7 @@
 
     // --- real voice: OpenAI TTS via edge fn, fallback to speechSynthesis ---
     var VOICE_AUDIO = null;
+    function speakDone(){ try { if (window.COB && typeof COB._afterSpeak === "function") COB._afterSpeak(); } catch (e) {} }
     async function speakLive(text) {
       var t = String(text || "").trim();
       if (!t) return false;
@@ -209,6 +210,7 @@
         if (!blob || !blob.size) return false;
         try { if (VOICE_AUDIO) { VOICE_AUDIO.pause(); VOICE_AUDIO.src = ""; } } catch (e) {}
         VOICE_AUDIO = new Audio(URL.createObjectURL(blob));
+        VOICE_AUDIO.onended = speakDone; VOICE_AUDIO.onerror = speakDone;
         try { await VOICE_AUDIO.play(); } catch (e) { return false; }
         return true;
       } catch (e) { return false; }
@@ -218,14 +220,18 @@
     var origSpeakImpl = (typeof COB._speakImpl === "function") ? COB._speakImpl.bind(COB) : null;
     COB._speakImpl = function (text) {
       speakLive(text).then(function (ok) {
-        if (!ok && origSpeakImpl) { try { origSpeakImpl(text); } catch (e) {} }
-        else if (!ok && typeof window.speechSynthesis !== "undefined") {
+        if (ok) return; // onended will fire speakDone
+        if (typeof window.speechSynthesis !== "undefined") {
           try {
             window.speechSynthesis.cancel();
             var u = new SpeechSynthesisUtterance(String(text || ""));
+            u.onend = speakDone;
             window.speechSynthesis.speak(u);
+            return;
           } catch (e) {}
         }
+        if (origSpeakImpl) { try { origSpeakImpl(text); } catch (e) {} }
+        setTimeout(speakDone, Math.min(9000, 1200 + String(text || "").length * 55));
       });
     };
 
