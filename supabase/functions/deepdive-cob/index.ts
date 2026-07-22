@@ -120,7 +120,7 @@ async function fcScrape(url: string, max = 1800): Promise<string> {
 async function lookup(opts: {
   business: string; city: string; industry: string;
   name: string; website: string; linkedin: string;
-  company: string; emailDomain: string;
+  company: string; emailDomain: string; workArea: string;
 }): Promise<string> {
   if (!FIRECRAWL_API_KEY) return "";
   const { business, city, industry, name, website, linkedin, company, emailDomain } = opts;
