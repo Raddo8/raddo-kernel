@@ -519,7 +519,7 @@ const COB={
  KEY:"cob_onboarding_v1",
  totalQ:CHAPTERS.reduce((a,c)=>a+c.qs.length,0),
  RES:["#/consent","#/gate","#/reveal","#/plugin","#/harvest","#/world","#/fireside","#/review","#/claude","#/connect","#/dashboard"],
- J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/harvest"],["Your world, drafted","#/world"],["Fireside chat","#/fireside"],["Review","#/review"],["Claude","#/claude"],["Wire together","#/connect"],["Your build","#/dashboard"]],
+ J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/harvest"],["Your world","#/world"],["Fireside chat","#/fireside"],["Review","#/review"],["Claude","#/claude"],["Wire together","#/connect"],["Your build","#/dashboard"]],
  stepDone(hash){const s=this.state;const seen=s.seen||{};const qs=CHAPTERS[0].qs;
   switch(hash){
    case "#/consent":return !!s.consentAt;
@@ -679,7 +679,7 @@ const COB={
  route(){const h=(location.hash||"#/welcome").slice(2).split("/");return{p:h[0]||"welcome",a:h[1],b:h[2]};},
  render(){const r=this.route();const app=document.getElementById('app');window.scrollTo(0,0);
   document.getElementById('progBar').style.width=this.pct()+"%";
-  const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world, drafted",fireside:"fireside chat",ch:"",review:"review everything",harvest:"the first connection",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
+  const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",harvest:"the first connection",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
   let crumb=crumbs[r.p]??r.p;
   if(r.p==="ch"){const c=CHAPTERS[+r.a];crumb=c?c.kicker:"";}
   document.getElementById('crumb').textContent=crumb;
@@ -891,7 +891,7 @@ const COB={
     <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> your dossier is on the record · ${facts} findings</p>
     <p style="margin:0;font-size:16px;color:var(--ink)">${this.esc(B.headline||B.welcome||"")}</p></div>
    ${secs.map(s=>`<div class="card" style="margin-top:12px"><p class="kicker" style="margin-bottom:8px">${this.esc(s.label)}</p><ul style="margin:0;padding-left:18px;font-size:15px;color:var(--charcoal)">${li(s.items)}</ul></div>`).join("")}
-   <p class="hintline" style="margin-top:14px">everything here is public, on the record, and yours. correct anything that is off in your world, drafted.</p>
+   <p class="hintline" style="margin-top:14px">everything here is public, on the record, and yours. correct anything that is off in your world.</p>
    <div class="q-actions" style="margin-top:16px"><button class="btn" onclick="COB.go('#/plugin')">This is a strong start. Continue →</button></div>`;}
   return `<p class="kicker" style="margin:22px 0 10px">what the dive covers</p>
   <p style="font-size:14px;color:var(--ash);margin-bottom:12px">Press Proceed and COB combs the open web to build your dossier: who you are, your work and ventures, your public and social footprint, the news and the record. Public sources only, on the record, yours to correct.</p>
@@ -949,8 +949,8 @@ const COB={
   <button class="btn-ghost" onclick="COB.go('#/harvest')">I'll decide connections later</button></div></div>`;},
  vUnderstanding(){const U=window.UNDERSTANDING||this.state.understanding;
   if(!U){const pend=t=>`<div class="card" style="margin-bottom:16px"><p class="kicker" style="margin-bottom:8px">${t}</p><p class="w-empty" style="margin:0">Assembling. This fills in as your study and connections complete.</p></div>`;
-   return `<div class="q-wrap" style="max-width:760px">${this.backbar("your world, drafted")}
-   <p class="kicker">onboarding 04 · your world, drafted</p>
+   return `<div class="q-wrap" style="max-width:760px">${this.backbar("your world")}
+   <p class="kicker">onboarding 04 · your world</p>
    <h1>Your world, as your COB understands it.</h1>
    <p>The draft of your world lands here. Confirm what's right. Correct what's wrong.</p>
    ${pend("the business")}${pend("entities")}${pend("people")}${pend("money rhythm")}${pend("systems")}
@@ -964,7 +964,7 @@ const COB={
    <div id="fx-${k}" style="display:none;margin-top:10px"><textarea id="ft-${k}" placeholder="Tell it straight. Your COB re-learns from this.">${this.esc(fix||"")}</textarea>
     <div class="q-actions"><button class="btn2" onclick="COB.fixSave('${k}')">Save correction</button></div></div></div>`};
   return `<div class="q-wrap" style="max-width:760px">${this.backbar("confirm and correct beats fill-in-the-blank")}
-  <p class="kicker">onboarding 04 · your world, drafted</p>
+  <p class="kicker">onboarding 04 · your world</p>
   <h1>Your world, as your COB understands it.</h1>
   <p>Confirm what's right. Correct what's wrong. This is the record your COB is built from.</p>
   <p class="hintline">sample data · design preview</p>
