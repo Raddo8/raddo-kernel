@@ -227,7 +227,7 @@ body.withrail .top .logo-mark,body.withrail .top .mark{display:none}
 /* connect */
 .conn{border:1px solid var(--edge);background:var(--white);margin-bottom:var(--s3)}
 .conn .c-head{display:flex;align-items:center;gap:var(--s3);padding:var(--s3);width:100%;background:none;border:none;text-align:left}
-.conn .c-ic{width:40px;height:40px;background:var(--marble-2);display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;color:var(--ink);font-size:18px;flex:none}
+.conn .c-ic{width:44px;height:44px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:700;color:var(--paper);font-size:18px;flex:none}
 .conn .c-t{font-weight:600;color:var(--ink)} .conn .c-s{font-size:var(--t-xs);color:var(--ash)}
 .conn .c-state{margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash);white-space:nowrap}
 .conn.done .c-state{color:var(--ok)} .conn .c-body{display:none;padding:0 var(--s3) var(--s3);border-top:1px solid var(--edge)}
@@ -1312,7 +1312,7 @@ const COB={
   ${CONNECTORS.map(c=>{const s=st[c.id];const locked=c.id!=="cob"&&!cobDone;
    return `<div class="conn ${s==="done"?"done":""} ${this._open===c.id?"open":""}">
     <button class="c-head" onclick="COB._open=COB._open==='${c.id}'?null:'${c.id}';COB.render()" ${locked?"disabled":""}>
-     <span class="c-ic">${CONN_ICONS[c.id]?`<img src="data:image/png;base64,${CONN_ICONS[c.id]}" alt="" style="width:22px;height:22px;object-fit:contain"/>`:this.esc(c.t[0])}</span><span><div class="c-t">${this.esc(c.t)}</div><div class="c-s">${this.esc(c.s)}</div></span>
+     <span class="c-ic">${CONN_ICONS[c.id]?`<img src="data:image/png;base64,${CONN_ICONS[c.id]}" alt="" style="width:34px;height:34px;object-fit:contain"/>`:this.esc(c.t[0])}</span><span><div class="c-t">${this.esc(c.t)}</div><div class="c-s">${this.esc(c.s)}</div></span>
      <span class="c-state">${s==="done"?"connected ✓":locked?"after the first one":c.required?"start here":"ready"}</span></button>
     <div class="c-body"><ol class="steps">${c.steps.map(x=>`<li>${this.esc(x)}</li>`).join("")}</ol>
      <div class="q-actions"><button class="btn2" onclick="COB.state.connectors['${c.id}']='done';COB.save();COB._open=null;COB.render()">Mark connected</button>
