@@ -123,7 +123,7 @@ async function lookup(opts: {
   company: string; emailDomain: string; workArea: string;
 }): Promise<string> {
   if (!FIRECRAWL_API_KEY) return "";
-  const { business, city, industry, name, website, linkedin, company, emailDomain } = opts;
+  const { business, city, industry, name, website, linkedin, company, emailDomain, workArea } = opts;
 
   // ANCHOR sources: full domain (never truncated), company name, website, linkedin.
   const anchorDomain = emailDomain || (website ? domainFromUrl(website) : "");
@@ -137,7 +137,8 @@ async function lookup(opts: {
     anchorDomain ? [`site:${anchorDomain}`, 4] : ["", 0],
     anchorDomain ? [`"${anchorDomain}"`, 3] : ["", 0],
     anchorCompany ? [`"${anchorCompany}" founder OR owner OR principal OR CEO`, 3] : ["", 0],
-    anchorCompany && city ? [`"${anchorCompany}" ${city}`, 3] : ["", 0],
+    anchorCompany && workArea ? [`"${anchorCompany}" ${workArea}`, 3] : ["", 0],
+    anchorCompany && city && city !== workArea ? [`"${anchorCompany}" ${city}`, 2] : ["", 0],
     // Name searches, always paired with an anchor when possible
     name && anchorCompany ? [`"${name}" "${anchorCompany}" linkedin`, 3] : ["", 0],
     name && city ? [`"${name}" ${city}`, 3] : ["", 0],
