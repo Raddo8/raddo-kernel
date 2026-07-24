@@ -92,7 +92,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, getNotionTarget, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, type TenantContext } from "./tenants.ts";
 
 // Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
 // Marcus, Alfred). Knox is added separately as `legalChair` inside
@@ -3070,6 +3070,19 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         try {
+          // C2c · fail fast BEFORE spending. Resolve the office up-front so
+          // an unconfigured tenant does not pay for a full triage +
+          // deliberation + minute assembly (30-60s of LLM spend) before
+          // discovering there is nowhere to file.
+          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          if (!target) {
+            await recordMcpUsage(supabaseAdmin, {
+              tenant, tool: "file_to_office", agent_id: null, passes: [],
+              routing_log: { outcome: "office_not_configured" },
+            });
+            throw new Error("office_not_configured");
+          }
+
           // file_to_office runs the same triage → mode pipeline so OFFICE
           // entries reflect the actual deliberation that happened.
           const { result, passes } = await runSummonBestAdvisor({
@@ -3108,11 +3121,6 @@ Deno.serve(async (req) => {
             });
             throw new Error("boundary_violation");
           }
-
-          // harden-v1 · fail-closed tenant resolution. No cross-tenant
-          // fallback. If this tenant has no office configured, refuse.
-          const target = getNotionTarget(tenant);
-          if (!target) throw new Error("office_not_configured");
 
           // harden-v1 · defense-in-depth PII scrub on the outgoing minute.
           const scrubbedMinute: MinuteShape = {
