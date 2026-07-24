@@ -33,7 +33,7 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "session_spine_v1";
+const BUILD_ID = "ritual_writes_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -2236,7 +2236,155 @@ const TOOL_BEGIN_SESSION = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION];
+// ── Ritual writes v1 · schemas shared by save_session / end_session ──────
+const RITUAL_SAVE_PROPS = {
+  session_id: { type: "string", description: "Active session UUID." },
+  decisions: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        rationale: { type: "string" },
+        decision_owner: { type: "string" },
+        execution_owner: { type: "string" },
+        reversible: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  open_loops: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        trigger: { type: "string" },
+        owner: { type: "string" },
+        state: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  signals: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        implication: { type: "string" },
+        type: { type: "string" },
+        status: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  memory: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        body_md: { type: "string" },
+        category: { type: "string" },
+      },
+      required: ["title", "body_md"],
+      additionalProperties: false,
+    },
+  },
+  rules_captured: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        scope: { type: "string", description: "'LOCKED' or 'SITUATIONAL'" },
+      },
+      required: ["text", "scope"],
+      additionalProperties: false,
+    },
+  },
+  checkpoint: {
+    type: "object",
+    properties: {
+      open_loops: { type: "array" },
+      decisions_pending: { type: "array" },
+      deferrals: { type: "array" },
+      principal_state: { type: "string" },
+      financial_residue: { type: "string" },
+      task_states: { type: "object" },
+      staleness_flags: { type: "array" },
+    },
+    additionalProperties: false,
+  },
+} as const;
+
+const TOOL_SAVE_SESSION = {
+  name: "save_session",
+  title: "Save Session",
+  description:
+    "Persist a session save-point: append checkpoint, upsert open loops, insert memory deltas, queue captured rules, and write verified rows to Notion (decisions, tasks, signals, session log, memory page). Every layer with a failure is returned in `unsaved`.",
+  annotations: { title: "Save Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: RITUAL_SAVE_PROPS,
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_SYNC_SESSION = {
+  name: "sync_session",
+  title: "Sync Session",
+  description:
+    "Read-mostly re-brief mid-session: returns live open loops (with surfaced_count bumped), directives added since session opened, decisions filed this session, staleness flags, and registers_empty.",
+  annotations: { title: "Sync Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      session_id: { type: "string", description: "Active session UUID." },
+    },
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_END_SESSION = {
+  name: "end_session",
+  title: "End Session",
+  description:
+    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop — the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board.",
+  annotations: { title: "End Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      ...RITUAL_SAVE_PROPS,
+      confirm_directives: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            action: { type: "string", description: "'confirm' | 'edit' | 'drop'" },
+            text: { type: "string" },
+          },
+          required: ["id", "action"],
+          additionalProperties: false,
+        },
+      },
+      close_kind: { type: "string", description: "'clean' | 'crash' | 'makeup' (default 'clean')" },
+    },
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
 
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
@@ -2879,6 +3027,624 @@ Deno.serve(async (req) => {
           return rpcError(id, -32603, `begin_session_failed:${msg}`);
         }
       }
+
+      // ══════════════════════════════════════════════════════════════════
+      // RITUAL WRITES v1 · save_session / sync_session / end_session
+      // Shared helpers close over tenant + supabaseAdmin (both resolved
+      // above from the verified claim). Fail-closed: no cross-tenant reads.
+      // ══════════════════════════════════════════════════════════════════
+      if (name === "save_session" || name === "sync_session" || name === "end_session") {
+        if (!tenant) return rpcError(id, -32001, "invalid_token");
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+
+        // ── getSurface ──
+        const getSurface = async (
+          surface_key: string,
+        ): Promise<{ kind: string; notion_id: string } | null> => {
+          const { data } = await supabaseAdmin
+            .from("tenant_surfaces")
+            .select("kind, notion_id")
+            .eq("tenant", tenant)
+            .eq("surface_key", surface_key)
+            .eq("status", "active")
+            .maybeSingle();
+          return data ? { kind: data.kind, notion_id: data.notion_id } : null;
+        };
+
+        // ── notionWriteVerified · WRITE → READ-BACK → RETRY ONCE ──
+        const notionHeaders = (token: string) => ({
+          "Authorization": `Bearer ${token}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
+        });
+
+        const doNotionWrite = async (
+          token: string,
+          kind: string,
+          notion_id: string,
+          payload: any,
+        ): Promise<{ ok: boolean; id?: string; blockId?: string; reason?: string }> => {
+          try {
+            if (kind === "data_source") {
+              const body = {
+                parent: { type: "data_source_id", data_source_id: notion_id },
+                properties: payload?.properties ?? {},
+                ...(Array.isArray(payload?.children) ? { children: payload.children } : {}),
+              };
+              const r = await fetch("https://api.notion.com/v1/pages", {
+                method: "POST",
+                headers: notionHeaders(token),
+                body: JSON.stringify(body),
+              });
+              if (!r.ok) return { ok: false, reason: `notion_write_${r.status}` };
+              const j = await r.json();
+              return { ok: true, id: j.id };
+            }
+            if (kind === "page") {
+              const body = { children: payload?.children ?? [] };
+              const r = await fetch(`https://api.notion.com/v1/blocks/${notion_id}/children`, {
+                method: "PATCH",
+                headers: notionHeaders(token),
+                body: JSON.stringify(body),
+              });
+              if (!r.ok) return { ok: false, reason: `notion_append_${r.status}` };
+              const j = await r.json();
+              const first = Array.isArray(j?.results) && j.results.length ? j.results[0] : null;
+              if (!first?.id) return { ok: false, reason: "notion_append_no_id" };
+              return { ok: true, id: first.id, blockId: first.id };
+            }
+            return { ok: false, reason: `unknown_kind:${kind}` };
+          } catch (e) {
+            return { ok: false, reason: `notion_exception:${e instanceof Error ? e.message : String(e)}` };
+          }
+        };
+
+        const readBack = async (token: string, kind: string, id: string): Promise<boolean> => {
+          try {
+            const url = kind === "page"
+              ? `https://api.notion.com/v1/blocks/${id}`
+              : `https://api.notion.com/v1/pages/${id}`;
+            const r = await fetch(url, { headers: notionHeaders(token) });
+            if (r.status === 404 || !r.ok) return false;
+            const j = await r.json();
+            return typeof j?.id === "string" && j.id.replace(/-/g, "") === id.replace(/-/g, "");
+          } catch { return false; }
+        };
+
+        const notionWriteVerified = async (
+          token: string,
+          kind: string,
+          notion_id: string,
+          payload: any,
+        ): Promise<{ ok: boolean; id?: string; reason?: string }> => {
+          const first = await doNotionWrite(token, kind, notion_id, payload);
+          if (first.ok && first.id && await readBack(token, kind, first.id)) {
+            return { ok: true, id: first.id };
+          }
+          // Retry ONCE
+          const second = await doNotionWrite(token, kind, notion_id, payload);
+          if (second.ok && second.id && await readBack(token, kind, second.id)) {
+            return { ok: true, id: second.id };
+          }
+          return { ok: false, reason: second.reason ?? first.reason ?? "notion_unverified" };
+        };
+
+        // ── Notion property helpers ──
+        const richText = (s: any) => (typeof s === "string" && s.length)
+          ? [{ type: "text", text: { content: s.slice(0, 2000) } }] : [];
+        const title = (s: any) => ({ title: richText(s ?? "") });
+        const rt = (s: any) => ({ rich_text: richText(s ?? "") });
+        const sel = (s: any) => (typeof s === "string" && s.length)
+          ? { select: { name: s.slice(0, 100) } } : { select: null };
+        const dateProp = () => ({ date: { start: new Date().toISOString().slice(0, 10) } });
+
+        // ── Register empty helper (used by sync_session) ──
+        const computeRegistersEmpty = async (): Promise<string[]> => {
+          const tables = ["directives","knowledge_files","goals","blueprints","study_agents","study_skills"];
+          const out: string[] = [];
+          for (const tbl of tables) {
+            const { count } = await supabaseAdmin
+              .from(tbl).select("id", { count: "exact", head: true }).eq("tenant_id", tenant);
+            if ((count ?? 0) === 0) out.push(tbl);
+          }
+          return out;
+        };
+
+        // ── Shared SAVE leg (used by save_session AND end_session) ──
+        const runSaveLeg = async (
+          argsIn: any,
+          checkpointKind: "save" | "end",
+        ): Promise<{
+          checkpointId: string | null;
+          saved: any;
+          unsaved: Array<{ layer: string; reason: string }>;
+          outcome: "ok" | "partial";
+        }> => {
+          const unsaved: Array<{ layer: string; reason: string }> = [];
+          const session_id = typeof argsIn?.session_id === "string" ? argsIn.session_id : "";
+          if (!session_id) throw new Error("session_id required");
+          const decisions = Array.isArray(argsIn?.decisions) ? argsIn.decisions : [];
+          const openLoops = Array.isArray(argsIn?.open_loops) ? argsIn.open_loops : [];
+          const signals = Array.isArray(argsIn?.signals) ? argsIn.signals : [];
+          const memory = Array.isArray(argsIn?.memory) ? argsIn.memory : [];
+          const rules = Array.isArray(argsIn?.rules_captured) ? argsIn.rules_captured : [];
+          const checkpoint = (argsIn?.checkpoint && typeof argsIn.checkpoint === "object") ? argsIn.checkpoint : {};
+
+          // Session must belong to tenant.
+          const { data: sess } = await supabaseAdmin
+            .from("sessions").select("id, tenant").eq("id", session_id).maybeSingle();
+          if (!sess || sess.tenant !== tenant) throw new Error("session_not_found");
+
+          // ── STORE LEGS · fail hard if any error ──
+          // 1. APPEND ONLY checkpoint
+          const { data: cpRow, error: cpErr } = await supabaseAdmin
+            .from("session_checkpoints").insert({
+              session_id,
+              tenant,
+              kind: checkpointKind,
+              open_loops: checkpoint.open_loops ?? [],
+              decisions_pending: checkpoint.decisions_pending ?? [],
+              deferrals: checkpoint.deferrals ?? [],
+              principal_state: checkpoint.principal_state ?? null,
+              financial_residue: checkpoint.financial_residue ?? null,
+              task_states: checkpoint.task_states ?? {},
+              staleness_flags: checkpoint.staleness_flags ?? [],
+            }).select("id").single();
+          if (cpErr || !cpRow) throw new Error(`checkpoint_insert_failed:${cpErr?.message ?? "unknown"}`);
+          const checkpointId: string = cpRow.id;
+
+          // 2. Upsert open_loops by (tenant, title)
+          for (const ol of openLoops) {
+            if (!ol?.title) continue;
+            const { data: existing } = await supabaseAdmin
+              .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
+            if (existing) {
+              const { error } = await supabaseAdmin.from("open_loops").update({
+                trigger: ol.trigger ?? null,
+                owner: ol.owner ?? null,
+                state: ol.state ?? null,
+                updated_at: new Date().toISOString(),
+              }).eq("id", existing.id).eq("tenant", tenant);
+              if (error) throw new Error(`open_loops_update_failed:${error.message}`);
+            } else {
+              const { error } = await supabaseAdmin.from("open_loops").insert({
+                tenant,
+                title: ol.title,
+                trigger: ol.trigger ?? null,
+                owner: ol.owner ?? null,
+                state: ol.state ?? null,
+              });
+              if (error) throw new Error(`open_loops_insert_failed:${error.message}`);
+            }
+          }
+
+          // 3. memory_entries inserts
+          const memoryIds: string[] = [];
+          for (const m of memory) {
+            if (!m?.title || !m?.body_md) continue;
+            const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
+              tenant,
+              session_id,
+              category: m.category ?? null,
+              title: m.title,
+              body_md: m.body_md,
+            }).select("id").single();
+            if (error || !mrow) throw new Error(`memory_insert_failed:${error?.message ?? "unknown"}`);
+            memoryIds.push(mrow.id);
+          }
+
+          // 4. rules_captured → directives QUEUED (never active here — end_session promotes)
+          for (const r of rules) {
+            if (!r?.text || !r?.scope) continue;
+            const { error } = await supabaseAdmin.from("directives").insert({
+              tenant_id: tenant,
+              text: r.text,
+              scope: r.scope,
+              status: "queued",
+            });
+            if (error) throw new Error(`directive_queue_failed:${error.message}`);
+          }
+
+          // ── NOTION LEGS · best-effort, verified writes ──
+          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
+
+          if (!target) {
+            unsaved.push({ layer: "notion", reason: "office_not_configured" });
+          } else {
+            const token = target.token;
+
+            // decisions → surface `decisions`
+            if (decisions.length > 0) {
+              const surface = await getSurface("decisions");
+              if (!surface) unsaved.push({ layer: "decisions", reason: "surface_not_configured" });
+              else {
+                for (const d of decisions) {
+                  const props: any = {
+                    "Decision": title(d.title),
+                    "Date": dateProp(),
+                    "Rationale": rt(d.rationale),
+                    "Decision Owner": rt(d.decision_owner),
+                    "Execution Owner": rt(d.execution_owner),
+                    "Reversible": sel(d.reversible),
+                  };
+                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
+                  if (w.ok) notionOk.decisions += 1;
+                  else unsaved.push({ layer: "decisions", reason: w.reason ?? "unverified" });
+                }
+              }
+            }
+
+            // open_loops → surface `tasks` (also store returned page id back on the DB row)
+            if (openLoops.length > 0) {
+              const surface = await getSurface("tasks");
+              if (!surface) unsaved.push({ layer: "tasks", reason: "surface_not_configured" });
+              else {
+                for (const ol of openLoops) {
+                  const props: any = {
+                    "Task": title(ol.title),
+                    "Trigger": rt(ol.trigger),
+                    "Owner": rt(ol.owner),
+                    "State": sel(ol.state),
+                  };
+                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
+                  if (w.ok && w.id) {
+                    notionOk.open_loops += 1;
+                    await supabaseAdmin.from("open_loops")
+                      .update({ notion_page_id: w.id })
+                      .eq("tenant", tenant).eq("title", ol.title);
+                  } else {
+                    unsaved.push({ layer: "tasks", reason: w.reason ?? "unverified" });
+                  }
+                }
+              }
+            }
+
+            // signals → surface `signals`
+            if (signals.length > 0) {
+              const surface = await getSurface("signals");
+              if (!surface) unsaved.push({ layer: "signals", reason: "surface_not_configured" });
+              else {
+                for (const s of signals) {
+                  const props: any = {
+                    "Signal": title(s.title),
+                    "Description": rt(s.description),
+                    "Implication": rt(s.implication),
+                    "Type": sel(s.type),
+                    "Status": sel(s.status),
+                  };
+                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
+                  if (w.ok) notionOk.signals += 1;
+                  else unsaved.push({ layer: "signals", reason: w.reason ?? "unverified" });
+                }
+              }
+            }
+
+            // checkpoint → surface `session_log`
+            {
+              const surface = await getSurface("session_log");
+              if (!surface) unsaved.push({ layer: "session_log", reason: "surface_not_configured" });
+              else {
+                const summarize = (v: any): string => {
+                  if (v == null) return "";
+                  if (typeof v === "string") return v;
+                  try { return JSON.stringify(v).slice(0, 1900); } catch { return String(v); }
+                };
+                const props: any = {
+                  "Session": title(`Session ${new Date().toISOString().slice(0,10)}`),
+                  "Date": dateProp(),
+                  "Type": sel(checkpointKind),
+                  "Open Loops": rt(summarize(checkpoint.open_loops)),
+                  "Decisions": rt(summarize(checkpoint.decisions_pending)),
+                  "Deferrals": rt(summarize(checkpoint.deferrals)),
+                  "Principal State": rt(checkpoint.principal_state),
+                  "Financial Residue": rt(checkpoint.financial_residue),
+                  "Task States": rt(summarize(checkpoint.task_states)),
+                };
+                const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
+                if (w.ok && w.id) {
+                  notionOk.checkpoint += 1;
+                  await supabaseAdmin.from("session_checkpoints")
+                    .update({ notion_page_id: w.id }).eq("id", checkpointId);
+                } else {
+                  unsaved.push({ layer: "session_log", reason: w.reason ?? "unverified" });
+                }
+              }
+            }
+
+            // memory → surface `memory` (page append)
+            if (memory.length > 0) {
+              const surface = await getSurface("memory");
+              if (!surface) unsaved.push({ layer: "memory", reason: "surface_not_configured" });
+              else {
+                const children: any[] = [
+                  {
+                    object: "block",
+                    type: "heading_2",
+                    heading_2: { rich_text: richText(`Memory delta · ${new Date().toISOString().slice(0,10)}`) },
+                  },
+                  ...memory.map((m: any) => ({
+                    object: "block",
+                    type: "paragraph",
+                    paragraph: { rich_text: richText(`${m.title}: ${m.body_md}`) },
+                  })),
+                ];
+                const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { children });
+                if (w.ok && w.id) {
+                  notionOk.memory += 1;
+                  // Best-effort: stamp block id onto every memory row from this leg.
+                  for (const mid of memoryIds) {
+                    await supabaseAdmin.from("memory_entries")
+                      .update({ notion_block_ref: w.id }).eq("id", mid);
+                  }
+                } else {
+                  unsaved.push({ layer: "memory", reason: w.reason ?? "unverified" });
+                }
+              }
+            }
+          }
+
+          return {
+            checkpointId,
+            saved: {
+              decisions: notionOk.decisions,
+              open_loops: notionOk.open_loops,
+              signals: notionOk.signals,
+              memory: notionOk.memory,
+              rules_captured: rules.length,
+              checkpoint_id: checkpointId,
+            },
+            unsaved,
+            outcome: unsaved.length > 0 ? "partial" : "ok",
+          };
+        };
+
+        // ══════ save_session ══════
+        if (name === "save_session") {
+          const startedAt = Date.now();
+          try {
+            const res = await runSaveLeg(args ?? {}, "save");
+            const duration_ms = Date.now() - startedAt;
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant,
+                session_id: args?.session_id,
+                ritual: "save",
+                outcome: res.outcome,
+                duration_ms,
+                layers: res.saved,
+                unsaved: res.unsaved,
+              });
+            } catch { /* best-effort */ }
+            try {
+              await recordMcpUsage(supabaseAdmin, {
+                tenant, tool: "save_session", agent_id: null, passes: [],
+                routing_log: { session_id: args?.session_id, outcome: res.outcome, duration_ms },
+              });
+            } catch { /* best-effort */ }
+            const out = {
+              session_id: args?.session_id,
+              saved: res.saved,
+              unsaved: res.unsaved,
+              outcome: res.outcome,
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, ritual: "save", outcome: "failed",
+                duration_ms: Date.now() - startedAt, layers: { error: msg },
+              });
+            } catch { /* best-effort */ }
+            return rpcError(id, -32603, `save_session_failed:${msg}`);
+          }
+        }
+
+        // ══════ sync_session ══════
+        if (name === "sync_session") {
+          const startedAt = Date.now();
+          const session_id = typeof args?.session_id === "string" ? args.session_id : "";
+          if (!session_id) return rpcError(id, -32602, "invalid_params");
+          try {
+            const { data: sess } = await supabaseAdmin
+              .from("sessions").select("id, tenant, opened_at")
+              .eq("id", session_id).maybeSingle();
+            if (!sess || sess.tenant !== tenant) return rpcError(id, -32602, "session_not_found");
+
+            // Brief with surfaced_count bump
+            const today = new Date().toISOString().slice(0, 10);
+            const { data: brief } = await supabaseAdmin
+              .from("open_loops")
+              .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
+              .eq("tenant", tenant).eq("brief_status", "open")
+              .or(`snooze_until.is.null,snooze_until.lte.${today}`)
+              .order("state", { ascending: true }).order("created_at", { ascending: true });
+            const briefRows = (brief ?? []) as any[];
+            const nowIso = new Date().toISOString();
+            for (const row of briefRows) {
+              await supabaseAdmin.from("open_loops").update({
+                surfaced_count: (row.surfaced_count ?? 0) + 1,
+                last_surfaced: nowIso,
+              }).eq("id", row.id);
+            }
+
+            // Directives added since session opened
+            const { data: dirs } = await supabaseAdmin
+              .from("directives").select("id, text, scope, rank, status, created_at")
+              .eq("tenant_id", tenant)
+              .in("status", ["active", "pending-confirm"])
+              .gte("created_at", sess.opened_at);
+
+            // Decisions filed this session — checkpoints for this session_id
+            const { data: cps } = await supabaseAdmin
+              .from("session_checkpoints")
+              .select("id, kind, decisions_pending, created_at, notion_page_id")
+              .eq("tenant", tenant).eq("session_id", session_id)
+              .order("created_at", { ascending: true });
+
+            // Staleness
+            const staleness: string[] = [];
+            const daysSince = (iso: string | null | undefined): number | null => {
+              if (!iso) return null;
+              const t = new Date(iso).getTime();
+              return Number.isFinite(t) ? Math.floor((Date.now() - t) / 86400000) : null;
+            };
+            const { data: lastCp } = await supabaseAdmin
+              .from("session_checkpoints").select("created_at").eq("tenant", tenant)
+              .order("created_at", { ascending: false }).limit(1).maybeSingle();
+            const cpD = daysSince(lastCp?.created_at ?? null);
+            staleness.push(cpD === null ? "no checkpoints on file" : `${cpD} day(s) since last checkpoint`);
+            const { data: lastMem } = await supabaseAdmin
+              .from("memory_entries").select("created_at").eq("tenant", tenant)
+              .order("created_at", { ascending: false }).limit(1).maybeSingle();
+            const mD = daysSince(lastMem?.created_at ?? null);
+            staleness.push(mD === null ? "no memory entries on file" : `${mD} day(s) since last memory entry`);
+            const { data: unclosed } = await supabaseAdmin
+              .from("sessions").select("id").eq("tenant", tenant).is("closed_at", null);
+            staleness.push(`${(unclosed ?? []).length} unclosed session(s)`);
+
+            const registers_empty = await computeRegistersEmpty();
+
+            const duration_ms = Date.now() - startedAt;
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, session_id, ritual: "sync", outcome: "ok",
+                duration_ms, layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length },
+              });
+            } catch { /* best-effort */ }
+            try {
+              await recordMcpUsage(supabaseAdmin, {
+                tenant, tool: "sync_session", agent_id: null, passes: [],
+                routing_log: { session_id, duration_ms },
+              });
+            } catch { /* best-effort */ }
+
+            const out = {
+              session_id,
+              tenant,
+              brief: briefRows.map((r: any) => ({
+                id: r.id, title: r.title, trigger: r.trigger, owner: r.owner,
+                state: r.state, surfaced_count: (r.surfaced_count ?? 0) + 1,
+                snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
+                created_at: r.created_at,
+              })),
+              directives: dirs ?? [],
+              decisions_this_session: cps ?? [],
+              staleness,
+              registers_empty,
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            return rpcError(id, -32603, `sync_session_failed:${msg}`);
+          }
+        }
+
+        // ══════ end_session ══════
+        if (name === "end_session") {
+          const startedAt = Date.now();
+          const session_id = typeof args?.session_id === "string" ? args.session_id : "";
+          if (!session_id) return rpcError(id, -32602, "invalid_params");
+          const close_kind = (typeof args?.close_kind === "string" && args.close_kind.trim())
+            ? args.close_kind.trim() : "clean";
+          try {
+            // 1. Full save leg with checkpoint kind='end'
+            const res = await runSaveLeg(args ?? {}, "end");
+
+            // 2. Confirm directives — ONLY path to active. Tenant-scoped.
+            const confirmations = Array.isArray(args?.confirm_directives) ? args.confirm_directives : [];
+            const nowIso = new Date().toISOString();
+            for (const c of confirmations) {
+              if (!c?.id || !c?.action) continue;
+              if (c.action === "confirm") {
+                await supabaseAdmin.from("directives")
+                  .update({ status: "active", confirmed_at: nowIso })
+                  .eq("id", c.id).eq("tenant_id", tenant);
+              } else if (c.action === "edit") {
+                if (typeof c.text !== "string" || !c.text.trim()) continue;
+                await supabaseAdmin.from("directives")
+                  .update({ text: c.text, status: "active", confirmed_at: nowIso })
+                  .eq("id", c.id).eq("tenant_id", tenant);
+              } else if (c.action === "drop") {
+                await supabaseAdmin.from("directives")
+                  .update({ status: "retired" })
+                  .eq("id", c.id).eq("tenant_id", tenant);
+              }
+            }
+
+            // 3. Close this session
+            await supabaseAdmin.from("sessions")
+              .update({ closed_at: nowIso, close_kind })
+              .eq("id", session_id).eq("tenant", tenant);
+            // Makeup-close any other still-open sessions for this tenant
+            const { data: orphans } = await supabaseAdmin
+              .from("sessions").select("id").eq("tenant", tenant)
+              .is("closed_at", null).neq("id", session_id);
+            const makeup_closed: string[] = [];
+            for (const o of (orphans ?? [])) {
+              await supabaseAdmin.from("sessions")
+                .update({ closed_at: nowIso, close_kind: "makeup" })
+                .eq("id", o.id).eq("tenant", tenant);
+              makeup_closed.push(o.id);
+            }
+
+            // 4. ritual_runs
+            const duration_ms = Date.now() - startedAt;
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, session_id, ritual: "end", outcome: res.outcome,
+                duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length },
+                unsaved: res.unsaved,
+              });
+            } catch { /* best-effort */ }
+            try {
+              await recordMcpUsage(supabaseAdmin, {
+                tenant, tool: "end_session", agent_id: null, passes: [],
+                routing_log: { session_id, close_kind, outcome: res.outcome, duration_ms },
+              });
+            } catch { /* best-effort */ }
+
+            // 5. Close board
+            const { data: board } = await supabaseAdmin
+              .from("directives").select("id, text, scope, status")
+              .eq("tenant_id", tenant).in("status", ["queued", "pending-confirm"]);
+
+            const out = {
+              session_id,
+              saved: res.saved,
+              unsaved: res.unsaved,
+              outcome: res.outcome,
+              close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
+              closed: { session_id, close_kind },
+              makeup_closed,
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, session_id, ritual: "end", outcome: "failed",
+                duration_ms: Date.now() - startedAt, layers: { error: msg },
+              });
+            } catch { /* best-effort */ }
+            return rpcError(id, -32603, `end_session_failed:${msg}`);
+          }
+        }
+      }
+
 
       // Applied to any tool that carries question/context (convene_council,
       // summon_best_advisor, file_to_office). show_council exited above.
