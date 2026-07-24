@@ -1391,6 +1391,63 @@ export type Database = {
         }
         Relationships: []
       }
+      memory_entries: {
+        Row: {
+          body_md: string
+          category: string | null
+          confidence: number
+          created_at: string
+          id: string
+          notion_block_ref: string | null
+          session_id: string | null
+          status: string
+          superseded_by: string | null
+          tenant: string
+          title: string
+        }
+        Insert: {
+          body_md: string
+          category?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          notion_block_ref?: string | null
+          session_id?: string | null
+          status?: string
+          superseded_by?: string | null
+          tenant: string
+          title: string
+        }
+        Update: {
+          body_md?: string
+          category?: string | null
+          confidence?: number
+          created_at?: string
+          id?: string
+          notion_block_ref?: string | null
+          session_id?: string | null
+          status?: string
+          superseded_by?: string | null
+          tenant?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_entries_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_entries_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_events: {
         Row: {
           action_id: string | null
@@ -1582,6 +1639,54 @@ export type Database = {
           tenant_key?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      open_loops: {
+        Row: {
+          brief_status: string
+          created_at: string
+          id: string
+          last_surfaced: string | null
+          notion_page_id: string | null
+          owner: string | null
+          snooze_until: string | null
+          state: string | null
+          surfaced_count: number
+          tenant: string
+          title: string
+          trigger: string | null
+          updated_at: string
+        }
+        Insert: {
+          brief_status?: string
+          created_at?: string
+          id?: string
+          last_surfaced?: string | null
+          notion_page_id?: string | null
+          owner?: string | null
+          snooze_until?: string | null
+          state?: string | null
+          surfaced_count?: number
+          tenant: string
+          title: string
+          trigger?: string | null
+          updated_at?: string
+        }
+        Update: {
+          brief_status?: string
+          created_at?: string
+          id?: string
+          last_surfaced?: string | null
+          notion_page_id?: string | null
+          owner?: string | null
+          snooze_until?: string | null
+          state?: string | null
+          surfaced_count?: number
+          tenant?: string
+          title?: string
+          trigger?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -2133,6 +2238,50 @@ export type Database = {
           },
         ]
       }
+      ritual_runs: {
+        Row: {
+          created_at: string
+          duration_ms: number | null
+          id: string
+          layers: Json
+          outcome: string
+          ritual: string
+          session_id: string | null
+          tenant: string
+          unsaved: Json
+        }
+        Insert: {
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          layers?: Json
+          outcome: string
+          ritual: string
+          session_id?: string | null
+          tenant: string
+          unsaved?: Json
+        }
+        Update: {
+          created_at?: string
+          duration_ms?: number | null
+          id?: string
+          layers?: Json
+          outcome?: string
+          ritual?: string
+          session_id?: string | null
+          tenant?: string
+          unsaved?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ritual_runs_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           account_id: string | null
@@ -2174,6 +2323,95 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      session_checkpoints: {
+        Row: {
+          created_at: string
+          decisions_pending: Json
+          deferrals: Json
+          financial_residue: string | null
+          id: string
+          kind: string
+          notion_page_id: string | null
+          open_loops: Json
+          principal_state: string | null
+          session_id: string | null
+          staleness_flags: Json
+          task_states: Json
+          tenant: string
+        }
+        Insert: {
+          created_at?: string
+          decisions_pending?: Json
+          deferrals?: Json
+          financial_residue?: string | null
+          id?: string
+          kind: string
+          notion_page_id?: string | null
+          open_loops?: Json
+          principal_state?: string | null
+          session_id?: string | null
+          staleness_flags?: Json
+          task_states?: Json
+          tenant: string
+        }
+        Update: {
+          created_at?: string
+          decisions_pending?: Json
+          deferrals?: Json
+          financial_residue?: string | null
+          id?: string
+          kind?: string
+          notion_page_id?: string | null
+          open_loops?: Json
+          principal_state?: string | null
+          session_id?: string | null
+          staleness_flags?: Json
+          task_states?: Json
+          tenant?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_checkpoints_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          close_kind: string | null
+          closed_at: string | null
+          id: string
+          kernel_version: number | null
+          meta: Json
+          opened_at: string
+          surface: string | null
+          tenant: string
+        }
+        Insert: {
+          close_kind?: string | null
+          closed_at?: string | null
+          id?: string
+          kernel_version?: number | null
+          meta?: Json
+          opened_at?: string
+          surface?: string | null
+          tenant: string
+        }
+        Update: {
+          close_kind?: string | null
+          closed_at?: string | null
+          id?: string
+          kernel_version?: number | null
+          meta?: Json
+          opened_at?: string
+          surface?: string | null
+          tenant?: string
+        }
+        Relationships: []
       }
       site_events: {
         Row: {
