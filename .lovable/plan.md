@@ -1,46 +1,68 @@
-## Goal
-Ship A + C + D together so a full 6-force convene returns to the Cowork client without timing out. Abe stays untouched.
+## Answer · advisor roster source in `mcp-council`
 
-## A. Roster — standing synchronous convene = 6 chairs
-In `supabase/functions/mcp-council/index.ts`:
-- Replace `CHAIRS` array with **Aims, Leo, Lucius, Knox, Marcus, Alfred** (6). Drop Felix and Abe from the synchronous set.
-- Felix moves to bench: keep the entry in `agents/manifest.ts` (Knox-style single agent, already there) and add `tags: ["growth"]` so future routing (queued task B) can summon him. He's still callable via `summon_best_advisor`, just not in the default fan-out.
-- Abe is already absent from `CHAIRS`-as-synchronous via the deferred path (`abe_weighing_in`) — no change to Abe.
-- Create `supabase/functions/mcp-council/council/knox.ts` (council-mode persona, same shape as `felix.ts` / `marcus.ts`): legal & risk lens, council-contribution mode (2–5 prose points, Leo synthesizes, no JSON).
-- Guard the Felix-specific synth branches that already exist (`stage1ById.has("felix")` for `frameChoiceRuling` and `pricingCosign`) — they already short-circuit on absence, so they become no-ops on the default convene. No behavior regression.
+### 1. Source of the roster (per tenant)
+There is **no per-tenant roster** today. The roster is a **code-level global** compiled into the `mcp-council` edge function. Nothing in the DB, no env/secret, and no `mcp-proxy` config participates in choosing advisors.
 
-## C. Safe fan-out — already parallel, raise the cap
-In `index.ts` both convene paths (lines ~798 and ~1311):
-- Raise per-chair `timeoutMs: 15_000` → **`35_000`** (Opus needs ~25–40s).
-- Keep `Promise.allSettled` fan-out, keep DroppedChair naming on timeout, keep the existing degraded-board pathway (lowers ε/ρ, never hard-fails unless 0 chairs survive).
-- Confirm no resynth in steady state (already removed; verify the deployed BUILD_ID reflects it — bump `BUILD_ID` to `"roster6_parallel35_progress_v1"` so the next log line proves the deploy landed).
+Three code sites, all in `supabase/functions/mcp-council/`:
 
-## D. MCP progress notifications — keep the client alive past 60s
-Per MCP Streamable HTTP spec, the server may upgrade a `tools/call` POST response to `text/event-stream` and emit `notifications/progress` frames before the final JSON-RPC result frame. Each frame resets the client's ~60s request timer.
+- **Enabled advisor registry** — `agents/manifest.ts` `AGENT_MANIFEST.agents[]`. Global list of 9 entries (council, knox, lucius, leo, alfred, marcus, felix, aims; abe is deferred via `abe_weighing_in`). Every entry has `tier_min: "any"` and `enabled: true` — no tenant field exists on the entry.
+- **Synchronous convene fan-out** — `index.ts` L103 `const CHAIRS = [leo, alfred, marcus, lucius, aims]` (+ Knox appended as `legalChair` at L802). Hard-coded 6-chair board, identical for every tenant.
+- **Single-agent bodies** — `index.ts` `loadAgent()` L189, `SINGLE_BODIES` map (knox/lucius/leo/alfred/marcus/felix/aims) → each body is the imported `*_MD` string from `agents/*.ts` (and `council/*.ts` for convene chairs). Persona content is a bundled markdown constant, not tenant-scoped.
 
-Implementation in `index.ts`:
-- When handling `tools/call` for `convene_council`, `summon_best_advisor`, `file_to_office`: read `params._meta.progressToken`. If present, build the response as a streamed SSE `Response` (`Content-Type: text/event-stream`) backed by a `ReadableStream`.
-- Pass an `onProgress(stage, detail)` callback into `runCouncil` / the routed flow. Fire it:
-  - After each chair settles (per-chair stage1 latency reported).
-  - 10s heartbeats during stage1 (so even the slowest single chair doesn't go silent).
-  - After horizon, after synth.
-- Each callback writes one SSE frame: `data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToken":<token>,"progress":<n>,"total":<chairs+2>,"message":<stage>}}\n\n`.
-- Final frame is the normal JSON-RPC result envelope (also as SSE `data:`), then close.
-- If `_meta.progressToken` is absent (e.g. curl regression), fall through to the existing single-shot JSON response — unchanged.
+**Models** are also global constants in `index.ts` (`MODEL_CHAIR = "claude-sonnet-4-5"`, `MODEL_SYNTHESIS = "claude-opus-4-5"`) with provider overrides in `providers.ts` (`abe → openai gpt-4o`, dissent → `gpt-5`). No per-tenant model selection.
 
-## Acceptance / reporting (post-deploy)
-- Fire a convene from Cowork. Read `mcp-council` logs and report:
-  - `BUILD_ID` matches `roster6_parallel35_progress_v1` (confirms deploy landed).
-  - `chairs_count: 6`, per-chair durations, `stage1_ms`, `horizon_ms`, `synth1_ms`, `total_ms`, `dropped_chairs`.
-  - HTTP outcome (no 504, no client timeout); progress frame count.
-- Expected envelope: `stage1_ms` ≤ ~35s, `total_ms` ~60–90s, full minute returned.
+**Tenant-scoped data** is limited to *placeholder substitution* only, via `tenants.ts :: getTenantContext(tenant)` and `getNotionTarget(tenant)`. That injects `{{CLIENT}}`, `{{PRINCIPAL}}`, `{{PRINCIPAL_VALUES}}`, `{{ACTIVE_MATTERS}}`, `{{BEARING_DEFAULT}}`, `{{POSTURE}}` into the *same* shared persona bodies. It does not add, remove, or swap advisors.
 
-## Out of scope (queued, do NOT build now)
-- **B**: triage routing with ≤6 hard cap.
-- **E**: async escape hatch (write minute to OFFICE after the response cuts).
-- **F**: governed decision-record fields in the minute.
+`mcp-proxy` (`edge/mcp-proxy/src/index.ts`) has zero tenant/roster logic — pure JSON-RPC passthrough.
 
-## Files touched
-- `supabase/functions/mcp-council/index.ts` — CHAIRS list, BUILD_ID, both `timeoutMs`, SSE response path + onProgress wiring in `runCouncil` and routed summon path.
-- `supabase/functions/mcp-council/council/knox.ts` — **new**, council-mode Knox persona.
-- `supabase/functions/mcp-council/agents/manifest.ts` — Felix gets `tags: ["growth"]` (no behavior change today; sets up B).
+### 2. Shape
+
+`AGENT_MANIFEST` entry (`agents/manifest.ts`):
+```ts
+interface AgentEntry {
+  id: string; name: string; lens: string;
+  tier_min: "any" | string; enabled: boolean;
+  kind: "council" | "single";
+  tags?: string[];                    // e.g. felix: ["growth"]
+  eval_score?: number; eval_scored_at?: string;  // latent, unused
+}
+```
+
+`CHAIRS` entry (`index.ts` L103):
+```ts
+{ id: "leo", name: "Leo", system: LEO_MD /* imported markdown */ }
+```
+
+`TENANT_CONTEXT` map (`tenants.ts` L25 · only tenant-shaped thing that exists):
+```ts
+Record<string, { client; principal; principal_values;
+                 active_matters; bearing_default }>
+```
+
+### 3. Which tenants are "provisioned"
+
+`TENANT_CONTEXT` in `tenants.ts` has exactly one key: **SPINNEY**. Everyone else falls through to `DEFAULT_CONTEXT` (readable "(capture at onboarding)" placeholders).
+
+| Tenant | Roster provisioned? | Tenant context? |
+|---|---|---|
+| SPINNEY | yes (global roster) | yes (explicit) |
+| COB-HQ  | yes (global roster) | no · default context |
+| JAEL / JAEL-PWA | yes (global roster) | no · default context |
+| ROC | yes (global roster) | no · default context |
+| CAP | yes (global roster) | no · default context |
+
+So the answer to "which tenants have rosters" is effectively **all authenticated tenants get the same global 6-chair roster**; only SPINNEY has custom placeholder text baked in.
+
+Notion write targets are separate: `SPINNEY_NOTION_TOKEN + SPINNEY_BOARDROOM_DB` and `COB_HQ_NOTION_TOKEN + COB_HQ_BOARDROOM_DB` are set as secrets; JAEL/ROC/CAP have no `*_NOTION_TOKEN` / `*_BOARDROOM_DB` pair, so `file_to_office` fails closed with `office_not_configured` for those — but this is unrelated to the advisor roster.
+
+### 4. Failure mode for a tenant "without a roster"
+
+There is no such failure mode, because roster membership is not tenant-gated. Any request that clears the auth gate (`verifySupabaseJwt` returning `app_metadata.tenant`, or the static SPINNEY bearer) reaches identical roster code:
+
+- **`show_council`** → `listSeatedAgentsPublic(tenant)` (`agents/manifest.ts` L121) ignores its `_tenant` arg and returns the global enabled roster. Always non-empty.
+- **`convene_council`** → `runCouncil` fans out to the global `CHAIRS` + Knox. Persona bodies render with `DEFAULT_CONTEXT` placeholders ("the principal's company (capture at onboarding)" etc.) rather than empty strings. It runs to a normal minute.
+
+The only *real* failure a tenant sees today is upstream at the auth gate: if the JWT is missing the `app_metadata.tenant` claim entirely, `verifySupabaseJwt` throws `invalid_token` → 401 → Claude reports "no tools available". Once a tenant claim exists (any string), the roster is served. This matches the earlier jake@818.capital diagnostic.
+
+### Bottom line
+Roster = hard-coded global in `agents/manifest.ts` + `index.ts CHAIRS` + `loadAgent SINGLE_BODIES`. Tenant only influences placeholder text (`tenants.ts`) and Notion write target. No DB or secret today controls which advisors exist for a given tenant.
