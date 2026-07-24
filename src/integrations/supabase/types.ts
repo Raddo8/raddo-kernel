@@ -2678,6 +2678,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_surfaces: {
+        Row: {
+          created_at: string
+          kind: string
+          label: string | null
+          notion_id: string
+          status: string
+          surface_key: string
+          tenant: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          label?: string | null
+          notion_id: string
+          status?: string
+          surface_key: string
+          tenant: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          label?: string | null
+          notion_id?: string
+          status?: string
+          surface_key?: string
+          tenant?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           account_id: string
