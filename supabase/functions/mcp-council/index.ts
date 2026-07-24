@@ -2195,7 +2195,33 @@ const TOOL_ABE_WEIGHING_IN = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS];
+const TOOL_BOOT_KERNEL = {
+  name: "boot_kernel",
+  title: "Boot Kernel",
+  description:
+    "Boot the caller's identity kernel manifest. Returns the active kernel version and a parts manifest (name, seq_count, bytes, sha256) for the caller's tenant. Read-only.",
+  annotations: { title: "Boot Kernel", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_LOAD_KERNEL_PART = {
+  name: "load_kernel_part",
+  title: "Load Kernel Part",
+  description:
+    "Load one kernel part by name and sequence from the caller's active kernel. Returns { part, seq, of, content_md, sha256 }. Read-only.",
+  annotations: { title: "Load Kernel Part", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      part: { type: "string", description: "Part name: profile | instructions | memory | preamble | roster | state_pointer" },
+      seq: { type: "number", description: "Sequence number within the part (default 1)" },
+    },
+    required: ["part"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART];
 
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
