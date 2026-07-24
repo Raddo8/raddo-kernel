@@ -2236,7 +2236,155 @@ const TOOL_BEGIN_SESSION = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION];
+// ── Ritual writes v1 · schemas shared by save_session / end_session ──────
+const RITUAL_SAVE_PROPS = {
+  session_id: { type: "string", description: "Active session UUID." },
+  decisions: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        rationale: { type: "string" },
+        decision_owner: { type: "string" },
+        execution_owner: { type: "string" },
+        reversible: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  open_loops: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        trigger: { type: "string" },
+        owner: { type: "string" },
+        state: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  signals: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        description: { type: "string" },
+        implication: { type: "string" },
+        type: { type: "string" },
+        status: { type: "string" },
+      },
+      required: ["title"],
+      additionalProperties: false,
+    },
+  },
+  memory: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        body_md: { type: "string" },
+        category: { type: "string" },
+      },
+      required: ["title", "body_md"],
+      additionalProperties: false,
+    },
+  },
+  rules_captured: {
+    type: "array",
+    items: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        scope: { type: "string", description: "'LOCKED' or 'SITUATIONAL'" },
+      },
+      required: ["text", "scope"],
+      additionalProperties: false,
+    },
+  },
+  checkpoint: {
+    type: "object",
+    properties: {
+      open_loops: { type: "array" },
+      decisions_pending: { type: "array" },
+      deferrals: { type: "array" },
+      principal_state: { type: "string" },
+      financial_residue: { type: "string" },
+      task_states: { type: "object" },
+      staleness_flags: { type: "array" },
+    },
+    additionalProperties: false,
+  },
+} as const;
+
+const TOOL_SAVE_SESSION = {
+  name: "save_session",
+  title: "Save Session",
+  description:
+    "Persist a session save-point: append checkpoint, upsert open loops, insert memory deltas, queue captured rules, and write verified rows to Notion (decisions, tasks, signals, session log, memory page). Every layer with a failure is returned in `unsaved`.",
+  annotations: { title: "Save Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: RITUAL_SAVE_PROPS,
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_SYNC_SESSION = {
+  name: "sync_session",
+  title: "Sync Session",
+  description:
+    "Read-mostly re-brief mid-session: returns live open loops (with surfaced_count bumped), directives added since session opened, decisions filed this session, staleness flags, and registers_empty.",
+  annotations: { title: "Sync Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      session_id: { type: "string", description: "Active session UUID." },
+    },
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_END_SESSION = {
+  name: "end_session",
+  title: "End Session",
+  description:
+    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop — the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board.",
+  annotations: { title: "End Session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      ...RITUAL_SAVE_PROPS,
+      confirm_directives: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            action: { type: "string", description: "'confirm' | 'edit' | 'drop'" },
+            text: { type: "string" },
+          },
+          required: ["id", "action"],
+          additionalProperties: false,
+        },
+      },
+      close_kind: { type: "string", description: "'clean' | 'crash' | 'makeup' (default 'clean')" },
+    },
+    required: ["session_id"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
 
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
