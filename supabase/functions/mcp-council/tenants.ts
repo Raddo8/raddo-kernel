@@ -108,17 +108,57 @@ export interface NotionTarget {
   dbId: string;
 }
 
+// Normalize a tenant slug to a valid env-var name (e.g. "COB-HQ" → "COB_HQ").
+const envKey = (tenant: string) => tenant.replace(/-/g, "_").toUpperCase();
+
 export function getNotionTarget(tenant: string): NotionTarget | null {
-  if (tenant === "SPINNEY") {
-    const token = Deno.env.get("SPINNEY_NOTION_TOKEN") ?? "";
-    const dbId = Deno.env.get("SPINNEY_BOARDROOM_DB") ?? "";
-    if (!token || !dbId) return null;
-    return { token, dbId };
+  const key = envKey(tenant);
+  const token = Deno.env.get(`${key}_NOTION_TOKEN`) ?? "";
+  const dbId = Deno.env.get(`${key}_BOARDROOM_DB`) ?? "";
+  if (!token || !dbId) return null;
+  return { token, dbId };
+}
+
+// C2b · resolve from public.tenant_offices first, env pair as fallback.
+// Fail-closed: never falls back to a different tenant's secrets.
+export async function getNotionTargetAsync(
+  tenant: string,
+  supabaseAdmin: any | null,
+): Promise<NotionTarget | null> {
+  const key = envKey(tenant);
+  let token = "";
+  let dbId = "";
+
+  if (supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("tenant_offices")
+        .select("boardroom_db, token_ref")
+        .eq("tenant", tenant)
+        .eq("status", "active")
+        .maybeSingle();
+      if (error) {
+        console.error("tenant_offices_lookup_error", error.message);
+      } else if (data) {
+        const tokenRef = (data.token_ref && String(data.token_ref).trim()) ||
+          `${key}_NOTION_TOKEN`;
+        token = Deno.env.get(tokenRef) ?? "";
+        dbId = String(data.boardroom_db ?? "");
+      }
+    } catch (e) {
+      console.error(
+        "tenant_offices_lookup_exception",
+        e instanceof Error ? e.message : String(e),
+      );
+    }
   }
-  // Other tenants: look up tenant-scoped secrets (e.g. JAEL_NOTION_TOKEN).
-  // Fail-closed when absent.
-  const token = Deno.env.get(`${tenant}_NOTION_TOKEN`) ?? "";
-  const dbId = Deno.env.get(`${tenant}_BOARDROOM_DB`) ?? "";
+
+  // Fallback to env pair if store yielded nothing.
+  if (!token || !dbId) {
+    if (!token) token = Deno.env.get(`${key}_NOTION_TOKEN`) ?? "";
+    if (!dbId) dbId = Deno.env.get(`${key}_BOARDROOM_DB`) ?? "";
+  }
+
   if (!token || !dbId) return null;
   return { token, dbId };
 }
