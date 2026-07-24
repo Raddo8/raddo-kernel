@@ -2650,6 +2650,236 @@ Deno.serve(async (req) => {
           return notFoundResp();
         }
       }
+
+      if (name === "begin_session") {
+        // Tenant is resolved above from the verified claim. If missing,
+        // authentication would already have refused. Fail-closed: never
+        // fall back to another tenant's data.
+        if (!tenant) return rpcError(id, -32001, "invalid_token");
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+        const startedAt = Date.now();
+        let outcome: "ok" | "partial" = "ok";
+        const surface = typeof args?.surface === "string" && args.surface.trim()
+          ? args.surface.trim().slice(0, 64)
+          : "unknown";
+        try {
+          // 2. Unclosed prior sessions → makeup_close_owed
+          const { data: unclosed, error: unclosedErr } = await supabaseAdmin
+            .from("sessions")
+            .select("id, opened_at")
+            .eq("tenant", tenant)
+            .is("closed_at", null)
+            .order("opened_at", { ascending: false });
+          if (unclosedErr) outcome = "partial";
+          const makeup_close_owed = (unclosed ?? []).map((r: any) => ({
+            id: r.id, opened_at: r.opened_at,
+          }));
+
+          // 4. Active kernel (needed for kernel_version on new session row)
+          const { data: kernel, error: kernelErr } = await supabaseAdmin
+            .from("kernels")
+            .select("id, version, status")
+            .eq("tenant_id", tenant)
+            .eq("status", "active")
+            .maybeSingle();
+          if (kernelErr) outcome = "partial";
+
+          // 3. Insert new session row
+          const { data: newSession, error: sessErr } = await supabaseAdmin
+            .from("sessions")
+            .insert({
+              tenant,
+              surface,
+              kernel_version: kernel?.version ?? null,
+            })
+            .select("id")
+            .single();
+          if (sessErr || !newSession) {
+            throw new Error("session_insert_failed");
+          }
+          const sessionId = newSession.id as string;
+
+          // 4 (cont). Kernel manifest — NAMES + HASHES ONLY, no content_md.
+          let kernelBlock: any = { version: null, status: null, parts: [], sealed: true };
+          if (kernel) {
+            const { data: parts, error: partsErr } = await supabaseAdmin
+              .from("kernel_parts")
+              .select("part, seq, sha256, bytes")
+              .eq("kernel_id", kernel.id)
+              .order("seq", { ascending: true });
+            if (partsErr) outcome = "partial";
+            kernelBlock = {
+              version: kernel.version,
+              status: kernel.status,
+              parts: (parts ?? []).map((p: any) => ({
+                part: p.part, seq: p.seq, sha256: p.sha256, bytes: p.bytes,
+              })),
+              sealed: true,
+            };
+          }
+
+          // 5. Directives (active) + pending_confirm — column is tenant_id.
+          const { data: activeDirectives, error: dirErr } = await supabaseAdmin
+            .from("directives")
+            .select("text, scope, rank")
+            .eq("tenant_id", tenant)
+            .eq("status", "active")
+            .order("rank", { ascending: true, nullsFirst: false });
+          if (dirErr) outcome = "partial";
+          const { data: pendingDirectives, error: pendErr } = await supabaseAdmin
+            .from("directives")
+            .select("text, scope, rank")
+            .eq("tenant_id", tenant)
+            .eq("status", "pending-confirm")
+            .order("rank", { ascending: true, nullsFirst: false });
+          if (pendErr) outcome = "partial";
+
+          // 6. Last checkpoint
+          const { data: lastCheckpoint, error: cpErr } = await supabaseAdmin
+            .from("session_checkpoints")
+            .select("*")
+            .eq("tenant", tenant)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (cpErr) outcome = "partial";
+
+          // 7. Brief — open loops not snoozed past today; bump surfaced_count.
+          const today = new Date().toISOString().slice(0, 10);
+          const { data: brief, error: briefErr } = await supabaseAdmin
+            .from("open_loops")
+            .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
+            .eq("tenant", tenant)
+            .eq("brief_status", "open")
+            .or(`snooze_until.is.null,snooze_until.lte.${today}`)
+            .order("state", { ascending: true })
+            .order("created_at", { ascending: true });
+          if (briefErr) outcome = "partial";
+          const briefRows = (brief ?? []) as any[];
+          if (briefRows.length > 0) {
+            const nowIso = new Date().toISOString();
+            for (const row of briefRows) {
+              const { error: bumpErr } = await supabaseAdmin
+                .from("open_loops")
+                .update({
+                  surfaced_count: (row.surfaced_count ?? 0) + 1,
+                  last_surfaced: nowIso,
+                })
+                .eq("id", row.id);
+              if (bumpErr) outcome = "partial";
+            }
+          }
+
+          // 8. Staleness flags
+          const staleness: string[] = [];
+          const daysSince = (iso: string | null | undefined): number | null => {
+            if (!iso) return null;
+            const t = new Date(iso).getTime();
+            if (!Number.isFinite(t)) return null;
+            return Math.floor((Date.now() - t) / 86400000);
+          };
+          const cpDays = daysSince(lastCheckpoint?.created_at ?? null);
+          if (cpDays === null) staleness.push("no checkpoints on file");
+          else staleness.push(`${cpDays} day(s) since last checkpoint`);
+          const { data: lastMem } = await supabaseAdmin
+            .from("memory_entries")
+            .select("created_at")
+            .eq("tenant", tenant)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const memDays = daysSince(lastMem?.created_at ?? null);
+          if (memDays === null) staleness.push("no memory entries on file");
+          else staleness.push(`${memDays} day(s) since last memory entry`);
+          staleness.push(`${makeup_close_owed.length} unclosed prior session(s)`);
+
+          // B4. registers_empty — REQUIRED honesty signal.
+          const registerTables = [
+            "directives", "knowledge_files", "goals",
+            "blueprints", "study_agents", "study_skills",
+          ];
+          const registers_empty: string[] = [];
+          for (const t of registerTables) {
+            const { count, error: cntErr } = await supabaseAdmin
+              .from(t)
+              .select("id", { count: "exact", head: true })
+              .eq("tenant_id", tenant);
+            if (cntErr) { outcome = "partial"; continue; }
+            if ((count ?? 0) === 0) registers_empty.push(t);
+          }
+
+          // 9. Reuse boot_log (do not create a parallel log).
+          try {
+            await supabaseAdmin.from("boot_log").insert({
+              tenant_id: tenant,
+              surface: `begin_session:${surface}`,
+              kernel_version: kernel?.version ?? null,
+              fallback_used: false,
+              meta: { session_id: sessionId, tool: "begin_session" },
+            });
+          } catch { outcome = "partial"; }
+
+          // 10. Ritual run
+          const durationMs = Date.now() - startedAt;
+          try {
+            await supabaseAdmin.from("ritual_runs").insert({
+              tenant,
+              session_id: sessionId,
+              ritual: "begin",
+              outcome,
+              duration_ms: durationMs,
+              layers: { kernel_parts: kernelBlock.parts.length, brief: briefRows.length },
+            });
+          } catch { /* best-effort */ }
+
+          // 11. Ledger the invocation (zero LLM spend).
+          try {
+            await recordMcpUsage(supabaseAdmin, {
+              tenant,
+              tool: "begin_session",
+              agent_id: null,
+              passes: [],
+              routing_log: { session_id: sessionId, outcome, duration_ms: durationMs },
+            });
+          } catch { /* best-effort */ }
+
+          const out = {
+            session_id: sessionId,
+            tenant,
+            kernel: kernelBlock,
+            directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
+            pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
+            last_checkpoint: lastCheckpoint ?? null,
+            brief: briefRows.map((r: any) => ({
+              id: r.id, title: r.title, trigger: r.trigger, owner: r.owner,
+              state: r.state, surfaced_count: (r.surfaced_count ?? 0) + 1,
+              snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
+              created_at: r.created_at,
+            })),
+            staleness,
+            makeup_close_owed,
+            registers_empty,
+          };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
+            isError: false,
+          });
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          try {
+            await supabaseAdmin.from("ritual_runs").insert({
+              tenant,
+              ritual: "begin",
+              outcome: "failed",
+              duration_ms: Date.now() - startedAt,
+              layers: { error: msg },
+            });
+          } catch { /* best-effort */ }
+          return rpcError(id, -32603, `begin_session_failed:${msg}`);
+        }
+      }
+
       // Applied to any tool that carries question/context (convene_council,
       // summon_best_advisor, file_to_office). show_council exited above.
       {
