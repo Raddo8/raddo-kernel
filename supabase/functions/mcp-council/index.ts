@@ -2195,7 +2195,33 @@ const TOOL_ABE_WEIGHING_IN = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS];
+const TOOL_BOOT_KERNEL = {
+  name: "boot_kernel",
+  title: "Boot Kernel",
+  description:
+    "Boot the caller's identity kernel manifest. Returns the active kernel version and a parts manifest (name, seq_count, bytes, sha256) for the caller's tenant. Read-only.",
+  annotations: { title: "Boot Kernel", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_LOAD_KERNEL_PART = {
+  name: "load_kernel_part",
+  title: "Load Kernel Part",
+  description:
+    "Load one kernel part by name and sequence from the caller's active kernel. Returns { part, seq, of, content_md, sha256 }. Read-only.",
+  annotations: { title: "Load Kernel Part", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      part: { type: "string", description: "Part name: profile | instructions | memory | preamble | roster | state_pointer" },
+      seq: { type: "number", description: "Sequence number within the part (default 1)" },
+    },
+    required: ["part"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART];
 
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
@@ -2490,7 +2516,125 @@ Deno.serve(async (req) => {
         });
       }
 
-      // ── harden-v1 · input sanitization + injection refusal ─────────────
+      if (name === "boot_kernel") {
+        try {
+          if (!supabaseAdmin) {
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify({ error: "no_active_kernel", tenant }) }],
+              structuredContent: { error: "no_active_kernel", tenant },
+              isError: false,
+            });
+          }
+          const { data: kernel } = await supabaseAdmin
+            .from("kernels")
+            .select("id, version")
+            .eq("tenant_id", tenant)
+            .eq("status", "active")
+            .maybeSingle();
+          if (!kernel) {
+            const out = { error: "no_active_kernel", tenant };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          }
+          const { data: parts } = await supabaseAdmin
+            .from("kernel_parts")
+            .select("part, seq, sha256, bytes")
+            .eq("kernel_id", kernel.id)
+            .order("part", { ascending: true })
+            .order("seq", { ascending: true });
+          const rows = (parts ?? []) as Array<{ part: string; seq: number; sha256: string; bytes: number }>;
+          const byPart = new Map<string, Array<{ seq: number; sha256: string; bytes: number }>>();
+          for (const r of rows) {
+            const arr = byPart.get(r.part) ?? [];
+            arr.push({ seq: r.seq, sha256: r.sha256, bytes: r.bytes });
+            byPart.set(r.part, arr);
+          }
+          const parts_manifest = Array.from(byPart.entries()).map(([part, entries]) => {
+            entries.sort((a, b) => a.seq - b.seq);
+            const seq_count = entries.reduce((m, e) => Math.max(m, e.seq), 0);
+            const bytes = entries.reduce((s, e) => s + (e.bytes ?? 0), 0);
+            const sha256 = seq_count === 1 ? entries[0].sha256 : entries.map((e) => e.sha256);
+            return { part, seq_count, bytes, sha256 };
+          });
+          const { data: lastBoot } = await supabaseAdmin
+            .from("boot_log")
+            .select("booted_at")
+            .eq("tenant_id", tenant)
+            .order("booted_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          const out = {
+            client: tenant,
+            tenant,
+            kernel_version: kernel.version,
+            parts_manifest,
+            counts: { parts: rows.length },
+            last_boot_at: lastBoot?.booted_at ?? null,
+          };
+          try {
+            await supabaseAdmin.from("boot_log").insert({
+              tenant_id: tenant,
+              surface: "mcp",
+              kernel_version: kernel.version,
+              fallback_used: false,
+            });
+          } catch (_e) { /* best-effort */ }
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
+            isError: false,
+          });
+        } catch (_e) {
+          const out = { error: "no_active_kernel", tenant };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
+            isError: false,
+          });
+        }
+      }
+
+      if (name === "load_kernel_part") {
+        const part = typeof args?.part === "string" ? args.part.trim() : "";
+        const seq = Number.isFinite(args?.seq) ? Math.trunc(args.seq) : 1;
+        const notFound = { error: "not_found", part, seq };
+        const notFoundResp = () => rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(notFound) }],
+          structuredContent: notFound,
+          isError: false,
+        });
+        if (!part || !supabaseAdmin) return notFoundResp();
+        try {
+          const { data: kernel } = await supabaseAdmin
+            .from("kernels")
+            .select("id")
+            .eq("tenant_id", tenant)
+            .eq("status", "active")
+            .maybeSingle();
+          if (!kernel) return notFoundResp();
+          const { data: partRows } = await supabaseAdmin
+            .from("kernel_parts")
+            .select("seq, content_md, sha256")
+            .eq("kernel_id", kernel.id)
+            .eq("part", part);
+          const rows = (partRows ?? []) as Array<{ seq: number; content_md: string; sha256: string }>;
+          if (rows.length === 0) return notFoundResp();
+          const of = rows.reduce((m, r) => Math.max(m, r.seq), 0);
+          const row = rows.find((r) => r.seq === seq);
+          if (!row) return notFoundResp();
+          const out = { part, seq, of, content_md: row.content_md, sha256: row.sha256 };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
+            isError: false,
+          });
+        } catch (_e) {
+          return notFoundResp();
+        }
+      }
       // Applied to any tool that carries question/context (convene_council,
       // summon_best_advisor, file_to_office). show_council exited above.
       {
