@@ -302,6 +302,95 @@ export type Database = {
           },
         ]
       }
+      blueprints: {
+        Row: {
+          created_at: string
+          current_state: string | null
+          goal_id: string | null
+          id: string
+          intent: string | null
+          loop_cadence: string | null
+          milestones: Json | null
+          next_action: string | null
+          owner: string | null
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          current_state?: string | null
+          goal_id?: string | null
+          id?: string
+          intent?: string | null
+          loop_cadence?: string | null
+          milestones?: Json | null
+          next_action?: string | null
+          owner?: string | null
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          current_state?: string | null
+          goal_id?: string | null
+          id?: string
+          intent?: string | null
+          loop_cadence?: string | null
+          milestones?: Json | null
+          next_action?: string | null
+          owner?: string | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blueprints_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      boot_log: {
+        Row: {
+          booted_at: string
+          fallback_used: boolean
+          id: string
+          kernel_version: number | null
+          meta: Json | null
+          surface: string | null
+          tenant_id: string
+        }
+        Insert: {
+          booted_at?: string
+          fallback_used?: boolean
+          id?: string
+          kernel_version?: number | null
+          meta?: Json | null
+          surface?: string | null
+          tenant_id: string
+        }
+        Update: {
+          booted_at?: string
+          fallback_used?: boolean
+          id?: string
+          kernel_version?: number | null
+          meta?: Json | null
+          surface?: string | null
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       build_views: {
         Row: {
           build_id: string
@@ -388,6 +477,39 @@ export type Database = {
           token?: string
           updated_at?: string
           version?: number
+        }
+        Relationships: []
+      }
+      change_log: {
+        Row: {
+          actor: string | null
+          at: string
+          change: string
+          entity: string
+          entity_id: string | null
+          id: string
+          summary: string | null
+          tenant_id: string
+        }
+        Insert: {
+          actor?: string | null
+          at?: string
+          change: string
+          entity: string
+          entity_id?: string | null
+          id?: string
+          summary?: string | null
+          tenant_id: string
+        }
+        Update: {
+          actor?: string | null
+          at?: string
+          change?: string
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          summary?: string | null
+          tenant_id?: string
         }
         Relationships: []
       }
@@ -672,6 +794,90 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      directives: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          id: string
+          rank: number | null
+          scope: string
+          status: string
+          tenant_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          rank?: number | null
+          scope?: string
+          status?: string
+          tenant_id: string
+          text: string
+          updated_at?: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          id?: string
+          rank?: number | null
+          scope?: string
+          status?: string
+          tenant_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      goals: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          priority: number | null
+          status: string
+          target_date: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          value_pillar: string
+          version: number
+          why: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          priority?: number | null
+          status?: string
+          target_date?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          value_pillar: string
+          version?: number
+          why?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          priority?: number | null
+          status?: string
+          target_date?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          value_pillar?: string
+          version?: number
+          why?: string | null
+        }
+        Relationships: []
       }
       intake_facts: {
         Row: {
@@ -1038,6 +1244,119 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kernel_parts: {
+        Row: {
+          bytes: number
+          content_md: string
+          id: string
+          kernel_id: string
+          part: string
+          seq: number
+          sha256: string
+        }
+        Insert: {
+          bytes: number
+          content_md: string
+          id?: string
+          kernel_id: string
+          part: string
+          seq?: number
+          sha256: string
+        }
+        Update: {
+          bytes?: number
+          content_md?: string
+          id?: string
+          kernel_id?: string
+          part?: string
+          seq?: number
+          sha256?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kernel_parts_kernel_id_fkey"
+            columns: ["kernel_id"]
+            isOneToOne: false
+            referencedRelation: "kernels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kernels: {
+        Row: {
+          activated_at: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          status: string
+          tenant_id: string
+          version: number
+        }
+        Insert: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id: string
+          version?: number
+        }
+        Update: {
+          activated_at?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          tenant_id?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      knowledge_files: {
+        Row: {
+          category: string
+          confidence: number | null
+          content_md: string | null
+          created_at: string
+          id: string
+          source: string
+          status: string
+          tenant_id: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          version: number
+        }
+        Insert: {
+          category: string
+          confidence?: number | null
+          content_md?: string | null
+          created_at?: string
+          id?: string
+          source?: string
+          status?: string
+          tenant_id: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Update: {
+          category?: string
+          confidence?: number | null
+          content_md?: string | null
+          created_at?: string
+          id?: string
+          source?: string
+          status?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          version?: number
+        }
+        Relationships: []
       }
       mcp_usage_events: {
         Row: {
@@ -1889,6 +2208,81 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+        }
+        Relationships: []
+      }
+      study_agents: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          persona_md: string | null
+          role_summary: string | null
+          scope: string
+          status: string
+          tenant_id: string | null
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          persona_md?: string | null
+          role_summary?: string | null
+          scope?: string
+          status?: string
+          tenant_id?: string | null
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          persona_md?: string | null
+          role_summary?: string | null
+          scope?: string
+          status?: string
+          tenant_id?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      study_skills: {
+        Row: {
+          body_md: string | null
+          changelog: string | null
+          created_at: string
+          id: string
+          name: string
+          scope: string
+          sha256: string | null
+          status: string
+          tenant_id: string | null
+          version: string
+        }
+        Insert: {
+          body_md?: string | null
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          scope?: string
+          sha256?: string | null
+          status?: string
+          tenant_id?: string | null
+          version: string
+        }
+        Update: {
+          body_md?: string | null
+          changelog?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          scope?: string
+          sha256?: string | null
+          status?: string
+          tenant_id?: string | null
+          version?: string
         }
         Relationships: []
       }
