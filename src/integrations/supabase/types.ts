@@ -2404,6 +2404,42 @@ export type Database = {
           },
         ]
       }
+      tenant_offices: {
+        Row: {
+          boardroom_db: string
+          created_at: string
+          label: string | null
+          provider: string
+          provisioned_by: string | null
+          status: string
+          tenant: string
+          token_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          boardroom_db: string
+          created_at?: string
+          label?: string | null
+          provider?: string
+          provisioned_by?: string | null
+          status?: string
+          tenant: string
+          token_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          boardroom_db?: string
+          created_at?: string
+          label?: string | null
+          provider?: string
+          provisioned_by?: string | null
+          status?: string
+          tenant?: string
+          token_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           account_id: string
