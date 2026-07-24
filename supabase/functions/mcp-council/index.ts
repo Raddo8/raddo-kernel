@@ -33,7 +33,7 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "office_store_v1";
+const BUILD_ID = "session_spine_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -2221,7 +2221,22 @@ const TOOL_LOAD_KERNEL_PART = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART];
+const TOOL_BEGIN_SESSION = {
+  name: "begin_session",
+  title: "Begin Session",
+  description:
+    "Boot a COBCLIENT session: returns the sealed kernel manifest, active standing directives, the last continuity checkpoint, the session brief, and staleness flags. Read-only; zero LLM cost.",
+  annotations: { title: "Begin Session", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      surface: { type: "string", description: "Optional surface identifier (e.g. 'cowork', 'mcp', 'cli')." },
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION];
 
 
 function rpcError(id: any, code: number, message: string, status = 200): Response {
