@@ -3529,8 +3529,10 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
-                tenant, session_id, ritual: "sync", outcome: "ok",
-                duration_ms, layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length },
+                tenant, session_id, ritual: "sync",
+                outcome: degraded.length ? "partial" : "ok",
+                duration_ms,
+                layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length, degraded },
               });
             } catch { /* best-effort */ }
             try {
