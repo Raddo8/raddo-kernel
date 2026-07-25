@@ -3460,6 +3460,7 @@ Deno.serve(async (req) => {
         // ══════ sync_session ══════
         if (name === "sync_session") {
           const startedAt = Date.now();
+          const degraded: string[] = [];
           const session_id = typeof args?.session_id === "string" ? args.session_id : "";
           if (!session_id) return rpcError(id, -32602, "invalid_params");
           try {
