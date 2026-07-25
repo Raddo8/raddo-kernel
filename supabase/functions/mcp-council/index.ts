@@ -3407,6 +3407,7 @@ Deno.serve(async (req) => {
             },
             unsaved,
             outcome: unsaved.length > 0 ? "partial" : "ok",
+            scrub: scrubReport,
           };
         };
 
