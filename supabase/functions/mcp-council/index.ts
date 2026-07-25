@@ -3164,7 +3164,12 @@ Deno.serve(async (req) => {
           saved: any;
           unsaved: Array<{ layer: string; reason: string }>;
           outcome: "ok" | "partial";
+          scrub: any;
         }> => {
+          // SCRUB-BEFORE-HQ · screen the whole ritual payload before ANY store or Notion leg.
+          // This must be the first statement in the body — every destructure below reads argsIn.
+          const { payload: scrubbedArgs, report: scrubReport } = scrubRitualArgs(argsIn);
+          argsIn = scrubbedArgs;
           const unsaved: Array<{ layer: string; reason: string }> = [];
           const session_id = typeof argsIn?.session_id === "string" ? argsIn.session_id : "";
           if (!session_id) throw new Error("session_id required");
