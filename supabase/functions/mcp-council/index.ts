@@ -3563,6 +3563,13 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, session_id, ritual: "sync", outcome: "failed",
+                duration_ms: Date.now() - startedAt,
+                layers: { error: msg.slice(0, 300), degraded },
+              });
+            } catch { /* best-effort */ }
             return rpcError(id, -32603, `sync_session_failed:${msg}`);
           }
         }
