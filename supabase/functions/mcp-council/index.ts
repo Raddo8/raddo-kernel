@@ -3496,11 +3496,12 @@ Deno.serve(async (req) => {
             if (dirsErr) degraded.push("directives");
 
             // Decisions filed this session — checkpoints for this session_id
-            const { data: cps } = await supabaseAdmin
+            const { data: cps, error: cpsErr } = await supabaseAdmin
               .from("session_checkpoints")
               .select("id, kind, decisions_pending, created_at, notion_page_id")
               .eq("tenant", tenant).eq("session_id", session_id)
               .order("created_at", { ascending: true });
+            if (cpsErr) degraded.push("checkpoints");
 
             // Staleness
             const staleness: string[] = [];
