@@ -3256,11 +3256,12 @@ Deno.serve(async (req) => {
           }
 
           // ── NOTION LEGS · best-effort, verified writes ──
-          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
+          const target = resolvedTarget.target;
           const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
 
           if (!target) {
-            unsaved.push({ layer: "notion", reason: "office_not_configured" });
+            unsaved.push({ layer: "notion", reason: resolvedTarget.reason });
           } else {
             const token = target.token;
 
