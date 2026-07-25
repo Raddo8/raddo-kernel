@@ -2743,11 +2743,16 @@ Deno.serve(async (req) => {
             last_boot_at: lastBoot?.booted_at ?? null,
           };
           try {
+            // fallback_used is a fleet health signal · true whenever this
+            // boot did NOT stand on a clean active kernel row for the tenant
+            // (lookup errored, no active kernel, or any default/bundled
+            // fallback context was used in place of tenant-resolved context).
+            const fallbackUsed = Boolean(kernelErr) || !kernel;
             await supabaseAdmin.from("boot_log").insert({
               tenant_id: tenant,
               surface: "mcp",
               kernel_version: kernel.version,
-              fallback_used: false,
+              fallback_used: fallbackUsed,
             });
           } catch (_e) { /* best-effort */ }
           return rpcResult(id, {
