@@ -31,9 +31,10 @@ import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
+import { scrubRitualArgs } from "./ritual-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "ritual_writes_v1";
+const BUILD_ID = "ritual_scrub_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -92,7 +93,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, resolveNotionTarget, type TenantContext } from "./tenants.ts";
 
 // Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
 // Marcus, Alfred). Knox is added separately as `legalChair` inside
@@ -2129,6 +2130,7 @@ const TOOL_RUN_COUNCIL = {
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
+      session_id: { type: "string", description: "Optional. The current session id, so the council run is recorded against the session." },
     },
     required: ["question"],
   },
@@ -2643,6 +2645,9 @@ Deno.serve(async (req) => {
         "concurrency_limit",
         "injection_refusal",
         "office_not_configured",
+        "office_not_provisioned",
+        "office_token_missing",
+        "office_db_missing",
         "input_too_large",
       ]);
 
@@ -3159,7 +3164,12 @@ Deno.serve(async (req) => {
           saved: any;
           unsaved: Array<{ layer: string; reason: string }>;
           outcome: "ok" | "partial";
+          scrub: any;
         }> => {
+          // SCRUB-BEFORE-HQ · screen the whole ritual payload before ANY store or Notion leg.
+          // This must be the first statement in the body — every destructure below reads argsIn.
+          const { payload: scrubbedArgs, report: scrubReport } = scrubRitualArgs(argsIn);
+          argsIn = scrubbedArgs;
           const unsaved: Array<{ layer: string; reason: string }> = [];
           const session_id = typeof argsIn?.session_id === "string" ? argsIn.session_id : "";
           if (!session_id) throw new Error("session_id required");
@@ -3246,11 +3256,12 @@ Deno.serve(async (req) => {
           }
 
           // ── NOTION LEGS · best-effort, verified writes ──
-          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
+          const target = resolvedTarget.target;
           const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
 
           if (!target) {
-            unsaved.push({ layer: "notion", reason: "office_not_configured" });
+            unsaved.push({ layer: "notion", reason: resolvedTarget.reason });
           } else {
             const token = target.token;
 
@@ -3396,6 +3407,7 @@ Deno.serve(async (req) => {
             },
             unsaved,
             outcome: unsaved.length > 0 ? "partial" : "ok",
+            scrub: scrubReport,
           };
         };
 
@@ -3412,7 +3424,7 @@ Deno.serve(async (req) => {
                 ritual: "save",
                 outcome: res.outcome,
                 duration_ms,
-                layers: res.saved,
+                layers: { ...res.saved, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
             } catch { /* best-effort */ }
@@ -3448,6 +3460,7 @@ Deno.serve(async (req) => {
         // ══════ sync_session ══════
         if (name === "sync_session") {
           const startedAt = Date.now();
+          const degraded: string[] = [];
           const session_id = typeof args?.session_id === "string" ? args.session_id : "";
           if (!session_id) return rpcError(id, -32602, "invalid_params");
           try {
@@ -3458,12 +3471,13 @@ Deno.serve(async (req) => {
 
             // Brief with surfaced_count bump
             const today = new Date().toISOString().slice(0, 10);
-            const { data: brief } = await supabaseAdmin
+            const { data: brief, error: briefErr } = await supabaseAdmin
               .from("open_loops")
               .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
               .eq("tenant", tenant).eq("brief_status", "open")
               .or(`snooze_until.is.null,snooze_until.lte.${today}`)
               .order("state", { ascending: true }).order("created_at", { ascending: true });
+            if (briefErr) degraded.push("brief");
             const briefRows = (brief ?? []) as any[];
             const nowIso = new Date().toISOString();
             for (const row of briefRows) {
@@ -3474,18 +3488,20 @@ Deno.serve(async (req) => {
             }
 
             // Directives added since session opened
-            const { data: dirs } = await supabaseAdmin
+            const { data: dirs, error: dirsErr } = await supabaseAdmin
               .from("directives").select("id, text, scope, rank, status, created_at")
               .eq("tenant_id", tenant)
               .in("status", ["active", "pending-confirm"])
               .gte("created_at", sess.opened_at);
+            if (dirsErr) degraded.push("directives");
 
             // Decisions filed this session — checkpoints for this session_id
-            const { data: cps } = await supabaseAdmin
+            const { data: cps, error: cpsErr } = await supabaseAdmin
               .from("session_checkpoints")
               .select("id, kind, decisions_pending, created_at, notion_page_id")
               .eq("tenant", tenant).eq("session_id", session_id)
               .order("created_at", { ascending: true });
+            if (cpsErr) degraded.push("checkpoints");
 
             // Staleness
             const staleness: string[] = [];
@@ -3513,8 +3529,10 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
-                tenant, session_id, ritual: "sync", outcome: "ok",
-                duration_ms, layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length },
+                tenant, session_id, ritual: "sync",
+                outcome: degraded.length ? "partial" : "ok",
+                duration_ms,
+                layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length, degraded },
               });
             } catch { /* best-effort */ }
             try {
@@ -3545,6 +3563,13 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            try {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant, session_id, ritual: "sync", outcome: "failed",
+                duration_ms: Date.now() - startedAt,
+                layers: { error: msg.slice(0, 300), degraded },
+              });
+            } catch { /* best-effort */ }
             return rpcError(id, -32603, `sync_session_failed:${msg}`);
           }
         }
@@ -3602,7 +3627,7 @@ Deno.serve(async (req) => {
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, session_id, ritual: "end", outcome: res.outcome,
-                duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length },
+                duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
             } catch { /* best-effort */ }
@@ -3692,6 +3717,7 @@ Deno.serve(async (req) => {
       if (name === "convene_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
+        const councilSessionId = typeof args?.session_id === "string" && args.session_id ? args.session_id : null;
         if (!question) return rpcError(id, -32602, "invalid_params");
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
@@ -3868,6 +3894,28 @@ Deno.serve(async (req) => {
               },
             },
           });
+          // Record the council as a ritual run. 'council' is already a legal value in the
+          // live ritual_runs CHECK constraint — this wires a seam that was designed and never used.
+          try {
+            if (supabaseAdmin) {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant,
+                session_id: councilSessionId,
+                ritual: "council",
+                outcome: "ok",
+                duration_ms: Math.round(metrics?.total_ms ?? 0),
+                layers: {
+                  mode: runMode,
+                  passes: Array.isArray(passes) ? passes.length : 0,
+                  epsilon,
+                  rho,
+                  capped,
+                  iters,
+                  question_hash: qhash,
+                },
+              });
+            }
+          } catch { /* best-effort — a telemetry failure must never fail the council */ }
           return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
@@ -4085,13 +4133,14 @@ Deno.serve(async (req) => {
           // an unconfigured tenant does not pay for a full triage +
           // deliberation + minute assembly (30-60s of LLM spend) before
           // discovering there is nowhere to file.
-          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          const resolved = await resolveNotionTarget(tenant, supabaseAdmin);
+          const target = resolved.target;
           if (!target) {
             await recordMcpUsage(supabaseAdmin, {
               tenant, tool: "file_to_office", agent_id: null, passes: [],
-              routing_log: { outcome: "office_not_configured" },
+              routing_log: { outcome: resolved.reason },
             });
-            throw new Error("office_not_configured");
+            throw new Error(resolved.reason);
           }
 
           // file_to_office runs the same triage → mode pipeline so OFFICE
