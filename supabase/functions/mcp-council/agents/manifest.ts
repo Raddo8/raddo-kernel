@@ -5,7 +5,7 @@
 // 2026-06-09. No tier remap, no legal_seat field.
 import { canSeat } from "./eval-gate.ts";
 
-export type AgentKind = "council" | "single";
+export type AgentKind = "council" | "single" | "deferred";
 
 
 export interface AgentEntry {
@@ -98,6 +98,21 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       enabled: true,
       kind: "single",
     },
+    {
+      // Abe is the deferred loyal-dissent pass reached only via
+      // abe_weighing_in, never a synchronous chair. Kind "deferred" keeps
+      // him out of summon_best_advisor and the convene fan-out (see
+      // findEnabledAgent guard) while still surfacing him in the public
+      // roster so principals discover the pass exists. Mirrors the note
+      // above the CHAIRS array in index.ts.
+      id: "abe",
+      name: "Abe",
+      lens: "Loyal dissent and falsification",
+      tier_min: "any",
+      enabled: true,
+      kind: "deferred",
+      tags: ["dissent"],
+    },
 
   ],
 };
@@ -105,6 +120,9 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
 export function findEnabledAgent(id: string): AgentEntry | null {
   const a = AGENT_MANIFEST.agents.find((x) => x.id === id);
   if (!a || !a.enabled) return null;
+  // Deferred agents (e.g. Abe) are reachable only via their dedicated tool
+  // path — never through synchronous routing (summon_best_advisor, convene).
+  if (a.kind === "deferred") return null;
   if (!canSeat(a)) return null;
   return a;
 }
