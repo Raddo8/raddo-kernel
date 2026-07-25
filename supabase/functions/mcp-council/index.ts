@@ -3717,6 +3717,7 @@ Deno.serve(async (req) => {
       if (name === "convene_council") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
+        const councilSessionId = typeof args?.session_id === "string" && args.session_id ? args.session_id : null;
         if (!question) return rpcError(id, -32602, "invalid_params");
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
