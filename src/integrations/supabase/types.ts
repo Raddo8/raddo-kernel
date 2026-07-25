@@ -391,6 +391,45 @@ export type Database = {
         }
         Relationships: []
       }
+      build_receipts: {
+        Row: {
+          build_id: string | null
+          circuit: string
+          created_at: string
+          id: string
+          legs_owed: number | null
+          legs_passed: number | null
+          owed_by: string | null
+          probed_at: string | null
+          status: string
+          summary: string
+        }
+        Insert: {
+          build_id?: string | null
+          circuit: string
+          created_at?: string
+          id?: string
+          legs_owed?: number | null
+          legs_passed?: number | null
+          owed_by?: string | null
+          probed_at?: string | null
+          status: string
+          summary: string
+        }
+        Update: {
+          build_id?: string | null
+          circuit?: string
+          created_at?: string
+          id?: string
+          legs_owed?: number | null
+          legs_passed?: number | null
+          owed_by?: string | null
+          probed_at?: string | null
+          status?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       build_views: {
         Row: {
           build_id: string
@@ -2488,6 +2527,7 @@ export type Database = {
       study_skills: {
         Row: {
           body_md: string | null
+          category: string
           changelog: string | null
           created_at: string
           id: string
@@ -2500,6 +2540,7 @@ export type Database = {
         }
         Insert: {
           body_md?: string | null
+          category: string
           changelog?: string | null
           created_at?: string
           id?: string
@@ -2512,6 +2553,7 @@ export type Database = {
         }
         Update: {
           body_md?: string | null
+          category?: string
           changelog?: string | null
           created_at?: string
           id?: string
@@ -2688,6 +2730,7 @@ export type Database = {
           surface_key: string
           tenant: string
           updated_at: string
+          write_policy: string
         }
         Insert: {
           created_at?: string
@@ -2698,6 +2741,7 @@ export type Database = {
           surface_key: string
           tenant: string
           updated_at?: string
+          write_policy?: string
         }
         Update: {
           created_at?: string
@@ -2708,6 +2752,7 @@ export type Database = {
           surface_key?: string
           tenant?: string
           updated_at?: string
+          write_policy?: string
         }
         Relationships: []
       }
