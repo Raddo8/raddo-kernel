@@ -93,7 +93,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, resolveNotionTarget, type TenantContext } from "./tenants.ts";
 
 // Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
 // Marcus, Alfred). Knox is added separately as `legalChair` inside
