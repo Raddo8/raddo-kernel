@@ -3424,7 +3424,7 @@ Deno.serve(async (req) => {
                 ritual: "save",
                 outcome: res.outcome,
                 duration_ms,
-                layers: res.saved,
+                layers: { ...res.saved, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
             } catch { /* best-effort */ }
