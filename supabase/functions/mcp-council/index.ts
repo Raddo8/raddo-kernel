@@ -34,7 +34,7 @@ import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "ritual_scrub_v1";
+const BUILD_ID = "boot_signal_v1";
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -2693,7 +2693,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          const { data: kernel } = await supabaseAdmin
+          const { data: kernel, error: kernelErr } = await supabaseAdmin
             .from("kernels")
             .select("id, version")
             .eq("tenant_id", tenant)
@@ -2743,11 +2743,16 @@ Deno.serve(async (req) => {
             last_boot_at: lastBoot?.booted_at ?? null,
           };
           try {
+            // fallback_used is a fleet health signal · true whenever this
+            // boot did NOT stand on a clean active kernel row for the tenant
+            // (lookup errored, no active kernel, or any default/bundled
+            // fallback context was used in place of tenant-resolved context).
+            const fallbackUsed = Boolean(kernelErr) || !kernel;
             await supabaseAdmin.from("boot_log").insert({
               tenant_id: tenant,
               surface: "mcp",
               kernel_version: kernel.version,
-              fallback_used: false,
+              fallback_used: fallbackUsed,
             });
           } catch (_e) { /* best-effort */ }
           return rpcResult(id, {
@@ -2962,12 +2967,17 @@ Deno.serve(async (req) => {
           }
 
           // 9. Reuse boot_log (do not create a parallel log).
+          // fallback_used is a fleet health signal · true whenever this
+          // boot did NOT stand on a clean active kernel row for the tenant
+          // (lookup errored, no active kernel, or any default/bundled
+          // fallback context was used in place of tenant-resolved context).
+          const fallbackUsed = Boolean(kernelErr) || !kernel;
           try {
             await supabaseAdmin.from("boot_log").insert({
               tenant_id: tenant,
               surface: `begin_session:${surface}`,
               kernel_version: kernel?.version ?? null,
-              fallback_used: false,
+              fallback_used: fallbackUsed,
               meta: { session_id: sessionId, tool: "begin_session" },
             });
           } catch { outcome = "partial"; }
