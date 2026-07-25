@@ -3488,11 +3488,12 @@ Deno.serve(async (req) => {
             }
 
             // Directives added since session opened
-            const { data: dirs } = await supabaseAdmin
+            const { data: dirs, error: dirsErr } = await supabaseAdmin
               .from("directives").select("id, text, scope, rank, status, created_at")
               .eq("tenant_id", tenant)
               .in("status", ["active", "pending-confirm"])
               .gte("created_at", sess.opened_at);
+            if (dirsErr) degraded.push("directives");
 
             // Decisions filed this session — checkpoints for this session_id
             const { data: cps } = await supabaseAdmin
