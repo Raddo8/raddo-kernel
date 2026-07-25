@@ -2693,7 +2693,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          const { data: kernel } = await supabaseAdmin
+          const { data: kernel, error: kernelErr } = await supabaseAdmin
             .from("kernels")
             .select("id, version")
             .eq("tenant_id", tenant)
