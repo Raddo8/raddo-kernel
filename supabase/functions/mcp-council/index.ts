@@ -3471,12 +3471,13 @@ Deno.serve(async (req) => {
 
             // Brief with surfaced_count bump
             const today = new Date().toISOString().slice(0, 10);
-            const { data: brief } = await supabaseAdmin
+            const { data: brief, error: briefErr } = await supabaseAdmin
               .from("open_loops")
               .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
               .eq("tenant", tenant).eq("brief_status", "open")
               .or(`snooze_until.is.null,snooze_until.lte.${today}`)
               .order("state", { ascending: true }).order("created_at", { ascending: true });
+            if (briefErr) degraded.push("brief");
             const briefRows = (brief ?? []) as any[];
             const nowIso = new Date().toISOString();
             for (const row of briefRows) {
