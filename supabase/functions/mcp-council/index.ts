@@ -2130,6 +2130,7 @@ const TOOL_RUN_COUNCIL = {
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
+      session_id: { type: "string", description: "Optional. The current session id, so the council run is recorded against the session." },
     },
     required: ["question"],
   },
