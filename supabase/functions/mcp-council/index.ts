@@ -2967,12 +2967,17 @@ Deno.serve(async (req) => {
           }
 
           // 9. Reuse boot_log (do not create a parallel log).
+          // fallback_used is a fleet health signal · true whenever this
+          // boot did NOT stand on a clean active kernel row for the tenant
+          // (lookup errored, no active kernel, or any default/bundled
+          // fallback context was used in place of tenant-resolved context).
+          const fallbackUsed = Boolean(kernelErr) || !kernel;
           try {
             await supabaseAdmin.from("boot_log").insert({
               tenant_id: tenant,
               surface: `begin_session:${surface}`,
               kernel_version: kernel?.version ?? null,
-              fallback_used: false,
+              fallback_used: fallbackUsed,
               meta: { session_id: sessionId, tool: "begin_session" },
             });
           } catch { outcome = "partial"; }
