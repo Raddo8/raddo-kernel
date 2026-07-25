@@ -2645,6 +2645,9 @@ Deno.serve(async (req) => {
         "concurrency_limit",
         "injection_refusal",
         "office_not_configured",
+        "office_not_provisioned",
+        "office_token_missing",
+        "office_db_missing",
         "input_too_large",
       ]);
 
