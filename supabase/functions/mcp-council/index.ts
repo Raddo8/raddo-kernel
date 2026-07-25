@@ -3627,7 +3627,7 @@ Deno.serve(async (req) => {
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, session_id, ritual: "end", outcome: res.outcome,
-                duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length },
+                duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
             } catch { /* best-effort */ }
