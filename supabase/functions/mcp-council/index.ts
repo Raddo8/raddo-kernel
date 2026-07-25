@@ -3897,22 +3897,24 @@ Deno.serve(async (req) => {
           // Record the council as a ritual run. 'council' is already a legal value in the
           // live ritual_runs CHECK constraint — this wires a seam that was designed and never used.
           try {
-            await supabaseAdmin.from("ritual_runs").insert({
-              tenant,
-              session_id: councilSessionId,
-              ritual: "council",
-              outcome: "ok",
-              duration_ms: Math.round(metrics?.total_ms ?? 0),
-              layers: {
-                mode: runMode,
-                passes: Array.isArray(passes) ? passes.length : 0,
-                epsilon,
-                rho,
-                capped,
-                iters,
-                question_hash: qhash,
-              },
-            });
+            if (supabaseAdmin) {
+              await supabaseAdmin.from("ritual_runs").insert({
+                tenant,
+                session_id: councilSessionId,
+                ritual: "council",
+                outcome: "ok",
+                duration_ms: Math.round(metrics?.total_ms ?? 0),
+                layers: {
+                  mode: runMode,
+                  passes: Array.isArray(passes) ? passes.length : 0,
+                  epsilon,
+                  rho,
+                  capped,
+                  iters,
+                  question_hash: qhash,
+                },
+              });
+            }
           } catch { /* best-effort — a telemetry failure must never fail the council */ }
           return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
