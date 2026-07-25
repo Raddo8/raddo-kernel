@@ -4131,13 +4131,14 @@ Deno.serve(async (req) => {
           // an unconfigured tenant does not pay for a full triage +
           // deliberation + minute assembly (30-60s of LLM spend) before
           // discovering there is nowhere to file.
-          const target = await getNotionTargetAsync(tenant, supabaseAdmin);
+          const resolved = await resolveNotionTarget(tenant, supabaseAdmin);
+          const target = resolved.target;
           if (!target) {
             await recordMcpUsage(supabaseAdmin, {
               tenant, tool: "file_to_office", agent_id: null, passes: [],
-              routing_log: { outcome: "office_not_configured" },
+              routing_log: { outcome: resolved.reason },
             });
-            throw new Error("office_not_configured");
+            throw new Error(resolved.reason);
           }
 
           // file_to_office runs the same triage → mode pipeline so OFFICE
