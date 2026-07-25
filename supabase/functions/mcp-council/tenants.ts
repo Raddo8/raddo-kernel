@@ -121,13 +121,21 @@ export function getNotionTarget(tenant: string): NotionTarget | null {
 
 // C2b · resolve from public.tenant_offices first, env pair as fallback.
 // Fail-closed: never falls back to a different tenant's secrets.
-export async function getNotionTargetAsync(
+
+export type NotionTargetReason =
+  | "ok"
+  | "office_not_provisioned"
+  | "office_token_missing"
+  | "office_db_missing";
+
+export async function resolveNotionTarget(
   tenant: string,
   supabaseAdmin: any | null,
-): Promise<NotionTarget | null> {
+): Promise<{ target: NotionTarget | null; reason: NotionTargetReason }> {
   const key = envKey(tenant);
   let token = "";
   let dbId = "";
+  let rowFound = false;
 
   if (supabaseAdmin) {
     try {
@@ -140,6 +148,7 @@ export async function getNotionTargetAsync(
       if (error) {
         console.error("tenant_offices_lookup_error", error.message);
       } else if (data) {
+        rowFound = true;
         const tokenRef = (data.token_ref && String(data.token_ref).trim()) ||
           `${key}_NOTION_TOKEN`;
         token = Deno.env.get(tokenRef) ?? "";
@@ -154,11 +163,30 @@ export async function getNotionTargetAsync(
   }
 
   // Fallback to env pair if store yielded nothing.
-  if (!token || !dbId) {
-    if (!token) token = Deno.env.get(`${key}_NOTION_TOKEN`) ?? "";
-    if (!dbId) dbId = Deno.env.get(`${key}_BOARDROOM_DB`) ?? "";
-  }
+  const envToken = Deno.env.get(`${key}_NOTION_TOKEN`) ?? "";
+  const envDb = Deno.env.get(`${key}_BOARDROOM_DB`) ?? "";
+  if (!token) token = envToken;
+  if (!dbId) dbId = envDb;
 
-  if (!token || !dbId) return null;
-  return { token, dbId };
+  if (token && dbId) return { target: { token, dbId }, reason: "ok" };
+
+  // Nothing resolvable at all → the tenant has no OFFICE surface.
+  if (!rowFound && !envToken && !envDb) {
+    return { target: null, reason: "office_not_provisioned" };
+  }
+  // A db id resolved but the token is empty.
+  if (!token && dbId) return { target: null, reason: "office_token_missing" };
+  // A token resolved but the db id is empty.
+  if (token && !dbId) return { target: null, reason: "office_db_missing" };
+  // Neither, but at least one hint was there (row without contents, or half env pair).
+  return { target: null, reason: "office_not_provisioned" };
+}
+
+// Backwards-compatible wrapper — callers that only need target/null keep working.
+export async function getNotionTargetAsync(
+  tenant: string,
+  supabaseAdmin: any | null,
+): Promise<NotionTarget | null> {
+  const r = await resolveNotionTarget(tenant, supabaseAdmin);
+  return r.target;
 }
