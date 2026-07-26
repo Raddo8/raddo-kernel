@@ -130,7 +130,7 @@ export default function Worklist() {
               return (
                 <Link
                   key={r.id}
-                  to="/app/revenue"
+                  to="/control/money/revenue"
                   className={`flex items-center gap-2 text-xs font-mono px-2 py-1 rounded border ${overdue ? "border-status-red/40 text-status-red" : "border-border hover:border-dossier-brass/40"}`}
                 >
                   <span className="truncate flex-1">{r.accounts?.name ?? "—"} · {r.description}</span>
@@ -154,7 +154,7 @@ export default function Worklist() {
                 <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">{group.account}</div>
                 <div className="text-sm font-medium">{group.title}</div>
                 <Button asChild variant="ghost" size="sm" className="ml-auto">
-                  <Link to={`/app/items/${group.itemId}`}><ExternalLink size={12} className="mr-1" /> Open pursuit</Link>
+                  <Link to={`/control/desk/items/${group.itemId}`}><ExternalLink size={12} className="mr-1" /> Open pursuit</Link>
                 </Button>
               </div>
               <div className="space-y-2">

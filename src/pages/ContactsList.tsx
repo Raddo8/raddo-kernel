@@ -184,7 +184,7 @@ function ContactsTable({
       <div className="divide-y divide-border">
         {sorted.map((c) => (
           <div key={c.id} className="flex items-center justify-between px-6 py-3 hover:bg-accent/50 transition-colors group">
-            <Link to={`/app/accounts/${c.account_id}`} className="flex-1 min-w-0">
+            <Link to={`/control/desk/accounts/${c.account_id}`} className="flex-1 min-w-0">
               <span className="font-medium text-sm">{c.name}</span>
               {c.is_decision_maker && <span className="ml-2 text-[9px] font-mono px-1 py-0 rounded border border-dossier-brass/60 text-dossier-brass">DM</span>}
               {c.email_verified && <span className="ml-1 text-[9px] font-mono px-1 py-0 rounded border border-status-green/60 text-status-green">✓</span>}

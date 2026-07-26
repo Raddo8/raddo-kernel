@@ -76,7 +76,7 @@ export default function Index() {
   }
 
   // BD workspace lands on the pursuit board.
-  if ((workspace as any)?.slug === "cob-hq-bd") return <Navigate to="/app/board" replace />;
+  if ((workspace as any)?.slug === "cob-hq-bd") return <Navigate to="/control/desk/board" replace />;
 
   return (
     <div>

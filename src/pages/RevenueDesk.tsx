@@ -468,7 +468,7 @@ export default function RevenueDesk() {
                     <div key={r.id + o.when.toISOString()} className="flex items-center gap-2 px-3 py-1.5 text-xs font-mono">
                       <span className="text-muted-foreground w-24 shrink-0">{format(o.when, "MMM d")}</span>
                       <span className="flex-1 truncate">
-                        <Link to={`/app/accounts/${r.account_id}`} className="hover:text-dossier-brass">{r.accounts?.name ?? "—"}</Link>
+                        <Link to={`/control/desk/accounts/${r.account_id}`} className="hover:text-dossier-brass">{r.accounts?.name ?? "—"}</Link>
                         <span className="mx-1 text-muted-foreground">·</span>
                         {r.description}
                         {o.override && <span className="ml-1 text-dossier-brass">· override ({o.override.override_kind})</span>}
@@ -736,7 +736,7 @@ function LedgerTable({
             {sorted.map(r => (
               <tr key={r.id} className="hover:bg-muted/20">
                 <td className="px-3 py-2">
-                  <Link to={`/app/accounts/${r.account_id}`} className="hover:text-dossier-brass">
+                  <Link to={`/control/desk/accounts/${r.account_id}`} className="hover:text-dossier-brass">
                     {r.accounts?.name ?? "—"}
                   </Link>
                 </td>
@@ -746,7 +746,7 @@ function LedgerTable({
                     {r.item_id && (() => {
                       const p = pursuits.find(x => x.id === r.item_id);
                       return p ? (
-                        <Link to={`/app/items/${p.id}`} className="text-[10px] text-muted-foreground hover:text-dossier-brass truncate max-w-[24ch]">
+                        <Link to={`/control/desk/items/${p.id}`} className="text-[10px] text-muted-foreground hover:text-dossier-brass truncate max-w-[24ch]">
                           ↳ {p.title}
                         </Link>
                       ) : null;
