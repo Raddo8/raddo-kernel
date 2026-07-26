@@ -25,6 +25,7 @@ import {
   Boxes,
   Hammer,
   Receipt,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
@@ -66,6 +67,7 @@ export default function AppSidebar() {
       { to: "/app/clients", label: "Client Board", icon: Users },
       { to: "/app/onboarding/kernel", label: "Kernel Build", icon: Boxes },
       { to: "/app/onboarding/builds", label: "Project Builds", icon: Hammer },
+      { to: "/app/surfaces", label: "Surfaces", icon: Layers },
       { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
       { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
       { to: "/app/revenue", label: "Revenue", icon: DollarSign },
