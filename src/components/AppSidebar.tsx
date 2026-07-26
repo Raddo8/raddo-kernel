@@ -25,6 +25,7 @@ import {
   Boxes,
   Hammer,
   Receipt,
+  Layers,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
