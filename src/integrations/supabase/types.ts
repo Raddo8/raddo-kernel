@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          grants: string
+          issued_to: string | null
+          label: string | null
+          max_uses: number
+          revoked: boolean
+          uses: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          grants?: string
+          issued_to?: string | null
+          label?: string | null
+          max_uses?: number
+          revoked?: boolean
+          uses?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          grants?: string
+          issued_to?: string | null
+          label?: string | null
+          max_uses?: number
+          revoked?: boolean
+          uses?: number
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           billing_mode: string
@@ -649,6 +688,45 @@ export type Database = {
           voice?: string | null
         }
         Relationships: []
+      }
+      code_redemptions: {
+        Row: {
+          auth_user_id: string
+          cid: string | null
+          code: string
+          id: string
+          redeemed_at: string
+        }
+        Insert: {
+          auth_user_id: string
+          cid?: string | null
+          code: string
+          id?: string
+          redeemed_at?: string
+        }
+        Update: {
+          auth_user_id?: string
+          cid?: string | null
+          code?: string
+          id?: string
+          redeemed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "code_redemptions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "code_redemptions_code_fkey"
+            columns: ["code"]
+            isOneToOne: false
+            referencedRelation: "access_codes"
+            referencedColumns: ["code"]
+          },
+        ]
       }
       connector_accounts: {
         Row: {
@@ -3773,7 +3851,22 @@ export type Database = {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
       }
+      mint_tenant: {
+        Args: {
+          p_cob_name: string
+          p_display_name: string
+          p_email: string
+          p_user: string
+        }
+        Returns: string
+      }
+      my_tenant: { Args: never; Returns: Json }
+      next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      redeem_access_code: {
+        Args: { p_cob_name?: string; p_code: string; p_display_name: string }
+        Returns: Json
+      }
       resolve_cid: { Args: { k: string }; Returns: string }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
