@@ -53,6 +53,7 @@ import HqSurface from "@/pages/HqSurface";
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
 import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
+import StartGate from "@/pages/StartGate";
 import OnboardingAdmin from "@/pages/onboarding/OnboardingAdmin";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
@@ -183,8 +184,8 @@ const App = () => (
             <Route path="/style-guide" element={<Navigate to="/control/brand/style" replace />} />
 
             {/* Onboarding */}
-            <Route path="/start" element={<OnboardingIframe />} />
-            <Route path="/start/progress" element={<OnboardingIframe initialHash="dashboard" />} />
+            <Route path="/start" element={<AuthGate><StartGate><OnboardingIframe /></StartGate></AuthGate>} />
+            <Route path="/start/progress" element={<AuthGate><StartGate><OnboardingIframe initialHash="dashboard" /></StartGate></AuthGate>} />
             <Route path="/onboarding" element={<Navigate to="/start" replace />} />
             <Route path="/onboarding/dashboard" element={<Navigate to="/start/progress" replace />} />
             <Route path="/onboarding/admin" element={<Navigate to="/control/onboarding" replace />} />
