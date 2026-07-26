@@ -519,6 +519,62 @@ export type Database = {
         }
         Relationships: []
       }
+      bulletins: {
+        Row: {
+          action_md: string | null
+          audience: string
+          body_md: string | null
+          cid: string | null
+          created_at: string
+          effective: string | null
+          expires: string | null
+          id: string
+          priority: string
+          seen: boolean
+          seen_at: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          action_md?: string | null
+          audience?: string
+          body_md?: string | null
+          cid?: string | null
+          created_at?: string
+          effective?: string | null
+          expires?: string | null
+          id?: string
+          priority?: string
+          seen?: boolean
+          seen_at?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          action_md?: string | null
+          audience?: string
+          body_md?: string | null
+          cid?: string | null
+          created_at?: string
+          effective?: string | null
+          expires?: string | null
+          id?: string
+          priority?: string
+          seen?: boolean
+          seen_at?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulletins_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       change_log: {
         Row: {
           actor: string | null
@@ -802,6 +858,116 @@ export type Database = {
           },
         ]
       }
+      council_minutes: {
+        Row: {
+          cid: string
+          convened_at: string
+          curn: string | null
+          dissent_md: string | null
+          eps: number | null
+          id: string
+          lenses: Json | null
+          question: string
+          rho: number | null
+          session_id: string | null
+          verdict_md: string | null
+        }
+        Insert: {
+          cid: string
+          convened_at?: string
+          curn?: string | null
+          dissent_md?: string | null
+          eps?: number | null
+          id?: string
+          lenses?: Json | null
+          question: string
+          rho?: number | null
+          session_id?: string | null
+          verdict_md?: string | null
+        }
+        Update: {
+          cid?: string
+          convened_at?: string
+          curn?: string | null
+          dissent_md?: string | null
+          eps?: number | null
+          id?: string
+          lenses?: Json | null
+          question?: string
+          rho?: number | null
+          session_id?: string | null
+          verdict_md?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "council_minutes_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      decisions: {
+        Row: {
+          authority_tier: string | null
+          cid: string
+          curn: string | null
+          decided_at: string
+          decided_by: string | null
+          decision_md: string
+          id: string
+          minute_id: string | null
+          rationale_md: string | null
+          reversibility: string | null
+          superseded_by: string | null
+          title: string
+        }
+        Insert: {
+          authority_tier?: string | null
+          cid: string
+          curn?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision_md: string
+          id?: string
+          minute_id?: string | null
+          rationale_md?: string | null
+          reversibility?: string | null
+          superseded_by?: string | null
+          title: string
+        }
+        Update: {
+          authority_tier?: string | null
+          cid?: string
+          curn?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision_md?: string
+          id?: string
+          minute_id?: string | null
+          rationale_md?: string | null
+          reversibility?: string | null
+          superseded_by?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "decisions_minute_id_fkey"
+            columns: ["minute_id"]
+            isOneToOne: false
+            referencedRelation: "council_minutes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deletion_requests: {
         Row: {
           created_at: string
@@ -831,6 +997,53 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "onboarding_tenants"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      directive_log: {
+        Row: {
+          at: string
+          cid: string
+          directive_id: string | null
+          id: string
+          phase: string
+          receipt_md: string | null
+          rolled_back_at: string | null
+          scope_checked: boolean | null
+          signature_ok: boolean | null
+          snapshot: Json | null
+        }
+        Insert: {
+          at?: string
+          cid: string
+          directive_id?: string | null
+          id?: string
+          phase: string
+          receipt_md?: string | null
+          rolled_back_at?: string | null
+          scope_checked?: boolean | null
+          signature_ok?: boolean | null
+          snapshot?: Json | null
+        }
+        Update: {
+          at?: string
+          cid?: string
+          directive_id?: string | null
+          id?: string
+          phase?: string
+          receipt_md?: string | null
+          rolled_back_at?: string | null
+          scope_checked?: boolean | null
+          signature_ok?: boolean | null
+          snapshot?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directive_log_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
           },
         ]
       }
@@ -869,6 +1082,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      document_registry: {
+        Row: {
+          category: string | null
+          cid: string
+          created_at: string
+          doc_id: string
+          drift: string
+          filename: string
+          id: string
+          install_sha256: string | null
+          install_version: string | null
+          last_checked: string | null
+          observed_sha256: string | null
+        }
+        Insert: {
+          category?: string | null
+          cid: string
+          created_at?: string
+          doc_id: string
+          drift?: string
+          filename: string
+          id?: string
+          install_sha256?: string | null
+          install_version?: string | null
+          last_checked?: string | null
+          observed_sha256?: string | null
+        }
+        Update: {
+          category?: string | null
+          cid?: string
+          created_at?: string
+          doc_id?: string
+          drift?: string
+          filename?: string
+          id?: string
+          install_sha256?: string | null
+          install_version?: string | null
+          last_checked?: string | null
+          observed_sha256?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_registry_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
       }
       goals: {
         Row: {
@@ -917,6 +1180,56 @@ export type Database = {
           why?: string | null
         }
         Relationships: []
+      }
+      improvement_signals: {
+        Row: {
+          audience: string
+          cid: string
+          curn: string | null
+          detail_md: string | null
+          first_seen: string
+          id: string
+          last_seen: string
+          pattern: string
+          recurrence: number
+          silent: boolean
+          status: string
+        }
+        Insert: {
+          audience?: string
+          cid: string
+          curn?: string | null
+          detail_md?: string | null
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          pattern: string
+          recurrence?: number
+          silent?: boolean
+          status?: string
+        }
+        Update: {
+          audience?: string
+          cid?: string
+          curn?: string | null
+          detail_md?: string | null
+          first_seen?: string
+          id?: string
+          last_seen?: string
+          pattern?: string
+          recurrence?: number
+          silent?: boolean
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "improvement_signals_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
       }
       intake_facts: {
         Row: {
@@ -1638,6 +1951,7 @@ export type Database = {
       }
       onboarding_tenants: {
         Row: {
+          cid: string | null
           connectors: Json
           consent_signed_at: string | null
           consent_signed_name: string | null
@@ -1652,6 +1966,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          cid?: string | null
           connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
@@ -1666,6 +1981,66 @@ export type Database = {
           user_id: string
         }
         Update: {
+          cid?: string | null
+          connectors?: Json
+          consent_signed_at?: string | null
+          consent_signed_name?: string | null
+          created_at?: string
+          current_step?: string
+          id?: string
+          state?: Json | null
+          status?: string
+          step0_flags?: Json
+          tenant_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_tenants_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      onboarding_tenants_archive: {
+        Row: {
+          archived_at: string | null
+          archived_reason: string | null
+          connectors: Json
+          consent_signed_at: string | null
+          consent_signed_name: string | null
+          created_at: string
+          current_step: string
+          id: string
+          state: Json | null
+          status: string
+          step0_flags: Json
+          tenant_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          archived_reason?: string | null
+          connectors?: Json
+          consent_signed_at?: string | null
+          consent_signed_name?: string | null
+          created_at?: string
+          current_step?: string
+          id?: string
+          state?: Json | null
+          status?: string
+          step0_flags?: Json
+          tenant_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          archived_reason?: string | null
           connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
@@ -2321,6 +2696,74 @@ export type Database = {
           },
         ]
       }
+      scheduled_actions: {
+        Row: {
+          blueprint_id: string | null
+          cadence: string | null
+          completed_at: string | null
+          created_at: string
+          detail: string | null
+          fired_at: string | null
+          id: string
+          outcome: string | null
+          owner: string
+          program: string | null
+          run_at: string | null
+          seq: number | null
+          status: string
+          tenant_id: string
+          title: string
+          trigger_ref: string | null
+          updated_at: string
+        }
+        Insert: {
+          blueprint_id?: string | null
+          cadence?: string | null
+          completed_at?: string | null
+          created_at?: string
+          detail?: string | null
+          fired_at?: string | null
+          id?: string
+          outcome?: string | null
+          owner?: string
+          program?: string | null
+          run_at?: string | null
+          seq?: number | null
+          status?: string
+          tenant_id: string
+          title: string
+          trigger_ref?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blueprint_id?: string | null
+          cadence?: string | null
+          completed_at?: string | null
+          created_at?: string
+          detail?: string | null
+          fired_at?: string | null
+          id?: string
+          outcome?: string | null
+          owner?: string
+          program?: string | null
+          run_at?: string | null
+          seq?: number | null
+          status?: string
+          tenant_id?: string
+          title?: string
+          trigger_ref?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_actions_blueprint_id_fkey"
+            columns: ["blueprint_id"]
+            isOneToOne: false
+            referencedRelation: "blueprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scores: {
         Row: {
           account_id: string | null
@@ -2488,6 +2931,56 @@ export type Database = {
         }
         Relationships: []
       }
+      storyline: {
+        Row: {
+          body_md: string
+          cid: string
+          cites: Json | null
+          created_at: string
+          curn: string | null
+          grade: string
+          id: string
+          kind: string
+          period_end: string | null
+          period_start: string | null
+          title: string
+        }
+        Insert: {
+          body_md: string
+          cid: string
+          cites?: Json | null
+          created_at?: string
+          curn?: string | null
+          grade?: string
+          id?: string
+          kind: string
+          period_end?: string | null
+          period_start?: string | null
+          title: string
+        }
+        Update: {
+          body_md?: string
+          cid?: string
+          cites?: Json | null
+          created_at?: string
+          curn?: string | null
+          grade?: string
+          id?: string
+          kind?: string
+          period_end?: string | null
+          period_start?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storyline_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       study_agents: {
         Row: {
           created_at: string
@@ -2599,6 +3092,86 @@ export type Database = {
         }
         Relationships: []
       }
+      surface_pin: {
+        Row: {
+          cid: string
+          held: boolean
+          pinned_at: string
+          pinned_by: string | null
+          surface_key: string
+          version: string
+        }
+        Insert: {
+          cid: string
+          held?: boolean
+          pinned_at?: string
+          pinned_by?: string | null
+          surface_key: string
+          version: string
+        }
+        Update: {
+          cid?: string
+          held?: boolean
+          pinned_at?: string
+          pinned_by?: string | null
+          surface_key?: string
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      surface_version: {
+        Row: {
+          author: string | null
+          body: string
+          bytes: number | null
+          created_at: string
+          encoding: string
+          id: number
+          published_at: string | null
+          reason: string | null
+          sha256: string | null
+          state: string
+          surface_key: string
+          version: string
+        }
+        Insert: {
+          author?: string | null
+          body?: string
+          bytes?: number | null
+          created_at?: string
+          encoding?: string
+          id?: number
+          published_at?: string | null
+          reason?: string | null
+          sha256?: string | null
+          state?: string
+          surface_key: string
+          version: string
+        }
+        Update: {
+          author?: string | null
+          body?: string
+          bytes?: number | null
+          created_at?: string
+          encoding?: string
+          id?: number
+          published_at?: string | null
+          reason?: string | null
+          sha256?: string | null
+          state?: string
+          surface_key?: string
+          version?: string
+        }
+        Relationships: []
+      }
       taylor_questions: {
         Row: {
           answer: string | null
@@ -2684,6 +3257,70 @@ export type Database = {
           },
         ]
       }
+      tenant_alias: {
+        Row: {
+          alias: string
+          ambiguous: boolean
+          cid: string | null
+          created_at: string
+          key_space: string
+          note: string | null
+        }
+        Insert: {
+          alias: string
+          ambiguous?: boolean
+          cid?: string | null
+          created_at?: string
+          key_space: string
+          note?: string | null
+        }
+        Update: {
+          alias?: string
+          ambiguous?: boolean
+          cid?: string | null
+          created_at?: string
+          key_space?: string
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_alias_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      tenant_members: {
+        Row: {
+          auth_user_id: string
+          cid: string
+          created_at: string
+          role: string
+        }
+        Insert: {
+          auth_user_id: string
+          cid: string
+          created_at?: string
+          role?: string
+        }
+        Update: {
+          auth_user_id?: string
+          cid?: string
+          created_at?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       tenant_offices: {
         Row: {
           boardroom_db: string
@@ -2753,6 +3390,51 @@ export type Database = {
           tenant?: string
           updated_at?: string
           write_policy?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          cid: string
+          cob_name: string | null
+          created_at: string
+          display_name: string
+          enterprise: string | null
+          notes: string | null
+          office_mode: string
+          onboarding_key: string | null
+          principal: string | null
+          status: string
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          cob_name?: string | null
+          created_at?: string
+          display_name: string
+          enterprise?: string | null
+          notes?: string | null
+          office_mode?: string
+          onboarding_key?: string | null
+          principal?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          cob_name?: string | null
+          created_at?: string
+          display_name?: string
+          enterprise?: string | null
+          notes?: string | null
+          office_mode?: string
+          onboarding_key?: string | null
+          principal?: string | null
+          status?: string
+          tier?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3076,6 +3758,7 @@ export type Database = {
         Returns: Json
       }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      current_cid: { Args: never; Returns: string }
       get_action_response_status: {
         Args: { p_action_id: string }
         Returns: Json
@@ -3083,6 +3766,7 @@ export type Database = {
       get_cron_headers: { Args: never; Returns: Json }
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
+      is_cob_operator: { Args: never; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
@@ -3090,6 +3774,7 @@ export type Database = {
         Returns: boolean
       }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      resolve_cid: { Args: { k: string }; Returns: string }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
