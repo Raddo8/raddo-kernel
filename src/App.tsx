@@ -71,9 +71,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (session === undefined) return null;
-  if (!session) return <SignIn />;
+  // Preserve the door the visitor knocked on so sign-in returns them here.
+  if (!session) return <SignIn nextPath={window.location.pathname + window.location.search} />;
   return <>{children}</>;
 }
+
 
 /** Operator chrome · AuthGate + workspace + sidebar, shared by every /control child zone. */
 function ControlShell() {
