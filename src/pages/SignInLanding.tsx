@@ -52,7 +52,7 @@ export function SignInLanding() {
       cancelled = true;
       cleanup?.();
     };
-  }, [navigate]);
+  }, [navigate, location.search]);
 
   return (
     <main className="min-h-screen bg-dossier-paper flex items-center justify-center">
