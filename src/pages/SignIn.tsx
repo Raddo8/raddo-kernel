@@ -17,11 +17,15 @@ const SSO_LABEL: Record<SsoProvider, string> = {
  * The single front door. Password sign-in and SSO both land on /signin/landing,
  * which decides between the operator zone (/control) and the client zone (/hq).
  */
-export function SignIn() {
+export function SignIn({ nextPath }: { nextPath?: string } = {}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const landing = nextPath
+    ? `/signin/landing?next=${encodeURIComponent(nextPath)}`
+    : "/signin/landing";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +33,7 @@ export function SignIn() {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      navigate("/signin/landing");
+      navigate(landing);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign-in failed");
     } finally {
@@ -40,7 +44,7 @@ export function SignIn() {
   const handleSso = async (provider: SsoProvider) => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: window.location.origin + "/signin/landing" },
+      options: { redirectTo: window.location.origin + landing },
     });
     if (error) {
       // Provider not enabled on the backend · tell the operator plainly.
@@ -52,6 +56,7 @@ export function SignIn() {
       );
     }
   };
+
 
   return (
     <DossierSplit
