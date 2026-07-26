@@ -123,3 +123,9 @@ export async function loadSurface(surfaceKey: SurfaceKey): Promise<SurfaceResult
     return { url: null, version: row.data.version, error: "decode-failed" };
   }
 }
+
+/** Decode a stored surface body to plain HTML text (operator tooling). */
+export async function decodeSurfaceBody(body: string, encoding: string | null): Promise<string> {
+  if (encoding === "gzip+base64") return gunzipToText(base64ToBytes(body));
+  return body;
+}
