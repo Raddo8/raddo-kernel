@@ -285,7 +285,7 @@ export default function InvoicesList() {
                     <td className="px-4 py-2 font-mono text-xs">{inv.invoice_number}</td>
                     <td className="px-4 py-2">
                       <Link
-                        to={`/app/accounts/${inv.account_id}`}
+                        to={`/control/desk/accounts/${inv.account_id}`}
                         onClick={(e) => e.stopPropagation()}
                         className="underline decoration-dotted underline-offset-2"
                       >

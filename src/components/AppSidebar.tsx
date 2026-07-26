@@ -61,36 +61,36 @@ export default function AppSidebar() {
 
   const isBd = (workspace as any)?.slug === "cob-hq-bd";
   const navItems: Array<{ to: string; label: string; icon: any; end?: boolean; badge?: number }> = [
-    { to: "/app", label: "Dashboard", icon: BarChart3, end: true },
+    { to: "/control/desk", label: "Dashboard", icon: BarChart3, end: true },
     ...(isBd ? [
-      { to: "/app/board", label: "Pursuit Board", icon: LayoutGrid },
-      { to: "/app/clients", label: "Client Board", icon: Users },
-      { to: "/app/onboarding/kernel", label: "Kernel Build", icon: Boxes },
-      { to: "/app/onboarding/builds", label: "Project Builds", icon: Hammer },
-      { to: "/app/surfaces", label: "Surfaces", icon: Layers },
-      { to: "/app/worklist", label: "Worklist", icon: CheckSquare },
-      { to: "/app/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
-      { to: "/app/revenue", label: "Revenue", icon: DollarSign },
-      { to: "/app/invoices", label: "Invoices", icon: Receipt },
+      { to: "/control/desk/board", label: "Pursuit Board", icon: LayoutGrid },
+      { to: "/control/fleet/clients", label: "Client Board", icon: Users },
+      { to: "/control/kernel", label: "Kernel Build", icon: Boxes },
+      { to: "/control/builds/projects", label: "Project Builds", icon: Hammer },
+      { to: "/control/publish", label: "Surfaces", icon: Layers },
+      { to: "/control/desk/worklist", label: "Worklist", icon: CheckSquare },
+      { to: "/control/fleet/approvals", label: "Approvals", icon: BellRing, badge: approvalCount },
+      { to: "/control/money/revenue", label: "Revenue", icon: DollarSign },
+      { to: "/control/money/invoices", label: "Invoices", icon: Receipt },
     ] : []),
-    { to: "/app/accounts", label: labels.accounts, icon: Building2 },
-    { to: "/app/contacts", label: "Contacts", icon: Users },
-    { to: "/app/items", label: labels.items, icon: FileText },
-    { to: "/app/actions", label: "Actions", icon: Zap },
-    { to: "/app/timeline", label: "Timeline", icon: Clock },
-    { to: "/app/policies", label: "Policies", icon: Shield },
-    { to: "/app/policy-rules", label: "Rules", icon: ListFilter },
-    { to: "/app/playbooks", label: "Playbooks", icon: BookOpen },
-    { to: "/app/templates", label: "Templates", icon: LayoutTemplate },
-    { to: "/app/connectors", label: "Connectors", icon: Plug },
-    { to: "/app/suppression", label: "Suppressions", icon: ShieldOff },
-    { to: "/app/scheduler-health", label: "Health", icon: HeartPulse },
-    { to: "/app/billing", label: "Usage", icon: BarChart3 },
+    { to: "/control/desk/accounts", label: labels.accounts, icon: Building2 },
+    { to: "/control/desk/contacts", label: "Contacts", icon: Users },
+    { to: "/control/desk/items", label: labels.items, icon: FileText },
+    { to: "/control/desk/actions", label: "Actions", icon: Zap },
+    { to: "/control/desk/timeline", label: "Timeline", icon: Clock },
+    { to: "/control/desk/policies", label: "Policies", icon: Shield },
+    { to: "/control/desk/policy-rules", label: "Rules", icon: ListFilter },
+    { to: "/control/desk/playbooks", label: "Playbooks", icon: BookOpen },
+    { to: "/control/desk/templates", label: "Templates", icon: LayoutTemplate },
+    { to: "/control/desk/connectors", label: "Connectors", icon: Plug },
+    { to: "/control/desk/suppression", label: "Suppressions", icon: ShieldOff },
+    { to: "/control/system", label: "Health", icon: HeartPulse },
+    { to: "/control/money/billing", label: "Usage", icon: BarChart3 },
   ];
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate("/app");
+    navigate("/control/desk");
   };
 
   const initials = (userEmail ?? "?").slice(0, 2).toUpperCase();
@@ -148,7 +148,7 @@ export default function AppSidebar() {
       <nav className="flex-1 py-2 space-y-0.5 overflow-y-auto">
         {navItems.map(({ to, label, icon: Icon, end, badge }, idx) => {
           const active = end ? location.pathname === to : location.pathname.startsWith(to);
-          const showOnboardingLabel = !collapsed && to === "/app/onboarding/kernel";
+          const showOnboardingLabel = !collapsed && to === "/control/kernel";
           return (
             <div key={to}>
               {showOnboardingLabel && (

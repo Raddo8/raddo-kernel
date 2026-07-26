@@ -104,7 +104,7 @@ export default function ApprovalsQueue() {
                         </span>
                       </div>
                       {it && (
-                        <Link to={`/app/items/${it.id}`} className="text-sm font-medium hover:text-dossier-brass flex items-center gap-1">
+                        <Link to={`/control/desk/items/${it.id}`} className="text-sm font-medium hover:text-dossier-brass flex items-center gap-1">
                           {it.accounts?.name ? `${it.accounts.name} · ` : ""}{it.title}
                           <ExternalLink size={11} />
                         </Link>

@@ -227,7 +227,7 @@ export default function ItemDetail() {
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold font-mono">CONTACTS ({contacts.length})</h3>
               {item.account_id && (
-                <Link to={`/app/accounts/${item.account_id}`} className="text-[10px] font-mono text-muted-foreground hover:text-dossier-brass">
+                <Link to={`/control/desk/accounts/${item.account_id}`} className="text-[10px] font-mono text-muted-foreground hover:text-dossier-brass">
                   <Plus size={12} className="inline mr-0.5" /> add
                 </Link>
               )}

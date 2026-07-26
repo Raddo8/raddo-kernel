@@ -136,7 +136,7 @@ export default function GroupedLedger({ rows, onEdit, onCancel, onChanged, pursu
                 className="w-full flex items-center gap-2 px-3 py-2 bg-muted/30 hover:bg-muted/50 text-xs font-mono text-left"
               >
                 {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                <Link to={`/app/accounts/${g.account_id}`} onClick={e => e.stopPropagation()}
+                <Link to={`/control/desk/accounts/${g.account_id}`} onClick={e => e.stopPropagation()}
                       className="font-medium hover:text-dossier-brass truncate">{g.name}</Link>
                 <span className="text-muted-foreground">· {g.rows.length} schedule(s){excludedCount > 0 && <span className="ml-1 text-dossier-brass">· {excludedCount} excluded</span>}</span>
                 <span className="ml-auto flex items-center gap-3">
@@ -180,7 +180,7 @@ export default function GroupedLedger({ rows, onEdit, onCancel, onChanged, pursu
                               {excluded && <span className="text-[9px] uppercase tracking-wider text-dossier-brass border border-dossier-brass/40 rounded px-1 no-underline">excluded</span>}
                             </div>
                             {p && (
-                              <Link to={`/app/items/${p.id}`} className="text-[10px] text-muted-foreground hover:text-dossier-brass">
+                              <Link to={`/control/desk/items/${p.id}`} className="text-[10px] text-muted-foreground hover:text-dossier-brass">
                                 ↳ {p.title}
                               </Link>
                             )}

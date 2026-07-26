@@ -242,7 +242,7 @@ export default function StyleGuide() {
               <Link to="/">· Hero</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link to="/app">· App</Link>
+              <Link to="/control/desk">· App</Link>
             </Button>
           </div>
         </div>
@@ -669,31 +669,31 @@ const FEATURES: { group: string; items: { label: string; route?: string }[] }[] 
   {
     group: "App · accounts & items",
     items: [
-      { label: "Accounts list", route: "/app/accounts" },
+      { label: "Accounts list", route: "/control/desk/accounts" },
       { label: "Account detail" },
-      { label: "Items list", route: "/app/items" },
+      { label: "Items list", route: "/control/desk/items" },
       { label: "Item detail" },
-      { label: "Contacts", route: "/app/contacts" },
+      { label: "Contacts", route: "/control/desk/contacts" },
     ],
   },
   {
     group: "App · execution",
     items: [
-      { label: "Actions queue", route: "/app/actions" },
-      { label: "Timeline", route: "/app/timeline" },
-      { label: "Scheduler health", route: "/app/scheduler-health" },
-      { label: "Billing & usage", route: "/app/billing" },
+      { label: "Actions queue", route: "/control/desk/actions" },
+      { label: "Timeline", route: "/control/desk/timeline" },
+      { label: "Scheduler health", route: "/control/system" },
+      { label: "Billing & usage", route: "/control/money/billing" },
     ],
   },
   {
     group: "App · automation",
     items: [
-      { label: "Policies", route: "/app/policies" },
-      { label: "Policy rules", route: "/app/policy-rules" },
-      { label: "Playbooks", route: "/app/playbooks" },
-      { label: "Templates", route: "/app/templates" },
-      { label: "Connectors", route: "/app/connectors" },
-      { label: "Suppression", route: "/app/suppression" },
+      { label: "Policies", route: "/control/desk/policies" },
+      { label: "Policy rules", route: "/control/desk/policy-rules" },
+      { label: "Playbooks", route: "/control/desk/playbooks" },
+      { label: "Templates", route: "/control/desk/templates" },
+      { label: "Connectors", route: "/control/desk/connectors" },
+      { label: "Suppression", route: "/control/desk/suppression" },
     ],
   },
 ];

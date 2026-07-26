@@ -1,5 +1,5 @@
 /**
- * Kernel Build Board · /app/onboarding/kernel
+ * Kernel Build Board · /control/kernel
  *
  * One card per onboarding CLIENT (client_ops item). Columns = fixed kernel
  * phases (Agreement & Access → LIVE). Each card carries per-phase checklists
@@ -189,7 +189,7 @@ export default function KernelBoard() {
               <SheetHeader>
                 <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground">Kernel</div>
                 <SheetTitle className="text-lg">
-                  <Link to={`/app/accounts/${openItem.account_id}`} className="hover:text-dossier-brass">
+                  <Link to={`/control/desk/accounts/${openItem.account_id}`} className="hover:text-dossier-brass">
                     {openItem.accounts?.name}
                   </Link>
                 </SheetTitle>

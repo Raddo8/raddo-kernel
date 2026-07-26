@@ -1,5 +1,5 @@
 /**
- * Project Builds Board · /app/onboarding/builds
+ * Project Builds Board · /control/builds/projects
  * One card per build. Six columns from Spec'd → Maintained.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -129,7 +129,7 @@ export default function ProjectBuildsBoard() {
                       >
                         <div className="text-sm font-medium truncate">{b.title}</div>
                         <div className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground truncate mt-0.5">
-                          <Link to={`/app/accounts/${b.account_id}`} className="hover:text-dossier-brass">
+                          <Link to={`/control/desk/accounts/${b.account_id}`} className="hover:text-dossier-brass">
                             {accounts[b.account_id] || "—"}
                           </Link>
                           <span> · {b.kind.replace(/_/g, " ")}</span>

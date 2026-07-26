@@ -497,7 +497,7 @@ export default function PursuitSlideOut({ pursuitId, open, onOpenChange, states,
 
             <div>
               <Button variant="outline" size="sm" asChild className="w-full">
-                <Link to={`/app/items/${item.id}`}>
+                <Link to={`/control/desk/items/${item.id}`}>
                   Open full record <ExternalLink size={12} className="ml-1" />
                 </Link>
               </Button>

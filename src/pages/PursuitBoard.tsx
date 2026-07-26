@@ -60,7 +60,7 @@ export default function PursuitBoard() {
         .eq("workspace_id", workspace.id)
         .eq("type", "pursuit"),
     ]);
-    // Only the pursuit ladder appears on this board. client_ops states live on /app/clients.
+    // Only the pursuit ladder appears on this board. client_ops states live on /control/fleet/clients.
     const pursuitStates = ((st || []) as any[]).filter(s => (s as any).category !== "client_ops");
     setStates(pursuitStates as any);
     const list = (it || []) as any as Pursuit[];

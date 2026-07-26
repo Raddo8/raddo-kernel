@@ -33,7 +33,7 @@ export default function AccountOnboardingTab({ workspaceId, accountId }: Props) 
       <div>
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-mono uppercase tracking-wider text-muted-foreground">Kernel · overall</h3>
-          <Link to="/app/onboarding/kernel" className="text-[10px] font-mono text-dossier-brass hover:underline">Open board →</Link>
+          <Link to="/control/kernel" className="text-[10px] font-mono text-dossier-brass hover:underline">Open board →</Link>
         </div>
         <div className="h-1.5 bg-muted rounded overflow-hidden">
           <div className="h-full bg-dossier-brass" style={{ width: `${overall.pct}%` }} />

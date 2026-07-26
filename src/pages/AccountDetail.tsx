@@ -215,7 +215,7 @@ export default function AccountDetail() {
                   {schedules.map(s => (
                     <div key={s.id} className="text-[11px] font-mono flex justify-between border border-border rounded px-2 py-1">
                       <span className="truncate">
-                        <Link to="/app/revenue" className="hover:text-dossier-brass">{s.description || s.kind}</Link>
+                        <Link to="/control/money/revenue" className="hover:text-dossier-brass">{s.description || s.kind}</Link>
                         <span className="text-muted-foreground"> · {s.status}</span>
                       </span>
                       <span>{fmtUsd(Number(s.amount_usd) || 0)}{s.cadence === "monthly" ? "/mo" : ""}</span>
