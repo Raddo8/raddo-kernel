@@ -90,7 +90,7 @@ export default function AppSidebar() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    navigate("/control/desk");
+    navigate("/signin");
   };
 
   const initials = (userEmail ?? "?").slice(0, 2).toUpperCase();
