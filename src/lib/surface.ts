@@ -19,7 +19,8 @@ function base64ToBytes(b64: string): Uint8Array {
 }
 
 async function gunzipToText(bytes: Uint8Array): Promise<string> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const buffer = bytes.slice().buffer as ArrayBuffer;
+  const stream = new Blob([buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
   const buf = await new Response(stream).arrayBuffer();
   return new TextDecoder("utf-8").decode(buf);
 }
