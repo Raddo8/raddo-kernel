@@ -13,7 +13,7 @@ import { decodeSurfaceBody, gzipBase64, sha256Hex, type SurfaceKey } from "@/lib
 import { lineDiff, type DiffLine } from "@/lib/line-diff";
 
 type VersionRow = {
-  id: string;
+  id: number;
   surface_key: string;
   version: string;
   state: string;
@@ -68,8 +68,8 @@ export default function SurfacesAdmin() {
   const [upError, setUpError] = useState<string | null>(null);
 
   // Release controls
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [diffOpened, setDiffOpened] = useState<Record<string, boolean>>({});
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [diffOpened, setDiffOpened] = useState<Record<number, boolean>>({});
   const [diff, setDiff] = useState<DiffLine[] | null>(null);
   const [targetMode, setTargetMode] = useState<TargetMode>("single");
   const [singleCid, setSingleCid] = useState<string>("");
