@@ -1,26 +1,36 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Post-authentication router. Waits for a session, then sends operators to
- * /control and everyone else to /hq.
+ * Post-authentication router. Honors an explicit ?next= destination, otherwise
+ * sends operators to /control and everyone else to /hq.
  */
 export function SignInLanding() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     let cancelled = false;
+    const params = new URLSearchParams(location.search);
+    const raw = params.get("next");
+    // Same-origin paths only · never honor an absolute URL.
+    const next = raw && raw.startsWith("/") && !raw.startsWith("//") ? raw : null;
 
     const route = async () => {
       const { data } = await supabase.auth.getSession();
       if (cancelled) return false;
       if (!data.session) return false;
+      if (next) {
+        navigate(next, { replace: true });
+        return true;
+      }
       const { data: isOperator } = await supabase.rpc("is_cob_operator");
       if (cancelled) return true;
       navigate(isOperator === true ? "/control" : "/hq", { replace: true });
       return true;
     };
+
 
     void route().then((handled) => {
       if (handled || cancelled) return;
