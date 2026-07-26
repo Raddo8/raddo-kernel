@@ -143,7 +143,11 @@ const App = () => (
             <Route path="onboarding/kernel" element={<KernelBoard />} />
             <Route path="onboarding/builds" element={<ProjectBuildsBoard />} />
             <Route path="builds" element={<BuildsAdmin />} />
+            <Route path="surfaces" element={<SurfacesAdmin />} />
           </Route>
+          <Route path="/hq" element={<AuthGate><HqSurface /></AuthGate>} />
+          <Route path="/panel" element={<AuthGate><PanelSurface /></AuthGate>} />
+
           {/* Legacy product paths → redirect into /app/* */}
           <Route path="/accounts/*" element={<Navigate to="/app/accounts" replace />} />
           <Route path="/items/*" element={<Navigate to="/app/items" replace />} />
