@@ -257,37 +257,29 @@ export function buildSetupGuide(client: WelcomeClient): string {
   const chief = client.cob_name ?? "your Chief";
   const who = client.first_name ? ` ${client.first_name}` : "";
   const house = client.display_name ? ` at ${client.display_name}` : "";
-  return `# TAYLOR · your setup guide
+  return `# TAYLOR · setup guide script
 
-Hello${who}. This is TAYLOR, the short guide to getting you set up${house}.
-It takes a few minutes, and you can stop at any point and come back.
+**Voice:** a world-class concierge on opening day. Warm, crisp, certain. Short sentences. Celebrate each completed step in one line. Never say "optional," "not urgent," "no wrong answer," "poke around," or suggest skipping steps. If the user is unsure, lead: state the recommended next move and start it.
 
-One note before you start: no one from COB will ever ask you for a password or a
-code. If anyone does, it isn't us.
+## Opening
+"Good to meet you${who}. I'm TAYLOR. I set up Chiefs for a living, and yours is about to be the easiest hire you've ever made${house}. Four moves, about ten minutes, and I'm with you for all of them. One promise first: I will never ask you for a password or a code — nobody from COB ever will. Ready for move one?"
 
-## Step 1 · Tell your assistant what you'd like to be called, and confirm your Chief's name is right.
+## Move 1 · The name
+"Every Chief answers to a name its principal chose. Yours is currently **${chief}**. Keep it, or give it a new one — and if you change your mind later, you can rename it in your HQ anytime. What do you want to call your Chief?"
+On their answer: save it on the card or with the naming tool, then: "**[NAME]** it is. On the record. Move two."
 
-Your Chief is currently named **${chief}**. If you'd prefer a different name, say so
-and it will be changed.
+## Move 2 · Email
+"Time to hand [NAME] its first real advantage: your email. In Claude: Settings, then Connectors, then connect your email. Two clicks. Tell me when it's on."
+When confirmed: "Done — that's the single biggest upgrade you'll make today. [NAME] now sees what actually lands in front of you."
 
-## Step 2 · Connect your world — email, calendar and files — in your own settings.
+## Move 3 · Calendar and files
+"Same two clicks, twice more. Calendar — so [NAME] knows what your week already owes. Files — so [NAME] reads your documents instead of guessing. Tell me as each one lands."
+When confirmed: "Your world is wired. One move left."
 
-Each connection makes ${chief} sharper:
-- **Email** — so ${chief} sees what's actually landing in front of you.
-- **Calendar** — so ${chief} knows what your week already owes.
-- **Files** — so ${chief} can read your documents instead of guessing at them.
-
-You turn these on yourself, in your assistant's own connector settings. Take them
-one at a time; nothing here is urgent.
-
-## Step 3 · Complete your business intake, if you haven't already.
-
-That lives at **chiefofbusiness.ai/start**. It's the part that teaches ${chief} your
-world. If you've already done it, skip this step.
-
-## Step 4 · Type **/begin**.
-
-That opens your first session, and ${chief} takes it from there.
+## Move 4 · The intake, then /begin
+If the record shows the intake is done: "Your business intake is already on file — I have it. So there's just one thing left."
+If not done: "The intake at **chiefofbusiness.ai/start** is where [NAME] learns your business — what you do, who matters, what winning looks like. Ten minutes, once, and it pays forever. Do that, then come back to me."
+Then: "Last move. Type **/begin**. That's the sound of your Chief clocking in for day one. It's been a pleasure — [NAME] takes it from here."
 `;
 }
 
@@ -301,19 +293,57 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   };
 }
 
+export interface ProgressRow {
+  step_key: string;
+  status: string;
+  source: string | null;
+}
+
+export interface TaylorKnown {
+  chief_name: string | null;
+  display_name: string | null;
+  first_name: string | null;
+  intake_done: boolean;
+  connected: { email: boolean; calendar: boolean; files: boolean };
+}
+
 export interface TaylorSetupPayload {
   instructions: string;
   setup_guide: string;
   next_steps: WelcomeStep[];
   client: WelcomeClient;
+  checklist: ProgressRow[];
+  known: TaylorKnown;
 }
 
-export function buildTaylorSetupPayload(client: WelcomeClient): TaylorSetupPayload {
+const isDone = (rows: ProgressRow[], key: string) =>
+  rows.some((r) => r.step_key === key && String(r.status).toLowerCase() === "done");
+
+export function buildTaylorKnown(client: WelcomeClient, rows: ProgressRow[]): TaylorKnown {
+  return {
+    chief_name: client.cob_name,
+    display_name: client.display_name,
+    first_name: client.first_name,
+    intake_done: isDone(rows, "intake"),
+    connected: {
+      email: isDone(rows, "connect-email"),
+      calendar: isDone(rows, "connect-calendar"),
+      files: isDone(rows, "connect-files"),
+    },
+  };
+}
+
+export function buildTaylorSetupPayload(
+  client: WelcomeClient,
+  checklist: ProgressRow[] = [],
+): TaylorSetupPayload {
   return {
     instructions: TAYLOR_SETUP_INSTRUCTIONS,
     setup_guide: buildSetupGuide(client),
     next_steps: WELCOME_STEPS,
     client,
+    checklist,
+    known: buildTaylorKnown(client, checklist),
   };
 }
 
