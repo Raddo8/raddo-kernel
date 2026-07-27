@@ -213,9 +213,10 @@ export function buildWelcomeHtml(client: WelcomeClient): string {
   }
   footer .top { color: var(--brass); }
   @media (max-width: 560px) {
-    footer { position: static; text-align: center; margin-top: 34px; }
-    .stage { padding-bottom: 40px; }
+    .stage { flex-direction: column; justify-content: center; padding-bottom: 40px; }
+    footer { position: static; align-self: center; text-align: center; margin-top: 30px; }
   }
+
 </style>
 </head>
 <body>
