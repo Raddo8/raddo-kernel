@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v4";
+const BUILD_ID = "welcome_party_v5";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2435,6 +2435,21 @@ const TOOL_SETUP_PROGRESS = {
   },
 };
 
+const TOOL_SET_CHIEF_NAME = {
+  name: "set_chief_name",
+  title: "Set Chief Name",
+  description: "Set or change the name of the client's Chief. Call when the user chooses a name.",
+  annotations: { title: "Set Chief Name" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", minLength: 2, maxLength: 40 },
+    },
+    required: ["name"],
+    additionalProperties: false,
+  },
+};
+
 const UI_RESOURCES = [
   {
     uri: WELCOME_WIDGET_URI,
@@ -2444,7 +2459,7 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -2792,6 +2807,37 @@ Deno.serve(async (req) => {
         (params?._meta && (typeof params._meta.progressToken === "string" || typeof params._meta.progressToken === "number"))
           ? params._meta.progressToken
           : undefined;
+
+      if (name === "set_chief_name") {
+        const raw = typeof args?.name === "string" ? args.name : "";
+        const cid = await resolveTenantCid(tenant);
+        if (!cid) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const cobName = raw
+          .replace(/[^\p{L}\p{N} '\u2019-]/gu, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 40)
+          .toUpperCase();
+        if (cobName.length < 2) {
+          const out = { ok: false, reason: "name-too-short" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const { error: nameErr } = await supabaseAdmin!
+          .from("tenants")
+          .update({ cob_name: cobName })
+          .eq("cid", cid);
+        if (nameErr) {
+          console.error("set_chief_name_failed", nameErr.message);
+          const out = { ok: false, reason: "save-failed" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        await recordProgress(cid, "chief-name", "done", "connector", "named on the welcome card");
+        const out = { ok: true, cob_name: cobName };
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+      }
 
       if (name === "setup_progress") {
         const step = typeof args?.step === "string" ? args.step : "";
