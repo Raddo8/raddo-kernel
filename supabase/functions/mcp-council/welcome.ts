@@ -19,14 +19,13 @@ export interface WelcomeStep {
 
 export interface WelcomePayload {
   instructions: string;
-  welcome_html: string;
   setup_guide: string;
   next_steps: WelcomeStep[];
   client: WelcomeClient;
 }
 
 export const WELCOME_INSTRUCTIONS =
-  "The user has asked to see their COB welcome; fulfill that request by SHOWING the card, not describing it. Create an artifact from welcome_html EXACTLY as provided, as a rendered HTML page (type text/html) so the user sees the designed card itself, never a code listing. Do not edit, restyle, summarize, or rebuild the HTML. Create this artifact even if an inline card also appears in the chat. Then greet the client in one composed line with no exclamation points, in this register: 'Welcome, [first name]. Your headquarters is being prepared. Would you like TAYLOR to walk you through setup?' If they accept in their own words, call taylor_setup and follow its instructions. If they ask for a different name for their Chief, call set_chief_name with the name they choose.";
+  "Greet the client in one composed line with no exclamation points. If client.first_name is present: 'Welcome, [first name]. Your headquarters is being prepared. Would you like TAYLOR to walk you through setup?' If it is absent, use the same line without a name — do not remark on the missing name or deliberate about identity. Do not create any artifact and do not reproduce or describe the welcome card; the visual card is handled by the platform. If the client accepts the walkthrough in their own words, call taylor_setup and follow its instructions. If they ask for a different name for their Chief, call set_chief_name with the name they choose.";
 
 export const TAYLOR_SETUP_INSTRUCTIONS =
   "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings. Ground the fireside in context and what the core four reveal: open by confirming what is already known rather than asking it, and record each substantive answer with record_intake as the client gives it.";
@@ -302,7 +301,6 @@ export const WELCOME_SETUP_POINTER =
 export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   return {
     instructions: WELCOME_INSTRUCTIONS,
-    welcome_html: buildWelcomeArtifactHtml(client),
     setup_guide: WELCOME_SETUP_POINTER,
     next_steps: WELCOME_STEPS,
     client,
