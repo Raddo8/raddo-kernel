@@ -2418,6 +2418,23 @@ const TOOL_TAYLOR_SETUP = {
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
 };
 
+const TOOL_SETUP_PROGRESS = {
+  name: "setup_progress",
+  title: "Setup Progress",
+  description:
+    "Record a setup step the user has confirmed is finished (for example, their email is now connected). Call only after the user states it themselves.",
+  annotations: { title: "Setup Progress" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      step: { type: "string", enum: ["chief-name", "email", "calendar", "files", "intake", "setup-complete"] },
+      status: { type: "string", enum: ["done", "skipped"] },
+    },
+    required: ["step", "status"],
+    additionalProperties: false,
+  },
+};
+
 const UI_RESOURCES = [
   {
     uri: WELCOME_WIDGET_URI,
@@ -2427,7 +2444,47 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
+// Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
+const SETUP_STEP_KEYS: Record<string, string> = {
+  "chief-name": "chief-name",
+  email: "connect-email",
+  calendar: "connect-calendar",
+  files: "connect-files",
+  intake: "intake",
+  "setup-complete": "setup-complete",
+};
+
+async function resolveTenantCid(tenant: string | null | undefined): Promise<string | null> {
+  if (!supabaseAdmin || !tenant) return null;
+  try {
+    const { data } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
+    return typeof data === "string" && data.trim() ? data.trim() : null;
+  } catch (e) {
+    console.error("resolve_cid_failed", e instanceof Error ? e.message : String(e));
+    return null;
+  }
+}
+
+async function recordProgress(
+  cid: string | null,
+  step_key: string,
+  status: string,
+  source: string,
+  detail: string,
+): Promise<void> {
+  if (!supabaseAdmin || !cid) return;
+  try {
+    const { error } = await supabaseAdmin
+      .from("onboarding_progress")
+      .upsert({ cid, step_key, status, source, detail, updated_at: new Date().toISOString() }, { onConflict: "cid,step_key" });
+    if (error) console.error("onboarding_progress_upsert_failed", error.message);
+  } catch (e) {
+    console.error("onboarding_progress_upsert_threw", e instanceof Error ? e.message : String(e));
+  }
+}
+
 
 
 
