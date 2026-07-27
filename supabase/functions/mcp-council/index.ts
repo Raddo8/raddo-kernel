@@ -2482,6 +2482,41 @@ async function resolveTenantCid(tenant: string | null | undefined): Promise<stri
   }
 }
 
+// Resolve the client identity for the welcome surfaces. Identity comes ONLY
+// from the verified token tenant; any failure degrades to a nameless client.
+async function resolveWelcomeClient(
+  tenant: string | null | undefined,
+): Promise<{ cid: string | null; client: WelcomeClient }> {
+  const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+  const cid = await resolveTenantCid(tenant);
+  if (!supabaseAdmin || !cid) return { cid, client: empty };
+  try {
+    const { data: row } = await supabaseAdmin
+      .from("tenants")
+      .select("cid, display_name, cob_name, principal")
+      .eq("cid", cid)
+      .maybeSingle();
+    return { cid, client: row ? normalizeClient(row) : empty };
+  } catch (e) {
+    console.error("welcome_client_lookup_failed", e instanceof Error ? e.message : String(e));
+    return { cid, client: empty };
+  }
+}
+
+async function readChecklist(cid: string | null): Promise<ProgressRow[]> {
+  if (!supabaseAdmin || !cid) return [];
+  try {
+    const { data } = await supabaseAdmin
+      .from("onboarding_progress")
+      .select("step_key, status, source")
+      .eq("cid", cid);
+    return Array.isArray(data) ? (data as ProgressRow[]) : [];
+  } catch (e) {
+    console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
+    return [];
+  }
+}
+
 async function recordProgress(
   cid: string | null,
   step_key: string,
