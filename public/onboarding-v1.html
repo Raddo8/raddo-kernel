@@ -674,7 +674,7 @@ const COB={
   r.start();},
   mic(btn,key){this.micTo(btn,'inp-'+key,v=>{this.state.answers[key]=v;this.save();});},
  onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
- copyConnUrl(){try{navigator.clipboard.writeText("https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway").then(()=>this.toast("Connector address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
+ copyConnUrl(){try{navigator.clipboard.writeText("https://mcp.chiefofbusiness.ai/").then(()=>this.toast("Address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
  copyWelcomeMsg(){try{navigator.clipboard.writeText("Hello \u2014 I've just connected Chief of Business. Please open my COB welcome and show it to me.").then(()=>this.toast("Welcome message copied."))}catch(e){this.toast("Copy failed. Select and copy the message by hand.")}},
  copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
  /* ---- router ---- */
