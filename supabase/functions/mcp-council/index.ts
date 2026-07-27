@@ -3028,26 +3028,55 @@ Deno.serve(async (req) => {
       if (name === "welcome_party" || name === "taylor_setup") {
         // Identity comes ONLY from the verified token tenant. Any resolution
         // failure degrades to a nameless welcome — never another tenant's name.
-        const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
-        if (name === "taylor_setup") {
-          await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
-          const checklist = await readChecklist(resolvedCid);
-          const context = await readTaylorContext(resolvedCid);
-          const guide = buildTaylorSetupPayload(client, checklist, context);
+        const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+        try {
+          const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
+          if (name === "taylor_setup") {
+            await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
+            const checklist = await readChecklist(resolvedCid);
+            const context = await readTaylorContext(resolvedCid);
+            const guide = buildTaylorSetupPayload(client, checklist, context);
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(guide) }],
+              structuredContent: guide,
+              isError: false,
+            });
+          }
+          await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
+          const payload = buildWelcomePayload(client);
+          // The widget carries the HTML; the text channel carries a pointer so
+          // the 15KB card is not serialized twice in one JSON-RPC result.
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(guide) }],
-            structuredContent: guide,
+            content: [{ type: "text", text: payload.instructions }],
+            structuredContent: payload,
             isError: false,
+            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
+          });
+        } catch (e) {
+          // Never 500 the welcome. Degrade to the nameless payload.
+          console.error(
+            name === "taylor_setup" ? "taylor_setup_degraded" : "welcome_party_degraded",
+            e instanceof Error ? e.message : String(e),
+          );
+          if (name === "taylor_setup") {
+            const guide = buildTaylorSetupPayload(nameless, [], {
+              business: { display_name: null, enterprise: null, principal: null },
+              intake_on_file: [],
+            });
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(guide) }],
+              structuredContent: guide,
+              isError: false,
+            });
+          }
+          const payload = buildWelcomePayload(nameless);
+          return rpcResult(id, {
+            content: [{ type: "text", text: payload.instructions }],
+            structuredContent: payload,
+            isError: false,
+            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
           });
         }
-        await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
-        const payload = buildWelcomePayload(client);
-        return rpcResult(id, {
-          content: [{ type: "text", text: JSON.stringify(payload) }],
-          structuredContent: payload,
-          isError: false,
-          _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
-        });
       }
 
 
