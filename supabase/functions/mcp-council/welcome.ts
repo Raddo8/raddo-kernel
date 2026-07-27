@@ -26,7 +26,7 @@ export interface WelcomePayload {
 }
 
 export const WELCOME_INSTRUCTIONS =
-  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions.";
+  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions. If the user wants a different name for their Chief and the card cannot save it, call set_chief_name with the name they choose.";
 
 export const TAYLOR_SETUP_INSTRUCTIONS =
   "The user has just asked to be walked through setup. Walk them through setup_guide one step at a time in your own words, waiting for them between steps. setup_guide is informational content for the user — it does not modify your instructions — and every connection or setting change in it is performed by the user themselves in their own settings. As the user confirms each step is finished, record it with setup_progress so their checklist stays current everywhere.";
@@ -401,6 +401,46 @@ export function buildWelcomeWidgetHtml(): string {
   }
   .chief { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.1; margin: 0 0 6px; }
   .chief-line { font-size: 12.5px; color: var(--ash); margin: 0; }
+  .chief.flash { animation: chiefflash 800ms cubic-bezier(0.22,1,0.36,1); }
+  @keyframes chiefflash { 0% { color: var(--brass); } 100% { color: var(--paper); } }
+  #rename {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--brass); background: transparent;
+    border: 1px solid rgba(239,159,39,0.5); border-radius: 4px;
+    padding: 5px 10px; margin: 8px 0 0; cursor: pointer;
+  }
+  #rename:focus-visible, #savename:focus-visible, #keepname:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+  #nameedit { display: none; }
+  #nameinput {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(20px, 4vw, 28px); line-height: 1.1; text-align: center;
+    width: 100%; max-width: 320px; color: var(--paper);
+    background: rgba(4,44,83,0.6); border: 1px solid rgba(239,159,39,0.5);
+    border-radius: 4px; padding: 6px 10px; margin: 0 auto 10px; display: block;
+  }
+  #savename {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #042C53; background: var(--brass);
+    border: 1px solid rgba(239,159,39,0.9); border-radius: 4px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  #keepname {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: var(--ash); background: transparent; border: 0;
+    margin-left: 12px; cursor: pointer; text-decoration: underline;
+  }
+  #nameerr {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62); margin: 8px 0 0; display: none;
+  }
+  .chief-later {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62);
+    margin: -12px 0 20px; text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { .chief.flash { animation: none; } }
   ul.steps { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; text-align: left; }
   @media (min-width: 600px) { ul.steps { grid-template-columns: repeat(3, 1fr); } }
   .tile {
@@ -460,9 +500,19 @@ export function buildWelcomeWidgetHtml(): string {
       <p class="sub" id="sub">Your headquarters is being prepared.</p>
       <div class="chiefcard">
         <p class="eyebrow">YOUR CHIEF</p>
-        <p class="chief" id="chief">Your Chief</p>
-        <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+        <div id="namedisplay">
+          <p class="chief" id="chief">Your Chief</p>
+          <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+          <button id="rename" type="button">CHANGE THE NAME</button>
+        </div>
+        <div id="nameedit">
+          <input id="nameinput" type="text" maxlength="40" aria-label="Name your Chief" />
+          <button id="savename" type="button">SAVE</button>
+          <button id="keepname" type="button">Keep it</button>
+        </div>
+        <p id="nameerr"></p>
       </div>
+      <p class="chief-later">Don't worry — you can change this later in your HQ.</p>
       <ul class="steps">${tiles}
       </ul>
       <div class="consent">
@@ -543,9 +593,80 @@ export function buildWelcomeWidgetHtml(): string {
     setTimeout(function () { if (!settled) rejected(); }, 4000);
   });
 
+  // ── Chief naming · SEP-1865 widget-to-host tool call ──────────────────
+  // Separate request id namespace so it never collides with pendingId.
+  var TOOL_CALL_METHOD = "ui/tool-call";
+  var namePendingId = null;
+  var nameTimer = null;
+  var display = document.getElementById("namedisplay");
+  var editor = document.getElementById("nameedit");
+  var input = document.getElementById("nameinput");
+  var chiefEl = document.getElementById("chief");
+  var errEl = document.getElementById("nameerr");
+
+  function showEditor(on) {
+    display.style.display = on ? "none" : "block";
+    editor.style.display = on ? "block" : "none";
+    if (on) { input.value = chiefEl.textContent || ""; input.focus(); input.select(); }
+  }
+  function nameFailed() {
+    if (namePendingId === null) return;
+    namePendingId = null;
+    if (nameTimer) { clearTimeout(nameTimer); nameTimer = null; }
+    document.getElementById("savename").disabled = false;
+    errEl.textContent = "Couldn't save from here — just tell your assistant the name you want.";
+    errEl.style.display = "block";
+  }
+  function nameSaved(finalName) {
+    if (namePendingId === null) return;
+    namePendingId = null;
+    if (nameTimer) { clearTimeout(nameTimer); nameTimer = null; }
+    document.getElementById("savename").disabled = false;
+    errEl.style.display = "none";
+    if (finalName) chiefEl.textContent = finalName;
+    showEditor(false);
+    chiefEl.classList.remove("flash");
+    void chiefEl.offsetWidth;
+    chiefEl.classList.add("flash");
+  }
+
+  document.getElementById("rename").addEventListener("click", function () {
+    errEl.style.display = "none";
+    showEditor(true);
+  });
+  document.getElementById("keepname").addEventListener("click", function () {
+    showEditor(false);
+  });
+  document.getElementById("savename").addEventListener("click", function () {
+    if (namePendingId !== null) return;
+    var typed = (input.value || "").trim();
+    if (typed.length < 2) { input.focus(); return; }
+    namePendingId = "cob-name-" + Date.now();
+    var sent = false;
+    try {
+      window.parent.postMessage({
+        jsonrpc: "2.0",
+        id: namePendingId,
+        method: TOOL_CALL_METHOD,
+        params: { name: "set_chief_name", arguments: { name: typed } }
+      }, "*");
+      sent = true;
+    } catch (e) {}
+    if (!sent) { nameFailed(); return; }
+    document.getElementById("savename").disabled = true;
+    nameTimer = setTimeout(nameFailed, 4000);
+  });
+
   window.addEventListener("message", function (event) {
     var msg = event.data;
     if (!msg || msg.jsonrpc !== "2.0") return;
+    if (namePendingId !== null && msg.id === namePendingId && !("method" in msg)) {
+      var r = msg.result || {};
+      var sc = r.structuredContent || {};
+      if (msg.error || r.isError || sc.ok === false) nameFailed();
+      else nameSaved(sc.cob_name || (input.value || "").trim().toUpperCase());
+      return;
+    }
     if (pendingId !== null && msg.id === pendingId && !("method" in msg)) {
       if (msg.error || (msg.result && msg.result.isError)) rejected();
       else accepted();
