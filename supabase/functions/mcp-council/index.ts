@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v12";
+const BUILD_ID = "welcome_party_v13";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2492,15 +2492,32 @@ const SETUP_STEP_KEYS: Record<string, string> = {
   "setup-complete": "setup-complete",
 };
 
+// Hard timeout for every store read/write on the welcome surfaces. A slow
+// database must degrade the welcome, never kill it.
+const STORE_TIMEOUT_MS = 3000;
+function withTimeout<T>(p: PromiseLike<T>, fallback: T, label: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p).catch((e) => {
+      console.error(`${label}_threw`, e instanceof Error ? e.message : String(e));
+      return fallback;
+    }),
+    new Promise<T>((resolve) =>
+      setTimeout(() => {
+        console.error(`${label}_timeout`);
+        resolve(fallback);
+      }, STORE_TIMEOUT_MS)
+    ),
+  ]);
+}
+
 async function resolveTenantCid(tenant: string | null | undefined): Promise<string | null> {
   if (!supabaseAdmin || !tenant) return null;
-  try {
-    const { data } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
-    return typeof data === "string" && data.trim() ? data.trim() : null;
-  } catch (e) {
-    console.error("resolve_cid_failed", e instanceof Error ? e.message : String(e));
-    return null;
-  }
+  const data = await withTimeout(
+    supabaseAdmin.rpc("resolve_cid", { k: tenant }).then((r: any) => r?.data ?? null),
+    null,
+    "resolve_cid_failed",
+  );
+  return typeof data === "string" && data.trim() ? data.trim() : null;
 }
 
 // Resolve the client identity for the welcome surfaces. Identity comes ONLY
@@ -2511,31 +2528,31 @@ async function resolveWelcomeClient(
   const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
   const cid = await resolveTenantCid(tenant);
   if (!supabaseAdmin || !cid) return { cid, client: empty };
-  try {
-    const { data: row } = await supabaseAdmin
+  const row = await withTimeout(
+    supabaseAdmin
       .from("tenants")
       .select("cid, display_name, cob_name, principal")
       .eq("cid", cid)
-      .maybeSingle();
-    return { cid, client: row ? normalizeClient(row) : empty };
-  } catch (e) {
-    console.error("welcome_client_lookup_failed", e instanceof Error ? e.message : String(e));
-    return { cid, client: empty };
-  }
+      .maybeSingle()
+      .then((r: any) => r?.data ?? null),
+    null,
+    "welcome_client_lookup_failed",
+  );
+  return { cid, client: row ? normalizeClient(row) : empty };
 }
 
 async function readChecklist(cid: string | null): Promise<ProgressRow[]> {
   if (!supabaseAdmin || !cid) return [];
-  try {
-    const { data } = await supabaseAdmin
+  const data = await withTimeout(
+    supabaseAdmin
       .from("onboarding_progress")
       .select("step_key, status, source")
-      .eq("cid", cid);
-    return Array.isArray(data) ? (data as ProgressRow[]) : [];
-  } catch (e) {
-    console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
-    return [];
-  }
+      .eq("cid", cid)
+      .then((r: any) => r?.data ?? null),
+    null,
+    "onboarding_progress_read_failed",
+  );
+  return Array.isArray(data) ? (data as ProgressRow[]) : [];
 }
 
 async function recordProgress(
@@ -2546,14 +2563,15 @@ async function recordProgress(
   detail: string,
 ): Promise<void> {
   if (!supabaseAdmin || !cid) return;
-  try {
-    const { error } = await supabaseAdmin
+  const err = await withTimeout(
+    supabaseAdmin
       .from("onboarding_progress")
-      .upsert({ cid, step_key, status, source, detail, updated_at: new Date().toISOString() }, { onConflict: "cid,step_key" });
-    if (error) console.error("onboarding_progress_upsert_failed", error.message);
-  } catch (e) {
-    console.error("onboarding_progress_upsert_threw", e instanceof Error ? e.message : String(e));
-  }
+      .upsert({ cid, step_key, status, source, detail, updated_at: new Date().toISOString() }, { onConflict: "cid,step_key" })
+      .then((r: any) => r?.error ?? null),
+    null,
+    "onboarding_progress_upsert_failed",
+  );
+  if (err) console.error("onboarding_progress_upsert_failed", err.message ?? String(err));
 }
 
 // Fireside context · business row + everything already gathered on any surface.
@@ -2577,33 +2595,35 @@ async function readTaylorContext(cid: string | null): Promise<TaylorContext> {
   };
   if (!supabaseAdmin || !cid) return empty;
   const out: TaylorContext = { business: { ...empty.business }, intake_on_file: [] };
-  try {
-    const { data } = await supabaseAdmin
+  const biz = await withTimeout(
+    supabaseAdmin
       .from("tenants")
       .select("display_name, enterprise, principal")
       .eq("cid", cid)
-      .maybeSingle();
-    if (data) {
-      out.business = {
-        display_name: nullish((data as any).display_name),
-        enterprise: nullish((data as any).enterprise),
-        principal: nullish((data as any).principal),
-      };
-    }
-  } catch (e) {
-    console.error("taylor_context_business_failed", e instanceof Error ? e.message : String(e));
+      .maybeSingle()
+      .then((r: any) => r?.data ?? null),
+    null,
+    "taylor_context_business_failed",
+  );
+  if (biz) {
+    out.business = {
+      display_name: nullish((biz as any).display_name),
+      enterprise: nullish((biz as any).enterprise),
+      principal: nullish((biz as any).principal),
+    };
   }
-  try {
-    const { data } = await supabaseAdmin
+  const intake = await withTimeout(
+    supabaseAdmin
       .from("client_intake")
       .select("topic, content_md, source, recorded_at")
       .eq("cid", cid)
       .order("recorded_at", { ascending: false })
-      .limit(40);
-    if (Array.isArray(data)) out.intake_on_file = data as any;
-  } catch (e) {
-    console.error("taylor_context_intake_failed", e instanceof Error ? e.message : String(e));
-  }
+      .limit(40)
+      .then((r: any) => r?.data ?? null),
+    null,
+    "taylor_context_intake_failed",
+  );
+  if (Array.isArray(intake)) out.intake_on_file = intake as any;
   return out;
 }
 
@@ -3008,26 +3028,55 @@ Deno.serve(async (req) => {
       if (name === "welcome_party" || name === "taylor_setup") {
         // Identity comes ONLY from the verified token tenant. Any resolution
         // failure degrades to a nameless welcome — never another tenant's name.
-        const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
-        if (name === "taylor_setup") {
-          await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
-          const checklist = await readChecklist(resolvedCid);
-          const context = await readTaylorContext(resolvedCid);
-          const guide = buildTaylorSetupPayload(client, checklist, context);
+        const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+        try {
+          const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
+          if (name === "taylor_setup") {
+            await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
+            const checklist = await readChecklist(resolvedCid);
+            const context = await readTaylorContext(resolvedCid);
+            const guide = buildTaylorSetupPayload(client, checklist, context);
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(guide) }],
+              structuredContent: guide,
+              isError: false,
+            });
+          }
+          await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
+          const payload = buildWelcomePayload(client);
+          // The widget carries the HTML; the text channel carries a pointer so
+          // the 15KB card is not serialized twice in one JSON-RPC result.
           return rpcResult(id, {
-            content: [{ type: "text", text: JSON.stringify(guide) }],
-            structuredContent: guide,
+            content: [{ type: "text", text: payload.instructions }],
+            structuredContent: payload,
             isError: false,
+            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
+          });
+        } catch (e) {
+          // Never 500 the welcome. Degrade to the nameless payload.
+          console.error(
+            name === "taylor_setup" ? "taylor_setup_degraded" : "welcome_party_degraded",
+            e instanceof Error ? e.message : String(e),
+          );
+          if (name === "taylor_setup") {
+            const guide = buildTaylorSetupPayload(nameless, [], {
+              business: { display_name: null, enterprise: null, principal: null },
+              intake_on_file: [],
+            });
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(guide) }],
+              structuredContent: guide,
+              isError: false,
+            });
+          }
+          const payload = buildWelcomePayload(nameless);
+          return rpcResult(id, {
+            content: [{ type: "text", text: payload.instructions }],
+            structuredContent: payload,
+            isError: false,
+            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
           });
         }
-        await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
-        const payload = buildWelcomePayload(client);
-        return rpcResult(id, {
-          content: [{ type: "text", text: JSON.stringify(payload) }],
-          structuredContent: payload,
-          isError: false,
-          _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
-        });
       }
 
 

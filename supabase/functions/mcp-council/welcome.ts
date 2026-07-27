@@ -294,11 +294,16 @@ END OF PERSONA.
 }
 
 
+// The welcome payload carries a POINTER, never the persona. taylor_setup
+// delivers the full guide; embedding it here doubled the result size.
+export const WELCOME_SETUP_POINTER =
+  "Call taylor_setup when the user accepts the walkthrough.";
+
 export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   return {
     instructions: WELCOME_INSTRUCTIONS,
     welcome_html: buildWelcomeHtml(client),
-    setup_guide: buildSetupGuide(client),
+    setup_guide: WELCOME_SETUP_POINTER,
     next_steps: WELCOME_STEPS,
     client,
   };
