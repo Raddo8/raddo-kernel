@@ -26,65 +26,7 @@ export interface WelcomePayload {
 }
 
 export const WELCOME_INSTRUCTIONS =
-  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions. If the user wants a different name for their Chief and the card cannot save it, call set_chief_name with the name they choose.";
-
-export const TAYLOR_SETUP_INSTRUCTIONS =
-  "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings. Ground the fireside in context and what the core four reveal: open by confirming what is already known rather than asking it, and record each substantive answer with record_intake as the client gives it.";
-
-
-const clean = (v: unknown): string | null => {
-  if (typeof v !== "string") return null;
-  const t = v.trim();
-  if (!t) return null;
-  if (/^(null|undefined|none)$/i.test(t)) return null;
-  return t;
-};
-
-export function firstNameOf(principal: unknown): string | null {
-  const p = clean(principal);
-  if (!p) return null;
-  // Principals are sometimes stored as an email address.
-  const base = p.includes("@") ? p.split("@")[0].replace(/[._-]+/g, " ") : p;
-  const word = base.trim().split(/\s+/)[0] ?? "";
-  const w = word.replace(/[^\p{L}\p{N}'’-]/gu, "");
-  if (w.length < 2) return null;
-  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
-}
-
-export function normalizeClient(row: {
-  display_name?: unknown;
-  cob_name?: unknown;
-  principal?: unknown;
-} | null): WelcomeClient {
-  if (!row) return { display_name: null, cob_name: null, first_name: null };
-  return {
-    display_name: clean(row.display_name),
-    cob_name: clean(row.cob_name),
-    first_name: firstNameOf(row.principal),
-  };
-}
-
-const esc = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-
-export const WELCOME_STEPS: WelcomeStep[] = [
-  {
-    step: 1,
-    title: "Meet TAYLOR · your setup guide.",
-    done_when: "You have said how you would like to be addressed and confirmed your Chief's name.",
-  },
-  {
-    step: 2,
-    title: "Connect your world — email, calendar, files.",
-    done_when: "You have switched on your email, calendar and file connectors in your own settings.",
-  },
-  {
-    step: 3,
-    title: "Say /begin — your Chief reports for duty.",
-    done_when: "You have typed /begin and your Chief has opened its first session with you.",
-  },
-];
+  "Show the client their welcome NOW. If the inline visual card has not rendered in this chat, immediately create an HTML artifact from welcome_html EXACTLY as provided - do not edit, restyle, summarize, or rebuild it. Never describe the card instead of showing it. After the card is visible, greet the client by first name in one warm professional line and ask if they would like TAYLOR to walk them through setup. If they accept in their own words, call taylor_setup and follow its instructions. If they want a different name for their Chief, call set_chief_name with the name they choose.";
 
 export function buildWelcomeHtml(client: WelcomeClient): string {
   const greeting = client.first_name
@@ -302,7 +244,7 @@ export const WELCOME_SETUP_POINTER =
 export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   return {
     instructions: WELCOME_INSTRUCTIONS,
-    welcome_html: buildWelcomeHtml(client),
+    welcome_html: buildWelcomeArtifactHtml(client),
     setup_guide: WELCOME_SETUP_POINTER,
     next_steps: WELCOME_STEPS,
     client,
@@ -383,6 +325,180 @@ export function buildTaylorSetupPayload(
     known: buildTaylorKnown(client, checklist),
     context,
   };
+}
+
+
+// ── Artifact variant ────────────────────────────────────────────────────
+// Identical visual card to the inline widget, minus the host bridge:
+// no script, no interactive naming, no consent button. Safe to render as
+// a standalone HTML artifact in a chat client.
+export function buildWelcomeArtifactHtml(client: WelcomeClient): string {
+  const bakedGreeting = client.first_name
+    ? `WELCOME, ${esc(client.first_name.toUpperCase())}.`
+    : "WELCOME.";
+  const bakedSub = client.display_name
+    ? `${esc(client.display_name)} · your headquarters is being prepared.`
+    : "Your headquarters is being prepared.";
+  const bakedChief = esc(client.cob_name ?? "Your Chief");
+  const tiles = WELCOME_STEPS.map((s) => `
+        <li class="tile">
+          <span class="num">${s.step}</span>
+          <span class="tt">${esc(s.title)}</span>
+        </li>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Welcome · COB</title>
+<style>
+  :root {
+    --paper: #FAF8F4;
+    --white: #FFFFFF;
+    --edge: #E5E3DE;
+    --ink: #042C53;
+    --ink-soft: #2A4E78;
+    --charcoal: #2C2C2A;
+    --ash: #5F5E5A;
+    --brass: #EF9F27;
+    --brass-deep: #854F0B;
+    --sans: 'Hanken Grotesk', system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: 'Spline Sans Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --ease: cubic-bezier(0.22,1,0.36,1);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body {
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    color: var(--charcoal);
+  }
+  .card {
+    position: relative;
+    overflow: hidden;
+    max-width: 720px;
+    margin: 0 auto;
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    background: var(--paper);
+    padding: 34px 30px 26px;
+  }
+  .glow, .grid { position: absolute; inset: 0; pointer-events: none; }
+  .glow { background: none; }
+  .grid {
+    background-image:
+      linear-gradient(to right, rgba(4,44,83,0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(4,44,83,0.04) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 80%);
+  }
+  .inner { position: relative; text-align: center; }
+  .mark { display: block; margin: 0 auto 10px; width: 44px; height: auto; }
+  .wordmark {
+    font-family: var(--mono);
+    font-size: 10px; letter-spacing: 0.3em; color: var(--brass-deep);
+    text-transform: uppercase; margin: 0 0 18px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400; font-size: clamp(26px, 5vw, 40px);
+    line-height: 1.05; letter-spacing: -0.01em; margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .sub { font-size: 14px; color: var(--ash); margin: 0 0 20px; }
+  .chiefcard {
+    border: 1px solid var(--edge);
+    border-left: 3px solid var(--brass);
+    border-radius: 4px;
+    background: var(--white);
+    padding: 16px 14px; margin: 0 auto 20px; max-width: 460px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.28em; color: var(--brass-deep); margin: 0 0 8px;
+  }
+  .chief { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.1; margin: 0 0 6px; color: var(--ink); }
+  .chief-line { font-size: 12.5px; color: var(--ash); margin: 0; }
+  .chief.flash { animation: chiefflash 800ms var(--ease); }
+  @keyframes chiefflash { 0% { color: var(--brass-deep); } 100% { color: var(--ink); } }
+  .chief-later {
+    font-family: var(--mono);
+    font-size: 10px; color: var(--ash);
+    margin: -12px 0 20px; text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { .chief.flash { animation: none; } }
+  ul.steps { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; text-align: left; }
+  @media (min-width: 600px) { ul.steps { grid-template-columns: repeat(3, 1fr); } }
+  .tile {
+    border: 1px solid var(--edge); border-radius: 4px;
+    padding: 12px 12px; background: var(--white);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .num {
+    font-family: var(--mono); font-size: 11px; color: var(--brass-deep);
+    border: 1px solid var(--brass); border-radius: 3px;
+    min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .tt { font-size: 12.5px; line-height: 1.4; color: var(--charcoal); }
+  .consent { margin: 0 0 18px; }
+  .meetchip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--ink); background: var(--brass);
+    border: 1px solid var(--brass); border-radius: 3px;
+    padding: 12px 22px;
+  }
+  .consent-note {
+    font-family: var(--mono);
+    font-size: 10px; color: var(--ash); margin: 9px 0 0;
+  }
+
+  footer {
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 9px; letter-spacing: 0.22em; line-height: 1.9;
+    color: var(--ash);
+  }
+  footer .top { color: var(--brass-deep); }
+
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="inner">
+      <img class="mark" alt="COB" src="data:image/png;base64,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" />
+      <p class="wordmark">COB · Chief of Business</p>
+      <h1 id="greeting">${bakedGreeting}</h1>
+      <p class="sub" id="sub">${bakedSub}</p>
+      <div class="chiefcard">
+        <p class="eyebrow">YOUR CHIEF</p>
+        <div id="namedisplay">
+          <p class="chief" id="chief">${bakedChief}</p>
+          <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+          <p class="chief-line" style="margin-top:8px">Want a different name? Tell TAYLOR — it changes in a moment.</p>
+        </div>
+      </div>
+      <p class="chief-later">Don't worry — you can change this later in your HQ.</p>
+      <ul class="steps">${tiles}
+      </ul>
+      <div class="consent">
+        <span class="meetchip">SAY "MEET TAYLOR" TO BEGIN MY SETUP</span>
+        <p class="consent-note">You choose every step. Nothing connects without you.</p>
+      </div>
+
+      <footer>
+        <div class="top">AUGMENTATION OVER AUTOMATION</div>
+        <div>&copy; COB Technologies LLC</div>
+      </footer>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 
