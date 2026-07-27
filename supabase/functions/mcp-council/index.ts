@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v13";
+const BUILD_ID = "welcome_party_v14";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2791,6 +2791,33 @@ Deno.serve(async (req) => {
   }
 
   if (!identity || !authMode) {
+    // Narrow anonymous carve-out · Claude.ai fetches the SEP-1865 widget
+    // template without an Authorization header. The default template carries
+    // ZERO tenant data; personalization arrives later over the authenticated
+    // tool result. Only resources/list and the welcome widget read qualify.
+    try {
+      const peek = await req.clone().json();
+      const pm = peek?.method;
+      const pid = peek?.id ?? null;
+      if (pm === "resources/list") {
+        return rpcResult(pid, { resources: UI_RESOURCES });
+      }
+      if (pm === "resources/read") {
+        const puri = peek?.params?.uri;
+        if (puri === WELCOME_WIDGET_URI || puri === "ui://cob/welcome") {
+          return rpcResult(pid, {
+            contents: [{
+              uri: puri,
+              mimeType: "text/html",
+              text: buildWelcomeWidgetHtml(),
+            }],
+          });
+        }
+      }
+    } catch {
+      // fall through to 401
+    }
+
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
