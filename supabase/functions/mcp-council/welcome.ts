@@ -537,8 +537,8 @@ export function buildWelcomeWidgetHtml(
         <path d="M50 22 L56 44 L78 50 L56 56 L50 78 L44 56 L22 50 L44 44 Z" fill="#EF9F27" />
       </svg>
       <p class="wordmark">COB · Chief of Business</p>
-      <h1 id="greeting">WELCOME.</h1>
-      <p class="sub" id="sub">Your headquarters is being prepared.</p>
+      <h1 id="greeting">${bakedGreeting}</h1>
+      <p class="sub" id="sub">${bakedSub}</p>
       <div class="chiefcard">
         <p class="eyebrow">YOUR CHIEF</p>
         <div id="namedisplay">
