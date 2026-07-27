@@ -2911,28 +2911,11 @@ Deno.serve(async (req) => {
       if (name === "welcome_party" || name === "taylor_setup") {
         // Identity comes ONLY from the verified token tenant. Any resolution
         // failure degrades to a nameless welcome — never another tenant's name.
-        let client: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
-        let resolvedCid: string | null = null;
-        if (supabaseAdmin && tenant) {
-          try {
-            const { data: cid } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
-            const resolved = typeof cid === "string" && cid.trim() ? cid.trim() : null;
-            resolvedCid = resolved;
-            if (resolved) {
-              const { data: row } = await supabaseAdmin
-                .from("tenants")
-                .select("cid, display_name, cob_name, principal")
-                .eq("cid", resolved)
-                .maybeSingle();
-              if (row) client = normalizeClient(row);
-            }
-          } catch (e) {
-            console.error("welcome_party_lookup_failed", e instanceof Error ? e.message : String(e));
-          }
-        }
+        const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
         if (name === "taylor_setup") {
           await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
-          const guide = buildTaylorSetupPayload(client);
+          const checklist = await readChecklist(resolvedCid);
+          const guide = buildTaylorSetupPayload(client, checklist);
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(guide) }],
             structuredContent: guide,
