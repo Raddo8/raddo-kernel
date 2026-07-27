@@ -301,6 +301,23 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   };
 }
 
+export interface TaylorSetupPayload {
+  instructions: string;
+  setup_guide: string;
+  next_steps: WelcomeStep[];
+  client: WelcomeClient;
+}
+
+export function buildTaylorSetupPayload(client: WelcomeClient): TaylorSetupPayload {
+  return {
+    instructions: TAYLOR_SETUP_INSTRUCTIONS,
+    setup_guide: buildSetupGuide(client),
+    next_steps: WELCOME_STEPS,
+    client,
+  };
+}
+
+
 // ── SEP-1865 · MCP Apps inline widget ───────────────────────────────────
 // Template served at ui://cob/welcome. Same visual language as
 // buildWelcomeHtml, sized as a compact inline chat card. It receives the
