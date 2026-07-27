@@ -44,18 +44,23 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
   };
 
   const handleSso = async (provider: SsoProvider) => {
+    // Google routes through Lovable Cloud's app-domain broker (/~oauth/*), so the
+    // consent screen names our domain rather than the backend project host.
     if (provider === "google") {
       const result = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin + landing,
       });
       if (result.error) {
-        toast.error(result.error.message || "Google sign-in failed");
+        const msg = result.error.message ?? "";
+        const disabled = /provider is not enabled|unsupported provider/i.test(msg);
+        toast.error(disabled ? "Google sign-in isn't switched on yet." : msg || "Google sign-in failed");
         return;
       }
       if (result.redirected) return;
       navigate(landing);
       return;
     }
+
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
