@@ -542,7 +542,7 @@ export function buildWelcomeWidgetHtml(
       <div class="chiefcard">
         <p class="eyebrow">YOUR CHIEF</p>
         <div id="namedisplay">
-          <p class="chief" id="chief">Your Chief</p>
+          <p class="chief" id="chief">${bakedChief}</p>
           <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
           <button id="rename" type="button">CHANGE THE NAME</button>
         </div>
