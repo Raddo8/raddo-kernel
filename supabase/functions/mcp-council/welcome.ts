@@ -503,9 +503,55 @@ export function buildWelcomeWidgetHtml(): string {
     var sc = result.structuredContent || result;
     if (sc && sc.client) apply(sc.client);
   }
+  // SEP-1865 widget-to-host request that submits a message on the user's
+  // behalf. The user's click is the consent; nothing is sent without it.
+  var MESSAGE_METHOD = "ui/message";
+  var CONSENT_TEXT =
+    "I'd like TAYLOR to walk me through my setup, one step at a time.";
+  var pendingId = null;
+  var settled = false;
+  var btn = document.getElementById("meet");
+
+  function accepted() {
+    if (settled) return;
+    settled = true;
+    btn.disabled = true;
+    btn.textContent = "TAYLOR IS ON THE WAY";
+  }
+  function rejected() {
+    if (settled) return;
+    settled = true;
+    btn.disabled = false;
+    document.getElementById("fallback").style.display = "block";
+  }
+
+  btn.addEventListener("click", function () {
+    if (settled || pendingId !== null) return;
+    pendingId = "cob-consent-" + Date.now();
+    var sent = false;
+    try {
+      window.parent.postMessage({
+        jsonrpc: "2.0",
+        id: pendingId,
+        method: MESSAGE_METHOD,
+        params: { role: "user", content: [{ type: "text", text: CONSENT_TEXT }] }
+      }, "*");
+      sent = true;
+    } catch (e) {}
+    if (!sent) { rejected(); return; }
+    btn.disabled = true;
+    setTimeout(function () { if (!settled) rejected(); }, 4000);
+  });
+
   window.addEventListener("message", function (event) {
     var msg = event.data;
-    if (!msg || msg.jsonrpc !== "2.0" || typeof msg.method !== "string") return;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+    if (pendingId !== null && msg.id === pendingId && !("method" in msg)) {
+      if (msg.error || (msg.result && msg.result.isError)) rejected();
+      else accepted();
+      return;
+    }
+    if (typeof msg.method !== "string") return;
     if (msg.method === "ui/notifications/tool-result") {
       var p = msg.params || {};
       fromResult(p.result || p);
@@ -518,6 +564,7 @@ export function buildWelcomeWidgetHtml(): string {
     );
   } catch (e) {}
 })();
+
 </script>
 </body>
 </html>`;
