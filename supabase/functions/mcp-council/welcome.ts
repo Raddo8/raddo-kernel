@@ -541,8 +541,8 @@ export function buildWelcomeWidgetHtml(
     <div class="grid"></div>
     <div class="inner">
       <svg class="mark" viewBox="0 0 100 100" role="img" aria-label="COB mark">
-        <circle cx="50" cy="50" r="42" fill="none" stroke="#EF9F27" stroke-width="1.6" />
-        <circle cx="50" cy="50" r="33" fill="none" stroke="#EF9F27" stroke-width="0.8" opacity="0.7" />
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#042C53" stroke-width="1.6" />
+        <circle cx="50" cy="50" r="33" fill="none" stroke="#042C53" stroke-width="0.8" opacity="0.7" />
         <path d="M50 22 L56 44 L78 50 L56 56 L50 78 L44 56 L22 50 L44 44 Z" fill="#EF9F27" />
       </svg>
       <p class="wordmark">COB · Chief of Business</p>
