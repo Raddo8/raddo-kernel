@@ -2793,14 +2793,47 @@ Deno.serve(async (req) => {
           ? params._meta.progressToken
           : undefined;
 
+      if (name === "setup_progress") {
+        const step = typeof args?.step === "string" ? args.step : "";
+        const status = typeof args?.status === "string" ? args.status : "";
+        const step_key = SETUP_STEP_KEYS[step];
+        if (!step_key || (status !== "done" && status !== "skipped")) {
+          const bad = { ok: false, reason: "invalid-input" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
+        }
+        const cid = await resolveTenantCid(tenant);
+        if (!cid) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        await recordProgress(cid, step_key, status, "connector", "confirmed by the user in conversation");
+        if (step === "setup-complete") {
+          await recordProgress(cid, "taylor-setup", "done", "connector", "confirmed by the user in conversation");
+        }
+        let checklist: Array<{ step_key: string; status: string; source: string }> = [];
+        try {
+          const { data } = await supabaseAdmin!
+            .from("onboarding_progress")
+            .select("step_key, status, source")
+            .eq("cid", cid);
+          if (Array.isArray(data)) checklist = data as any;
+        } catch (e) {
+          console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
+        }
+        const out = { ok: true, recorded: step, checklist };
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+      }
+
       if (name === "welcome_party" || name === "taylor_setup") {
         // Identity comes ONLY from the verified token tenant. Any resolution
         // failure degrades to a nameless welcome — never another tenant's name.
         let client: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+        let resolvedCid: string | null = null;
         if (supabaseAdmin && tenant) {
           try {
             const { data: cid } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
             const resolved = typeof cid === "string" && cid.trim() ? cid.trim() : null;
+            resolvedCid = resolved;
             if (resolved) {
               const { data: row } = await supabaseAdmin
                 .from("tenants")
@@ -2814,6 +2847,7 @@ Deno.serve(async (req) => {
           }
         }
         if (name === "taylor_setup") {
+          await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
           const guide = buildTaylorSetupPayload(client);
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(guide) }],
@@ -2821,6 +2855,7 @@ Deno.serve(async (req) => {
             isError: false,
           });
         }
+        await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
         const payload = buildWelcomePayload(client);
         return rpcResult(id, {
           content: [{ type: "text", text: JSON.stringify(payload) }],
@@ -2829,6 +2864,7 @@ Deno.serve(async (req) => {
           _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
         });
       }
+
 
       if (name === "show_council") {
 
