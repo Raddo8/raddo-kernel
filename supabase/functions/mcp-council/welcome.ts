@@ -29,7 +29,7 @@ export const WELCOME_INSTRUCTIONS =
   "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions. If the user wants a different name for their Chief and the card cannot save it, call set_chief_name with the name they choose.";
 
 export const TAYLOR_SETUP_INSTRUCTIONS =
-  "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings.";
+  "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings. Ground the fireside in context and what the core four reveal: open by confirming what is already known rather than asking it, and record each substantive answer with record_intake as the client gives it.";
 
 
 const clean = (v: unknown): string | null => {
@@ -318,6 +318,22 @@ export interface TaylorKnown {
   connected: { email: boolean; calendar: boolean; files: boolean };
 }
 
+export interface IntakeRow {
+  topic: string | null;
+  content_md: string | null;
+  source: string | null;
+  recorded_at: string | null;
+}
+
+export interface TaylorContext {
+  business: {
+    display_name: string | null;
+    enterprise: string | null;
+    principal: string | null;
+  };
+  intake_on_file: IntakeRow[];
+}
+
 export interface TaylorSetupPayload {
   instructions: string;
   setup_guide: string;
@@ -325,6 +341,7 @@ export interface TaylorSetupPayload {
   client: WelcomeClient;
   checklist: ProgressRow[];
   known: TaylorKnown;
+  context: TaylorContext;
 }
 
 const isDone = (rows: ProgressRow[], key: string) =>
@@ -347,6 +364,10 @@ export function buildTaylorKnown(client: WelcomeClient, rows: ProgressRow[]): Ta
 export function buildTaylorSetupPayload(
   client: WelcomeClient,
   checklist: ProgressRow[] = [],
+  context: TaylorContext = {
+    business: { display_name: null, enterprise: null, principal: null },
+    intake_on_file: [],
+  },
 ): TaylorSetupPayload {
   return {
     instructions: TAYLOR_SETUP_INSTRUCTIONS,
@@ -355,6 +376,7 @@ export function buildTaylorSetupPayload(
     client,
     checklist,
     known: buildTaylorKnown(client, checklist),
+    context,
   };
 }
 

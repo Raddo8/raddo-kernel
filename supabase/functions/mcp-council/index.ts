@@ -32,10 +32,10 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
-import { buildTaylorSetupPayload, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
+import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v11";
+const BUILD_ID = "welcome_party_v12";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2450,6 +2450,27 @@ const TOOL_SET_CHIEF_NAME = {
   },
 };
 
+const TOOL_RECORD_INTAKE = {
+  name: "record_intake",
+  title: "Record Intake",
+  description:
+    "Record something the client just told TAYLOR, or something TAYLOR observed with consent, to the client's permanent record. One topic per call.",
+  annotations: { title: "Record Intake" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      topic: {
+        type: "string",
+        enum: ["vision", "priorities", "non-negotiables", "values", "weekly-friction", "delegation", "communication-style", "skepticism", "business-basics", "people", "discovery-observation"],
+      },
+      content: { type: "string", minLength: 3, maxLength: 4000 },
+      source: { type: "string", enum: ["fireside-connector", "discovery-sweep"] },
+    },
+    required: ["topic", "content", "source"],
+    additionalProperties: false,
+  },
+};
+
 const UI_RESOURCES = [
   {
     uri: WELCOME_WIDGET_URI,
@@ -2459,7 +2480,7 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -2533,6 +2554,57 @@ async function recordProgress(
   } catch (e) {
     console.error("onboarding_progress_upsert_threw", e instanceof Error ? e.message : String(e));
   }
+}
+
+// Fireside context · business row + everything already gathered on any surface.
+const INTAKE_TOPICS = new Set([
+  "vision", "priorities", "non-negotiables", "values", "weekly-friction",
+  "delegation", "communication-style", "skepticism", "business-basics",
+  "people", "discovery-observation",
+]);
+const INTAKE_SOURCES = new Set(["fireside-connector", "discovery-sweep"]);
+
+const nullish = (v: unknown): string | null => {
+  const s = typeof v === "string" ? v.trim() : "";
+  if (!s || s.toLowerCase() === "null") return null;
+  return s;
+};
+
+async function readTaylorContext(cid: string | null): Promise<TaylorContext> {
+  const empty: TaylorContext = {
+    business: { display_name: null, enterprise: null, principal: null },
+    intake_on_file: [],
+  };
+  if (!supabaseAdmin || !cid) return empty;
+  const out: TaylorContext = { business: { ...empty.business }, intake_on_file: [] };
+  try {
+    const { data } = await supabaseAdmin
+      .from("tenants")
+      .select("display_name, enterprise, principal")
+      .eq("cid", cid)
+      .maybeSingle();
+    if (data) {
+      out.business = {
+        display_name: nullish((data as any).display_name),
+        enterprise: nullish((data as any).enterprise),
+        principal: nullish((data as any).principal),
+      };
+    }
+  } catch (e) {
+    console.error("taylor_context_business_failed", e instanceof Error ? e.message : String(e));
+  }
+  try {
+    const { data } = await supabaseAdmin
+      .from("client_intake")
+      .select("topic, content_md, source, recorded_at")
+      .eq("cid", cid)
+      .order("recorded_at", { ascending: false })
+      .limit(40);
+    if (Array.isArray(data)) out.intake_on_file = data as any;
+  } catch (e) {
+    console.error("taylor_context_intake_failed", e instanceof Error ? e.message : String(e));
+  }
+  return out;
 }
 
 
@@ -2877,6 +2949,31 @@ Deno.serve(async (req) => {
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
 
+      if (name === "record_intake") {
+        const topic = typeof args?.topic === "string" ? args.topic : "";
+        const content = typeof args?.content === "string" ? args.content.trim() : "";
+        const source = typeof args?.source === "string" ? args.source : "";
+        if (!INTAKE_TOPICS.has(topic) || !INTAKE_SOURCES.has(source) || content.length < 3 || content.length > 4000) {
+          const bad = { ok: false, reason: "invalid-input" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
+        }
+        const cid = await resolveTenantCid(tenant);
+        if (!cid || !supabaseAdmin) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const { error: intakeErr } = await supabaseAdmin
+          .from("client_intake")
+          .insert({ cid, topic, content_md: content, source });
+        if (intakeErr) {
+          console.error("record_intake_failed", intakeErr.message);
+          const out = { ok: false, reason: "save-failed" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const out = { ok: true, recorded: topic };
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+      }
+
       if (name === "setup_progress") {
         const step = typeof args?.step === "string" ? args.step : "";
         const status = typeof args?.status === "string" ? args.status : "";
@@ -2915,7 +3012,8 @@ Deno.serve(async (req) => {
         if (name === "taylor_setup") {
           await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
           const checklist = await readChecklist(resolvedCid);
-          const guide = buildTaylorSetupPayload(client, checklist);
+          const context = await readTaylorContext(resolvedCid);
+          const guide = buildTaylorSetupPayload(client, checklist, context);
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(guide) }],
             structuredContent: guide,
