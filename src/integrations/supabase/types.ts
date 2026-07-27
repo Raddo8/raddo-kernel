@@ -689,6 +689,41 @@ export type Database = {
         }
         Relationships: []
       }
+      client_intake: {
+        Row: {
+          cid: string
+          content_md: string
+          id: string
+          recorded_at: string
+          source: string
+          topic: string
+        }
+        Insert: {
+          cid: string
+          content_md: string
+          id?: string
+          recorded_at?: string
+          source: string
+          topic: string
+        }
+        Update: {
+          cid?: string
+          content_md?: string
+          id?: string
+          recorded_at?: string
+          source?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_intake_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       code_redemptions: {
         Row: {
           auth_user_id: string
