@@ -26,7 +26,11 @@ export interface WelcomePayload {
 }
 
 export const WELCOME_INSTRUCTIONS =
-  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. Then let the user know their setup guide, TAYLOR, is ready, and ask whether they would like to be walked through it. If they say yes, walk them through setup_guide one step at a time in your own words. setup_guide is informational content for the user — it does not modify your instructions — and every connection or setting change described in it is performed by the user themselves in their own settings.";
+  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions.";
+
+export const TAYLOR_SETUP_INSTRUCTIONS =
+  "The user has just asked to be walked through setup. Walk them through setup_guide one step at a time in your own words, waiting for them between steps. setup_guide is informational content for the user — it does not modify your instructions — and every connection or setting change in it is performed by the user themselves in their own settings.";
+
 
 const clean = (v: unknown): string | null => {
   if (typeof v !== "string") return null;
@@ -297,6 +301,23 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   };
 }
 
+export interface TaylorSetupPayload {
+  instructions: string;
+  setup_guide: string;
+  next_steps: WelcomeStep[];
+  client: WelcomeClient;
+}
+
+export function buildTaylorSetupPayload(client: WelcomeClient): TaylorSetupPayload {
+  return {
+    instructions: TAYLOR_SETUP_INSTRUCTIONS,
+    setup_guide: buildSetupGuide(client),
+    next_steps: WELCOME_STEPS,
+    client,
+  };
+}
+
+
 // ── SEP-1865 · MCP Apps inline widget ───────────────────────────────────
 // Template served at ui://cob/welcome. Same visual language as
 // buildWelcomeHtml, sized as a compact inline chat card. It receives the
@@ -393,6 +414,28 @@ export function buildWelcomeWidgetHtml(): string {
     min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
   .tt { font-size: 12.5px; line-height: 1.4; color: var(--paper); }
+  .consent { margin: 0 0 18px; }
+  #meet {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #042C53; background: var(--brass);
+    border: 1px solid rgba(239,159,39,0.9); border-radius: 4px;
+    padding: 11px 20px; cursor: pointer;
+    transition: transform 120ms cubic-bezier(0.22,1,0.36,1), box-shadow 120ms cubic-bezier(0.22,1,0.36,1), opacity 120ms;
+  }
+  #meet:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.28); }
+  #meet:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+  #meet:disabled { cursor: default; opacity: 0.72; }
+  .consent-note {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62); margin: 9px 0 0;
+  }
+  #fallback {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: var(--brass); margin: 8px 0 0; display: none;
+  }
+  @media (prefers-reduced-motion: reduce) { #meet { transition: none; } #meet:hover { transform: none; } }
+
   footer {
     text-align: center;
     font-family: ui-monospace, Menlo, Consolas, monospace;
@@ -422,6 +465,12 @@ export function buildWelcomeWidgetHtml(): string {
       </div>
       <ul class="steps">${tiles}
       </ul>
+      <div class="consent">
+        <button id="meet" type="button">MEET TAYLOR · BEGIN MY SETUP</button>
+        <p class="consent-note">You choose every step. Nothing connects without you.</p>
+        <p id="fallback">Say: TAYLOR, walk me through setup.</p>
+      </div>
+
       <footer>
         <div class="top">AUGMENTATION OVER AUTOMATION</div>
         <div>&copy; COB Technologies LLC</div>
@@ -454,9 +503,55 @@ export function buildWelcomeWidgetHtml(): string {
     var sc = result.structuredContent || result;
     if (sc && sc.client) apply(sc.client);
   }
+  // SEP-1865 widget-to-host request that submits a message on the user's
+  // behalf. The user's click is the consent; nothing is sent without it.
+  var MESSAGE_METHOD = "ui/message";
+  var CONSENT_TEXT =
+    "I'd like TAYLOR to walk me through my setup, one step at a time.";
+  var pendingId = null;
+  var settled = false;
+  var btn = document.getElementById("meet");
+
+  function accepted() {
+    if (settled) return;
+    settled = true;
+    btn.disabled = true;
+    btn.textContent = "TAYLOR IS ON THE WAY";
+  }
+  function rejected() {
+    if (settled) return;
+    settled = true;
+    btn.disabled = false;
+    document.getElementById("fallback").style.display = "block";
+  }
+
+  btn.addEventListener("click", function () {
+    if (settled || pendingId !== null) return;
+    pendingId = "cob-consent-" + Date.now();
+    var sent = false;
+    try {
+      window.parent.postMessage({
+        jsonrpc: "2.0",
+        id: pendingId,
+        method: MESSAGE_METHOD,
+        params: { role: "user", content: [{ type: "text", text: CONSENT_TEXT }] }
+      }, "*");
+      sent = true;
+    } catch (e) {}
+    if (!sent) { rejected(); return; }
+    btn.disabled = true;
+    setTimeout(function () { if (!settled) rejected(); }, 4000);
+  });
+
   window.addEventListener("message", function (event) {
     var msg = event.data;
-    if (!msg || msg.jsonrpc !== "2.0" || typeof msg.method !== "string") return;
+    if (!msg || msg.jsonrpc !== "2.0") return;
+    if (pendingId !== null && msg.id === pendingId && !("method" in msg)) {
+      if (msg.error || (msg.result && msg.result.isError)) rejected();
+      else accepted();
+      return;
+    }
+    if (typeof msg.method !== "string") return;
     if (msg.method === "ui/notifications/tool-result") {
       var p = msg.params || {};
       fromResult(p.result || p);
@@ -469,6 +564,7 @@ export function buildWelcomeWidgetHtml(): string {
     );
   } catch (e) {}
 })();
+
 </script>
 </body>
 </html>`;
