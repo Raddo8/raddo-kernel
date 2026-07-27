@@ -364,6 +364,10 @@ export function buildTaylorKnown(client: WelcomeClient, rows: ProgressRow[]): Ta
 export function buildTaylorSetupPayload(
   client: WelcomeClient,
   checklist: ProgressRow[] = [],
+  context: TaylorContext = {
+    business: { display_name: null, enterprise: null, principal: null },
+    intake_on_file: [],
+  },
 ): TaylorSetupPayload {
   return {
     instructions: TAYLOR_SETUP_INSTRUCTIONS,
@@ -372,6 +376,7 @@ export function buildTaylorSetupPayload(
     client,
     checklist,
     known: buildTaylorKnown(client, checklist),
+    context,
   };
 }
 
