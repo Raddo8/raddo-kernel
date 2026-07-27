@@ -32,9 +32,11 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
+import { buildWelcomePayload, normalizeClient, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "boot_signal_v1";
+const BUILD_ID = "welcome_party_v1";
+
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
