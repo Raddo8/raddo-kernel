@@ -2683,7 +2683,36 @@ Deno.serve(async (req) => {
           ? params._meta.progressToken
           : undefined;
 
+      if (name === "welcome_party") {
+        // Identity comes ONLY from the verified token tenant. Any resolution
+        // failure degrades to a nameless welcome — never another tenant's name.
+        let client: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+        if (supabaseAdmin && tenant) {
+          try {
+            const { data: cid } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
+            const resolved = typeof cid === "string" && cid.trim() ? cid.trim() : null;
+            if (resolved) {
+              const { data: row } = await supabaseAdmin
+                .from("tenants")
+                .select("cid, display_name, cob_name, principal")
+                .eq("cid", resolved)
+                .maybeSingle();
+              if (row) client = normalizeClient(row);
+            }
+          } catch (e) {
+            console.error("welcome_party_lookup_failed", e instanceof Error ? e.message : String(e));
+          }
+        }
+        const payload = buildWelcomePayload(client);
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(payload) }],
+          structuredContent: payload,
+          isError: false,
+        });
+      }
+
       if (name === "show_council") {
+
         // Tenant comes from the verified identity (see invariant above).
         const roster = listSeatedAgentsPublic(tenant);
         const lines = roster.map((a) => `- ${a.name} (${a.id}) · ${a.lens}`).join("\n");
