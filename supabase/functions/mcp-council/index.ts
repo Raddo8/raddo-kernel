@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v19";
+const BUILD_ID = "welcome_party_v20";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2394,8 +2394,8 @@ const TOOL_WELCOME_PARTY = {
     "Call this FIRST after connecting to COB. Returns the client's welcome — a visual to render for them and the guided setup that follows.",
   annotations: { title: "Welcome Party", readOnlyHint: true },
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
-  // No SEP-1865 widget attachment: hosts claimed inline render and suppressed
-  // the artifact fallback. The HTML travels in the tool result instead.
+  // SEP-1865 inline widget attachment (restored in v20).
+  _meta: { "ui.resourceUri": WELCOME_WIDGET_URI },
 };
 
 const TOOL_TAYLOR_SETUP = {
@@ -2797,7 +2797,7 @@ Deno.serve(async (req) => {
             contents: [{
               uri: puri,
               mimeType: "text/html",
-              text: buildWelcomeArtifactHtml({ display_name: null, cob_name: null, first_name: null }),
+              text: buildWelcomeWidgetHtml({ display_name: null, cob_name: null, first_name: null }),
             }],
           });
         }
@@ -2901,7 +2901,7 @@ Deno.serve(async (req) => {
         contents: [{
           uri: WELCOME_WIDGET_URI,
           mimeType: "text/html",
-          text: buildWelcomeArtifactHtml(widgetClient),
+          text: buildWelcomeWidgetHtml(widgetClient),
         }],
       });
     }
