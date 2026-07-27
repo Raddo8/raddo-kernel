@@ -318,6 +318,22 @@ export interface TaylorKnown {
   connected: { email: boolean; calendar: boolean; files: boolean };
 }
 
+export interface IntakeRow {
+  topic: string | null;
+  content_md: string | null;
+  source: string | null;
+  recorded_at: string | null;
+}
+
+export interface TaylorContext {
+  business: {
+    display_name: string | null;
+    enterprise: string | null;
+    principal: string | null;
+  };
+  intake_on_file: IntakeRow[];
+}
+
 export interface TaylorSetupPayload {
   instructions: string;
   setup_guide: string;
@@ -325,6 +341,7 @@ export interface TaylorSetupPayload {
   client: WelcomeClient;
   checklist: ProgressRow[];
   known: TaylorKnown;
+  context: TaylorContext;
 }
 
 const isDone = (rows: ProgressRow[], key: string) =>
