@@ -32,10 +32,10 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
-import { buildTaylorSetupPayload, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type WelcomeClient } from "./welcome.ts";
+import { buildTaylorSetupPayload, buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v5";
+const BUILD_ID = "welcome_party_v6";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2482,6 +2482,41 @@ async function resolveTenantCid(tenant: string | null | undefined): Promise<stri
   }
 }
 
+// Resolve the client identity for the welcome surfaces. Identity comes ONLY
+// from the verified token tenant; any failure degrades to a nameless client.
+async function resolveWelcomeClient(
+  tenant: string | null | undefined,
+): Promise<{ cid: string | null; client: WelcomeClient }> {
+  const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+  const cid = await resolveTenantCid(tenant);
+  if (!supabaseAdmin || !cid) return { cid, client: empty };
+  try {
+    const { data: row } = await supabaseAdmin
+      .from("tenants")
+      .select("cid, display_name, cob_name, principal")
+      .eq("cid", cid)
+      .maybeSingle();
+    return { cid, client: row ? normalizeClient(row) : empty };
+  } catch (e) {
+    console.error("welcome_client_lookup_failed", e instanceof Error ? e.message : String(e));
+    return { cid, client: empty };
+  }
+}
+
+async function readChecklist(cid: string | null): Promise<ProgressRow[]> {
+  if (!supabaseAdmin || !cid) return [];
+  try {
+    const { data } = await supabaseAdmin
+      .from("onboarding_progress")
+      .select("step_key, status, source")
+      .eq("cid", cid);
+    return Array.isArray(data) ? (data as ProgressRow[]) : [];
+  } catch (e) {
+    console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
+    return [];
+  }
+}
+
 async function recordProgress(
   cid: string | null,
   step_key: string,
@@ -2752,11 +2787,14 @@ Deno.serve(async (req) => {
       if (uri !== WELCOME_WIDGET_URI) {
         return rpcError(id, -32002, "resource_not_found");
       }
+      // Personalize server-side from the verified token tenant, so the card
+      // is correct even if the host never sends the tool-result notification.
+      const { client: widgetClient } = await resolveWelcomeClient(tenant);
       return rpcResult(id, {
         contents: [{
           uri: WELCOME_WIDGET_URI,
           mimeType: "text/html",
-          text: buildWelcomeWidgetHtml(),
+          text: buildWelcomeWidgetHtml(widgetClient),
         }],
       });
     }
@@ -2873,28 +2911,11 @@ Deno.serve(async (req) => {
       if (name === "welcome_party" || name === "taylor_setup") {
         // Identity comes ONLY from the verified token tenant. Any resolution
         // failure degrades to a nameless welcome — never another tenant's name.
-        let client: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
-        let resolvedCid: string | null = null;
-        if (supabaseAdmin && tenant) {
-          try {
-            const { data: cid } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
-            const resolved = typeof cid === "string" && cid.trim() ? cid.trim() : null;
-            resolvedCid = resolved;
-            if (resolved) {
-              const { data: row } = await supabaseAdmin
-                .from("tenants")
-                .select("cid, display_name, cob_name, principal")
-                .eq("cid", resolved)
-                .maybeSingle();
-              if (row) client = normalizeClient(row);
-            }
-          } catch (e) {
-            console.error("welcome_party_lookup_failed", e instanceof Error ? e.message : String(e));
-          }
-        }
+        const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
         if (name === "taylor_setup") {
           await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
-          const guide = buildTaylorSetupPayload(client);
+          const checklist = await readChecklist(resolvedCid);
+          const guide = buildTaylorSetupPayload(client, checklist);
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(guide) }],
             structuredContent: guide,
