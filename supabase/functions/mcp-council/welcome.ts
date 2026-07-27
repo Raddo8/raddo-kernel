@@ -414,6 +414,28 @@ export function buildWelcomeWidgetHtml(): string {
     min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
   .tt { font-size: 12.5px; line-height: 1.4; color: var(--paper); }
+  .consent { margin: 0 0 18px; }
+  #meet {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #042C53; background: var(--brass);
+    border: 1px solid rgba(239,159,39,0.9); border-radius: 4px;
+    padding: 11px 20px; cursor: pointer;
+    transition: transform 120ms cubic-bezier(0.22,1,0.36,1), box-shadow 120ms cubic-bezier(0.22,1,0.36,1), opacity 120ms;
+  }
+  #meet:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.28); }
+  #meet:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+  #meet:disabled { cursor: default; opacity: 0.72; }
+  .consent-note {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62); margin: 9px 0 0;
+  }
+  #fallback {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: var(--brass); margin: 8px 0 0; display: none;
+  }
+  @media (prefers-reduced-motion: reduce) { #meet { transition: none; } #meet:hover { transform: none; } }
+
   footer {
     text-align: center;
     font-family: ui-monospace, Menlo, Consolas, monospace;
