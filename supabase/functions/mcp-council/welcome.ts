@@ -249,50 +249,41 @@ export function buildWelcomeHtml(client: WelcomeClient): string {
 </html>`;
 }
 
-export function buildTaylorScript(client: WelcomeClient): string {
+export function buildSetupGuide(client: WelcomeClient): string {
   const chief = client.cob_name ?? "your Chief";
   const who = client.first_name ? ` ${client.first_name}` : "";
   const house = client.display_name ? ` at ${client.display_name}` : "";
-  return `# TAYLOR · onboarding script
+  return `# TAYLOR · your setup guide
 
-**Voice:** warm, unhurried, competent. A concierge, not a chatbot. Short sentences.
-No jargon. No internal system names. Perform this one step at a time and wait for
-the person to answer before moving on.
+Hello${who}. This is TAYLOR, the short guide to getting you set up${house}.
+It takes a few minutes, and you can stop at any point and come back.
 
-## Opening (say this, then stop)
+One note before you start: no one from COB will ever ask you for a password or a
+code. If anyone does, it isn't us.
 
-"Hello${who}. I'm TAYLOR. I'll be your guide while we get you set up${house}.
-This takes a few minutes and I'll stay with you the whole way.
-One thing before we start: I will never ask you for a password or a code. If anyone does, it isn't me."
+## Step 1 · Tell your assistant what you'd like to be called, and confirm your Chief's name is right.
 
-## Step 1 · Names (wait for the answer)
+Your Chief is currently named **${chief}**. If you'd prefer a different name, say so
+and it will be changed.
 
-Ask two things, plainly:
-- "What should I call you?"
-- "Your Chief is named **${chief}**. Is that right, or would you like a different name?"
+## Step 2 · Connect your world — email, calendar and files — in your own settings.
 
-Confirm back what they said. Then move on.
+Each connection makes ${chief} sharper:
+- **Email** — so ${chief} sees what's actually landing in front of you.
+- **Calendar** — so ${chief} knows what your week already owes.
+- **Files** — so ${chief} can read your documents instead of guessing at them.
 
-## Step 2 · Connect your world (wait between each)
+You turn these on yourself, in your assistant's own connector settings. Take them
+one at a time; nothing here is urgent.
 
-Explain that connecting these makes ${chief} sharper, then walk them into Claude's
-settings, one connector at a time:
-- **Email** — "So ${chief} sees what's actually landing in front of you."
-- **Calendar** — "So ${chief} knows what your week already owes."
-- **Files** — "So ${chief} can read your documents instead of guessing at them."
+## Step 3 · Complete your business intake, if you haven't already.
 
-Ask them to tell you when each one is switched on. Do not rush them.
+That lives at **chiefofbusiness.ai/start**. It's the part that teaches ${chief} your
+world. If you've already done it, skip this step.
 
-## Step 3 · Your business intake
+## Step 4 · Type **/begin**.
 
-"If you haven't already told us about the business, that happens at
-**chiefofbusiness.ai/start**. It's the part that teaches ${chief} your world.
-If you've done it, we'll skip it."
-
-## Step 4 · Hand over
-
-"Last thing. Type **/begin**. That opens your first session, and ${chief} takes over from here.
-I'll step back. You're in good hands."
+That opens your first session, and ${chief} takes it from there.
 `;
 }
 
@@ -300,8 +291,185 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
   return {
     instructions: WELCOME_INSTRUCTIONS,
     welcome_html: buildWelcomeHtml(client),
-    taylor_script: buildTaylorScript(client),
+    setup_guide: buildSetupGuide(client),
     next_steps: WELCOME_STEPS,
     client,
   };
+}
+
+// ── SEP-1865 · MCP Apps inline widget ───────────────────────────────────
+// Template served at ui://cob/welcome. Same visual language as
+// buildWelcomeHtml, sized as a compact inline chat card. It receives the
+// tool result over postMessage JSON-RPC notifications and fills in the
+// three identity slots, degrading to a nameless welcome when null.
+export const WELCOME_WIDGET_URI = "ui://cob/welcome";
+
+export function buildWelcomeWidgetHtml(): string {
+  const tiles = WELCOME_STEPS.map((s) => `
+        <li class="tile">
+          <span class="num">${s.step}</span>
+          <span class="tt">${esc(s.title)}</span>
+        </li>`).join("");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Welcome · COB</title>
+<style>
+  :root {
+    --navy: #042C53;
+    --brass: #EF9F27;
+    --paper: #FAF8F4;
+    --ash: rgba(250,248,244,0.62);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: transparent; }
+  body {
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--paper);
+  }
+  .card {
+    position: relative;
+    overflow: hidden;
+    max-width: 720px;
+    margin: 0 auto;
+    border: 1px solid rgba(239,159,39,0.35);
+    border-radius: 8px;
+    background: var(--navy);
+    padding: 28px 26px 24px;
+  }
+  .glow, .grid { position: absolute; inset: 0; pointer-events: none; }
+  .glow {
+    background:
+      radial-gradient(420px 300px at 10% 0%, rgba(239,159,39,0.18), transparent 62%),
+      radial-gradient(520px 360px at 96% 100%, rgba(2,28,54,0.9), transparent 60%);
+  }
+  .grid {
+    background-image:
+      linear-gradient(to right, rgba(250,248,244,0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(250,248,244,0.045) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 80%);
+    -webkit-mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 80%);
+  }
+  .inner { position: relative; text-align: center; }
+  .mark { display: block; margin: 0 auto 10px; width: 44px; height: 44px; }
+  .wordmark {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.3em; color: var(--brass);
+    text-transform: uppercase; margin: 0 0 18px;
+  }
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400; font-size: clamp(26px, 5vw, 40px);
+    line-height: 1.05; letter-spacing: -0.01em; margin: 0 0 8px;
+  }
+  .sub { font-size: 14px; color: var(--ash); margin: 0 0 20px; }
+  .chiefcard {
+    border: 1px solid rgba(239,159,39,0.5);
+    border-radius: 8px;
+    background: rgba(250,248,244,0.035);
+    padding: 16px 14px; margin: 0 auto 20px; max-width: 460px;
+  }
+  .eyebrow {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 9px; letter-spacing: 0.28em; color: var(--brass); margin: 0 0 8px;
+  }
+  .chief { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.1; margin: 0 0 6px; }
+  .chief-line { font-size: 12.5px; color: var(--ash); margin: 0; }
+  ul.steps { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; text-align: left; }
+  @media (min-width: 600px) { ul.steps { grid-template-columns: repeat(3, 1fr); } }
+  .tile {
+    border: 1px solid rgba(250,248,244,0.14); border-radius: 8px;
+    padding: 12px 12px; background: rgba(4,44,83,0.55);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .num {
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11px; color: var(--brass);
+    border: 1px solid rgba(239,159,39,0.5); border-radius: 4px;
+    min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  }
+  .tt { font-size: 12.5px; line-height: 1.4; color: var(--paper); }
+  footer {
+    text-align: center;
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 8.5px; letter-spacing: 0.22em; line-height: 1.9;
+    color: rgba(250,248,244,0.45);
+  }
+  footer .top { color: var(--brass); }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="glow"></div>
+    <div class="grid"></div>
+    <div class="inner">
+      <svg class="mark" viewBox="0 0 100 100" role="img" aria-label="COB mark">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="#EF9F27" stroke-width="1.6" />
+        <circle cx="50" cy="50" r="33" fill="none" stroke="#EF9F27" stroke-width="0.8" opacity="0.7" />
+        <path d="M50 22 L56 44 L78 50 L56 56 L50 78 L44 56 L22 50 L44 44 Z" fill="#EF9F27" />
+      </svg>
+      <p class="wordmark">COB · Chief of Business</p>
+      <h1 id="greeting">WELCOME.</h1>
+      <p class="sub" id="sub">Your headquarters is being prepared.</p>
+      <div class="chiefcard">
+        <p class="eyebrow">YOUR CHIEF</p>
+        <p class="chief" id="chief">Your Chief</p>
+        <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+      </div>
+      <ul class="steps">${tiles}
+      </ul>
+      <footer>
+        <div class="top">AUGMENTATION OVER AUTOMATION</div>
+        <div>&copy; COB Technologies LLC</div>
+      </footer>
+    </div>
+  </div>
+<script>
+(function () {
+  var clean = function (v) {
+    if (typeof v !== "string") return null;
+    var t = v.trim();
+    if (!t) return null;
+    if (/^(null|undefined|none)$/i.test(t)) return null;
+    return t;
+  };
+  function apply(client) {
+    if (!client || typeof client !== "object") return;
+    var first = clean(client.first_name);
+    var house = clean(client.display_name);
+    var chief = clean(client.cob_name);
+    document.getElementById("greeting").textContent =
+      first ? "WELCOME, " + first.toUpperCase() + "." : "WELCOME.";
+    document.getElementById("sub").textContent =
+      house ? house + " · your headquarters is being prepared."
+            : "Your headquarters is being prepared.";
+    document.getElementById("chief").textContent = chief || "Your Chief";
+  }
+  function fromResult(result) {
+    if (!result) return;
+    var sc = result.structuredContent || result;
+    if (sc && sc.client) apply(sc.client);
+  }
+  window.addEventListener("message", function (event) {
+    var msg = event.data;
+    if (!msg || msg.jsonrpc !== "2.0" || typeof msg.method !== "string") return;
+    if (msg.method === "ui/notifications/tool-result") {
+      var p = msg.params || {};
+      fromResult(p.result || p);
+    }
+  });
+  try {
+    window.parent.postMessage(
+      { jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} },
+      "*"
+    );
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>`;
 }
