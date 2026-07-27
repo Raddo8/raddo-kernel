@@ -727,7 +727,9 @@ const COB={
    <div class="r-copy">© COB Technologies LLC</div></nav>`;
   const chips=(arr,cls)=>arr.length?arr.slice(0,5).map(x=>`<span class="chip ${cls||""}">${this.esc(x)}</span>`).join("")+(arr.length>5?`<span class="chip" style="color:var(--ash)">+${arr.length-5} more</span>`:""):`<span class="w-empty">· · ·</span>`;
   const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+(d.facts||0),0);const fl=this.state.files||[];
-  const world=`<aside class="world${this._tayOpen?' tay-open':''}" aria-label="The briefcase"><div class="bp">
+  const noTay=(location.hash||"").split("/")[1]==="fireside"; /* fireside keeps the rail for the briefcase alone */
+  const tayOn=!noTay&&this._tayOpen;
+  const world=`<aside class="world${tayOn?' tay-open':''}" aria-label="The briefcase"><div class="bp">
    <div class="bp-head" onclick="if(COB._tayOpen)COB.tayToggle()"><span class="bp-t">The briefcase</span><span class="bp-c">${bf.length||fl.length||!this.state.noAI?`${bf.length} deliverables · ${facts} facts on record${fl.length?` · ${fl.length} files`:""}`:`clean start · building from zero`}</span></div>
    <div class="bp-body">
     ${bf.length||fl.length?`<div class="bp-sec">${bf.map(d=>`<div class="bp-row"><span>${this.esc(d.title)}</span><span class="ok">filed</span></div>`).join("")}${fl.map(f=>`<div class="bp-row"><span>${this.esc(f.name)}</span><span class="ok">received</span></div>`).join("")}</div>`:""}
