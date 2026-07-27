@@ -465,6 +465,12 @@ export function buildWelcomeWidgetHtml(): string {
       </div>
       <ul class="steps">${tiles}
       </ul>
+      <div class="consent">
+        <button id="meet" type="button">MEET TAYLOR · BEGIN MY SETUP</button>
+        <p class="consent-note">You choose every step. Nothing connects without you.</p>
+        <p id="fallback">Say: TAYLOR, walk me through setup.</p>
+      </div>
+
       <footer>
         <div class="top">AUGMENTATION OVER AUTOMATION</div>
         <div>&copy; COB Technologies LLC</div>
