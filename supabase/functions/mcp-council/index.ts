@@ -2387,7 +2387,17 @@ const TOOL_END_SESSION = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOL_WELCOME_PARTY = {
+  name: "welcome_party",
+  title: "Welcome Party",
+  description:
+    "Call this FIRST after connecting to COB. Returns the client's welcome — a visual to render for them and the guided setup that follows.",
+  annotations: { title: "Welcome Party", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
 
 
 
