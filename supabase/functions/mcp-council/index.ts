@@ -2492,6 +2492,24 @@ const SETUP_STEP_KEYS: Record<string, string> = {
   "setup-complete": "setup-complete",
 };
 
+// Hard timeout for every store read/write on the welcome surfaces. A slow
+// database must degrade the welcome, never kill it.
+const STORE_TIMEOUT_MS = 3000;
+function withTimeout<T>(p: PromiseLike<T>, fallback: T, label: string): Promise<T> {
+  return Promise.race([
+    Promise.resolve(p).catch((e) => {
+      console.error(`${label}_threw`, e instanceof Error ? e.message : String(e));
+      return fallback;
+    }),
+    new Promise<T>((resolve) =>
+      setTimeout(() => {
+        console.error(`${label}_timeout`);
+        resolve(fallback);
+      }, STORE_TIMEOUT_MS)
+    ),
+  ]);
+}
+
 async function resolveTenantCid(tenant: string | null | undefined): Promise<string | null> {
   if (!supabaseAdmin || !tenant) return null;
   try {
