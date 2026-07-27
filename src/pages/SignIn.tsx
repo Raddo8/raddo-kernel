@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link, useNavigate } from "react-router-dom";
@@ -42,6 +44,19 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
   };
 
   const handleSso = async (provider: SsoProvider) => {
+    if (provider === "google") {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin + landing,
+      });
+      if (result.error) {
+        toast.error(result.error.message || "Google sign-in failed");
+        return;
+      }
+      if (result.redirected) return;
+      navigate(landing);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: window.location.origin + landing },
@@ -56,6 +71,7 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
       );
     }
   };
+
 
 
   return (
