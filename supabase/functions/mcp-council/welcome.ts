@@ -238,11 +238,11 @@ export function buildWelcomeHtml(client: WelcomeClient): string {
       </div>
       <ul class="steps">${tiles}
       </ul>
-      <footer>
-        <div class="top">AUGMENTATION OVER AUTOMATION</div>
-        <div>&copy; COB Technologies LLC</div>
-      </footer>
     </div>
+    <footer>
+      <div class="top">AUGMENTATION OVER AUTOMATION</div>
+      <div>&copy; COB Technologies LLC</div>
+    </footer>
   </div>
 </body>
 </html>`;
