@@ -67,13 +67,13 @@ const esc = (s: string) =>
 export const WELCOME_STEPS: WelcomeStep[] = [
   {
     step: 1,
-    title: "Meet TAYLOR — your setup guide, starting now.",
-    done_when: "You have told TAYLOR how you would like to be addressed and confirmed your Chief's name.",
+    title: "Meet TAYLOR · your setup guide.",
+    done_when: "You have said how you would like to be addressed and confirmed your Chief's name.",
   },
   {
     step: 2,
     title: "Connect your world — email, calendar, files.",
-    done_when: "Your email, calendar and file connectors are switched on in Claude's settings.",
+    done_when: "You have switched on your email, calendar and file connectors in your own settings.",
   },
   {
     step: 3,

@@ -32,10 +32,10 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
-import { buildWelcomePayload, normalizeClient, type WelcomeClient } from "./welcome.ts";
+import { buildWelcomePayload, buildWelcomeWidgetHtml, normalizeClient, WELCOME_WIDGET_URI, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v1";
+const BUILD_ID = "welcome_party_v2";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2394,7 +2394,29 @@ const TOOL_WELCOME_PARTY = {
     "Call this FIRST after connecting to COB. Returns the client's welcome — a visual to render for them and the guided setup that follows.",
   annotations: { title: "Welcome Party", readOnlyHint: true },
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  // SEP-1865 · MCP Apps. Hosts that support inline UI resources render the
+  // widget in the chat feed; others fall back to welcome_html in the result.
+  _meta: {
+    "ui.resourceUri": WELCOME_WIDGET_URI,
+    "ui.resourceName": "COB Welcome",
+    "ui.resourceDescription": "Inline welcome card for a newly connected COB client.",
+    "openai/outputTemplate": WELCOME_WIDGET_URI,
+    ui: {
+      resourceUri: WELCOME_WIDGET_URI,
+      resourceName: "COB Welcome",
+      resourceDescription: "Inline welcome card for a newly connected COB client.",
+    },
+  },
 };
+
+const UI_RESOURCES = [
+  {
+    uri: WELCOME_WIDGET_URI,
+    name: "COB Welcome",
+    description: "Inline welcome card for a newly connected COB client.",
+    mimeType: "text/html",
+  },
+];
 
 const TOOLS = [TOOL_WELCOME_PARTY, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
@@ -2623,7 +2645,7 @@ Deno.serve(async (req) => {
     if (method === "initialize") {
       return rpcResult(id, {
         protocolVersion: PROTOCOL_VERSION,
-        capabilities: { tools: {} },
+        capabilities: { tools: {}, resources: { listChanged: false } },
         serverInfo: SERVER_INFO,
       });
     }
@@ -2634,6 +2656,28 @@ Deno.serve(async (req) => {
 
     if (method === "tools/list") {
       return rpcResult(id, { tools: TOOLS });
+    }
+
+    if (method === "resources/list") {
+      return rpcResult(id, { resources: UI_RESOURCES });
+    }
+
+    if (method === "resources/templates/list") {
+      return rpcResult(id, { resourceTemplates: [] });
+    }
+
+    if (method === "resources/read") {
+      const uri = body?.params?.uri;
+      if (uri !== WELCOME_WIDGET_URI) {
+        return rpcError(id, -32002, "resource_not_found");
+      }
+      return rpcResult(id, {
+        contents: [{
+          uri: WELCOME_WIDGET_URI,
+          mimeType: "text/html",
+          text: buildWelcomeWidgetHtml(),
+        }],
+      });
     }
 
     if (method === "tools/call") {
@@ -2708,6 +2752,7 @@ Deno.serve(async (req) => {
           content: [{ type: "text", text: JSON.stringify(payload) }],
           structuredContent: payload,
           isError: false,
+          _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
         });
       }
 
