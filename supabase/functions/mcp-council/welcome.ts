@@ -913,9 +913,32 @@ export function buildWelcomeWidgetHtml(
     nameTimer = setTimeout(nameFailed, 4000);
   });
 
+  // SEP-1865 handshake state: ui/initialize request → host response →
+  // ui/notifications/initialized notification.
+  var INIT_ID = "cob-init-1";
+  var initDone = false;
+  var initTimer = null;
+  function sendInitialized() {
+    if (initDone) return;
+    initDone = true;
+    if (initTimer) { clearTimeout(initTimer); initTimer = null; }
+    try {
+      window.parent.postMessage(
+        { jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} },
+        "*"
+      );
+    } catch (e) {}
+  }
+
   window.addEventListener("message", function (event) {
     var msg = event.data;
     if (!msg || msg.jsonrpc !== "2.0") return;
+    if (msg.id === INIT_ID && !("method" in msg)) {
+      var ir = msg.result || {};
+      sendInitialized();
+      if (ir.structuredContent || ir.content) fromResult(ir);
+      return;
+    }
     if (namePendingId !== null && msg.id === namePendingId && !("method" in msg)) {
       var r = msg.result || {};
       var sc = r.structuredContent || {};
@@ -934,12 +957,16 @@ export function buildWelcomeWidgetHtml(
       fromResult(p.result || p);
     }
   });
+
   try {
     window.parent.postMessage(
-      { jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} },
+      { jsonrpc: "2.0", id: INIT_ID, method: "ui/initialize", params: { capabilities: {} } },
       "*"
     );
   } catch (e) {}
+  // Safety net · never leave the card inert if the host stays silent.
+  initTimer = setTimeout(sendInitialized, 2000);
+
 })();
 
 </script>
