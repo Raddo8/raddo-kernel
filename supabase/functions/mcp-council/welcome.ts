@@ -593,9 +593,80 @@ export function buildWelcomeWidgetHtml(): string {
     setTimeout(function () { if (!settled) rejected(); }, 4000);
   });
 
+  // ── Chief naming · SEP-1865 widget-to-host tool call ──────────────────
+  // Separate request id namespace so it never collides with pendingId.
+  var TOOL_CALL_METHOD = "ui/tool-call";
+  var namePendingId = null;
+  var nameTimer = null;
+  var display = document.getElementById("namedisplay");
+  var editor = document.getElementById("nameedit");
+  var input = document.getElementById("nameinput");
+  var chiefEl = document.getElementById("chief");
+  var errEl = document.getElementById("nameerr");
+
+  function showEditor(on) {
+    display.style.display = on ? "none" : "block";
+    editor.style.display = on ? "block" : "none";
+    if (on) { input.value = chiefEl.textContent || ""; input.focus(); input.select(); }
+  }
+  function nameFailed() {
+    if (namePendingId === null) return;
+    namePendingId = null;
+    if (nameTimer) { clearTimeout(nameTimer); nameTimer = null; }
+    document.getElementById("savename").disabled = false;
+    errEl.textContent = "Couldn't save from here — just tell your assistant the name you want.";
+    errEl.style.display = "block";
+  }
+  function nameSaved(finalName) {
+    if (namePendingId === null) return;
+    namePendingId = null;
+    if (nameTimer) { clearTimeout(nameTimer); nameTimer = null; }
+    document.getElementById("savename").disabled = false;
+    errEl.style.display = "none";
+    if (finalName) chiefEl.textContent = finalName;
+    showEditor(false);
+    chiefEl.classList.remove("flash");
+    void chiefEl.offsetWidth;
+    chiefEl.classList.add("flash");
+  }
+
+  document.getElementById("rename").addEventListener("click", function () {
+    errEl.style.display = "none";
+    showEditor(true);
+  });
+  document.getElementById("keepname").addEventListener("click", function () {
+    showEditor(false);
+  });
+  document.getElementById("savename").addEventListener("click", function () {
+    if (namePendingId !== null) return;
+    var typed = (input.value || "").trim();
+    if (typed.length < 2) { input.focus(); return; }
+    namePendingId = "cob-name-" + Date.now();
+    var sent = false;
+    try {
+      window.parent.postMessage({
+        jsonrpc: "2.0",
+        id: namePendingId,
+        method: TOOL_CALL_METHOD,
+        params: { name: "set_chief_name", arguments: { name: typed } }
+      }, "*");
+      sent = true;
+    } catch (e) {}
+    if (!sent) { nameFailed(); return; }
+    document.getElementById("savename").disabled = true;
+    nameTimer = setTimeout(nameFailed, 4000);
+  });
+
   window.addEventListener("message", function (event) {
     var msg = event.data;
     if (!msg || msg.jsonrpc !== "2.0") return;
+    if (namePendingId !== null && msg.id === namePendingId && !("method" in msg)) {
+      var r = msg.result || {};
+      var sc = r.structuredContent || {};
+      if (msg.error || r.isError || sc.ok === false) nameFailed();
+      else nameSaved(sc.cob_name || (input.value || "").trim().toUpperCase());
+      return;
+    }
     if (pendingId !== null && msg.id === pendingId && !("method" in msg)) {
       if (msg.error || (msg.result && msg.result.isError)) rejected();
       else accepted();
