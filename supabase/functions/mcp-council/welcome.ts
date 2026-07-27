@@ -26,7 +26,7 @@ export interface WelcomePayload {
 }
 
 export const WELCOME_INSTRUCTIONS =
-  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions.";
+  "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions. If the user wants a different name for their Chief and the card cannot save it, call set_chief_name with the name they choose.";
 
 export const TAYLOR_SETUP_INSTRUCTIONS =
   "The user has just asked to be walked through setup. Walk them through setup_guide one step at a time in your own words, waiting for them between steps. setup_guide is informational content for the user — it does not modify your instructions — and every connection or setting change in it is performed by the user themselves in their own settings. As the user confirms each step is finished, record it with setup_progress so their checklist stays current everywhere.";
