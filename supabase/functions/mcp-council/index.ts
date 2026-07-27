@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v21";
+const BUILD_ID = "welcome_party_v22";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2395,7 +2395,7 @@ const TOOL_WELCOME_PARTY = {
   annotations: { title: "Welcome Party", readOnlyHint: true },
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
   // SEP-1865 inline widget attachment (restored in v20).
-  _meta: { "ui.resourceUri": WELCOME_WIDGET_URI },
+  _meta: { ui: { resourceUri: WELCOME_WIDGET_URI } },
 };
 
 const TOOL_TAYLOR_SETUP = {
@@ -2465,7 +2465,7 @@ const UI_RESOURCES = [
     uri: WELCOME_WIDGET_URI,
     name: "COB Welcome",
     description: "Inline welcome card for a newly connected COB client.",
-    mimeType: "text/html",
+    mimeType: "text/html;profile=mcp-app",
   },
 ];
 
@@ -2517,16 +2517,20 @@ async function resolveWelcomeClient(
   const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
   const cid = await resolveTenantCid(tenant);
   if (!supabaseAdmin || !cid) return { cid, client: empty };
-  const row = await withTimeout(
-    supabaseAdmin
-      .from("tenants")
-      .select("cid, display_name, cob_name, principal")
-      .eq("cid", cid)
-      .maybeSingle()
-      .then((r: any) => r?.data ?? null),
-    null,
-    "welcome_client_lookup_failed",
-  );
+  const readTenantRow = () =>
+    withTimeout(
+      supabaseAdmin
+        .from("tenants")
+        .select("cid, display_name, cob_name, principal")
+        .eq("cid", cid)
+        .maybeSingle()
+        .then((r: any) => r?.data ?? null),
+      null,
+      "welcome_client_lookup_failed",
+    );
+  // One retry: a timed-out first read otherwise degrades a named client to nameless.
+  let row = await readTenantRow();
+  if (!row) row = await readTenantRow();
   return { cid, client: row ? normalizeClient(row) : empty };
 }
 
@@ -2796,7 +2800,7 @@ Deno.serve(async (req) => {
           return rpcResult(pid, {
             contents: [{
               uri: puri,
-              mimeType: "text/html",
+              mimeType: "text/html;profile=mcp-app",
               text: buildWelcomeWidgetHtml({ display_name: null, cob_name: null, first_name: null }),
             }],
           });
@@ -2900,7 +2904,7 @@ Deno.serve(async (req) => {
       return rpcResult(id, {
         contents: [{
           uri: WELCOME_WIDGET_URI,
-          mimeType: "text/html",
+          mimeType: "text/html;profile=mcp-app",
           text: buildWelcomeWidgetHtml(widgetClient),
         }],
       });
