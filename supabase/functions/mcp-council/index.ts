@@ -2791,6 +2791,33 @@ Deno.serve(async (req) => {
   }
 
   if (!identity || !authMode) {
+    // Narrow anonymous carve-out · Claude.ai fetches the SEP-1865 widget
+    // template without an Authorization header. The default template carries
+    // ZERO tenant data; personalization arrives later over the authenticated
+    // tool result. Only resources/list and the welcome widget read qualify.
+    try {
+      const peek = await req.clone().json();
+      const pm = peek?.method;
+      const pid = peek?.id ?? null;
+      if (pm === "resources/list") {
+        return rpcResult(pid, { resources: UI_RESOURCES });
+      }
+      if (pm === "resources/read") {
+        const puri = peek?.params?.uri;
+        if (puri === WELCOME_WIDGET_URI || puri === "ui://cob/welcome") {
+          return rpcResult(pid, {
+            contents: [{
+              uri: puri,
+              mimeType: "text/html",
+              text: buildWelcomeWidgetHtml(),
+            }],
+          });
+        }
+      }
+    } catch {
+      // fall through to 401
+    }
+
     return new Response(
       JSON.stringify({
         jsonrpc: "2.0",
