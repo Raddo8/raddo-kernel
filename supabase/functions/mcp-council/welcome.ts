@@ -401,6 +401,46 @@ export function buildWelcomeWidgetHtml(): string {
   }
   .chief { font-family: Georgia, "Times New Roman", serif; font-size: clamp(20px, 4vw, 28px); line-height: 1.1; margin: 0 0 6px; }
   .chief-line { font-size: 12.5px; color: var(--ash); margin: 0; }
+  .chief.flash { animation: chiefflash 800ms cubic-bezier(0.22,1,0.36,1); }
+  @keyframes chiefflash { 0% { color: var(--brass); } 100% { color: var(--paper); } }
+  #rename {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--brass); background: transparent;
+    border: 1px solid rgba(239,159,39,0.5); border-radius: 4px;
+    padding: 5px 10px; margin: 8px 0 0; cursor: pointer;
+  }
+  #rename:focus-visible, #savename:focus-visible, #keepname:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+  #nameedit { display: none; }
+  #nameinput {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(20px, 4vw, 28px); line-height: 1.1; text-align: center;
+    width: 100%; max-width: 320px; color: var(--paper);
+    background: rgba(4,44,83,0.6); border: 1px solid rgba(239,159,39,0.5);
+    border-radius: 4px; padding: 6px 10px; margin: 0 auto 10px; display: block;
+  }
+  #savename {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+    color: #042C53; background: var(--brass);
+    border: 1px solid rgba(239,159,39,0.9); border-radius: 4px;
+    padding: 7px 14px; cursor: pointer;
+  }
+  #keepname {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: var(--ash); background: transparent; border: 0;
+    margin-left: 12px; cursor: pointer; text-decoration: underline;
+  }
+  #nameerr {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62); margin: 8px 0 0; display: none;
+  }
+  .chief-later {
+    font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 10px; color: rgba(250,248,244,0.62);
+    margin: -12px 0 20px; text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { .chief.flash { animation: none; } }
   ul.steps { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 10px; text-align: left; }
   @media (min-width: 600px) { ul.steps { grid-template-columns: repeat(3, 1fr); } }
   .tile {
