@@ -565,6 +565,7 @@ const COB={
   const ask=window.COB_ASK;
   const land=(a)=>{this._pending=false;this.state.taylor_qs[idx].a=a||"I'm right here. Ask me anything about this step and I'll walk you through it.";this.save();this.dockRender();this._postSpeak(this.state.taylor_qs[idx].a);};
   this._pending=true;if(ask){ask(v,this.route().p).then(land).catch(()=>land(null));}else{land(null);}},
+ _tayOpen:true, /* TAYLOR panel sits on top of the rail and is open by default; the briefcase is the collapsible bar below it */
  dockSync(r){const d=document.getElementById('tdock');if(!d)return;
   const hide=!this.state.user||["welcome","account","fireside"].includes(r.p);
   d.style.display=hide?"none":"block";if(hide)this.dockClose();if(this._tayOpen)this.sideRender();},
