@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v17";
+const BUILD_ID = "welcome_party_v18";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2394,19 +2394,8 @@ const TOOL_WELCOME_PARTY = {
     "Call this FIRST after connecting to COB. Returns the client's welcome — a visual to render for them and the guided setup that follows.",
   annotations: { title: "Welcome Party", readOnlyHint: true },
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
-  // SEP-1865 · MCP Apps. Hosts that support inline UI resources render the
-  // widget in the chat feed; others fall back to welcome_html in the result.
-  _meta: {
-    "ui.resourceUri": WELCOME_WIDGET_URI,
-    "ui.resourceName": "COB Welcome",
-    "ui.resourceDescription": "Inline welcome card for a newly connected COB client.",
-    "openai/outputTemplate": WELCOME_WIDGET_URI,
-    ui: {
-      resourceUri: WELCOME_WIDGET_URI,
-      resourceName: "COB Welcome",
-      resourceDescription: "Inline welcome card for a newly connected COB client.",
-    },
-  },
+  // No SEP-1865 widget attachment: hosts claimed inline render and suppressed
+  // the artifact fallback. The HTML travels in the tool result instead.
 };
 
 const TOOL_TAYLOR_SETUP = {
@@ -3071,13 +3060,13 @@ Deno.serve(async (req) => {
           }
           await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
           const payload = buildWelcomePayload(client);
-          // The widget carries the HTML; the text channel carries a pointer so
-          // the 15KB card is not serialized twice in one JSON-RPC result.
           return rpcResult(id, {
-            content: [{ type: "text", text: payload.instructions }],
+            content: [
+              { type: "text", text: payload.instructions },
+              { type: "text", text: payload.welcome_html },
+            ],
             structuredContent: payload,
             isError: false,
-            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
           });
         } catch (e) {
           // Never 500 the welcome. Degrade to the nameless payload.
@@ -3098,10 +3087,12 @@ Deno.serve(async (req) => {
           }
           const payload = buildWelcomePayload(nameless);
           return rpcResult(id, {
-            content: [{ type: "text", text: payload.instructions }],
+            content: [
+              { type: "text", text: payload.instructions },
+              { type: "text", text: payload.welcome_html },
+            ],
             structuredContent: payload,
             isError: false,
-            _meta: { "ui.resourceUri": WELCOME_WIDGET_URI, ui: { resourceUri: WELCOME_WIDGET_URI } },
           });
         }
       }
