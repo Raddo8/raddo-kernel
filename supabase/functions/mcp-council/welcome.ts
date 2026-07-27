@@ -28,6 +28,64 @@ export interface WelcomePayload {
 export const WELCOME_INSTRUCTIONS =
   "Show the client their welcome NOW. If the inline visual card has not rendered in this chat, immediately create an HTML artifact from welcome_html EXACTLY as provided - do not edit, restyle, summarize, or rebuild it. Never describe the card instead of showing it. After the card is visible, greet the client by first name in one warm professional line and ask if they would like TAYLOR to walk them through setup. If they accept in their own words, call taylor_setup and follow its instructions. If they want a different name for their Chief, call set_chief_name with the name they choose.";
 
+export const TAYLOR_SETUP_INSTRUCTIONS =
+  "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings. Ground the fireside in context and what the core four reveal: open by confirming what is already known rather than asking it, and record each substantive answer with record_intake as the client gives it.";
+
+
+const clean = (v: unknown): string | null => {
+  if (typeof v !== "string") return null;
+  const t = v.trim();
+  if (!t) return null;
+  if (/^(null|undefined|none)$/i.test(t)) return null;
+  return t;
+};
+
+export function firstNameOf(principal: unknown): string | null {
+  const p = clean(principal);
+  if (!p) return null;
+  // Principals are sometimes stored as an email address.
+  const base = p.includes("@") ? p.split("@")[0].replace(/[._-]+/g, " ") : p;
+  const word = base.trim().split(/\s+/)[0] ?? "";
+  const w = word.replace(/[^\p{L}\p{N}'’-]/gu, "");
+  if (w.length < 2) return null;
+  return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+}
+
+export function normalizeClient(row: {
+  display_name?: unknown;
+  cob_name?: unknown;
+  principal?: unknown;
+} | null): WelcomeClient {
+  if (!row) return { display_name: null, cob_name: null, first_name: null };
+  return {
+    display_name: clean(row.display_name),
+    cob_name: clean(row.cob_name),
+    first_name: firstNameOf(row.principal),
+  };
+}
+
+const esc = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
+export const WELCOME_STEPS: WelcomeStep[] = [
+  {
+    step: 1,
+    title: "Meet TAYLOR · your setup guide.",
+    done_when: "You have said how you would like to be addressed and confirmed your Chief's name.",
+  },
+  {
+    step: 2,
+    title: "Connect your world — email, calendar, files.",
+    done_when: "You have switched on your email, calendar and file connectors in your own settings.",
+  },
+  {
+    step: 3,
+    title: "Say /begin — your Chief reports for duty.",
+    done_when: "You have typed /begin and your Chief has opened its first session with you.",
+  },
+];
+
 export function buildWelcomeHtml(client: WelcomeClient): string {
   const greeting = client.first_name
     ? `WELCOME, ${esc(client.first_name.toUpperCase())}.`
