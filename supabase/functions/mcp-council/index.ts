@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v18";
+const BUILD_ID = "welcome_party_v19";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2626,7 +2626,6 @@ function rpcError(id: any, code: number, message: string, status = 200): Respons
       jsonrpc: "2.0",
       id: id ?? null,
       error: { code, message },
-      build_id: BUILD_ID,
     }),
     {
       status,
@@ -2636,9 +2635,9 @@ function rpcError(id: any, code: number, message: string, status = 200): Respons
 }
 
 function rpcResult(id: any, result: any): Response {
-  // Non-destructive: stamp build_id alongside result without mutating shape
+  // Envelope must contain ONLY jsonrpc/id/result · SDK schema rejects extra keys.
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID }),
+    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result }),
     {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
@@ -2679,10 +2678,10 @@ function rpcStreamingResult(
       const hb = setInterval(() => notify("working"), 10_000);
       try {
         const result = await work(notify);
-        write({ jsonrpc: "2.0", id: id ?? null, result, build_id: BUILD_ID });
+        write({ jsonrpc: "2.0", id: id ?? null, result });
       } catch (e) {
         const { code, message } = toRpc(e);
-        write({ jsonrpc: "2.0", id: id ?? null, error: { code, message }, build_id: BUILD_ID });
+        write({ jsonrpc: "2.0", id: id ?? null, error: { code, message } });
       } finally {
         clearInterval(hb);
         closed = true;
