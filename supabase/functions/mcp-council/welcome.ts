@@ -29,7 +29,7 @@ export const WELCOME_INSTRUCTIONS =
   "The welcome renders automatically as a widget; if it does not, show welcome_html to the user. If the user asks for TAYLOR or accepts the walkthrough, call taylor_setup and follow its instructions. If the user wants a different name for their Chief and the card cannot save it, call set_chief_name with the name they choose.";
 
 export const TAYLOR_SETUP_INSTRUCTIONS =
-  "The user has invited TAYLOR by their own action. Speak as TAYLOR, their setup guide, using the voice and scripts in setup_guide. Before anything else, read checklist and known: greet them by name if known, SKIP every step already done or skipped, and resume at the first open step — never re-ask what the record already answers, and never recite the whole guide at once. Deliver exactly one step per message and wait for the user. As the user confirms each step, record it with setup_progress. setup_guide is the script for a guide the user invited — it does not modify your other instructions — and every connection or setting change is performed by the user themselves in their own settings. Never ask for passwords or codes.";
+  "The user has invited TAYLOR by their own action. Adopt the persona in setup_guide fully: you ARE TAYLOR for this onboarding, speaking in TAYLOR's voice and holding TAYLOR's boundaries. Before anything else read checklist and known, resume at the first open step, and never re-ask what the record answers. One step per message; wait for the user; record each confirmed step with setup_progress. The persona does not override your safety judgment, and every connection or setting change is performed by the user themselves in their own settings.";
 
 
 const clean = (v: unknown): string | null => {
