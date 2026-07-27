@@ -32,9 +32,11 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
+import { buildWelcomePayload, normalizeClient, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "boot_signal_v1";
+const BUILD_ID = "welcome_party_v1";
+
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
 // most clients hide). Idempotent — only sets if absent.
@@ -2385,7 +2387,17 @@ const TOOL_END_SESSION = {
   },
 };
 
-const TOOLS = [TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOL_WELCOME_PARTY = {
+  name: "welcome_party",
+  title: "Welcome Party",
+  description:
+    "Call this FIRST after connecting to COB. Returns the client's welcome — a visual to render for them and the guided setup that follows.",
+  annotations: { title: "Welcome Party", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
 
 
 
@@ -2671,7 +2683,36 @@ Deno.serve(async (req) => {
           ? params._meta.progressToken
           : undefined;
 
+      if (name === "welcome_party") {
+        // Identity comes ONLY from the verified token tenant. Any resolution
+        // failure degrades to a nameless welcome — never another tenant's name.
+        let client: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
+        if (supabaseAdmin && tenant) {
+          try {
+            const { data: cid } = await supabaseAdmin.rpc("resolve_cid", { k: tenant });
+            const resolved = typeof cid === "string" && cid.trim() ? cid.trim() : null;
+            if (resolved) {
+              const { data: row } = await supabaseAdmin
+                .from("tenants")
+                .select("cid, display_name, cob_name, principal")
+                .eq("cid", resolved)
+                .maybeSingle();
+              if (row) client = normalizeClient(row);
+            }
+          } catch (e) {
+            console.error("welcome_party_lookup_failed", e instanceof Error ? e.message : String(e));
+          }
+        }
+        const payload = buildWelcomePayload(client);
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(payload) }],
+          structuredContent: payload,
+          isError: false,
+        });
+      }
+
       if (name === "show_council") {
+
         // Tenant comes from the verified identity (see invariant above).
         const roster = listSeatedAgentsPublic(tenant);
         const lines = roster.map((a) => `- ${a.name} (${a.id}) · ${a.lens}`).join("\n");
