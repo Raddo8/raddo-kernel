@@ -917,11 +917,9 @@ export function buildWelcomeWidgetHtml(
   // ui/notifications/initialized notification.
   var INIT_ID = "cob-init-1";
   var initDone = false;
-  var initTimer = null;
   function sendInitialized() {
     if (initDone) return;
     initDone = true;
-    if (initTimer) { clearTimeout(initTimer); initTimer = null; }
     try {
       window.parent.postMessage(
         { jsonrpc: "2.0", method: "ui/notifications/initialized", params: {} },
@@ -964,8 +962,8 @@ export function buildWelcomeWidgetHtml(
       "*"
     );
   } catch (e) {}
-  // Safety net · never leave the card inert if the host stays silent.
-  initTimer = setTimeout(sendInitialized, 2000);
+  // Legacy hosts expect the notification immediately on load.
+  sendInitialized();
 
 })();
 
