@@ -355,7 +355,18 @@ export function buildTaylorSetupPayload(
 // three identity slots, degrading to a nameless welcome when null.
 export const WELCOME_WIDGET_URI = "ui://cob/welcome";
 
-export function buildWelcomeWidgetHtml(): string {
+export function buildWelcomeWidgetHtml(
+  client: WelcomeClient = { display_name: null, cob_name: null, first_name: null },
+): string {
+  // Server-side personalization: baked into the markup so the card is correct
+  // even when the host never delivers the tool-result notification.
+  const bakedGreeting = client.first_name
+    ? `WELCOME, ${esc(client.first_name.toUpperCase())}.`
+    : "WELCOME.";
+  const bakedSub = client.display_name
+    ? `${esc(client.display_name)} · your headquarters is being prepared.`
+    : "Your headquarters is being prepared.";
+  const bakedChief = esc(client.cob_name ?? "Your Chief");
   const tiles = WELCOME_STEPS.map((s) => `
         <li class="tile">
           <span class="num">${s.step}</span>
