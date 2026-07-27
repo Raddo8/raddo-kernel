@@ -2787,11 +2787,14 @@ Deno.serve(async (req) => {
       if (uri !== WELCOME_WIDGET_URI) {
         return rpcError(id, -32002, "resource_not_found");
       }
+      // Personalize server-side from the verified token tenant, so the card
+      // is correct even if the host never sends the tool-result notification.
+      const { client: widgetClient } = await resolveWelcomeClient(tenant);
       return rpcResult(id, {
         contents: [{
           uri: WELCOME_WIDGET_URI,
           mimeType: "text/html",
-          text: buildWelcomeWidgetHtml(),
+          text: buildWelcomeWidgetHtml(widgetClient),
         }],
       });
     }
