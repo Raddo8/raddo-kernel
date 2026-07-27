@@ -500,9 +500,19 @@ export function buildWelcomeWidgetHtml(): string {
       <p class="sub" id="sub">Your headquarters is being prepared.</p>
       <div class="chiefcard">
         <p class="eyebrow">YOUR CHIEF</p>
-        <p class="chief" id="chief">Your Chief</p>
-        <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+        <div id="namedisplay">
+          <p class="chief" id="chief">Your Chief</p>
+          <p class="chief-line">Named by you. Loyal to you. Briefed on your business.</p>
+          <button id="rename" type="button">CHANGE THE NAME</button>
+        </div>
+        <div id="nameedit">
+          <input id="nameinput" type="text" maxlength="40" aria-label="Name your Chief" />
+          <button id="savename" type="button">SAVE</button>
+          <button id="keepname" type="button">Keep it</button>
+        </div>
+        <p id="nameerr"></p>
       </div>
+      <p class="chief-later">Don't worry — you can change this later in your HQ.</p>
       <ul class="steps">${tiles}
       </ul>
       <div class="consent">
