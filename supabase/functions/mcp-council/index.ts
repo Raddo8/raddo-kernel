@@ -35,7 +35,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "welcome_party_v16";
+const BUILD_ID = "welcome_party_v17";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
