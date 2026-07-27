@@ -422,7 +422,7 @@ export function buildWelcomeWidgetHtml(
     -webkit-mask-image: radial-gradient(circle at 50% 35%, #000 0%, transparent 80%);
   }
   .inner { position: relative; text-align: center; }
-  .mark { display: block; margin: 0 auto 10px; width: 44px; height: 44px; }
+  .mark { display: block; margin: 0 auto 10px; width: 44px; height: auto; }
   .wordmark {
     font-family: var(--mono);
     font-size: 10px; letter-spacing: 0.3em; color: var(--brass-deep);
