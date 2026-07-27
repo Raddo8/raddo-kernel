@@ -42,6 +42,19 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
   };
 
   const handleSso = async (provider: SsoProvider) => {
+    if (provider === "google") {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin + landing,
+      });
+      if (result.error) {
+        toast.error(result.error.message || "Google sign-in failed");
+        return;
+      }
+      if (result.redirected) return;
+      navigate(landing);
+      return;
+    }
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: window.location.origin + landing },
@@ -56,6 +69,7 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
       );
     }
   };
+
 
 
   return (
