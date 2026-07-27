@@ -2006,6 +2006,41 @@ export type Database = {
           },
         ]
       }
+      onboarding_progress: {
+        Row: {
+          cid: string
+          detail: string | null
+          source: string
+          status: string
+          step_key: string
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          detail?: string | null
+          source: string
+          status?: string
+          step_key: string
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          detail?: string | null
+          source?: string
+          status?: string
+          step_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       onboarding_state: {
         Row: {
           email: string | null

@@ -674,7 +674,7 @@ const COB={
   r.start();},
   mic(btn,key){this.micTo(btn,'inp-'+key,v=>{this.state.answers[key]=v;this.save();});},
  onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
- copyConnUrl(){try{navigator.clipboard.writeText("https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway").then(()=>this.toast("Connector address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
+ copyConnUrl(){try{navigator.clipboard.writeText("https://mcp.chiefofbusiness.ai/").then(()=>this.toast("Address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
  copyWelcomeMsg(){try{navigator.clipboard.writeText("Hello \u2014 I've just connected Chief of Business. Please open my COB welcome and show it to me.").then(()=>this.toast("Welcome message copied."))}catch(e){this.toast("Copy failed. Select and copy the message by hand.")}},
  copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
  /* ---- router ---- */
@@ -1178,35 +1178,35 @@ const COB={
   </div>`;
   return `<div class="q-wrap" style="max-width:760px">${this.backbar("the first connection")}
   <p class="kicker">onboarding 03 · the first connection</p><h1>The <span class="brass-u">first connection</span>.</h1>
-  <p style="margin-top:14px"><b style="color:var(--ink)">TAYLOR meets you inside Claude, and your record starts filling itself.</b></p>
-  ${(this.state.connectors||{}).cob==="done"?`
-  <div class="card" style="border-left:3px solid var(--ok)">
-   <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you in claude</p>
-   <p style="margin:0">You're connected. If you haven't met TAYLOR yet, paste the welcome message from step 6 into any Claude chat.</p>
-   <p class="hintline" style="margin:8px 0 0">on your confirmation${this.state.connectedAt?` · ${new Date(this.state.connectedAt).toLocaleString()}`:""} · verify it live below</p>
-   <div class="q-actions" style="margin-top:12px">
-    <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
-    <button class="btn-ghost" onclick="COB.connDisconnect()">Disconnect</button>
-   </div>
-   <div id="conncheck"></div>
-  </div>`:`
-  <div class="card" style="border-left:3px solid var(--brass)">
-   <div class="steps-c">
-    <div class="stc ${(this.state.checks||{}).conn1?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn1')"><span class="stn">${(this.state.checks||{}).conn1?"✓":"1"}</span><span><b>Open Claude's connector settings.</b> Use the button below; a new tab opens. If Claude asks you to sign in, sign in to your Claude account first, then come back to that tab.</span></div>
-    <div class="stc ${(this.state.checks||{}).conn2?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn2')"><span class="stn">${(this.state.checks||{}).conn2?"✓":"2"}</span><span><b>Find "Add custom connector."</b> On the settings page, scroll to the Connectors section and click <b>Add custom connector</b>.</span></div>
-    <div class="stc ${(this.state.checks||{}).conn3?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn3')"><span class="stn">${(this.state.checks||{}).conn3?"✓":"3"}</span><span><b>Fill in the top two boxes.</b> Name: <b>COB</b>. URL: the connector address below. Copy it with one click (do not fill in the bottom two boxes):</span></div>
-   </div>
-   <div class="copybox" style="margin-top:10px;font-size:16px;text-align:center;padding:20px 16px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button><div style="padding-top:6px">https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway</div></div>
-   <p class="hintline" style="margin:8px 0 0">The address looks technical today. It works; a friendlier one is coming.</p>
-   <div class="steps-c" style="margin-top:10px">
-    <div class="stc ${(this.state.checks||{}).conn4?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn4')"><span class="stn">${(this.state.checks||{}).conn4?"✓":"4"}</span><span><b>Click Add, then Connect.</b> A card appears reading <b>COB · Chief of Business</b> with our mark. Click <b>Connect</b> on it.</span></div>
-    <div class="stc ${(this.state.checks||{}).conn5?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn5')"><span class="stn">${(this.state.checks||{}).conn5?"✓":"5"}</span><span><b>Sign in and allow.</b> Our sign-in page opens: use the same email and password you created here. Then click <b>Allow</b> on the authorization screen. That is you granting Claude the key to your COB, and only yours.</span></div>
-    <div class="stc ${(this.state.checks||{}).conn6?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn6')"><span class="stn">${(this.state.checks||{}).conn6?"✓":"6"}</span><span><b>Start the welcome.</b> Copy this, open any Claude chat, paste it, and send. A navy and brass welcome card with our mark will appear right in the chat · that is your COB answering.</span></div>
-   </div>
-   <div class="copybox" style="margin-top:10px;font-size:15px;padding:18px 16px"><button class="copybtn" onclick="event.stopPropagation();COB.copyWelcomeMsg()">Copy message</button><div style="padding-top:6px">Hello — I've just connected Chief of Business. Please open my COB welcome and show it to me.</div></div>
-   <div class="steps-c" style="margin-top:10px">
-    <div class="stc ${(this.state.checks||{}).conn7?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn7')"><span class="stn">${(this.state.checks||{}).conn7?"✓":"7"}</span><span><b>Meet TAYLOR.</b> On the welcome card, press the brass button · <b>MEET TAYLOR · BEGIN MY SETUP</b>. TAYLOR walks you through the rest, one step at a time, and you approve each step yourself. When you're done there, come back here and press <b>I'm connected</b>.</span></div>
-   </div>
+   <p style="margin-top:14px"><b style="color:var(--ink)">Your Chief lives inside Claude. These seven steps introduce you. It takes about five minutes.</b></p>
+   ${(this.state.connectors||{}).cob==="done"?`
+   <div class="card" style="border-left:3px solid var(--ok)">
+    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you in claude</p>
+    <p style="margin:0">You're connected. Haven't met TAYLOR yet? Paste the step 6 message into any Claude chat.</p>
+    <p class="hintline" style="margin:8px 0 0">on your confirmation${this.state.connectedAt?` · ${new Date(this.state.connectedAt).toLocaleString()}`:""} · verify it live below</p>
+    <div class="q-actions" style="margin-top:12px">
+     <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+     <button class="btn-ghost" onclick="COB.connDisconnect()">Disconnect</button>
+    </div>
+    <div id="conncheck"></div>
+   </div>`:`
+   <div class="card" style="border-left:3px solid var(--brass)">
+    <div class="steps-c">
+     <div class="stc ${(this.state.checks||{}).conn1?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn1')"><span class="stn">${(this.state.checks||{}).conn1?"✓":"1"}</span><span><b>Open Claude's settings.</b> Click the button below. A new tab opens. If Claude asks you to sign in, sign in. Then come back to that tab.</span></div>
+     <div class="stc ${(this.state.checks||{}).conn2?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn2')"><span class="stn">${(this.state.checks||{}).conn2?"✓":"2"}</span><span><b>Find the button that says Add custom connector.</b> Scroll down until you see it. Click it.</span></div>
+     <div class="stc ${(this.state.checks||{}).conn3?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn3')"><span class="stn">${(this.state.checks||{}).conn3?"✓":"3"}</span><span><b>Fill in two boxes.</b> In the Name box, type: <b>COB</b>. In the URL box, paste this address (use the copy button · leave the other boxes empty):</span></div>
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:16px;text-align:center;padding:20px 16px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button><div style="padding-top:6px">https://mcp.chiefofbusiness.ai/</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     <div class="stc ${(this.state.checks||{}).conn4?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn4')"><span class="stn">${(this.state.checks||{}).conn4?"✓":"4"}</span><span><b>Click Add, then Connect.</b> A card appears that says <b>COB · Chief of Business</b>, with our gold mark. Click <b>Connect</b> on it.</span></div>
+     <div class="stc ${(this.state.checks||{}).conn5?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn5')"><span class="stn">${(this.state.checks||{}).conn5?"✓":"5"}</span><span><b>Sign in and press Allow.</b> A COB sign-in page opens. Sign in. Then press <b>Allow</b>. That hands Claude the key to YOUR Chief · yours and nobody else's.</span></div>
+     <div class="stc ${(this.state.checks||{}).conn6?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn6')"><span class="stn">${(this.state.checks||{}).conn6?"✓":"6"}</span><span><b>Send your first message.</b> Copy the message below. Open any Claude chat. Paste it and hit send. A navy-and-gold welcome card will appear right in the chat. That's your Chief saying hello.</span></div>
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:15px;padding:18px 16px"><button class="copybtn" onclick="event.stopPropagation();COB.copyWelcomeMsg()">Copy message</button><div style="padding-top:6px">Hello — I've just connected Chief of Business. Please open my COB welcome and show it to me.</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     <div class="stc ${(this.state.checks||{}).conn7?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn7')"><span class="stn">${(this.state.checks||{}).conn7?"✓":"7"}</span><span><b>Press the gold button.</b> On the welcome card, press <b>MEET TAYLOR · BEGIN MY SETUP</b>. TAYLOR helps you finish, one step at a time. You say yes or no to each step. When TAYLOR is done, come back here and press <b>I'm connected</b>.</span></div>
+    </div>
+
    <p class="hintline" style="margin:10px 0 0">using ChatGPT instead? its connector home is <a href="https://chatgpt.com/plugins" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" style="color:var(--brass-deep)">chatgpt.com/plugins</a></p>
    <div class="q-actions" style="margin-top:14px">
     <a class="btn" href="https://claude.ai/new#settings/customize-connectors" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Open Claude connectors</a>
@@ -1253,7 +1253,7 @@ const COB={
   this.provPrep(id);const w=window.open(u,"_blank","noopener");if(!w)this.toast("Your browser blocked the tab. Click the tab again, or allow pop-ups.");},
  connCheck(){const el=document.getElementById('conncheck');if(!el)return;
   const bf=this.state.briefcase||[];const fc=bf.find(d=>d&&d.title==="FIRST_CONVERSATION");
-  el.innerHTML=(fc&&fc.facts)?'<div class="notice" style="margin-top:10px"><b>Live.</b> '+fc.facts+' fact'+(fc.facts===1?'':'s')+' have streamed from your Claude conversations into the briefcase. The wire is carrying.</div>':'<div class="notice" style="margin-top:10px"><b>Recorded, not yet proven.</b> Your connection is on record from your confirmation. If the welcome card appeared in Claude, you are connected. If it didn\'t, remove Chief of Business under Claude\'s Settings &gt; Connectors and connect again from step 1.</div>';},
+  el.innerHTML=(fc&&fc.facts)?'<div class="notice" style="margin-top:10px"><b>Live.</b> '+fc.facts+' fact'+(fc.facts===1?'':'s')+' have streamed from your Claude conversations into the briefcase. The wire is carrying.</div>':'<div class="notice" style="margin-top:10px"><b>Recorded, not yet proven.</b> You told us you\'re connected. Did the welcome card show up in Claude? Then you\'re set. No card? In Claude, go to Settings, then Connectors, remove Chief of Business, and start again from step 1. It happens · no harm done.</div>';},
  connDisconnect(){this.state.connectors=this.state.connectors||{};this.state.connectors.cob=null;this.state.claude=null;this.state.connectedAt=null;this.save();
   this.toast("Disconnected on this record. To revoke inside Claude too: Settings, Connectors, remove Chief of Business.");this.render();},
  parseDeliverable(t){t=(t||"").trim();if(t.length<40)return null;
