@@ -104,10 +104,12 @@ export async function loadSurface(surfaceKey: SurfaceKey): Promise<SurfaceResult
     return { url: null, version: pin.data.version, error: "no-version" };
   }
 
+  // Scoped for the same reason as the pin read above: an unscoped tenants read
+  // would inject another client's identity into the rendered document.
   const tenant = await supabase
     .from("tenants")
     .select("cid, cob_name")
-    .limit(1)
+    .eq("cid", cid)
     .maybeSingle();
 
   const operator = await supabase.rpc("is_cob_operator");
