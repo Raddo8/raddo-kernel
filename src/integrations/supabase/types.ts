@@ -4185,6 +4185,41 @@ export type Database = {
           total: number
         }[]
       }
+      bridge_claim_next: {
+        Args: never
+        Returns: {
+          attempt_count: number
+          channel_id: string
+          cid: string
+          claimed_at: string | null
+          event_id: string
+          event_type: string
+          id: string
+          last_error: string | null
+          message_ts: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          slack_user_id: string | null
+          status: string
+          target_agent: string | null
+          team_id: string
+          thread_ts: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "bridge_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      bridge_reap_stale_claims: {
+        Args: never
+        Returns: {
+          dead: number
+          requeued: number
+        }[]
+      }
       bringup_state: {
         Args: { p_tenant: string }
         Returns: {
