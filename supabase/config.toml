@@ -79,3 +79,6 @@ verify_jwt = true
 [functions.slack-bridge-events]
 verify_jwt = false
 
+[functions.slack-bridge-worker]
+verify_jwt = false
+
