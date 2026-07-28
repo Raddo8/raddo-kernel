@@ -77,9 +77,9 @@ function injectBootstrap(
  * otherwise block the document's own JavaScript.
  */
 export async function loadSurface(surfaceKey: SurfaceKey): Promise<SurfaceResult> {
-  // Operators can see every tenant's pin row (sp_operator policy), so the pin
-  // read must be scoped to the caller's own cid or .maybeSingle() trips on
-  // multiplicity.
+  // Every read in this function must be constrained by the effective tenant:
+  // operator RLS grants full cross-tenant visibility, so an unscoped read
+  // silently selects the wrong tenant (or trips .maybeSingle() on multiplicity).
   const cidRes = await supabase.rpc("current_cid");
   const cid = cidRes.error ? null : (cidRes.data as string | null);
   if (!cid) return { url: null, version: null, error: "no-pin" };
@@ -104,10 +104,12 @@ export async function loadSurface(surfaceKey: SurfaceKey): Promise<SurfaceResult
     return { url: null, version: pin.data.version, error: "no-version" };
   }
 
+  // Scoped for the same reason as the pin read above: an unscoped tenants read
+  // would inject another client's identity into the rendered document.
   const tenant = await supabase
     .from("tenants")
     .select("cid, cob_name")
-    .limit(1)
+    .eq("cid", cid)
     .maybeSingle();
 
   const operator = await supabase.rpc("is_cob_operator");
