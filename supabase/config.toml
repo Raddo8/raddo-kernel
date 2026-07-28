@@ -75,3 +75,7 @@ verify_jwt = true
 
 [functions.deepgram-token]
 verify_jwt = true
+
+[functions.slack-bridge-events]
+verify_jwt = false
+
