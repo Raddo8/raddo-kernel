@@ -496,6 +496,66 @@ export type Database = {
         }
         Relationships: []
       }
+      bridge_events: {
+        Row: {
+          attempt_count: number
+          channel_id: string
+          cid: string
+          claimed_at: string | null
+          event_id: string
+          event_type: string
+          id: string
+          last_error: string | null
+          message_ts: string
+          payload: Json
+          processed_at: string | null
+          received_at: string
+          slack_user_id: string | null
+          status: string
+          target_agent: string | null
+          team_id: string
+          thread_ts: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          channel_id: string
+          cid?: string
+          claimed_at?: string | null
+          event_id: string
+          event_type: string
+          id?: string
+          last_error?: string | null
+          message_ts: string
+          payload: Json
+          processed_at?: string | null
+          received_at?: string
+          slack_user_id?: string | null
+          status?: string
+          target_agent?: string | null
+          team_id: string
+          thread_ts?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          channel_id?: string
+          cid?: string
+          claimed_at?: string | null
+          event_id?: string
+          event_type?: string
+          id?: string
+          last_error?: string | null
+          message_ts?: string
+          payload?: Json
+          processed_at?: string | null
+          received_at?: string
+          slack_user_id?: string | null
+          status?: string
+          target_agent?: string | null
+          team_id?: string
+          thread_ts?: string | null
+        }
+        Relationships: []
+      }
       build_receipts: {
         Row: {
           build_id: string | null
