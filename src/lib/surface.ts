@@ -77,10 +77,18 @@ function injectBootstrap(
  * otherwise block the document's own JavaScript.
  */
 export async function loadSurface(surfaceKey: SurfaceKey): Promise<SurfaceResult> {
+  // Operators can see every tenant's pin row (sp_operator policy), so the pin
+  // read must be scoped to the caller's own cid or .maybeSingle() trips on
+  // multiplicity.
+  const cidRes = await supabase.rpc("current_cid");
+  const cid = cidRes.error ? null : (cidRes.data as string | null);
+  if (!cid) return { url: null, version: null, error: "no-pin" };
+
   const pin = await supabase
     .from("surface_pin")
     .select("version")
     .eq("surface_key", surfaceKey)
+    .eq("cid", cid)
     .maybeSingle();
 
   if (pin.error || !pin.data?.version) return { url: null, version: null, error: "no-pin" };
