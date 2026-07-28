@@ -430,6 +430,72 @@ export type Database = {
         }
         Relationships: []
       }
+      boot_source_register: {
+        Row: {
+          boot_relationship: string
+          classification_basis: string | null
+          classified_at: string | null
+          classified_by: string | null
+          failure_behavior: string | null
+          first_seen_at: string
+          freshness_proof: string | null
+          notes: string | null
+          plane: string
+          ratified_at: string | null
+          ratified_by: string | null
+          reader: string | null
+          required: boolean | null
+          supersession_role: string | null
+          system_role: string
+          table_name: string
+          tenant_column: string | null
+          watermark_column: string | null
+          writer: string | null
+        }
+        Insert: {
+          boot_relationship?: string
+          classification_basis?: string | null
+          classified_at?: string | null
+          classified_by?: string | null
+          failure_behavior?: string | null
+          first_seen_at?: string
+          freshness_proof?: string | null
+          notes?: string | null
+          plane?: string
+          ratified_at?: string | null
+          ratified_by?: string | null
+          reader?: string | null
+          required?: boolean | null
+          supersession_role?: string | null
+          system_role?: string
+          table_name: string
+          tenant_column?: string | null
+          watermark_column?: string | null
+          writer?: string | null
+        }
+        Update: {
+          boot_relationship?: string
+          classification_basis?: string | null
+          classified_at?: string | null
+          classified_by?: string | null
+          failure_behavior?: string | null
+          first_seen_at?: string
+          freshness_proof?: string | null
+          notes?: string | null
+          plane?: string
+          ratified_at?: string | null
+          ratified_by?: string | null
+          reader?: string | null
+          required?: boolean | null
+          supersession_role?: string | null
+          system_role?: string
+          table_name?: string
+          tenant_column?: string | null
+          watermark_column?: string | null
+          writer?: string | null
+        }
+        Relationships: []
+      }
       build_receipts: {
         Row: {
           build_id: string | null
@@ -3171,6 +3237,7 @@ export type Database = {
           category: string
           changelog: string | null
           created_at: string
+          distribution_status: string
           id: string
           name: string
           scope: string
@@ -3184,6 +3251,7 @@ export type Database = {
           category: string
           changelog?: string | null
           created_at?: string
+          distribution_status?: string
           id?: string
           name: string
           scope?: string
@@ -3197,6 +3265,7 @@ export type Database = {
           category?: string
           changelog?: string | null
           created_at?: string
+          distribution_status?: string
           id?: string
           name?: string
           scope?: string
@@ -3282,6 +3351,7 @@ export type Database = {
           bytes: number | null
           created_at: string
           encoding: string
+          has_body: boolean | null
           id: number
           published_at: string | null
           reason: string | null
@@ -3296,6 +3366,7 @@ export type Database = {
           bytes?: number | null
           created_at?: string
           encoding?: string
+          has_body?: boolean | null
           id?: number
           published_at?: string | null
           reason?: string | null
@@ -3310,6 +3381,7 @@ export type Database = {
           bytes?: number | null
           created_at?: string
           encoding?: string
+          has_body?: boolean | null
           id?: number
           published_at?: string | null
           reason?: string | null
@@ -3647,6 +3719,66 @@ export type Database = {
           },
         ]
       }
+      tool_catalog: {
+        Row: {
+          circuit: string | null
+          created_at: string
+          degraded_behavior: string | null
+          family: string
+          id: number
+          notes: string | null
+          provenance: string
+          purpose: string
+          reads: string | null
+          status: string
+          surface: string
+          tenant_scoped: boolean
+          tool_key: string
+          updated_at: string
+          verified_at: string | null
+          verified_how: string | null
+          writes: string | null
+        }
+        Insert: {
+          circuit?: string | null
+          created_at?: string
+          degraded_behavior?: string | null
+          family: string
+          id?: number
+          notes?: string | null
+          provenance: string
+          purpose: string
+          reads?: string | null
+          status?: string
+          surface?: string
+          tenant_scoped?: boolean
+          tool_key: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_how?: string | null
+          writes?: string | null
+        }
+        Update: {
+          circuit?: string | null
+          created_at?: string
+          degraded_behavior?: string | null
+          family?: string
+          id?: number
+          notes?: string | null
+          provenance?: string
+          purpose?: string
+          reads?: string | null
+          status?: string
+          surface?: string
+          tenant_scoped?: boolean
+          tool_key?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_how?: string | null
+          writes?: string | null
+        }
+        Relationships: []
+      }
       usage_events: {
         Row: {
           action_id: string
@@ -3898,9 +4030,110 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      assurance_asserted_state_without_substrate: {
+        Row: {
+          asserted_without_substrate: number | null
+          body_col: string | null
+          hash_col: string | null
+          table_name: string | null
+          total: number | null
+          verdict: string | null
+        }
+        Relationships: []
+      }
+      boot_coverage_faults: {
+        Row: {
+          boot_relationship: string | null
+          fault: string | null
+          plane: string | null
+          system_role: string | null
+          table_name: string | null
+          tenant_scoped: boolean | null
+        }
+        Insert: {
+          boot_relationship?: string | null
+          fault?: never
+          plane?: string | null
+          system_role?: string | null
+          table_name?: string | null
+          tenant_scoped?: never
+        }
+        Update: {
+          boot_relationship?: string | null
+          fault?: never
+          plane?: string | null
+          system_role?: string | null
+          table_name?: string | null
+          tenant_scoped?: never
+        }
+        Relationships: []
+      }
+      surface_pin_unrestorable: {
+        Row: {
+          cid: string | null
+          has_body: boolean | null
+          held: boolean | null
+          pinned_at: string | null
+          pinned_by: string | null
+          reason: string | null
+          state: string | null
+          surface_key: string | null
+          version: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      tool_catalog_health: {
+        Row: {
+          degraded_unknown: number | null
+          family: string | null
+          never_verified: number | null
+          own_probed: number | null
+          tools: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      assurance_integrity_scan: {
+        Args: never
+        Returns: {
+          body_col: string
+          contract: string
+          hash_col: string
+          hash_mismatch: number
+          table_name: string
+          total: number
+          verdict: string
+          with_body: number
+        }[]
+      }
+      assurance_substrate_scan: {
+        Args: never
+        Returns: {
+          asserted_without_substrate: number
+          body_col: string
+          hash_col: string
+          table_name: string
+          total: number
+        }[]
+      }
+      bringup_state: {
+        Args: { p_tenant: string }
+        Returns: {
+          evidence: string
+          seq: number
+          stage: string
+          state: string
+        }[]
+      }
       check_rate_limit: {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
