@@ -1609,6 +1609,8 @@ export type Database = {
           effects_catalog_version: string
           error_class: string | null
           id: string
+          identity_candidates: Json | null
+          identity_status: string | null
           notes: Json
           observed_effects: Json
           outcome: string
@@ -1634,6 +1636,8 @@ export type Database = {
           effects_catalog_version: string
           error_class?: string | null
           id?: string
+          identity_candidates?: Json | null
+          identity_status?: string | null
           notes?: Json
           observed_effects?: Json
           outcome: string
@@ -1659,6 +1663,8 @@ export type Database = {
           effects_catalog_version?: string
           error_class?: string | null
           id?: string
+          identity_candidates?: Json | null
+          identity_status?: string | null
           notes?: Json
           observed_effects?: Json
           outcome?: string

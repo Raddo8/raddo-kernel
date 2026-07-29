@@ -12,7 +12,8 @@
 // Receipts carry pointers, counts and outcomes. Never raw business content.
 
 import type { RequestContext } from "./request-context.ts";
-import { declaredEffects, EFFECTS_CATALOG_VERSION, undeclaredEffects, type Effect } from "./tool-effects.ts";
+import type { IdentityResolution } from "./effective-identity.ts";
+import { declaredEffects, EFFECTS_CATALOG_VERSION, isUncatalogued, undeclaredEffects, type Effect } from "./tool-effects.ts";
 
 export type Outcome = "ok" | "error" | "degraded";
 
@@ -24,6 +25,8 @@ export type ExecutionReceiptArgs = {
   error_class?: string | null;
   canonical_refs?: Record<string, unknown> | null;
   notes?: Record<string, unknown> | null;
+  identity_status?: string | null;
+  identity_candidates?: string[] | null;
 };
 
 export async function recordExecutionReceipt(
@@ -36,6 +39,7 @@ export async function recordExecutionReceipt(
     const observed = args.observed_effects ?? [];
     const declared = declaredEffects(args.tool);
     const undeclared = undeclaredEffects(args.tool, observed);
+    const uncatalogued = isUncatalogued(args.tool);
 
     const duration_ms = (() => {
       const d = Date.now() - ctx.started_ms;
@@ -57,11 +61,13 @@ export async function recordExecutionReceipt(
       declared_effects: declared,
       observed_effects: observed,
       undeclared_effects: undeclared,
-      contract_ok: undeclared.length === 0,
+      contract_ok: undeclared.length === 0 && !uncatalogued,
       outcome: args.outcome,
       error_class: args.error_class ?? null,
       canonical_refs: args.canonical_refs ?? {},
       notes: args.notes ?? {},
+      identity_status: args.identity_status ?? null,
+      identity_candidates: args.identity_candidates ?? null,
       started_at: ctx.started_at,
       duration_ms,
     });

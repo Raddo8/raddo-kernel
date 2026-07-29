@@ -28,6 +28,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
+import { resolveEffectiveIdentity, cidOrNull } from "./effective-identity.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
@@ -37,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "pkt0a_receipts_v1";
+const BUILD_ID = "pkt0a_receipts_v2";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -3114,10 +3115,11 @@ Deno.serve(async (req) => {
       if (name === "boot_kernel") {
         try {
           // PKT-0A · request context, built at branch entry so duration is real
+          const pkt0aIdentity = await resolveEffectiveIdentity(supabaseAdmin, tenant);
           const pkt0aCtx = newRequestContext({
             req,
             tenant,
-            cid: await resolveTenantCid(tenant).catch(() => null),
+            cid: cidOrNull(pkt0aIdentity),
             authenticated_sub: identity.sub ?? null,
             auth_mode: authMode,
             surface: "mcp",
@@ -3200,6 +3202,8 @@ Deno.serve(async (req) => {
               outcome: "ok",
               observed_effects: ["identity_read", "telemetry_write"],
               canonical_refs: { kernel_version: kernel.version, parts: rows.length },
+              identity_status: pkt0aIdentity.status,
+              identity_candidates: pkt0aIdentity.status === "AMBIGUOUS" ? pkt0aIdentity.candidates : null,
             });
           } catch (_e) { /* best-effort */ }
           return rpcResult(id, {
