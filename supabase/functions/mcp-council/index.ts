@@ -3202,6 +3202,8 @@ Deno.serve(async (req) => {
               outcome: "ok",
               observed_effects: ["identity_read", "telemetry_write"],
               canonical_refs: { kernel_version: kernel.version, parts: rows.length },
+              identity_status: pkt0aIdentity.status,
+              identity_candidates: pkt0aIdentity.status === "AMBIGUOUS" ? pkt0aIdentity.candidates : null,
             });
           } catch (_e) { /* best-effort */ }
           return rpcResult(id, {
