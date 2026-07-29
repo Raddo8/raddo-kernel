@@ -713,8 +713,9 @@ const COB={
   document.getElementById('progBar').style.width=this.pct()+"%";
   const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",harvest:"the first connection",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
   let crumb=crumbs[r.p]??r.p;
-  if(r.p==="ch"){const c=CHAPTERS[+r.a];crumb=c?c.kicker:"";}
+  if(r.p==="ch"){crumb="fireside chat";}
   document.getElementById('crumb').textContent=crumb;
+  this.acctRender();
   const _ri=this.RES.findIndex(h=>h.split("/")[1]===r.p);
   if(_ri>-1&&_ri>(this.state.reached||0)){this.state.reached=_ri;this.save();}
   if(["reveal","plugin","world","review"].includes(r.p)){this.state.seen=this.state.seen||{};
