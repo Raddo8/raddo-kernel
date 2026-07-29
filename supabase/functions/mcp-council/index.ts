@@ -3115,10 +3115,11 @@ Deno.serve(async (req) => {
       if (name === "boot_kernel") {
         try {
           // PKT-0A · request context, built at branch entry so duration is real
+          const pkt0aIdentity = await resolveEffectiveIdentity(supabaseAdmin, tenant);
           const pkt0aCtx = newRequestContext({
             req,
             tenant,
-            cid: await resolveTenantCid(tenant).catch(() => null),
+            cid: cidOrNull(pkt0aIdentity),
             authenticated_sub: identity.sub ?? null,
             auth_mode: authMode,
             surface: "mcp",
