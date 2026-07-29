@@ -3192,6 +3192,16 @@ Deno.serve(async (req) => {
               fallback_used: fallbackUsed,
             });
           } catch (_e) { /* best-effort */ }
+          // PKT-0A · execution receipt · best-effort, never affects the response
+          try {
+            await recordExecutionReceipt(supabaseAdmin, {
+              ctx: pkt0aCtx,
+              tool: "boot_kernel",
+              outcome: "ok",
+              observed_effects: ["identity_read", "telemetry_write"],
+              canonical_refs: { kernel_version: kernel.version, parts: rows.length },
+            });
+          } catch (_e) { /* best-effort */ }
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
