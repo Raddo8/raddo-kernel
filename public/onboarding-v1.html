@@ -544,6 +544,30 @@ const COB={
   return this.J.map((s,i)=>{const on=cur.split("/")[1]===s[1].split("/")[1];
    const d=this.stepDone(s[1]);const just=d&&!(this._doneSeen||{})[s[1]];if(d){(this._doneSeen=this._doneSeen||{})[s[1]]=1;}
    return `<button class="r-item ${on?"on":""} ${d?"done":""} ${just?"just":""}" onclick="COB.navClose();COB.go('${s[1]}')"><span class="r-n">${d?"✓":i+1}</span><span>${s[0]}</span></button>`;}).join("");},
+ /* One source of order: the side menu (this.J) also produces every header step number.
+    Pages absent from the menu get a label-only kicker rather than an invented number. */
+ stepIndex(hash){const h=String(hash||"").split("/")[1];return this.J.findIndex(s=>s[1].split("/")[1]===h);},
+ stepKicker(hash,fallback){const i=this.stepIndex(hash);
+  if(i<0)return this.esc(fallback||"");
+  return `Step ${i+1} · ${this.esc(this.J[i][0])}`;},
+ acctRender(){const el=document.getElementById('acctBar');if(!el)return;
+  const u=this.state.user;const em=(u&&u.email)||"";
+  if(!em){el.innerHTML="";return;}
+  el.innerHTML=`<span class="who" title="${this.esc(em)}">${this.esc(em)}</span><span class="sep">·</span>
+   <button type="button" onclick="COB.accountExit('out')">Sign out</button>
+   <span class="sep alt">·</span>
+   <button type="button" class="alt" onclick="COB.accountExit('switch')">Use a different account</button>`;},
+ accountExit(mode){const switching=mode==="switch";
+  this.openDrawer(`<p class="kicker">${switching?"use a different account":"sign out"}</p>
+   <h3 style="margin-bottom:8px">${switching?"Sign out and choose another account?":"Sign out of this account?"}</h3>
+   <p style="font-size:14px">Your progress is saved. You can sign back in any time and pick up exactly where you left off.</p>
+   <p style="font-size:14px">You are signed in as <b>${this.esc((this.state.user&&this.state.user.email)||"")}</b>.</p>
+   <div class="q-actions" style="margin-top:18px">
+    <button class="btn" onclick="COB.doSignOut()">${switching?"Sign out and choose account":"Sign out"}</button>
+    <button class="btn-ghost" onclick="COB.closeDrawer()">Stay signed in</button></div>`);},
+ doSignOut(){this.save();this.closeDrawer();this.toast("Signing you out. Your progress is saved.");
+  if(typeof window.COB_SIGNOUT==="function"){window.COB_SIGNOUT();return;}
+  try{(window.top||window).location.href="/signin";}catch(e){window.location.href="/signin";}},
  taylorBox(ctx,big){const id="tq-"+ctx.replace(/[^a-z0-9]/gi,"");
   return `<div class="tay"><div class="t-l">ask taylor · your guide</div>
    ${big?`<textarea id="${id}" placeholder="Ask anything about this step. TAYLOR answers on your dashboard."></textarea>`:`<input type="text" id="${id}" placeholder="Stuck? Ask TAYLOR anything..." onkeydown="if(event.key==='Enter')COB.askTaylor('${ctx}','${id}')">`}
