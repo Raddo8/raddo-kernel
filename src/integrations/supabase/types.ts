@@ -1509,6 +1509,7 @@ export type Database = {
       }
       directives: {
         Row: {
+          cid: string | null
           confirmed_at: string | null
           created_at: string
           id: string
@@ -1520,6 +1521,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          cid?: string | null
           confirmed_at?: string | null
           created_at?: string
           id?: string
@@ -1531,6 +1533,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          cid?: string | null
           confirmed_at?: string | null
           created_at?: string
           id?: string
@@ -3384,6 +3387,7 @@ export type Database = {
       scheduled_actions: {
         Row: {
           blueprint_id: string | null
+          build_spec: string | null
           cadence: string | null
           completed_at: string | null
           created_at: string
@@ -3395,6 +3399,10 @@ export type Database = {
           program: string | null
           run_at: string | null
           seq: number | null
+          spec_accepted_at: string | null
+          spec_accepted_by: string | null
+          spec_author: string | null
+          spec_status: string | null
           status: string
           tenant_id: string
           title: string
@@ -3403,6 +3411,7 @@ export type Database = {
         }
         Insert: {
           blueprint_id?: string | null
+          build_spec?: string | null
           cadence?: string | null
           completed_at?: string | null
           created_at?: string
@@ -3414,6 +3423,10 @@ export type Database = {
           program?: string | null
           run_at?: string | null
           seq?: number | null
+          spec_accepted_at?: string | null
+          spec_accepted_by?: string | null
+          spec_author?: string | null
+          spec_status?: string | null
           status?: string
           tenant_id: string
           title: string
@@ -3422,6 +3435,7 @@ export type Database = {
         }
         Update: {
           blueprint_id?: string | null
+          build_spec?: string | null
           cadence?: string | null
           completed_at?: string | null
           created_at?: string
@@ -3433,6 +3447,10 @@ export type Database = {
           program?: string | null
           run_at?: string | null
           seq?: number | null
+          spec_accepted_at?: string | null
+          spec_accepted_by?: string | null
+          spec_author?: string | null
+          spec_status?: string | null
           status?: string
           tenant_id?: string
           title?: string
@@ -3711,11 +3729,19 @@ export type Database = {
           distribution_status: string
           id: string
           name: string
+          observed_at: string | null
+          observed_body_version: string | null
+          observed_bytes: number | null
+          observed_in_manifest: boolean | null
+          observed_sha256: string | null
+          observed_source: string | null
+          reconciliation_state: string | null
           scope: string
           sha256: string | null
           status: string
           tenant_id: string | null
           version: string
+          version_state: string | null
         }
         Insert: {
           body_md?: string | null
@@ -3725,11 +3751,19 @@ export type Database = {
           distribution_status?: string
           id?: string
           name: string
+          observed_at?: string | null
+          observed_body_version?: string | null
+          observed_bytes?: number | null
+          observed_in_manifest?: boolean | null
+          observed_sha256?: string | null
+          observed_source?: string | null
+          reconciliation_state?: string | null
           scope?: string
           sha256?: string | null
           status?: string
           tenant_id?: string | null
           version: string
+          version_state?: string | null
         }
         Update: {
           body_md?: string | null
@@ -3739,11 +3773,19 @@ export type Database = {
           distribution_status?: string
           id?: string
           name?: string
+          observed_at?: string | null
+          observed_body_version?: string | null
+          observed_bytes?: number | null
+          observed_in_manifest?: boolean | null
+          observed_sha256?: string | null
+          observed_source?: string | null
+          reconciliation_state?: string | null
           scope?: string
           sha256?: string | null
           status?: string
           tenant_id?: string | null
           version?: string
+          version_state?: string | null
         }
         Relationships: []
       }
