@@ -1,18 +1,18 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-interface Membership {
-  cid: string;
+interface Company {
+  key: string;
   role: string;
-  display_name: string | null;
+  name: string;
 }
 
 /**
- * Placeholder for the ambiguous-membership case. It shows what the subject
- * holds; choosing one binds a session context in a later packet.
+ * Shown when one person has access to more than one company. Companies are
+ * listed by name · never by an internal identifier.
  */
 export function SelectWorkspace() {
-  const [rows, setRows] = useState<Membership[] | null>(null);
+  const [rows, setRows] = useState<Company[] | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -24,11 +24,11 @@ export function SelectWorkspace() {
         if (cancelled) return;
         setRows(
           (data ?? []).map((r) => ({
-            cid: r.cid as string,
+            key: r.cid as string,
             role: r.role as string,
-            display_name:
+            name:
               (r as { tenants?: { display_name?: string | null } }).tenants
-                ?.display_name ?? null,
+                ?.display_name ?? "Unnamed company",
           })),
         );
       });
@@ -49,17 +49,18 @@ export function SelectWorkspace() {
             fontWeight: 700,
           }}
         >
-          workspace · selection
+          choose a company
         </p>
         <h1
           className="font-display text-dossier-ink-deep"
           style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
         >
-          More than one workspace
+          You have access to more than one company
         </h1>
         <p className="mt-4 text-sm text-dossier-ash">
-          Your account is active in several workspaces. Selecting one is coming
-          shortly. Until then, contact cob@chiefofbusiness.ai to be routed.
+          Choosing between them here is coming shortly. In the meantime, write to
+          cob@chiefofbusiness.ai and tell us which company you want to open · we
+          will point you straight at it.
         </p>
 
         <ul className="mt-8 space-y-2">
@@ -68,17 +69,27 @@ export function SelectWorkspace() {
           )}
           {rows?.map((r) => (
             <li
-              key={r.cid}
+              key={r.key}
               className="border border-dossier-paper-edge bg-white px-4 py-3"
               style={{ borderRadius: 4 }}
             >
               <span className="text-dossier-ink-deep text-sm font-medium">
-                {r.display_name ?? r.cid}
+                {r.name}
               </span>
-              <span className="ml-2 text-xs text-dossier-ash">{r.role}</span>
             </li>
           ))}
         </ul>
+
+        <button
+          type="button"
+          onClick={async () => {
+            await supabase.auth.signOut();
+            window.location.assign("/signin");
+          }}
+          className="mt-8 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
+        >
+          Sign out · use a different account
+        </button>
       </div>
     </main>
   );

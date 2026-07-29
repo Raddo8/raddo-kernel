@@ -67,7 +67,7 @@ export function ClientReadinessGate({ children }: { children: ReactNode }) {
           className="font-mono uppercase text-dossier-ash"
           style={{ fontSize: 10, letterSpacing: "0.22em" }}
         >
-          opening your workspace…
+          opening your COB…
         </p>
       </main>
     );
@@ -88,22 +88,34 @@ export function ClientReadinessGate({ children }: { children: ReactNode }) {
               fontWeight: 700,
             }}
           >
-            access · {verdict.status.toLowerCase()}
+            access · not active
           </p>
           <h1
             className="font-display text-dossier-ink-deep"
             style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
           >
-            Access is closed
+            This COB is not active right now
           </h1>
           <p className="mt-4 text-sm text-dossier-ash">
-            Your membership is {verdict.status === "REVOKED" ? "revoked" : "suspended"}.
-            Contact cob@chiefofbusiness.ai to have it reviewed.
+            Access for your account has been paused. If you think that is a mistake,
+            write to cob@chiefofbusiness.ai and we will look into it.
           </p>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.assign("/signin");
+            }}
+            className="mt-6 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
+          >
+            Sign out · use a different account
+          </button>
+
         </div>
       </main>
     );
   }
+
 
   return <>{children}</>;
 }
