@@ -1,0 +1,2 @@
+ALTER TABLE public.ritual_runs DROP CONSTRAINT IF EXISTS ritual_runs_outcome_check;
+ALTER TABLE public.ritual_runs ADD CONSTRAINT ritual_runs_outcome_check CHECK (outcome = ANY (ARRAY['ok'::text, 'partial'::text, 'degraded'::text, 'failed'::text]));
