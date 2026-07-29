@@ -39,6 +39,7 @@ export async function recordExecutionReceipt(
     const observed = args.observed_effects ?? [];
     const declared = declaredEffects(args.tool);
     const undeclared = undeclaredEffects(args.tool, observed);
+    const uncatalogued = isUncatalogued(args.tool);
 
     const duration_ms = (() => {
       const d = Date.now() - ctx.started_ms;
