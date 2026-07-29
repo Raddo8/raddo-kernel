@@ -28,6 +28,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
+import { resolveEffectiveIdentity, cidOrNull } from "./effective-identity.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
