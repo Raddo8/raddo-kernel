@@ -54,6 +54,9 @@ import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
 import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
 import StartGate from "@/pages/StartGate";
+import SelectWorkspace from "@/pages/SelectWorkspace";
+import { FleetOperatorGate } from "@/components/FleetOperatorGate";
+import { ClientReadinessGate } from "@/components/ClientReadinessGate";
 import OnboardingAdmin from "@/pages/onboarding/OnboardingAdmin";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
@@ -82,9 +85,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ControlShell() {
   return (
     <AuthGate>
-      <WorkspaceProvider>
-        <AppLayout />
-      </WorkspaceProvider>
+      <FleetOperatorGate>
+        <WorkspaceProvider>
+          <AppLayout />
+        </WorkspaceProvider>
+      </FleetOperatorGate>
     </AuthGate>
   );
 }
@@ -119,10 +124,10 @@ const App = () => (
             <Route path="/reset-password" element={<Navigate to="/signin/reset" replace />} />
 
             {/* Client zone */}
-            <Route path="/hq" element={<AuthGate><HqSurface /></AuthGate>} />
+            <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
 
             {/* Operator zone · index is the full-viewport panel surface */}
-            <Route path="/control" element={<AuthGate><PanelSurface /></AuthGate>} />
+            <Route path="/control" element={<AuthGate><FleetOperatorGate><PanelSurface /></FleetOperatorGate></AuthGate>} />
             <Route path="/panel" element={<Navigate to="/control" replace />} />
 
             <Route path="/control/desk" element={<ControlShell />}>
@@ -176,15 +181,16 @@ const App = () => (
               <Route index element={<SurfacesAdmin />} />
             </Route>
 
-            <Route path="/control/onboarding" element={<AuthGate><OnboardingAdmin /></AuthGate>} />
+            <Route path="/control/onboarding" element={<AuthGate><FleetOperatorGate><OnboardingAdmin /></FleetOperatorGate></AuthGate>} />
 
-            <Route path="/control/brand/dossier" element={<AuthGate><Dossier /></AuthGate>} />
-            <Route path="/control/brand/style" element={<AuthGate><StyleGuide /></AuthGate>} />
+            <Route path="/control/brand/dossier" element={<AuthGate><FleetOperatorGate><Dossier /></FleetOperatorGate></AuthGate>} />
+            <Route path="/control/brand/style" element={<AuthGate><FleetOperatorGate><StyleGuide /></FleetOperatorGate></AuthGate>} />
             <Route path="/dossier" element={<Navigate to="/control/brand/dossier" replace />} />
             <Route path="/style-guide" element={<Navigate to="/control/brand/style" replace />} />
 
             {/* Onboarding */}
             <Route path="/start" element={<AuthGate><StartGate><OnboardingIframe /></StartGate></AuthGate>} />
+            <Route path="/start/select-workspace" element={<AuthGate><SelectWorkspace /></AuthGate>} />
             <Route path="/start/progress" element={<AuthGate><StartGate><OnboardingIframe initialHash="dashboard" /></StartGate></AuthGate>} />
             <Route path="/onboarding" element={<Navigate to="/start" replace />} />
             <Route path="/onboarding/dashboard" element={<Navigate to="/start/progress" replace />} />
