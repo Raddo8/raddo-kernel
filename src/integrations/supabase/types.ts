@@ -16,6 +16,9 @@ export type Database = {
     Tables: {
       access_codes: {
         Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          claimed_email: string | null
           code: string
           created_at: string
           created_by: string | null
@@ -24,10 +27,14 @@ export type Database = {
           issued_to: string | null
           label: string | null
           max_uses: number
+          redemption_policy: string | null
           revoked: boolean
           uses: number
         }
         Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_email?: string | null
           code: string
           created_at?: string
           created_by?: string | null
@@ -36,10 +43,14 @@ export type Database = {
           issued_to?: string | null
           label?: string | null
           max_uses?: number
+          redemption_policy?: string | null
           revoked?: boolean
           uses?: number
         }
         Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          claimed_email?: string | null
           code?: string
           created_at?: string
           created_by?: string | null
@@ -48,6 +59,7 @@ export type Database = {
           issued_to?: string | null
           label?: string | null
           max_uses?: number
+          redemption_policy?: string | null
           revoked?: boolean
           uses?: number
         }
@@ -1683,6 +1695,33 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_operators: {
+        Row: {
+          auth_user_id: string
+          fleet_role: string
+          granted_at: string
+          granted_by: string | null
+          revoked_at: string | null
+          status: string
+        }
+        Insert: {
+          auth_user_id: string
+          fleet_role: string
+          granted_at?: string
+          granted_by?: string | null
+          revoked_at?: string | null
+          status?: string
+        }
+        Update: {
+          auth_user_id?: string
+          fleet_role?: string
+          granted_at?: string
+          granted_by?: string | null
+          revoked_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
@@ -2594,6 +2633,8 @@ export type Database = {
       }
       onboarding_tenants: {
         Row: {
+          bound_at: string | null
+          bound_by: string | null
           cid: string | null
           connectors: Json
           consent_signed_at: string | null
@@ -2601,6 +2642,9 @@ export type Database = {
           created_at: string
           current_step: string
           id: string
+          identity_state: string
+          quarantine_reason: string | null
+          reconciliation_receipt_id: string | null
           state: Json | null
           status: string
           step0_flags: Json
@@ -2609,6 +2653,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          bound_at?: string | null
+          bound_by?: string | null
           cid?: string | null
           connectors?: Json
           consent_signed_at?: string | null
@@ -2616,6 +2662,9 @@ export type Database = {
           created_at?: string
           current_step?: string
           id?: string
+          identity_state?: string
+          quarantine_reason?: string | null
+          reconciliation_receipt_id?: string | null
           state?: Json | null
           status?: string
           step0_flags?: Json
@@ -2624,6 +2673,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          bound_at?: string | null
+          bound_by?: string | null
           cid?: string | null
           connectors?: Json
           consent_signed_at?: string | null
@@ -2631,6 +2682,9 @@ export type Database = {
           created_at?: string
           current_step?: string
           id?: string
+          identity_state?: string
+          quarantine_reason?: string | null
+          reconciliation_receipt_id?: string | null
           state?: Json | null
           status?: string
           step0_flags?: Json
@@ -2645,6 +2699,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "ot_membership_fk"
+            columns: ["user_id", "cid"]
+            isOneToOne: false
+            referencedRelation: "tenant_members"
+            referencedColumns: ["auth_user_id", "cid"]
           },
         ]
       }
@@ -3393,6 +3454,8 @@ export type Database = {
           created_at: string
           detail: string | null
           fired_at: string | null
+          gates_passed: number | null
+          gates_total: number | null
           id: string
           outcome: string | null
           owner: string
@@ -3417,6 +3480,8 @@ export type Database = {
           created_at?: string
           detail?: string | null
           fired_at?: string | null
+          gates_passed?: number | null
+          gates_total?: number | null
           id?: string
           outcome?: string | null
           owner?: string
@@ -3441,6 +3506,8 @@ export type Database = {
           created_at?: string
           detail?: string | null
           fired_at?: string | null
+          gates_passed?: number | null
+          gates_total?: number | null
           id?: string
           outcome?: string | null
           owner?: string
@@ -3946,6 +4013,42 @@ export type Database = {
           },
         ]
       }
+      taylor_turn_receipts: {
+        Row: {
+          auth_user_id: string
+          cid: string
+          client_request_id: string
+          created_at: string
+          fact_id: string | null
+          onboarding_id: string
+          outcome: string
+          question_id: string | null
+          receipt_id: string
+        }
+        Insert: {
+          auth_user_id: string
+          cid: string
+          client_request_id: string
+          created_at?: string
+          fact_id?: string | null
+          onboarding_id: string
+          outcome: string
+          question_id?: string | null
+          receipt_id?: string
+        }
+        Update: {
+          auth_user_id?: string
+          cid?: string
+          client_request_id?: string
+          created_at?: string
+          fact_id?: string | null
+          onboarding_id?: string
+          outcome?: string
+          question_id?: string | null
+          receipt_id?: string
+        }
+        Relationships: []
+      }
       templates: {
         Row: {
           body: string
@@ -4030,19 +4133,43 @@ export type Database = {
           auth_user_id: string
           cid: string
           created_at: string
+          granted_at: string | null
+          granted_by: string | null
+          provenance_ref: string | null
+          provenance_type: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
           role: string
+          status: string
         }
         Insert: {
           auth_user_id: string
           cid: string
           created_at?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          provenance_ref?: string | null
+          provenance_type?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
           role?: string
+          status?: string
         }
         Update: {
           auth_user_id?: string
           cid?: string
           created_at?: string
+          granted_at?: string | null
+          granted_by?: string | null
+          provenance_ref?: string | null
+          provenance_type?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
           role?: string
+          status?: string
         }
         Relationships: [
           {
@@ -4089,6 +4216,44 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      tenant_session_context: {
+        Row: {
+          auth_user_id: string
+          cid: string
+          established_at: string
+          expires_at: string | null
+          revoked_at: string | null
+          session_id: string
+          source: string
+        }
+        Insert: {
+          auth_user_id: string
+          cid: string
+          established_at?: string
+          expires_at?: string | null
+          revoked_at?: string | null
+          session_id: string
+          source?: string
+        }
+        Update: {
+          auth_user_id?: string
+          cid?: string
+          established_at?: string
+          expires_at?: string | null
+          revoked_at?: string | null
+          session_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tsc_membership_fk"
+            columns: ["auth_user_id", "cid"]
+            isOneToOne: false
+            referencedRelation: "tenant_members"
+            referencedColumns: ["auth_user_id", "cid"]
+          },
+        ]
       }
       tenant_surfaces: {
         Row: {
@@ -4696,6 +4861,7 @@ export type Database = {
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       is_cob_operator: { Args: never; Returns: boolean }
+      is_fleet_operator: { Args: never; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
@@ -4727,14 +4893,35 @@ export type Database = {
         }
         Returns: string
       }
+      mint_tenant_v1_archived: { Args: never; Returns: string }
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      record_taylor_turn: {
+        Args: {
+          p_answer: string
+          p_client_request_id: string
+          p_fact?: string
+          p_fact_section?: string
+          p_question_id?: string
+          p_session_id?: string
+        }
+        Returns: Json
+      }
       redeem_access_code: {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
       }
       resolve_cid: { Args: { k: string }; Returns: string }
+      resolve_tenant_context: {
+        Args: { p_session_id?: string }
+        Returns: {
+          out_cid: string
+          out_role: string
+          out_source: string
+          out_status: string
+        }[]
+      }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
