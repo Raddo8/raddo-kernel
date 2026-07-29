@@ -61,6 +61,9 @@ Deno.serve(async (req) => {
     if (!question && history.length === 0) {
       return new Response(JSON.stringify({ error: 'question required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+    if (client_request_id.length < 8) {
+      return new Response(JSON.stringify({ error: 'client_request_id required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     const key = Deno.env.get('ANTHROPIC_API_KEY')
     if (!key) {
