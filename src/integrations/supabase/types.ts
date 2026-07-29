@@ -1593,6 +1593,84 @@ export type Database = {
           },
         ]
       }
+      execution_receipts: {
+        Row: {
+          auth_mode: string | null
+          authenticated_sub: string | null
+          build_id: string | null
+          canonical_refs: Json
+          cid: string | null
+          contract_ok: boolean
+          contract_version: string
+          correlation_id: string
+          created_at: string
+          declared_effects: Json
+          duration_ms: number | null
+          effects_catalog_version: string
+          error_class: string | null
+          id: string
+          notes: Json
+          observed_effects: Json
+          outcome: string
+          request_id: string
+          started_at: string | null
+          surface: string | null
+          tenant_display: string | null
+          tool: string
+          undeclared_effects: Json
+        }
+        Insert: {
+          auth_mode?: string | null
+          authenticated_sub?: string | null
+          build_id?: string | null
+          canonical_refs?: Json
+          cid?: string | null
+          contract_ok?: boolean
+          contract_version: string
+          correlation_id: string
+          created_at?: string
+          declared_effects?: Json
+          duration_ms?: number | null
+          effects_catalog_version: string
+          error_class?: string | null
+          id?: string
+          notes?: Json
+          observed_effects?: Json
+          outcome: string
+          request_id: string
+          started_at?: string | null
+          surface?: string | null
+          tenant_display?: string | null
+          tool: string
+          undeclared_effects?: Json
+        }
+        Update: {
+          auth_mode?: string | null
+          authenticated_sub?: string | null
+          build_id?: string | null
+          canonical_refs?: Json
+          cid?: string | null
+          contract_ok?: boolean
+          contract_version?: string
+          correlation_id?: string
+          created_at?: string
+          declared_effects?: Json
+          duration_ms?: number | null
+          effects_catalog_version?: string
+          error_class?: string | null
+          id?: string
+          notes?: Json
+          observed_effects?: Json
+          outcome?: string
+          request_id?: string
+          started_at?: string | null
+          surface?: string | null
+          tenant_display?: string | null
+          tool?: string
+          undeclared_effects?: Json
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           created_at: string
