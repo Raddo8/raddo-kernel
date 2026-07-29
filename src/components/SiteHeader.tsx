@@ -8,6 +8,7 @@ import cobLogo from "@/assets/cob-logo.png.asset.json";
 const NAV_LINKS: { label: string; href: string }[] = [
   { label: "Home", href: "/" },
   { label: "Consult", href: "/consult" },
+  { label: "Client Sign In", href: "/signin" },
 ];
 
 const EASE = [0.22, 1, 0.36, 1] as const;
