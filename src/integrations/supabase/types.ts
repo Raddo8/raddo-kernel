@@ -1619,6 +1619,7 @@ export type Database = {
           surface: string | null
           tenant_display: string | null
           tool: string
+          tool_catalogued: boolean
           undeclared_effects: Json
         }
         Insert: {
@@ -1646,6 +1647,7 @@ export type Database = {
           surface?: string | null
           tenant_display?: string | null
           tool: string
+          tool_catalogued?: boolean
           undeclared_effects?: Json
         }
         Update: {
@@ -1673,6 +1675,7 @@ export type Database = {
           surface?: string | null
           tenant_display?: string | null
           tool?: string
+          tool_catalogued?: boolean
           undeclared_effects?: Json
         }
         Relationships: []
