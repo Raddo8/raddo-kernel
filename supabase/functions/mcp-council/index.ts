@@ -2246,6 +2246,11 @@ const TOOL_BEGIN_SESSION = {
 // ── Ritual writes v1 · schemas shared by save_session / end_session ──────
 const RITUAL_SAVE_PROPS = {
   session_id: { type: "string", description: "Active session UUID." },
+  client_request_id: {
+    type: "string",
+    description:
+      "Stable id for this save attempt (>= 8 chars). Repeating it returns the original receipt instead of writing a second one. Required by save_session.",
+  },
   decisions: {
     type: "array",
     items: {
