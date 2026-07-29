@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}))
     const question = String(body?.question || '').trim().slice(0, 2000)
     const page_ctx = String(body?.page_ctx || '').slice(0, 200)
-    const tenant_id = String(body?.tenant_id || '')
+    const client_request_id = String(body?.client_request_id || '').trim()
     const question_id = body?.question_id ? String(body.question_id) : null
     const page_state = body?.page_state
     const mode = String(body?.mode || '').trim()
