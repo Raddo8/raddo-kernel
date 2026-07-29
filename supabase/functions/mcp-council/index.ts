@@ -2344,7 +2344,7 @@ const TOOL_SAVE_SESSION = {
   inputSchema: {
     type: "object",
     properties: RITUAL_SAVE_PROPS,
-    required: ["session_id"],
+    required: ["session_id", "client_request_id"],
     additionalProperties: false,
   },
 };
