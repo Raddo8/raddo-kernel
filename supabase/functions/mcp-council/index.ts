@@ -3434,6 +3434,11 @@ Deno.serve(async (req) => {
             });
           } catch { outcome = "partial"; }
 
+          // 9b. HONESTY GATE · a boot that loaded no identity is not a success.
+          if (!kernel || kernelBlock.parts.length === 0) degradedReasons.push("no_active_kernel");
+          if (briefRows.length === 0) degradedReasons.push("empty_brief");
+          if (degradedReasons.length > 0) outcome = "degraded";
+
           // 10. Ritual run
           const durationMs = Date.now() - startedAt;
           try {
@@ -3443,7 +3448,7 @@ Deno.serve(async (req) => {
               ritual: "begin",
               outcome,
               duration_ms: durationMs,
-              layers: { kernel_parts: kernelBlock.parts.length, brief: briefRows.length },
+              layers: { kernel_parts: kernelBlock.parts.length, brief: briefRows.length, reasons: degradedReasons },
             });
           } catch { /* best-effort */ }
 
