@@ -67,7 +67,7 @@ export function ClientReadinessGate({ children }: { children: ReactNode }) {
           className="font-mono uppercase text-dossier-ash"
           style={{ fontSize: 10, letterSpacing: "0.22em" }}
         >
-          opening your workspace…
+          opening your COB…
         </p>
       </main>
     );
