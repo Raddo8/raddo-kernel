@@ -61,6 +61,7 @@ export async function recordExecutionReceipt(
       declared_effects: declared,
       observed_effects: observed,
       undeclared_effects: undeclared,
+      tool_catalogued: !uncatalogued,
       contract_ok: undeclared.length === 0 && !uncatalogued,
       outcome: args.outcome,
       error_class: args.error_class ?? null,
