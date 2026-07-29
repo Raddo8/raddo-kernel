@@ -100,6 +100,17 @@ export function ClientReadinessGate({ children }: { children: ReactNode }) {
             Access for your account has been paused. If you think that is a mistake,
             write to cob@chiefofbusiness.ai and we will look into it.
           </p>
+          <button
+            type="button"
+            onClick={async () => {
+              await supabase.auth.signOut();
+              window.location.assign("/signin");
+            }}
+            className="mt-6 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
+          >
+            Sign out · use a different account
+          </button>
+
         </div>
       </main>
     );
