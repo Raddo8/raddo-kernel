@@ -387,12 +387,29 @@
         }
       }
 
-      if (!COB.state.user) {
-        COB.state.user = { email: user.email, first: (user.user_metadata||{}).first_name||"", last: (user.user_metadata||{}).last_name||"", name: (user.user_metadata||{}).full_name || (user.email||"") };
-      }
+      // The signed-in identity is authoritative. It comes from the React layer
+      // (already resolved against resolve_tenant_context) or from the session.
+      var ident = (window.__COB_IDENTITY || {});
+      var meta = user.user_metadata || {};
+      COB.state.user = {
+        email: ident.email || user.email,
+        first: meta.first_name || (COB.state.user && COB.state.user.first) || "",
+        last: meta.last_name || (COB.state.user && COB.state.user.last) || "",
+        name: meta.full_name || (COB.state.user && COB.state.user.name) || ident.email || user.email || "",
+      };
+      if (ident.cid) COB.state.cid = ident.cid;
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+
       rerender();
       subscribeRealtime();
       loadFactsInitial();
+
+      // Tell the host the record is hydrated so it can reveal the surface.
+      try {
+        if (window.parent && typeof window.parent.__COB_ONBOARDING_READY === "function") {
+          window.parent.__COB_ONBOARDING_READY();
+        }
+      } catch (e) {}
     }
 
 
@@ -426,57 +443,20 @@
     // COB.save monkey-patch is deferred to the very end of install() so a
     // failure here can never abort any preceding wiring (see bottom of install).
 
-    // --- auth bridge ---
-    COB.signup = async function () {
-      var f = document.getElementById("f-first"), l = document.getElementById("f-last"), p = document.getElementById("f-pass");
-      var first = (f && f.value || "").trim(), last = (l && l.value || "").trim(), pass = (p && p.value || "");
-      var email = COB._authEmail || "";
-      if (!first || !last) return COB.toast("First and last name aim your study. Both, please.");
-      if (pass.length < 10) return COB.toast("Give the password at least 10 characters.");
-      try {
-        var r = await sb.auth.signUp({
-          email: email, password: pass,
-          options: {
-            emailRedirectTo: window.location.origin + "/onboarding",
-            data: { first_name: first, last_name: last, full_name: first + " " + last },
-          },
-        });
-        if (r.error) throw r.error;
-        var uid = r.data.user && r.data.user.id;
-        if (uid) TENANT = await loadOrCreateTenant(uid, email);
-        COB.state.user = { first: first, last: last, name: first + " " + last, email: email };
-        COB.save();
-        try { window.COB_PERSIST && window.COB_PERSIST(); } catch (e) {}
-        // Fire-and-forget: mirror this identity onto the Authorization Server so
-        // the client's Claude MCP connector signs in with the same credentials.
-        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass, user_id: uid } }); } catch (e) {}
-        COB.go("#/consent");
-      } catch (e) {
-        COB.toast(e && e.message ? e.message : "Sign-up failed.");
-      }
-    };
+    // --- auth bridge (START-0G) ---
+    // ONE authentication. The React layer authenticates at /signin and hands the
+    // resolved identity down. Every legacy credential path is hard-disabled here:
+    // Google OAuth never creates an email/password credential, so those screens
+    // could only ever fail. Connector identity mirroring is gone with them.
+    COB.signup = function () { /* disabled: no second door */ };
+    COB.signin = function () { /* disabled: no second door */ };
+    COB.emailContinue = function () { /* disabled: no second door */ };
+    COB.provider = function () { /* disabled: no second door */ };
 
-    COB.signin = async function () {
-      var p = document.getElementById("f-pass");
-      var pass = (p && p.value || "");
-      var email = COB._authEmail || "";
-      if (pass.length < 10) return COB.toast("That password looks short.");
-      try {
-        var r = await sb.auth.signInWithPassword({ email: email, password: pass });
-        if (r.error) throw r.error;
-        var u = r.data.user;
-        COB.state.user = COB.state.user || { email: u.email, first: (u.user_metadata||{}).first_name||"", last: (u.user_metadata||{}).last_name||"", name: (u.user_metadata||{}).full_name||u.email };
-        COB.save();
-        try { window.COB_PERSIST && window.COB_PERSIST(); } catch (e) {}
-        // Retroactively mirror identity onto the AS for accounts created before
-        // this circuit existed. Idempotent server-side (already-exists path).
-        try { sb.functions.invoke("provision-connector-identity", { body: { email: email, password: pass, user_id: u && u.id } }); } catch (e) {}
-        await hydrateFromServer();
-        COB.toast("Welcome back.");
-        COB.resume();
-      } catch (e) {
-        COB.toast(e && e.message ? e.message : "Sign-in failed.");
-      }
+    // Hash navigation must never leave a legacy screen in browser history.
+    COB.go = function (h) {
+      try { location.replace(location.pathname + location.search + h); }
+      catch (e) { location.hash = h; }
     };
 
     // --- file uploads ---

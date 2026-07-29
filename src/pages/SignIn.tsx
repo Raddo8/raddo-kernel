@@ -155,6 +155,9 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
         <p className="mt-2 text-xs text-dossier-ash">
           The usual way in. Use the Google account your invitation was sent to.
         </p>
+        <p className="mt-1 text-xs text-dossier-ash">
+          A Google account is required during this pilot.
+        </p>
       </div>
 
       <div className="my-8 flex items-center gap-3">
