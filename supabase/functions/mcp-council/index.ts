@@ -3267,7 +3267,8 @@ Deno.serve(async (req) => {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
         const startedAt = Date.now();
-        let outcome: "ok" | "partial" = "ok";
+        let outcome: "ok" | "partial" | "degraded" = "ok";
+        const degradedReasons: string[] = [];
         const surface = typeof args?.surface === "string" && args.surface.trim()
           ? args.surface.trim().slice(0, 64)
           : "unknown";
