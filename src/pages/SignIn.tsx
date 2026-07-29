@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 
@@ -8,26 +8,40 @@ import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { DossierSplit, DossierFieldLabel } from "@/components/dossier/DossierSplit";
 
-type SsoProvider = "google" | "azure";
-
-const SSO_LABEL: Record<SsoProvider, string> = {
-  google: "Google",
-  azure: "Microsoft",
-};
-
 /**
- * The single front door. Password sign-in and SSO both land on /signin/landing,
- * which decides between the operator zone (/control) and the client zone (/hq).
+ * The single front door, written for clients. Password sign-in and Google both
+ * land on /signin/landing, which decides where the person belongs. The routing
+ * authority itself is unchanged · this surface is presentation only.
  */
 export function SignIn({ nextPath }: { nextPath?: string } = {}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [signedInAs, setSignedInAs] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const landing = nextPath
     ? `/signin/landing?next=${encodeURIComponent(nextPath)}`
     : "/signin/landing";
+
+  // Surface an existing session so nobody gets trapped on the wrong account.
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setSignedInAs(data.session?.user?.email ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setSignedInAs(null);
+    toast.success("Signed out · you can sign in with a different account.");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,51 +57,34 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
     }
   };
 
-  const handleSso = async (provider: SsoProvider) => {
-    // Google routes through Lovable Cloud's app-domain broker (/~oauth/*), so the
-    // consent screen names our domain rather than the backend project host.
-    if (provider === "google") {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + landing,
-      });
-      if (result.error) {
-        const msg = result.error.message ?? "";
-        const disabled = /provider is not enabled|unsupported provider/i.test(msg);
-        toast.error(disabled ? "Google sign-in isn't switched on yet." : msg || "Google sign-in failed");
-        return;
-      }
-      if (result.redirected) return;
-      navigate(landing);
+  const handleGoogle = async () => {
+    // Google routes through the app-domain broker (/~oauth/*), so the consent
+    // screen names our domain rather than the backend project host.
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin + landing,
+      extraParams: { prompt: "select_account" },
+    });
+    if (result.error) {
+      const msg = result.error.message ?? "";
+      const disabled = /provider is not enabled|unsupported provider/i.test(msg);
+      toast.error(
+        disabled ? "Google sign-in isn't switched on yet." : msg || "Google sign-in failed",
+      );
       return;
     }
-
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: window.location.origin + landing },
-    });
-    if (error) {
-      // Provider not enabled on the backend · tell the operator plainly.
-      const disabled = /provider is not enabled|unsupported provider/i.test(error.message);
-      toast.error(
-        disabled
-          ? `${SSO_LABEL[provider]} sign-in isn't switched on yet.`
-          : error.message,
-      );
-    }
+    if (result.redirected) return;
+    navigate(landing);
   };
-
-
 
   return (
     <DossierSplit
       brand={{
         chip: "dossier · sign in",
         headline: "Sign in to your",
-        keyword: "operator",
-        headlineTrail: " workspace.",
+        keyword: "COB",
+        headlineTrail: ".",
         pitch:
-          "One door · your queue, your accounts, your policies, all held in one place.",
+          "Your Chief of Business is waiting · your briefings, your decisions, your follow-ups, all held in one place.",
       }}
     >
       <p
@@ -99,31 +96,68 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
           fontWeight: 700,
         }}
       >
-        workspace · sign in
+        client · sign in
       </p>
       <h1
         className="font-display text-dossier-ink-deep"
         style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
       >
-        Sign in
+        Sign in to your COB
       </h1>
+      <p
+        className="mt-3 font-sans text-dossier-charcoal/85"
+        style={{ fontSize: 15, lineHeight: 1.55 }}
+      >
+        Your Chief of Business is waiting. Sign in with the account you were invited
+        with.
+      </p>
 
-      <div className="mt-8 space-y-3">
-        {(["google", "azure"] as const).map((p) => (
-          <Button
-            key={p}
-            type="button"
-            variant="outline"
-            onClick={() => handleSso(p)}
-            className="w-full border-dossier-paper-edge bg-white text-dossier-ink-deep hover:bg-dossier-paper"
-            style={{ borderRadius: 4, fontWeight: 500 }}
-          >
-            Continue with {SSO_LABEL[p]}
-          </Button>
-        ))}
+      {signedInAs && (
+        <div
+          className="mt-6 border border-dossier-paper-edge bg-white px-4 py-3"
+          style={{ borderRadius: 4 }}
+        >
+          <p className="text-sm text-dossier-charcoal">
+            You are already signed in as{" "}
+            <span className="font-medium text-dossier-ink-deep">{signedInAs}</span>.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Button
+              type="button"
+              onClick={() => navigate(landing)}
+              className="bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
+              style={{ borderRadius: 4, fontWeight: 600 }}
+            >
+              Continue
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSignOut}
+              className="border-dossier-paper-edge bg-white text-dossier-ink-deep hover:bg-dossier-paper"
+              style={{ borderRadius: 4, fontWeight: 500 }}
+            >
+              Use a different account
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-8">
+        <Button
+          type="button"
+          onClick={handleGoogle}
+          className="w-full bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
+          style={{ borderRadius: 4, fontWeight: 600, height: 48, fontSize: 15 }}
+        >
+          Continue with Google
+        </Button>
+        <p className="mt-2 text-xs text-dossier-ash">
+          The usual way in. Use the Google account your invitation was sent to.
+        </p>
       </div>
 
-      <div className="my-6 flex items-center gap-3">
+      <div className="my-8 flex items-center gap-3">
         <span className="h-px flex-1 bg-dossier-paper-edge" />
         <span
           className="font-mono uppercase text-dossier-ash"
@@ -134,52 +168,85 @@ export function SignIn({ nextPath }: { nextPath?: string } = {}) {
         <span className="h-px flex-1 bg-dossier-paper-edge" />
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <DossierFieldLabel htmlFor="signin-email">Email</DossierFieldLabel>
-          <Input
-            id="signin-email"
-            type="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
-            style={{ borderRadius: 4 }}
-          />
-        </div>
-        <div>
-          <DossierFieldLabel htmlFor="signin-password">Password</DossierFieldLabel>
-          <Input
-            id="signin-password"
-            type="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
-            style={{ borderRadius: 4 }}
-          />
-        </div>
-        <Button
-          type="submit"
-          className="w-full bg-dossier-brass text-dossier-ink-deep hover:bg-dossier-brass-deep hover:text-dossier-paper"
-          style={{ borderRadius: 4, fontWeight: 600 }}
-          disabled={loading}
+      <details className="group">
+        <summary
+          className="cursor-pointer list-none font-mono uppercase text-dossier-ash hover:text-dossier-ink-deep"
+          style={{ fontSize: 10, letterSpacing: "0.18em" }}
         >
-          {loading ? "…" : "Sign in"}
-        </Button>
-      </form>
+          Sign in with email and password
+        </summary>
+        <p className="mt-2 text-xs text-dossier-ash">
+          For invited accounts that were set up with a password.
+        </p>
 
-      <p className="mt-6 text-center text-sm text-dossier-ash">
+        <form onSubmit={handleSubmit} className="mt-5 space-y-5">
+          <div>
+            <DossierFieldLabel htmlFor="signin-email">Email</DossierFieldLabel>
+            <Input
+              id="signin-email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
+              style={{ borderRadius: 4 }}
+            />
+          </div>
+          <div>
+            <DossierFieldLabel htmlFor="signin-password">Password</DossierFieldLabel>
+            <Input
+              id="signin-password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="bg-white border-dossier-paper-edge text-dossier-ink-deep"
+              style={{ borderRadius: 4 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+              className="mt-2 text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
+            >
+              {showPassword ? "Hide password" : "Show password"}
+            </button>
+          </div>
+          <Button
+            type="submit"
+            variant="outline"
+            className="w-full border-dossier-paper-edge bg-white text-dossier-ink-deep hover:bg-dossier-paper"
+            style={{ borderRadius: 4, fontWeight: 500 }}
+            disabled={loading}
+          >
+            {loading ? "…" : "Sign in with password"}
+          </Button>
+        </form>
+      </details>
+
+      <div className="mt-8 flex flex-col items-center gap-3 text-sm text-dossier-ash">
         <Link
           to="/signin/reset"
           className="text-dossier-ink-deep underline-offset-4 hover:underline"
         >
           Forgot password?
         </Link>
-      </p>
+        {!signedInAs && (
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="text-xs uppercase tracking-[0.16em] text-dossier-ash hover:text-dossier-ink-deep"
+          >
+            Use a different Google account
+          </button>
+        )}
+        <p className="text-xs">
+          Trouble getting in? Write to cob@chiefofbusiness.ai
+        </p>
+      </div>
     </DossierSplit>
   );
 }
