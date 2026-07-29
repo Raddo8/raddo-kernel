@@ -671,7 +671,7 @@ const COB={
   r.start();},
   mic(btn,key){this.micTo(btn,'inp-'+key,v=>{this.state.answers[key]=v;this.save();});},
  onFileSelected(kind,name){this.state.files.push({kind,name,at:new Date().toISOString()});this.save();this.render();/* LOVABLE: upload to bucket + intake_files */},
- copyConnUrl(){try{navigator.clipboard.writeText("https://mcp.chiefofbusiness.ai/").then(()=>this.toast("Address copied."))}catch(e){this.toast("Copy failed. Select and copy the address by hand.")}},
+ copyConnUrl(){this.toast("Connector account linking is being prepared. No action is required from you yet.");},
  copyWelcomeMsg(){try{navigator.clipboard.writeText("Hello \u2014 I've just connected Chief of Business. Please open my COB welcome and show it to me.").then(()=>this.toast("Welcome message copied."))}catch(e){this.toast("Copy failed. Select and copy the message by hand.")}},
  copyPrompt(){navigator.clipboard.writeText(window.HARVEST_PROMPT).then(()=>this.toast("Prompt copied. Paste it into ChatGPT."));},
  /* ---- router ---- */
@@ -1336,21 +1336,8 @@ const COB={
   </div>
 
   <div class="card" style="margin-top:14px">
-   <p class="kicker" style="margin-bottom:6px">your COB connector</p>
-   <p style="margin:0 0 10px;font-size:14px">This is your COB's address. In Claude: Settings, then Connectors, then add a custom connector with this URL and sign in with the email and password you created here.</p>
-   <div class="copybox" style="font-size:15px;text-align:center;padding:16px 12px;word-break:break-all">https://mcp.chiefofbusiness.ai/</div>
-   <div class="q-actions" style="margin-top:10px"><button class="btn2" onclick="COB.nUrl()">Copy the address</button></div>
-  </div>
-
-  <div class="card" style="margin-top:14px">
-   <p class="kicker" style="margin-bottom:8px">to go fully live</p>
-   <ol class="steps">
-    ${remaining.length?`<li>Connect the ${remaining.length} remaining system${remaining.length===1?"":"s"} on the Wire together step.</li>`:""}
-    ${uAns?"":`<li>Spend a few minutes in the Fireside so COB has your words, not just the record.</li>`}
-    <li>Open Claude, add the connector above, and approve it.</li>
-    <li>Say <b>/begin</b> to COB. That is your first working session.</li>
-   </ol>
-   <p style="font-size:13px;color:var(--ash);margin-top:10px">Anything unfinished stays here waiting. Nothing is lost, and you can come back to this page at any time.</p>
+   <p class="kicker" style="margin-bottom:6px">COB Connector</p>
+   <p style="margin:0;font-size:14px">Connector account linking is being prepared. No action is required from you yet. TAYLOR will guide you when this step becomes available.</p>
   </div>
 
   <p style="font-size:13px;color:var(--ash);margin-top:18px">Stuck on any of it, reply to your onboarding email or ask TAYLOR. A person reads it.</p>
