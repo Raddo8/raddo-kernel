@@ -387,12 +387,29 @@
         }
       }
 
-      if (!COB.state.user) {
-        COB.state.user = { email: user.email, first: (user.user_metadata||{}).first_name||"", last: (user.user_metadata||{}).last_name||"", name: (user.user_metadata||{}).full_name || (user.email||"") };
-      }
+      // The signed-in identity is authoritative. It comes from the React layer
+      // (already resolved against resolve_tenant_context) or from the session.
+      var ident = (window.__COB_IDENTITY || {});
+      var meta = user.user_metadata || {};
+      COB.state.user = {
+        email: ident.email || user.email,
+        first: meta.first_name || (COB.state.user && COB.state.user.first) || "",
+        last: meta.last_name || (COB.state.user && COB.state.user.last) || "",
+        name: meta.full_name || (COB.state.user && COB.state.user.name) || ident.email || user.email || "",
+      };
+      if (ident.cid) COB.state.cid = ident.cid;
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+
       rerender();
       subscribeRealtime();
       loadFactsInitial();
+
+      // Tell the host the record is hydrated so it can reveal the surface.
+      try {
+        if (window.parent && typeof window.parent.__COB_ONBOARDING_READY === "function") {
+          window.parent.__COB_ONBOARDING_READY();
+        }
+      } catch (e) {}
     }
 
 
