@@ -3479,6 +3479,8 @@ Deno.serve(async (req) => {
             staleness,
             makeup_close_owed,
             registers_empty,
+            outcome,
+            ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
