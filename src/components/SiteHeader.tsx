@@ -176,6 +176,26 @@ export function SiteHeader({ cta }: SiteHeaderProps = {}) {
                   <span aria-hidden>→</span>
                 </a>
               ) : null}
+
+              {/* The door · always visible so an invited client can find the way in. */}
+              <Link
+                to="/signin"
+                className="dossier-cta-brass inline-flex items-center gap-2 font-sans"
+                style={{
+                  backgroundColor: "hsl(var(--dossier-brass))",
+                  color: "hsl(var(--dossier-ink-deep))",
+                  padding: "8px 14px",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  letterSpacing: "0.01em",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <span className="hidden sm:inline">Client Sign In</span>
+                <span className="sm:hidden">Sign In</span>
+              </Link>
+
               <button
                 type="button"
                 onClick={() => {
