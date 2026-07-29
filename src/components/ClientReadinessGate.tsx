@@ -88,22 +88,23 @@ export function ClientReadinessGate({ children }: { children: ReactNode }) {
               fontWeight: 700,
             }}
           >
-            access · {verdict.status.toLowerCase()}
+            access · not active
           </p>
           <h1
             className="font-display text-dossier-ink-deep"
             style={{ fontWeight: 800, fontSize: "1.75rem", lineHeight: 1.15 }}
           >
-            Access is closed
+            This COB is not active right now
           </h1>
           <p className="mt-4 text-sm text-dossier-ash">
-            Your membership is {verdict.status === "REVOKED" ? "revoked" : "suspended"}.
-            Contact cob@chiefofbusiness.ai to have it reviewed.
+            Access for your account has been paused. If you think that is a mistake,
+            write to cob@chiefofbusiness.ai and we will look into it.
           </p>
         </div>
       </main>
     );
   }
+
 
   return <>{children}</>;
 }
