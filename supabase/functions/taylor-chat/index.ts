@@ -145,29 +145,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    if ((fact && tenant_id) || (question_id && tenant_id)) {
-      const admin = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-      )
-      if (question_id && tenant_id) {
-        await admin.from('taylor_questions')
-          .update({ answer, answered_at: new Date().toISOString(), status: 'answered' })
-          .eq('id', question_id)
-      }
-      if (fact && tenant_id) {
-        try {
-          await admin.from('intake_facts').insert({
-            tenant_id,
-            source: 'taylor',
-            section: fact.section,
-            fact: fact.fact,
-          })
-        } catch { /* swallow */ }
-      }
+    // Tenant is DERIVED server-side by record_taylor_turn from the caller's own
+    // membership. This function never accepts or asserts a tenant identifier.
+    const { data: turn, error: turnErr } = await supabase.rpc('record_taylor_turn', {
+      p_client_request_id: client_request_id,
+      p_answer: answer,
+      p_question_id: question_id,
+      p_fact_section: fact?.section ?? null,
+      p_fact: fact?.fact ?? null,
+      p_session_id: null,
+    })
+    if (turnErr) {
+      return new Response(JSON.stringify({ error: 'record_turn_failed', detail: turnErr.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+    const t = turn as Record<string, unknown> | null
+    if (!t || t.ok !== true) {
+      return new Response(JSON.stringify({ error: 'record_turn_refused', reason: t?.reason ?? 'unknown' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
-    return new Response(JSON.stringify({ answer }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(
+      JSON.stringify(t.receipt_id ? { answer, receipt_id: t.receipt_id } : { answer }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    )
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e?.message || e) }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
