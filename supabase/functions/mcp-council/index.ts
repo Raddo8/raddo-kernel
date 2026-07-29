@@ -3616,16 +3616,73 @@ Deno.serve(async (req) => {
           return out;
         };
 
+        // ══════════════════════════════════════════════════════════════
+        // TRUTHFUL RECEIPTS · seven-layer accumulator
+        //
+        // Every layer reports its own arithmetic. A failure in one layer
+        // never aborts the others, and never collapses the save. The
+        // database function public.record_save_receipt derives the overall
+        // status — this file never computes or overrides it.
+        //
+        // Loop-state normalisation is the DATABASE's job (loop_state_alias
+        // + BEFORE INSERT/UPDATE trigger on open_loops). No mapping here.
+        // ══════════════════════════════════════════════════════════════
+        type LayerName =
+          | "checkpoint" | "open_loops" | "memory"
+          | "decisions" | "signals" | "rules_captured" | "notion_mirror";
+
+        const ALL_LAYERS: LayerName[] = [
+          "checkpoint", "open_loops", "memory",
+          "decisions", "signals", "rules_captured", "notion_mirror",
+        ];
+
+        type LayerAcc = {
+          layer: LayerName;
+          requested: number;
+          attempted: number;
+          saved: number;
+          updated: number;
+          failed: number;
+          record_ids: string[];
+          error_code: string | null;
+          error_message: string | null;
+          retryable: boolean | null;
+          verified: boolean;
+          layer_state?: string;
+        };
+
+        const newLayer = (layer: LayerName, requested: number): LayerAcc => ({
+          layer, requested, attempted: 0, saved: 0, updated: 0, failed: 0,
+          record_ids: [], error_code: null, error_message: null,
+          retryable: null, verified: false,
+        });
+
+        const noteFailure = (L: LayerAcc, code: string, msg: string, retryable: boolean) => {
+          L.failed += 1;
+          if (!L.error_code) { L.error_code = code; L.error_message = msg.slice(0, 500); L.retryable = retryable; }
+        };
+
+        // Read-after-write: a row is only "saved" once it reads back.
+        const readsBack = async (table: string, rowId: string): Promise<boolean> => {
+          try {
+            const { data } = await supabaseAdmin.from(table).select("id").eq("id", rowId).maybeSingle();
+            return Boolean(data?.id);
+          } catch { return false; }
+        };
+
         // ── Shared SAVE leg (used by save_session AND end_session) ──
         const runSaveLeg = async (
           argsIn: any,
           checkpointKind: "save" | "end",
+          only?: Set<LayerName> | null,
         ): Promise<{
           checkpointId: string | null;
           saved: any;
           unsaved: Array<{ layer: string; reason: string }>;
-          outcome: "ok" | "partial";
+          outcome: "ok" | "partial" | "degraded";
           scrub: any;
+          layers: LayerAcc[];
+          totalRequested: number;
         }> => {
           // SCRUB-BEFORE-HQ · screen the whole ritual payload before ANY store or Notion leg.
           // This must be the first statement in the body — every destructure below reads argsIn.
@@ -3634,250 +3691,450 @@ Deno.serve(async (req) => {
           const unsaved: Array<{ layer: string; reason: string }> = [];
           const session_id = typeof argsIn?.session_id === "string" ? argsIn.session_id : "";
           if (!session_id) throw new Error("session_id required");
-          const decisions = Array.isArray(argsIn?.decisions) ? argsIn.decisions : [];
-          const openLoops = Array.isArray(argsIn?.open_loops) ? argsIn.open_loops : [];
-          const signals = Array.isArray(argsIn?.signals) ? argsIn.signals : [];
-          const memory = Array.isArray(argsIn?.memory) ? argsIn.memory : [];
-          const rules = Array.isArray(argsIn?.rules_captured) ? argsIn.rules_captured : [];
-          const checkpoint = (argsIn?.checkpoint && typeof argsIn.checkpoint === "object") ? argsIn.checkpoint : {};
+          const decisions = (Array.isArray(argsIn?.decisions) ? argsIn.decisions : []).filter((d: any) => d?.title);
+          const openLoops = (Array.isArray(argsIn?.open_loops) ? argsIn.open_loops : []).filter((o: any) => o?.title);
+          const signals = (Array.isArray(argsIn?.signals) ? argsIn.signals : []).filter((s: any) => s?.title);
+          const memory = (Array.isArray(argsIn?.memory) ? argsIn.memory : []).filter((m: any) => m?.title && m?.body_md);
+          const rules = (Array.isArray(argsIn?.rules_captured) ? argsIn.rules_captured : []).filter((r: any) => r?.text && r?.scope);
+          const checkpoint = (argsIn?.checkpoint && typeof argsIn.checkpoint === "object") ? argsIn.checkpoint : null;
+          const checkpointRequested = checkpoint && Object.keys(checkpoint).length > 0 ? 1 : 0;
+
+          // Notion write intents — one per row we would mirror.
+          const notionIntents =
+            decisions.length + openLoops.length + signals.length +
+            (memory.length > 0 ? 1 : 0) + checkpointRequested;
+
+          const L: Record<LayerName, LayerAcc> = {
+            checkpoint: newLayer("checkpoint", checkpointRequested),
+            open_loops: newLayer("open_loops", openLoops.length),
+            memory: newLayer("memory", memory.length),
+            decisions: newLayer("decisions", decisions.length),
+            signals: newLayer("signals", signals.length),
+            rules_captured: newLayer("rules_captured", rules.length),
+            notion_mirror: newLayer("notion_mirror", notionIntents),
+          };
+          const want = (l: LayerName) => !only || only.has(l);
+          const totalRequested = ALL_LAYERS
+            .filter((l) => l !== "notion_mirror")
+            .reduce((s, l) => s + L[l].requested, 0);
 
           // Session must belong to tenant.
           const { data: sess } = await supabaseAdmin
             .from("sessions").select("id, tenant").eq("id", session_id).maybeSingle();
           if (!sess || sess.tenant !== tenant) throw new Error("session_not_found");
 
-          // ── STORE LEGS · fail hard if any error ──
-          // 1. APPEND ONLY checkpoint
-          const { data: cpRow, error: cpErr } = await supabaseAdmin
-            .from("session_checkpoints").insert({
-              session_id,
-              tenant,
-              kind: checkpointKind,
-              open_loops: checkpoint.open_loops ?? [],
-              decisions_pending: checkpoint.decisions_pending ?? [],
-              deferrals: checkpoint.deferrals ?? [],
-              principal_state: checkpoint.principal_state ?? null,
-              financial_residue: checkpoint.financial_residue ?? null,
-              task_states: checkpoint.task_states ?? {},
-              staleness_flags: checkpoint.staleness_flags ?? [],
-            }).select("id").single();
-          if (cpErr || !cpRow) throw new Error(`checkpoint_insert_failed:${cpErr?.message ?? "unknown"}`);
-          const checkpointId: string = cpRow.id;
-
-          // 2. Upsert open_loops by (tenant, title)
-          for (const ol of openLoops) {
-            if (!ol?.title) continue;
-            const { data: existing } = await supabaseAdmin
-              .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
-            if (existing) {
-              const { error } = await supabaseAdmin.from("open_loops").update({
-                trigger: ol.trigger ?? null,
-                owner: ol.owner ?? null,
-                state: ol.state ?? null,
-                updated_at: new Date().toISOString(),
-              }).eq("id", existing.id).eq("tenant", tenant);
-              if (error) throw new Error(`open_loops_update_failed:${error.message}`);
-            } else {
-              const { error } = await supabaseAdmin.from("open_loops").insert({
-                tenant,
-                title: ol.title,
-                trigger: ol.trigger ?? null,
-                owner: ol.owner ?? null,
-                state: ol.state ?? null,
-              });
-              if (error) throw new Error(`open_loops_insert_failed:${error.message}`);
-            }
+          // Nothing submitted → nothing written. Honest NOOP.
+          if (totalRequested === 0) {
+            for (const l of ALL_LAYERS) L[l].layer_state = "EMPTY_EXPECTED";
+            return {
+              checkpointId: null,
+              saved: { decisions: 0, open_loops: 0, signals: 0, memory: 0, rules_captured: 0, checkpoint_id: null },
+              unsaved,
+              outcome: "degraded",
+              scrub: scrubReport,
+              layers: ALL_LAYERS.map((l) => L[l]),
+              totalRequested,
+            };
           }
+
+          // ── GATEWAY LEGS · each isolated; one failure never aborts the rest ──
+          // 1. APPEND ONLY checkpoint
+          let checkpointId: string | null = null;
+          if (checkpointRequested && want("checkpoint")) {
+            L.checkpoint.attempted = 1;
+            try {
+              const { data: cpRow, error: cpErr } = await supabaseAdmin
+                .from("session_checkpoints").insert({
+                  session_id,
+                  tenant,
+                  kind: checkpointKind,
+                  open_loops: checkpoint.open_loops ?? [],
+                  decisions_pending: checkpoint.decisions_pending ?? [],
+                  deferrals: checkpoint.deferrals ?? [],
+                  principal_state: checkpoint.principal_state ?? null,
+                  financial_residue: checkpoint.financial_residue ?? null,
+                  task_states: checkpoint.task_states ?? {},
+                  staleness_flags: checkpoint.staleness_flags ?? [],
+                }).select("id").single();
+              if (cpErr || !cpRow) throw new Error(cpErr?.message ?? "unknown");
+              if (!(await readsBack("session_checkpoints", cpRow.id))) throw new Error("not_readable_after_write");
+              checkpointId = cpRow.id;
+              L.checkpoint.saved = 1;
+              L.checkpoint.record_ids.push(cpRow.id);
+              L.checkpoint.verified = true;
+            } catch (e) {
+              noteFailure(L.checkpoint, "checkpoint_insert_failed", e instanceof Error ? e.message : String(e), true);
+              unsaved.push({ layer: "checkpoint", reason: L.checkpoint.error_message ?? "failed" });
+            }
+          } else if (!checkpointRequested) {
+            L.checkpoint.layer_state = "EMPTY_EXPECTED";
+          } else {
+            L.checkpoint.layer_state = "SKIPPED";
+          }
+
+          // 2. Upsert open_loops by (tenant, title). Loop state normalised by DB trigger.
+          if (want("open_loops")) {
+            let olVerified = openLoops.length > 0;
+            for (const ol of openLoops) {
+              L.open_loops.attempted += 1;
+              try {
+                const { data: existing } = await supabaseAdmin
+                  .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
+                let rowId: string;
+                if (existing) {
+                  const { error } = await supabaseAdmin.from("open_loops").update({
+                    trigger: ol.trigger ?? null,
+                    owner: ol.owner ?? null,
+                    state: ol.state ?? null,
+                    updated_at: new Date().toISOString(),
+                  }).eq("id", existing.id).eq("tenant", tenant);
+                  if (error) throw new Error(error.message);
+                  rowId = existing.id;
+                  if (!(await readsBack("open_loops", rowId))) throw new Error("not_readable_after_write");
+                  L.open_loops.updated += 1;
+                } else {
+                  const { data: ins, error } = await supabaseAdmin.from("open_loops").insert({
+                    tenant,
+                    title: ol.title,
+                    trigger: ol.trigger ?? null,
+                    owner: ol.owner ?? null,
+                    state: ol.state ?? null,
+                  }).select("id").single();
+                  if (error || !ins) throw new Error(error?.message ?? "unknown");
+                  rowId = ins.id;
+                  if (!(await readsBack("open_loops", rowId))) throw new Error("not_readable_after_write");
+                  L.open_loops.saved += 1;
+                }
+                L.open_loops.record_ids.push(rowId);
+              } catch (e) {
+                olVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.open_loops, /LOOP_STATE_UNMAPPED/.test(msg) ? "loop_state_unmapped" : "open_loops_write_failed", msg, !/LOOP_STATE_UNMAPPED/.test(msg));
+                unsaved.push({ layer: "open_loops", reason: msg.slice(0, 200) });
+              }
+            }
+            L.open_loops.verified = olVerified;
+          } else if (openLoops.length) { L.open_loops.layer_state = "SKIPPED"; }
 
           // 3. memory_entries inserts
           const memoryIds: string[] = [];
-          for (const m of memory) {
-            if (!m?.title || !m?.body_md) continue;
-            const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
-              tenant,
-              session_id,
-              category: m.category ?? null,
-              title: m.title,
-              body_md: m.body_md,
-            }).select("id").single();
-            if (error || !mrow) throw new Error(`memory_insert_failed:${error?.message ?? "unknown"}`);
-            memoryIds.push(mrow.id);
-          }
+          if (want("memory")) {
+            let memVerified = memory.length > 0;
+            for (const m of memory) {
+              L.memory.attempted += 1;
+              try {
+                const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
+                  tenant,
+                  session_id,
+                  category: m.category ?? null,
+                  title: m.title,
+                  body_md: m.body_md,
+                }).select("id").single();
+                if (error || !mrow) throw new Error(error?.message ?? "unknown");
+                if (!(await readsBack("memory_entries", mrow.id))) throw new Error("not_readable_after_write");
+                memoryIds.push(mrow.id);
+                L.memory.saved += 1;
+                L.memory.record_ids.push(mrow.id);
+              } catch (e) {
+                memVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.memory, "memory_insert_failed", msg, true);
+                unsaved.push({ layer: "memory", reason: msg.slice(0, 200) });
+              }
+            }
+            L.memory.verified = memVerified;
+          } else if (memory.length) { L.memory.layer_state = "SKIPPED"; }
 
           // 4. rules_captured → directives QUEUED (never active here — end_session promotes)
-          for (const r of rules) {
-            if (!r?.text || !r?.scope) continue;
-            const { error } = await supabaseAdmin.from("directives").insert({
-              tenant_id: tenant,
-              text: r.text,
-              scope: r.scope,
-              status: "queued",
-            });
-            if (error) throw new Error(`directive_queue_failed:${error.message}`);
-          }
+          if (want("rules_captured")) {
+            let rVerified = rules.length > 0;
+            for (const r of rules) {
+              L.rules_captured.attempted += 1;
+              try {
+                const { data: drow, error } = await supabaseAdmin.from("directives").insert({
+                  tenant_id: tenant,
+                  text: r.text,
+                  scope: r.scope,
+                  status: "queued",
+                }).select("id").single();
+                if (error || !drow) throw new Error(error?.message ?? "unknown");
+                if (!(await readsBack("directives", drow.id))) throw new Error("not_readable_after_write");
+                L.rules_captured.saved += 1;
+                L.rules_captured.record_ids.push(drow.id);
+              } catch (e) {
+                rVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.rules_captured, "directive_queue_failed", msg, true);
+                unsaved.push({ layer: "rules_captured", reason: msg.slice(0, 200) });
+              }
+            }
+            L.rules_captured.verified = rVerified;
+          } else if (rules.length) { L.rules_captured.layer_state = "SKIPPED"; }
 
-          // ── NOTION LEGS · best-effort, verified writes ──
+          // ── NOTION LEGS · verified writes. decisions and signals have no
+          // gateway table: Notion IS their store, so their layer counts come
+          // from verified Notion pages. notion_mirror aggregates all surfaces.
           const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
           const target = resolvedTarget.target;
           const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
+          const mirrorReasons: string[] = [];
 
           if (!target) {
             unsaved.push({ layer: "notion", reason: resolvedTarget.reason });
+            L.notion_mirror.layer_state = "UNAVAILABLE";
+            L.notion_mirror.error_code = "notion_target_unresolved";
+            L.notion_mirror.error_message = resolvedTarget.reason;
+            L.notion_mirror.retryable = true;
           } else {
             const token = target.token;
 
-            // decisions → surface `decisions`
-            if (decisions.length > 0) {
-              const surface = await getSurface("decisions");
-              if (!surface) unsaved.push({ layer: "decisions", reason: "surface_not_configured" });
-              else {
-                for (const d of decisions) {
-                  const props: any = {
-                    "Decision": title(d.title),
-                    "Date": dateProp(),
-                    "Rationale": rt(d.rationale),
-                    "Decision Owner": rt(d.decision_owner),
-                    "Execution Owner": rt(d.execution_owner),
-                    "Reversible": sel(d.reversible),
-                  };
-                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
-                  if (w.ok) notionOk.decisions += 1;
-                  else unsaved.push({ layer: "decisions", reason: w.reason ?? "unverified" });
-                }
+            const mirror = async (
+              surfaceKey: string,
+              payload: any,
+              onOk: (pageId: string) => Promise<void> | void,
+              layerForCount?: LayerAcc,
+            ) => {
+              L.notion_mirror.attempted += 1;
+              layerForCount && (layerForCount.attempted += 1);
+              const surface = await getSurface(surfaceKey);
+              if (!surface) {
+                unsaved.push({ layer: surfaceKey, reason: "surface_not_configured" });
+                mirrorReasons.push(`${surfaceKey}:surface_not_configured`);
+                L.notion_mirror.failed += 1;
+                layerForCount && noteFailure(layerForCount, "surface_not_configured", `${surfaceKey} surface not configured`, false);
+                return;
               }
+              const w = await notionWriteVerified(token, surface.kind, surface.notion_id, payload);
+              if (w.ok && w.id) {
+                L.notion_mirror.saved += 1;
+                L.notion_mirror.record_ids.push(w.id);
+                if (layerForCount) {
+                  layerForCount.saved += 1;
+                  layerForCount.record_ids.push(w.id);
+                  layerForCount.verified = true;
+                }
+                await onOk(w.id);
+              } else {
+                const reason = w.reason ?? "unverified";
+                unsaved.push({ layer: surfaceKey, reason });
+                mirrorReasons.push(`${surfaceKey}:${reason}`);
+                L.notion_mirror.failed += 1;
+                layerForCount && noteFailure(layerForCount, "notion_write_unverified", reason, true);
+              }
+            };
+
+            // decisions → surface `decisions`
+            for (const d of decisions) {
+              await mirror("decisions", {
+                properties: {
+                  "Decision": title(d.title),
+                  "Date": dateProp(),
+                  "Rationale": rt(d.rationale),
+                  "Decision Owner": rt(d.decision_owner),
+                  "Execution Owner": rt(d.execution_owner),
+                  "Reversible": sel(d.reversible),
+                },
+              }, () => { notionOk.decisions += 1; }, L.decisions);
             }
 
             // open_loops → surface `tasks` (also store returned page id back on the DB row)
-            if (openLoops.length > 0) {
-              const surface = await getSurface("tasks");
-              if (!surface) unsaved.push({ layer: "tasks", reason: "surface_not_configured" });
-              else {
-                for (const ol of openLoops) {
-                  const props: any = {
-                    "Task": title(ol.title),
-                    "Trigger": rt(ol.trigger),
-                    "Owner": rt(ol.owner),
-                    "State": sel(ol.state),
-                  };
-                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
-                  if (w.ok && w.id) {
-                    notionOk.open_loops += 1;
-                    await supabaseAdmin.from("open_loops")
-                      .update({ notion_page_id: w.id })
-                      .eq("tenant", tenant).eq("title", ol.title);
-                  } else {
-                    unsaved.push({ layer: "tasks", reason: w.reason ?? "unverified" });
-                  }
-                }
-              }
+            for (const ol of openLoops) {
+              await mirror("tasks", {
+                properties: {
+                  "Task": title(ol.title),
+                  "Trigger": rt(ol.trigger),
+                  "Owner": rt(ol.owner),
+                  "State": sel(ol.state),
+                },
+              }, async (pageId) => {
+                notionOk.open_loops += 1;
+                await supabaseAdmin.from("open_loops")
+                  .update({ notion_page_id: pageId })
+                  .eq("tenant", tenant).eq("title", ol.title);
+              });
             }
 
             // signals → surface `signals`
-            if (signals.length > 0) {
-              const surface = await getSurface("signals");
-              if (!surface) unsaved.push({ layer: "signals", reason: "surface_not_configured" });
-              else {
-                for (const s of signals) {
-                  const props: any = {
-                    "Signal": title(s.title),
-                    "Description": rt(s.description),
-                    "Implication": rt(s.implication),
-                    "Type": sel(s.type),
-                    "Status": sel(s.status),
-                  };
-                  const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
-                  if (w.ok) notionOk.signals += 1;
-                  else unsaved.push({ layer: "signals", reason: w.reason ?? "unverified" });
-                }
-              }
+            for (const s of signals) {
+              await mirror("signals", {
+                properties: {
+                  "Signal": title(s.title),
+                  "Description": rt(s.description),
+                  "Implication": rt(s.implication),
+                  "Type": sel(s.type),
+                  "Status": sel(s.status),
+                },
+              }, () => { notionOk.signals += 1; }, L.signals);
             }
 
             // checkpoint → surface `session_log`
-            {
-              const surface = await getSurface("session_log");
-              if (!surface) unsaved.push({ layer: "session_log", reason: "surface_not_configured" });
-              else {
-                const summarize = (v: any): string => {
-                  if (v == null) return "";
-                  if (typeof v === "string") return v;
-                  try { return JSON.stringify(v).slice(0, 1900); } catch { return String(v); }
-                };
-                const props: any = {
-                  "Session": title(`Session ${new Date().toISOString().slice(0,10)}`),
+            if (checkpointId) {
+              const summarize = (v: any): string => {
+                if (v == null) return "";
+                if (typeof v === "string") return v;
+                try { return JSON.stringify(v).slice(0, 1900); } catch { return String(v); }
+              };
+              await mirror("session_log", {
+                properties: {
+                  "Session": title(`Session ${new Date().toISOString().slice(0, 10)}`),
                   "Date": dateProp(),
                   "Type": sel(checkpointKind),
-                  "Open Loops": rt(summarize(checkpoint.open_loops)),
-                  "Decisions": rt(summarize(checkpoint.decisions_pending)),
-                  "Deferrals": rt(summarize(checkpoint.deferrals)),
-                  "Principal State": rt(checkpoint.principal_state),
-                  "Financial Residue": rt(checkpoint.financial_residue),
-                  "Task States": rt(summarize(checkpoint.task_states)),
-                };
-                const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { properties: props });
-                if (w.ok && w.id) {
-                  notionOk.checkpoint += 1;
-                  await supabaseAdmin.from("session_checkpoints")
-                    .update({ notion_page_id: w.id }).eq("id", checkpointId);
-                } else {
-                  unsaved.push({ layer: "session_log", reason: w.reason ?? "unverified" });
-                }
-              }
+                  "Open Loops": rt(summarize(checkpoint?.open_loops)),
+                  "Decisions": rt(summarize(checkpoint?.decisions_pending)),
+                  "Deferrals": rt(summarize(checkpoint?.deferrals)),
+                  "Principal State": rt(checkpoint?.principal_state),
+                  "Financial Residue": rt(checkpoint?.financial_residue),
+                  "Task States": rt(summarize(checkpoint?.task_states)),
+                },
+              }, async (pageId) => {
+                notionOk.checkpoint += 1;
+                await supabaseAdmin.from("session_checkpoints")
+                  .update({ notion_page_id: pageId }).eq("id", checkpointId);
+              });
             }
 
-            // memory → surface `memory` (page append)
+            // memory → surface `memory` (page append · one block for the delta)
             if (memory.length > 0) {
-              const surface = await getSurface("memory");
-              if (!surface) unsaved.push({ layer: "memory", reason: "surface_not_configured" });
-              else {
-                const children: any[] = [
-                  {
-                    object: "block",
-                    type: "heading_2",
-                    heading_2: { rich_text: richText(`Memory delta · ${new Date().toISOString().slice(0,10)}`) },
-                  },
-                  ...memory.map((m: any) => ({
-                    object: "block",
-                    type: "paragraph",
-                    paragraph: { rich_text: richText(`${m.title}: ${m.body_md}`) },
-                  })),
-                ];
-                const w = await notionWriteVerified(token, surface.kind, surface.notion_id, { children });
-                if (w.ok && w.id) {
-                  notionOk.memory += 1;
-                  // Best-effort: stamp block id onto every memory row from this leg.
-                  for (const mid of memoryIds) {
-                    await supabaseAdmin.from("memory_entries")
-                      .update({ notion_block_ref: w.id }).eq("id", mid);
-                  }
-                } else {
-                  unsaved.push({ layer: "memory", reason: w.reason ?? "unverified" });
+              const children: any[] = [
+                {
+                  object: "block",
+                  type: "heading_2",
+                  heading_2: { rich_text: richText(`Memory delta · ${new Date().toISOString().slice(0, 10)}`) },
+                },
+                ...memory.map((m: any) => ({
+                  object: "block",
+                  type: "paragraph",
+                  paragraph: { rich_text: richText(`${m.title}: ${m.body_md}`) },
+                })),
+              ];
+              await mirror("memory", { children }, async (blockId) => {
+                notionOk.memory += 1;
+                for (const mid of memoryIds) {
+                  await supabaseAdmin.from("memory_entries")
+                    .update({ notion_block_ref: blockId }).eq("id", mid);
                 }
-              }
+              });
             }
+
+            if (mirrorReasons.length) {
+              L.notion_mirror.error_code = "notion_partial";
+              L.notion_mirror.error_message = mirrorReasons.join(" · ").slice(0, 500);
+              L.notion_mirror.retryable = true;
+            }
+            L.notion_mirror.verified = L.notion_mirror.attempted > 0 && L.notion_mirror.failed === 0;
           }
+
+          const layers = ALL_LAYERS.map((l) => L[l]);
+          const anyFailed = layers.some((x) => x.failed > 0);
+          const anyEmptyUnexpected = layers.some(
+            (x) => x.layer !== "notion_mirror" && x.requested > 0 && x.saved + x.updated === 0,
+          );
 
           return {
             checkpointId,
             saved: {
-              decisions: notionOk.decisions,
-              open_loops: notionOk.open_loops,
-              signals: notionOk.signals,
-              memory: notionOk.memory,
-              rules_captured: rules.length,
+              decisions: L.decisions.saved,
+              open_loops: L.open_loops.saved + L.open_loops.updated,
+              signals: L.signals.saved,
+              memory: L.memory.saved,
+              rules_captured: L.rules_captured.saved,
               checkpoint_id: checkpointId,
+              notion: notionOk,
             },
             unsaved,
-            outcome: unsaved.length > 0 ? "partial" : "ok",
+            outcome: anyEmptyUnexpected ? "degraded" : (anyFailed ? "partial" : "ok"),
             scrub: scrubReport,
+            layers,
+            totalRequested,
           };
+        };
+
+        // Layers the DB says still need work on a retry of the same request id.
+        const retryableLayerSet = async (saveId: string): Promise<Set<LayerName>> => {
+          const out = new Set<LayerName>();
+          const { data } = await supabaseAdmin
+            .from("save_receipt_layers")
+            .select("layer, layer_state")
+            .eq("save_id", saveId);
+          for (const r of (data ?? [])) {
+            if (r.layer_state === "FAILED" || r.layer_state === "EMPTY_UNEXPECTED") {
+              out.add(r.layer as LayerName);
+            }
+          }
+          return out;
         };
 
         // ══════ save_session ══════
         if (name === "save_session") {
           const startedAt = Date.now();
+          const clientRequestId = typeof args?.client_request_id === "string" ? args.client_request_id.trim() : "";
+          if (clientRequestId.length < 8) {
+            return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
+          }
           try {
-            const res = await runSaveLeg(args ?? {}, "save");
+            // Idempotency: a prior receipt for this id decides what happens next.
+            const { data: prior } = await supabaseAdmin
+              .from("save_receipts")
+              .select("save_id, overall_status")
+              .eq("client_request_id", clientRequestId)
+              .maybeSingle();
+
+            let only: Set<LayerName> | null = null;
+            if (prior) {
+              if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
+                const out = {
+                  session_id: args?.session_id,
+                  save_id: prior.save_id,
+                  overall_status: prior.overall_status,
+                  idempotent: true,
+                  layers_executed: [],
+                };
+                return rpcResult(id, {
+                  content: [{ type: "text", text: JSON.stringify(out) }],
+                  structuredContent: out,
+                  isError: false,
+                });
+              }
+              only = await retryableLayerSet(prior.save_id);
+            }
+
+            const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
+
+            // The database derives the status. This file never computes one.
+            let save_id: string | null = null;
+            let overall_status: string | null = null;
+            let idempotent = false;
+            let receipt_error: string | null = null;
+            try {
+              const { data: receipt, error: recErr } = await supabaseAdmin.rpc("record_save_receipt", {
+                p_client_request_id: clientRequestId,
+                p_session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                p_payload_hash: null,
+                p_layers: res.layers.map((l) => ({
+                  layer: l.layer,
+                  requested: l.requested,
+                  attempted: l.attempted,
+                  saved: l.saved,
+                  updated: l.updated,
+                  failed: l.failed,
+                  record_ids: l.record_ids,
+                  error_code: l.error_code,
+                  error_message: l.error_message,
+                  retryable: l.retryable,
+                  verified: l.verified,
+                  ...(l.layer_state ? { layer_state: l.layer_state } : {}),
+                })),
+              });
+              if (recErr) throw new Error(recErr.message);
+              save_id = receipt?.save_id ?? null;
+              overall_status = receipt?.overall_status ?? null;
+              idempotent = Boolean(receipt?.idempotent);
+            } catch (e) {
+              receipt_error = e instanceof Error ? e.message : String(e);
+              console.error("save_receipt_write_failed", receipt_error);
+            }
+
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant,
@@ -3885,18 +4142,24 @@ Deno.serve(async (req) => {
                 ritual: "save",
                 outcome: res.outcome,
                 duration_ms,
-                layers: { ...res.saved, scrub: res.scrub },
+                layers: { ...res.saved, scrub: res.scrub, save_id, overall_status },
                 unsaved: res.unsaved,
               });
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
                 tenant, tool: "save_session", agent_id: null, passes: [],
-                routing_log: { session_id: args?.session_id, outcome: res.outcome, duration_ms },
+                routing_log: { session_id: args?.session_id, outcome: res.outcome, overall_status, save_id, duration_ms },
               });
             } catch { /* best-effort */ }
+
             const out = {
               session_id: args?.session_id,
+              save_id,
+              overall_status,
+              idempotent,
+              ...(receipt_error ? { receipt_error } : {}),
+              layers: res.layers,
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
