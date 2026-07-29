@@ -2390,6 +2390,30 @@ export type Database = {
         }
         Relationships: []
       }
+      loop_state_alias: {
+        Row: {
+          added_at: string
+          alias: string
+          canonical: string
+          note: string | null
+          vocab_version: number
+        }
+        Insert: {
+          added_at?: string
+          alias: string
+          canonical: string
+          note?: string | null
+          vocab_version?: number
+        }
+        Update: {
+          added_at?: string
+          alias?: string
+          canonical?: string
+          note?: string | null
+          vocab_version?: number
+        }
+        Relationships: []
+      }
       mcp_usage_events: {
         Row: {
           agent_id: string | null
@@ -3477,6 +3501,104 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      save_receipt_layers: {
+        Row: {
+          attempted: number
+          error_code: string | null
+          error_message: string | null
+          failed: number
+          id: string
+          layer: string
+          layer_state: string
+          record_ids: Json
+          requested: number
+          retryable: boolean | null
+          save_id: string
+          saved: number
+          updated: number
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          attempted?: number
+          error_code?: string | null
+          error_message?: string | null
+          failed?: number
+          id?: string
+          layer: string
+          layer_state: string
+          record_ids?: Json
+          requested?: number
+          retryable?: boolean | null
+          save_id: string
+          saved?: number
+          updated?: number
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          attempted?: number
+          error_code?: string | null
+          error_message?: string | null
+          failed?: number
+          id?: string
+          layer?: string
+          layer_state?: string
+          record_ids?: Json
+          requested?: number
+          retryable?: boolean | null
+          save_id?: string
+          saved?: number
+          updated?: number
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "save_receipt_layers_save_id_fkey"
+            columns: ["save_id"]
+            isOneToOne: false
+            referencedRelation: "save_receipts"
+            referencedColumns: ["save_id"]
+          },
+        ]
+      }
+      save_receipts: {
+        Row: {
+          cid: string
+          client_request_id: string
+          completed_at: string | null
+          created_at: string
+          overall_status: string
+          payload_hash: string | null
+          save_id: string
+          session_id: string | null
+          watermark: string
+        }
+        Insert: {
+          cid: string
+          client_request_id: string
+          completed_at?: string | null
+          created_at?: string
+          overall_status: string
+          payload_hash?: string | null
+          save_id?: string
+          session_id?: string | null
+          watermark?: string
+        }
+        Update: {
+          cid?: string
+          client_request_id?: string
+          completed_at?: string | null
+          created_at?: string
+          overall_status?: string
+          payload_hash?: string | null
+          save_id?: string
+          session_id?: string | null
+          watermark?: string
+        }
+        Relationships: []
       }
       scheduled_actions: {
         Row: {
@@ -4930,6 +5052,15 @@ export type Database = {
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      record_save_receipt: {
+        Args: {
+          p_client_request_id: string
+          p_layers: Json
+          p_payload_hash: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       record_taylor_turn: {
         Args: {
           p_answer: string
