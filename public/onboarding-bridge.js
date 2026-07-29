@@ -389,6 +389,18 @@
 
       // The signed-in identity is authoritative. It comes from the React layer
       // (already resolved against resolve_tenant_context) or from the session.
+      // START-0H: first-run vs returning is decided on SERVER truth only.
+      // Any doubt resolves to first-time · showing "welcome back" to a brand
+      // new client is the defect being fixed here.
+      try {
+        var prog = serverState || (TENANT && TENANT.state) || null;
+        var reached = prog && typeof prog.reached === "number" ? prog.reached : 0;
+        var hasProgress = !!(prog && (prog.consentAt || reached >= 1));
+        COB.state.__progress = { returning: hasProgress, reached: reached };
+      } catch (e) {
+        COB.state.__progress = { returning: false, reached: 0 };
+      }
+
       var ident = (window.__COB_IDENTITY || {});
       var meta = user.user_metadata || {};
       COB.state.user = {

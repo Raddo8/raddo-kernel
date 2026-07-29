@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      _grant_rollback_20260729: {
+        Row: {
+          stmt: string | null
+        }
+        Insert: {
+          stmt?: string | null
+        }
+        Update: {
+          stmt?: string | null
+        }
+        Relationships: []
+      }
+      _grant_snapshot_20260729: {
+        Row: {
+          grantee: string | null
+          privilege_type: string | null
+          snapped_at: string | null
+          table_name: string | null
+        }
+        Insert: {
+          grantee?: string | null
+          privilege_type?: string | null
+          snapped_at?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          grantee?: string | null
+          privilege_type?: string | null
+          snapped_at?: string | null
+          table_name?: string | null
+        }
+        Relationships: []
+      }
       access_codes: {
         Row: {
           claimed_at: string | null
