@@ -4258,19 +4258,28 @@ Deno.serve(async (req) => {
 
             const registers_empty = await computeRegistersEmpty();
 
+            // HONESTY GATE · a re-brief that returned nothing is not a success.
+            const syncReasons: string[] = [];
+            if (briefRows.length === 0) syncReasons.push("empty_brief");
+            if ((dirs ?? []).length === 0 && (cps ?? []).length === 0 && briefRows.length === 0) {
+              syncReasons.push("no_layers_loaded");
+            }
+            const syncOutcome: "ok" | "partial" | "degraded" =
+              syncReasons.length ? "degraded" : (degraded.length ? "partial" : "ok");
+
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, session_id, ritual: "sync",
-                outcome: degraded.length ? "partial" : "ok",
+                outcome: syncOutcome,
                 duration_ms,
-                layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length, degraded },
+                layers: { brief: briefRows.length, directives: (dirs ?? []).length, checkpoints: (cps ?? []).length, degraded, reasons: syncReasons },
               });
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
                 tenant, tool: "sync_session", agent_id: null, passes: [],
-                routing_log: { session_id, duration_ms },
+                routing_log: { session_id, duration_ms, outcome: syncOutcome },
               });
             } catch { /* best-effort */ }
 
@@ -4287,6 +4296,8 @@ Deno.serve(async (req) => {
               decisions_this_session: cps ?? [],
               staleness,
               registers_empty,
+              outcome: syncOutcome,
+              ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
             };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(out) }],
