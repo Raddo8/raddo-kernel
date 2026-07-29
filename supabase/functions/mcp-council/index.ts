@@ -3113,6 +3113,16 @@ Deno.serve(async (req) => {
 
       if (name === "boot_kernel") {
         try {
+          // PKT-0A · request context, built at branch entry so duration is real
+          const pkt0aCtx = newRequestContext({
+            req,
+            tenant,
+            cid: await resolveTenantCid(tenant).catch(() => null),
+            authenticated_sub: identity.sub ?? null,
+            auth_mode: authMode,
+            surface: "mcp",
+            build_id: BUILD_ID,
+          });
           if (!supabaseAdmin) {
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify({ error: "no_active_kernel", tenant }) }],
