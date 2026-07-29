@@ -425,7 +425,22 @@
     }
 
 
+    // --- account control bridge ---
+    // Presentation-only exit hatch for the legacy surface. Signs the person out
+    // and returns them to the single front door. No routing or gate logic here.
+    window.COB_SIGNOUT = async function () {
+      try { window.COB_PERSIST && window.COB_PERSIST(); } catch (e) {}
+      try { await sb.auth.signOut(); } catch (e) {}
+      try {
+        var top = window.top || window.parent || window;
+        top.location.href = "/signin";
+      } catch (e) {
+        window.location.href = "/signin";
+      }
+    };
+
     // --- persistence bridge ---
+
     // Debounced (1500ms) full-state upsert into onboarding_state for the signed-in user.
     var PERSIST_T = null;
     window.COB_PERSIST = function () {
