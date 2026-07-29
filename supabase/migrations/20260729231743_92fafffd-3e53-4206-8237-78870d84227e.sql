@@ -1,0 +1,1 @@
+ALTER TABLE public.ritual_runs DROP CONSTRAINT IF EXISTS ritual_runs_outcome_chk;
