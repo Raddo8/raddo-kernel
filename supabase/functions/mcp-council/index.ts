@@ -4396,6 +4396,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              layers: res.layers,
               close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
               makeup_closed,
