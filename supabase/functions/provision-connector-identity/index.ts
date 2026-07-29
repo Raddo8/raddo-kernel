@@ -49,13 +49,27 @@ async function asFetch(path: string, init: RequestInit) {
   });
 }
 
+// START-0A containment: this path stamped a tenant claim from the onboarding
+// slug, which is not an authority. Rebuilt in START-3. Refuses until then.
+const CONNECTOR_PROVISIONING_ENABLED = false;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  if (!CONNECTOR_PROVISIONING_ENABLED) {
+    console.warn("connector_provisioning_disabled", { path: new URL(req.url).pathname });
+    return ok({
+      provisioned: false,
+      error: "connector_provisioning_disabled",
+      message: "Connector provisioning is temporarily unavailable.",
+    });
+  }
 
   try {
     if (!AS_SERVICE_ROLE_KEY) {
       return ok({ provisioned: false, error: "as_key_missing" });
     }
+
 
     // --- Auth guard: caller must be signed in, and claims email must match body email.
     const authz = req.headers.get("Authorization") || "";
