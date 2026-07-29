@@ -12,7 +12,8 @@
 // Receipts carry pointers, counts and outcomes. Never raw business content.
 
 import type { RequestContext } from "./request-context.ts";
-import { declaredEffects, EFFECTS_CATALOG_VERSION, undeclaredEffects, type Effect } from "./tool-effects.ts";
+import type { IdentityResolution } from "./effective-identity.ts";
+import { declaredEffects, EFFECTS_CATALOG_VERSION, isUncatalogued, undeclaredEffects, type Effect } from "./tool-effects.ts";
 
 export type Outcome = "ok" | "error" | "degraded";
 
@@ -24,6 +25,8 @@ export type ExecutionReceiptArgs = {
   error_class?: string | null;
   canonical_refs?: Record<string, unknown> | null;
   notes?: Record<string, unknown> | null;
+  identity_status?: string | null;
+  identity_candidates?: string[] | null;
 };
 
 export async function recordExecutionReceipt(
