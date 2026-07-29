@@ -496,6 +496,47 @@ export type Database = {
         }
         Relationships: []
       }
+      bridge_deliveries: {
+        Row: {
+          attempt_no: number
+          attempted_at: string
+          cid: string
+          delivery_id: string
+          error: string | null
+          outcome: string
+          run_id: string
+          slack_ts: string | null
+        }
+        Insert: {
+          attempt_no: number
+          attempted_at?: string
+          cid?: string
+          delivery_id?: string
+          error?: string | null
+          outcome: string
+          run_id: string
+          slack_ts?: string | null
+        }
+        Update: {
+          attempt_no?: number
+          attempted_at?: string
+          cid?: string
+          delivery_id?: string
+          error?: string | null
+          outcome?: string
+          run_id?: string
+          slack_ts?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bridge_deliveries_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "bridge_runs"
+            referencedColumns: ["run_id"]
+          },
+        ]
+      }
       bridge_events: {
         Row: {
           attempt_count: number
@@ -553,6 +594,186 @@ export type Database = {
           target_agent?: string | null
           team_id?: string
           thread_ts?: string | null
+        }
+        Relationships: []
+      }
+      bridge_limits: {
+        Row: {
+          breach_action: string
+          enforced_by: string
+          limit_name: string
+          limit_value: number
+          set_at: string
+          set_by: string
+          unit: string
+        }
+        Insert: {
+          breach_action: string
+          enforced_by: string
+          limit_name: string
+          limit_value: number
+          set_at?: string
+          set_by: string
+          unit: string
+        }
+        Update: {
+          breach_action?: string
+          enforced_by?: string
+          limit_name?: string
+          limit_value?: number
+          set_at?: string
+          set_by?: string
+          unit?: string
+        }
+        Relationships: []
+      }
+      bridge_model_prices: {
+        Row: {
+          effective_from: string
+          input_usd_per_1k: number
+          model: string
+          output_usd_per_1k: number
+          provider: string
+          registered_by: string
+          source: string
+        }
+        Insert: {
+          effective_from: string
+          input_usd_per_1k: number
+          model: string
+          output_usd_per_1k: number
+          provider: string
+          registered_by: string
+          source: string
+        }
+        Update: {
+          effective_from?: string
+          input_usd_per_1k?: number
+          model?: string
+          output_usd_per_1k?: number
+          provider?: string
+          registered_by?: string
+          source?: string
+        }
+        Relationships: []
+      }
+      bridge_runs: {
+        Row: {
+          agent: string
+          agent_tenant: string
+          cid: string
+          completed_at: string | null
+          cost_usd: number | null
+          created_at: string
+          error: string | null
+          event_id: string
+          input_watermark: string
+          kernel_version: number
+          latency_ms: number | null
+          model: string
+          packet_id: string | null
+          price_effective_from: string
+          provider: string
+          provider_response_id: string | null
+          request_message_ts: string
+          response_text: string | null
+          run_id: string
+          status: string
+          tokens_in: number | null
+          tokens_out: number | null
+        }
+        Insert: {
+          agent: string
+          agent_tenant: string
+          cid?: string
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          event_id: string
+          input_watermark: string
+          kernel_version: number
+          latency_ms?: number | null
+          model: string
+          packet_id?: string | null
+          price_effective_from: string
+          provider: string
+          provider_response_id?: string | null
+          request_message_ts: string
+          response_text?: string | null
+          run_id?: string
+          status: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Update: {
+          agent?: string
+          agent_tenant?: string
+          cid?: string
+          completed_at?: string | null
+          cost_usd?: number | null
+          created_at?: string
+          error?: string | null
+          event_id?: string
+          input_watermark?: string
+          kernel_version?: number
+          latency_ms?: number | null
+          model?: string
+          packet_id?: string | null
+          price_effective_from?: string
+          provider?: string
+          provider_response_id?: string | null
+          request_message_ts?: string
+          response_text?: string | null
+          run_id?: string
+          status?: string
+          tokens_in?: number | null
+          tokens_out?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bridge_runs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "bridge_events"
+            referencedColumns: ["event_id"]
+          },
+          {
+            foreignKeyName: "bridge_runs_price_registered"
+            columns: ["provider", "model", "price_effective_from"]
+            isOneToOne: false
+            referencedRelation: "bridge_model_prices"
+            referencedColumns: ["provider", "model", "effective_from"]
+          },
+        ]
+      }
+      bridge_senders: {
+        Row: {
+          added_at: string
+          added_by: string
+          enabled: boolean
+          label: string
+          may_invoke: string[]
+          note: string | null
+          slack_user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          enabled?: boolean
+          label: string
+          may_invoke?: string[]
+          note?: string | null
+          slack_user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          enabled?: boolean
+          label?: string
+          may_invoke?: string[]
+          note?: string | null
+          slack_user_id?: string
         }
         Relationships: []
       }
@@ -1836,6 +2057,50 @@ export type Database = {
           },
         ]
       }
+      kernel_activation_receipts: {
+        Row: {
+          activated_at: string
+          activated_by: string
+          cid: string
+          kernel_id: string
+          part_manifest: Json
+          receipt_id: string
+          retired_kernel_id: string | null
+          validator_verdict: Json
+          version: number
+        }
+        Insert: {
+          activated_at?: string
+          activated_by: string
+          cid: string
+          kernel_id: string
+          part_manifest: Json
+          receipt_id?: string
+          retired_kernel_id?: string | null
+          validator_verdict: Json
+          version: number
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string
+          cid?: string
+          kernel_id?: string
+          part_manifest?: Json
+          receipt_id?: string
+          retired_kernel_id?: string | null
+          validator_verdict?: Json
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kernel_activation_receipts_kernel_id_fkey"
+            columns: ["kernel_id"]
+            isOneToOne: false
+            referencedRelation: "kernels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kernel_parts: {
         Row: {
           bytes: number
@@ -1877,32 +2142,46 @@ export type Database = {
       kernels: {
         Row: {
           activated_at: string | null
+          cid: string
           created_at: string
           id: string
           notes: string | null
           status: string
           tenant_id: string
+          verification_state: string | null
           version: number
         }
         Insert: {
           activated_at?: string | null
+          cid: string
           created_at?: string
           id?: string
           notes?: string | null
           status?: string
           tenant_id: string
+          verification_state?: string | null
           version?: number
         }
         Update: {
           activated_at?: string | null
+          cid?: string
           created_at?: string
           id?: string
           notes?: string | null
           status?: string
           tenant_id?: string
+          verification_state?: string | null
           version?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kernels_cid_fk"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
       }
       knowledge_files: {
         Row: {
@@ -2623,6 +2902,51 @@ export type Database = {
           full_name?: string | null
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      program_capabilities: {
+        Row: {
+          autonomy: string
+          blocked_by: string | null
+          capability_key: string
+          cost_model: string
+          est_usd_per_unit: number | null
+          label: string
+          proven_by: string | null
+          registered_at: string
+          registered_by: string
+          status: string
+          unit: string | null
+          what_it_does: string
+        }
+        Insert: {
+          autonomy: string
+          blocked_by?: string | null
+          capability_key: string
+          cost_model: string
+          est_usd_per_unit?: number | null
+          label: string
+          proven_by?: string | null
+          registered_at?: string
+          registered_by: string
+          status: string
+          unit?: string | null
+          what_it_does: string
+        }
+        Update: {
+          autonomy?: string
+          blocked_by?: string | null
+          capability_key?: string
+          cost_model?: string
+          est_usd_per_unit?: number | null
+          label?: string
+          proven_by?: string | null
+          registered_at?: string
+          registered_by?: string
+          status?: string
+          unit?: string | null
+          what_it_does?: string
         }
         Relationships: []
       }
@@ -4248,6 +4572,22 @@ export type Database = {
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
+      }
+      kernel_activate: {
+        Args: { p_actor: string; p_kernel_id: string }
+        Returns: {
+          activated: string
+          receipt: string
+          retired: string
+        }[]
+      }
+      kernel_validate: {
+        Args: { p_kernel_id: string }
+        Returns: {
+          check_name: string
+          detail: string
+          verdict: string
+        }[]
       }
       mint_tenant: {
         Args: {
