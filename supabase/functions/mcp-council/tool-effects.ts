@@ -9,7 +9,7 @@
 //
 // Purely additive: nothing here changes behaviour.
 
-export const EFFECTS_CATALOG_VERSION = "pkt0a.1";
+export const EFFECTS_CATALOG_VERSION = "pkt0a.2";
 
 export type Effect =
   | "identity_read"
