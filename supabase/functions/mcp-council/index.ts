@@ -2864,6 +2864,33 @@ Deno.serve(async (req) => {
   };
   const resolvedCid = async (): Promise<string | null> => cidOrNull(await cidResolution());
 
+  // Lane 1 · ITEM 2 · active kernel keyed on the server-verified CID, with a
+  // display-name fallback that MUST remain: two tenants rows share the names
+  // COB and JAEL, so name-based CID resolution can come back AMBIGUOUS. The
+  // fallback keeps the runtime identity-delivery path (load_kernel_part /
+  // begin_session Step 0-K) working exactly as it does today, and the row's
+  // own `cid` column is then treated as the authoritative CID downstream.
+  const activeKernel = async (
+    cols = "id, version, status, cid",
+  ): Promise<{ kernel: any | null; error: any; cid: string | null; keyed_by: "cid" | "tenant_id" | "none" }> => {
+    if (!supabaseAdmin) return { kernel: null, error: null, cid: null, keyed_by: "none" };
+    const cid = await resolvedCid();
+    if (cid) {
+      const { data, error } = await supabaseAdmin
+        .from("kernels").select(cols).eq("cid", cid).eq("status", "active").maybeSingle();
+      if (data) return { kernel: data, error, cid: data.cid ?? cid, keyed_by: "cid" };
+      if (error) return { kernel: null, error, cid, keyed_by: "cid" };
+    }
+    const { data: legacy, error: legacyErr } = await supabaseAdmin
+      .from("kernels").select(cols).eq("tenant_id", tenant).eq("status", "active").maybeSingle();
+    return {
+      kernel: legacy ?? null,
+      error: legacyErr,
+      cid: (legacy?.cid ?? cid) ?? null,
+      keyed_by: legacy ? "tenant_id" : (cid ? "cid" : "none"),
+    };
+  };
+
   // Lane 1 · ITEM 4 · manifest staleness reporting. Work always completes.
   const manifestBlock = (a: any): Record<string, unknown> => {
     const client = typeof a?.client_manifest_version === "string" ? a.client_manifest_version.trim() : "";
@@ -3198,23 +3225,10 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          const bootCid = cidOrNull(pkt0aIdentity);
-          const { data: kernel, error: kernelErr } = bootCid
-            ? await supabaseAdmin
-                .from("kernels")
-                .select("id, version, cid")
-                .eq("cid", bootCid)
-                .eq("status", "active")
-                .maybeSingle()
-            : { data: null, error: null } as any;
-          if (!bootCid) {
-            const out = { error: "no_active_kernel", tenant, outcome: "degraded", reason: "cid_unresolved", reasons: ["cid_unresolved"] };
-            return rpcResult(id, {
-              content: [{ type: "text", text: JSON.stringify(out) }],
-              structuredContent: out,
-              isError: false,
-            });
-          }
+          const bootLookup = await activeKernel("id, version, cid");
+          const kernel = bootLookup.kernel;
+          const kernelErr = bootLookup.error;
+          const bootCid = bootLookup.cid;
           if (!kernel) {
             const out = { error: "no_active_kernel", tenant };
             return rpcResult(id, {
@@ -3321,14 +3335,9 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
-          const partCid = await resolvedCid();
-          if (!partCid) return notFoundResp();
-          const { data: kernel } = await supabaseAdmin
-            .from("kernels")
-            .select("id")
-            .eq("cid", partCid)
-            .eq("status", "active")
-            .maybeSingle();
+          const partLookup = await activeKernel("id, cid");
+          const kernel = partLookup.kernel;
+          const partCid = partLookup.cid;
           if (!kernel) return notFoundResp();
           const { data: partRows } = await supabaseAdmin
             .from("kernel_parts")
@@ -3391,16 +3400,11 @@ Deno.serve(async (req) => {
           }));
 
           // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
-          const beginCid = await resolvedCid();
+          const beginLookup = await activeKernel("id, version, status, cid");
+          const kernel = beginLookup.kernel;
+          const kernelErr = beginLookup.error;
+          const beginCid = beginLookup.cid;
           if (!beginCid) degradedReasons.push("cid_unresolved");
-          const { data: kernel, error: kernelErr } = beginCid
-            ? await supabaseAdmin
-                .from("kernels")
-                .select("id, version, status, cid")
-                .eq("cid", beginCid)
-                .eq("status", "active")
-                .maybeSingle()
-            : { data: null, error: null } as any;
           if (kernelErr) outcome = "partial";
 
           // 3. Insert new session row
