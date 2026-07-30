@@ -28,7 +28,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
-import { resolveEffectiveIdentity, cidOrNull } from "./effective-identity.ts";
+import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "truthful_receipts_v1";
+const BUILD_ID = "lane1_cid_telemetry_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2124,6 +2124,17 @@ const SERVER_INFO = {
   ],
 };
 
+// Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
+// input schema changes so a stale connector can detect its own staleness.
+const TOOL_MANIFEST_VERSION = "2026.07.30.1";
+
+const MANIFEST_PROP = {
+  client_manifest_version: {
+    type: "string",
+    description: "Optional. The tool manifest version your connector was registered with. If it does not match the server, the work still runs and the response reports manifest_mismatch.",
+  },
+} as const;
+
 const TOOL_RUN_COUNCIL = {
   name: "convene_council",
   title: "Convene the Council",
@@ -2238,6 +2249,7 @@ const TOOL_BEGIN_SESSION = {
     type: "object",
     properties: {
       surface: { type: "string", description: "Optional surface identifier (e.g. 'cowork', 'mcp', 'cli')." },
+      ...MANIFEST_PROP,
     },
     additionalProperties: false,
   },
@@ -2333,6 +2345,7 @@ const RITUAL_SAVE_PROPS = {
     },
     additionalProperties: false,
   },
+  ...MANIFEST_PROP,
 } as const;
 
 const TOOL_SAVE_SESSION = {
@@ -2359,6 +2372,7 @@ const TOOL_SYNC_SESSION = {
     type: "object",
     properties: {
       session_id: { type: "string", description: "Active session UUID." },
+      ...MANIFEST_PROP,
     },
     required: ["session_id"],
     additionalProperties: false,
@@ -2841,6 +2855,86 @@ Deno.serve(async (req) => {
   // The legal-seat and tenant-context lookups below depend on this.
   const tenant = identity.tenant;
 
+  // Lane 1 · ITEM 1/2 · server-verified CID. Resolved once per request from
+  // the same verified claim that produced `tenant`. NEVER from the body.
+  let _cidResolution: IdentityResolution | null = null;
+  const cidResolution = async (): Promise<IdentityResolution> => {
+    if (!_cidResolution) _cidResolution = await resolveEffectiveIdentity(supabaseAdmin, tenant);
+    return _cidResolution;
+  };
+  const resolvedCid = async (): Promise<string | null> => cidOrNull(await cidResolution());
+
+  // Lane 1 · ITEM 2 · active kernel keyed on the server-verified CID, with a
+  // display-name fallback that MUST remain: two tenants rows share the names
+  // COB and JAEL, so name-based CID resolution can come back AMBIGUOUS. The
+  // fallback keeps the runtime identity-delivery path (load_kernel_part /
+  // begin_session Step 0-K) working exactly as it does today, and the row's
+  // own `cid` column is then treated as the authoritative CID downstream.
+  const activeKernel = async (
+    cols = "id, version, status, cid",
+  ): Promise<{ kernel: any | null; error: any; cid: string | null; keyed_by: "cid" | "tenant_id" | "none" }> => {
+    if (!supabaseAdmin) return { kernel: null, error: null, cid: null, keyed_by: "none" };
+    const cid = await resolvedCid();
+    if (cid) {
+      const { data, error } = await supabaseAdmin
+        .from("kernels").select(cols).eq("cid", cid).eq("status", "active").maybeSingle();
+      if (data) return { kernel: data, error, cid: data.cid ?? cid, keyed_by: "cid" };
+      if (error) return { kernel: null, error, cid, keyed_by: "cid" };
+    }
+    const { data: legacy, error: legacyErr } = await supabaseAdmin
+      .from("kernels").select(cols).eq("tenant_id", tenant).eq("status", "active").maybeSingle();
+    return {
+      kernel: legacy ?? null,
+      error: legacyErr,
+      cid: (legacy?.cid ?? cid) ?? null,
+      keyed_by: legacy ? "tenant_id" : (cid ? "cid" : "none"),
+    };
+  };
+
+  // Server-side CID for receipts. Name resolution first; when the display
+  // name is ambiguous, the tenant's own active kernel row carries the CID.
+  // Never sourced from the request body.
+  const serverCid = async (): Promise<string | null> =>
+    (await resolvedCid()) ?? (await activeKernel("id, cid")).cid;
+
+  // Lane 1 · ITEM 4 · manifest staleness reporting. Work always completes.
+  const manifestBlock = (a: any): Record<string, unknown> => {
+    const client = typeof a?.client_manifest_version === "string" ? a.client_manifest_version.trim() : "";
+    const base = { tool_manifest_version: TOOL_MANIFEST_VERSION };
+    if (!client || client === TOOL_MANIFEST_VERSION) return base;
+    return {
+      ...base,
+      manifest_mismatch: { client, server: TOOL_MANIFEST_VERSION },
+      manifest_note: "Your connector is registered against an older tool manifest. Remove and re-add the connector to pick up the current tool schemas.",
+    };
+  };
+
+  // Lane 1 · ITEM 3 · kernel-access telemetry. Never blocks or fails a read.
+  const logKernelAccess = async (a: {
+    cid: string | null; kernel_id: string | null; part: string; seq: number | null;
+    bytes: number; access_kind: string; surface: string | null; session_id?: string | null;
+  }): Promise<boolean> => {
+    if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
+    try {
+      const { error } = await supabaseAdmin.rpc("log_kernel_access", {
+        p_cid: a.cid,
+        p_kernel_id: a.kernel_id,
+        p_part: a.part,
+        p_seq: a.seq,
+        p_bytes: a.bytes,
+        p_access_kind: a.access_kind,
+        p_surface: a.surface,
+        p_auth_subject: identity?.sub ?? null,
+        p_session_id: a.session_id ?? null,
+      });
+      if (error) { console.error("kernel_access_log_failed", error.message); return false; }
+      return true;
+    } catch (e) {
+      console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  };
+
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
     const ip = getClientIp(req.headers);
@@ -3137,12 +3231,10 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          const { data: kernel, error: kernelErr } = await supabaseAdmin
-            .from("kernels")
-            .select("id, version")
-            .eq("tenant_id", tenant)
-            .eq("status", "active")
-            .maybeSingle();
+          const bootLookup = await activeKernel("id, version, cid");
+          const kernel = bootLookup.kernel;
+          const kernelErr = bootLookup.error;
+          const bootCid = bootLookup.cid;
           if (!kernel) {
             const out = { error: "no_active_kernel", tenant };
             return rpcResult(id, {
@@ -3178,9 +3270,21 @@ Deno.serve(async (req) => {
             .order("booted_at", { ascending: false })
             .limit(1)
             .maybeSingle();
-          const out = {
+          const bootTelemetryOk = await logKernelAccess({
+            cid: bootCid,
+            kernel_id: kernel.id,
+            part: "manifest",
+            seq: null,
+            bytes: 0,
+            access_kind: "MANIFEST_ONLY",
+            surface: "mcp",
+            session_id: typeof args?.session_id === "string" ? args.session_id : null,
+          });
+          const out: Record<string, unknown> = {
             client: tenant,
             tenant,
+            cid: bootCid,
+            ...(bootTelemetryOk ? {} : { telemetry: "unrecorded" }),
             kernel_version: kernel.version,
             parts_manifest,
             counts: { parts: rows.length },
@@ -3237,12 +3341,9 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
-          const { data: kernel } = await supabaseAdmin
-            .from("kernels")
-            .select("id")
-            .eq("tenant_id", tenant)
-            .eq("status", "active")
-            .maybeSingle();
+          const partLookup = await activeKernel("id, cid");
+          const kernel = partLookup.kernel;
+          const partCid = partLookup.cid;
           if (!kernel) return notFoundResp();
           const { data: partRows } = await supabaseAdmin
             .from("kernel_parts")
@@ -3254,7 +3355,21 @@ Deno.serve(async (req) => {
           const of = rows.reduce((m, r) => Math.max(m, r.seq), 0);
           const row = rows.find((r) => r.seq === seq);
           if (!row) return notFoundResp();
-          const out = { part, seq, of, content_md: row.content_md, sha256: row.sha256 };
+          const servedBytes = new TextEncoder().encode(row.content_md ?? "").length;
+          const partTelemetryOk = await logKernelAccess({
+            cid: partCid,
+            kernel_id: kernel.id,
+            part,
+            seq,
+            bytes: servedBytes,
+            access_kind: "RUNTIME_LOAD",
+            surface: "mcp",
+            session_id: typeof args?.session_id === "string" ? args.session_id : null,
+          });
+          const out = {
+            part, seq, of, content_md: row.content_md, sha256: row.sha256,
+            ...(partTelemetryOk ? {} : { telemetry: "unrecorded" }),
+          };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
@@ -3290,13 +3405,12 @@ Deno.serve(async (req) => {
             id: r.id, opened_at: r.opened_at,
           }));
 
-          // 4. Active kernel (needed for kernel_version on new session row)
-          const { data: kernel, error: kernelErr } = await supabaseAdmin
-            .from("kernels")
-            .select("id, version, status")
-            .eq("tenant_id", tenant)
-            .eq("status", "active")
-            .maybeSingle();
+          // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
+          const beginLookup = await activeKernel("id, version, status, cid");
+          const kernel = beginLookup.kernel;
+          const kernelErr = beginLookup.error;
+          const beginCid = beginLookup.cid;
+          if (!beginCid) degradedReasons.push("cid_unresolved");
           if (kernelErr) outcome = "partial";
 
           // 3. Insert new session row
@@ -3331,6 +3445,14 @@ Deno.serve(async (req) => {
               })),
               sealed: true,
             };
+          }
+
+          if (kernel) {
+            await logKernelAccess({
+              cid: beginCid, kernel_id: kernel.id, part: "manifest", seq: null,
+              bytes: 0, access_kind: "MANIFEST_ONLY", surface: `begin_session:${surface}`,
+              session_id: sessionId,
+            });
           }
 
           // 5. Directives (active) + pending_confirm — column is tenant_id.
@@ -3440,8 +3562,11 @@ Deno.serve(async (req) => {
           } catch { outcome = "partial"; }
 
           // 9b. HONESTY GATE · a boot that loaded no identity is not a success.
-          if (!kernel || kernelBlock.parts.length === 0) degradedReasons.push("no_active_kernel");
-          if (briefRows.length === 0) degradedReasons.push("empty_brief");
+          if (!kernel) degradedReasons.push("no_active_kernel");
+          else if (kernelBlock.parts.length === 0) degradedReasons.push("kernel_parts_zero");
+          if (briefErr) degradedReasons.push("empty_brief");
+          if (dirErr || pendErr) degradedReasons.push("no_directives_surface");
+          if (cpErr) degradedReasons.push("no_checkpoint");
           if (degradedReasons.length > 0) outcome = "degraded";
 
           // 10. Ritual run
@@ -3485,6 +3610,7 @@ Deno.serve(async (req) => {
             makeup_close_owed,
             registers_empty,
             outcome,
+            ...manifestBlock(args),
             ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
           return rpcResult(id, {
@@ -4111,6 +4237,24 @@ Deno.serve(async (req) => {
               only = await retryableLayerSet(prior.save_id);
             }
 
+            const saveCid = await serverCid();
+            if (!saveCid) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "cid_unresolved",
+                reasons: ["cid_unresolved"],
+                ...manifestBlock(args),
+                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
 
@@ -4138,6 +4282,7 @@ Deno.serve(async (req) => {
                   verified: l.verified,
                   ...(l.layer_state ? { layer_state: l.layer_state } : {}),
                 })),
+                p_cid: saveCid,
               });
               if (recErr) throw new Error(recErr.message);
               save_id = receipt?.save_id ?? null;
@@ -4176,6 +4321,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              ...manifestBlock(args),
             };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(out) }],
@@ -4264,11 +4410,13 @@ Deno.serve(async (req) => {
             const registers_empty = await computeRegistersEmpty();
 
             // HONESTY GATE · a re-brief that returned nothing is not a success.
+            // An honestly empty source is ok. Only an UNREADABLE source degrades.
             const syncReasons: string[] = [];
-            if (briefRows.length === 0) syncReasons.push("empty_brief");
-            if ((dirs ?? []).length === 0 && (cps ?? []).length === 0 && briefRows.length === 0) {
-              syncReasons.push("no_layers_loaded");
-            }
+            if (briefErr) syncReasons.push("empty_brief");
+            if (dirsErr) syncReasons.push("no_directives_surface");
+            if (cpsErr) syncReasons.push("no_checkpoint");
+            const syncCid = await serverCid();
+            if (!syncCid) syncReasons.push("cid_unresolved");
             const syncOutcome: "ok" | "partial" | "degraded" =
               syncReasons.length ? "degraded" : (degraded.length ? "partial" : "ok");
 
@@ -4302,6 +4450,7 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
             };
             return rpcResult(id, {
@@ -4331,6 +4480,9 @@ Deno.serve(async (req) => {
             ? args.close_kind.trim() : "clean";
           try {
             // 1. Full save leg with checkpoint kind='end'
+            const endReasons: string[] = [];
+            const endCid = await serverCid();
+            if (!endCid) endReasons.push("cid_unresolved");
             const res = await runSaveLeg(args ?? {}, "end");
 
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
@@ -4371,10 +4523,12 @@ Deno.serve(async (req) => {
             }
 
             // 4. ritual_runs
+            const endOutcome: "ok" | "partial" | "degraded" =
+              endReasons.length ? "degraded" : res.outcome;
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
-                tenant, session_id, ritual: "end", outcome: res.outcome,
+                tenant, session_id, ritual: "end", outcome: endOutcome,
                 duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
@@ -4382,7 +4536,7 @@ Deno.serve(async (req) => {
             try {
               await recordMcpUsage(supabaseAdmin, {
                 tenant, tool: "end_session", agent_id: null, passes: [],
-                routing_log: { session_id, close_kind, outcome: res.outcome, duration_ms },
+                routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
               });
             } catch { /* best-effort */ }
 
@@ -4395,7 +4549,9 @@ Deno.serve(async (req) => {
               session_id,
               saved: res.saved,
               unsaved: res.unsaved,
-              outcome: res.outcome,
+              outcome: endOutcome,
+              ...manifestBlock(args),
+              ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
               close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
