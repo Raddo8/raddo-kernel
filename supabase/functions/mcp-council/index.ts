@@ -4470,6 +4470,9 @@ Deno.serve(async (req) => {
             ? args.close_kind.trim() : "clean";
           try {
             // 1. Full save leg with checkpoint kind='end'
+            const endReasons: string[] = [];
+            const endCid = await resolvedCid();
+            if (!endCid) endReasons.push("cid_unresolved");
             const res = await runSaveLeg(args ?? {}, "end");
 
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
@@ -4510,10 +4513,12 @@ Deno.serve(async (req) => {
             }
 
             // 4. ritual_runs
+            const endOutcome: "ok" | "partial" | "degraded" =
+              endReasons.length ? "degraded" : res.outcome;
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
-                tenant, session_id, ritual: "end", outcome: res.outcome,
+                tenant, session_id, ritual: "end", outcome: endOutcome,
                 duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
               });
@@ -4521,7 +4526,7 @@ Deno.serve(async (req) => {
             try {
               await recordMcpUsage(supabaseAdmin, {
                 tenant, tool: "end_session", agent_id: null, passes: [],
-                routing_log: { session_id, close_kind, outcome: res.outcome, duration_ms },
+                routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
               });
             } catch { /* best-effort */ }
 
@@ -4534,7 +4539,9 @@ Deno.serve(async (req) => {
               session_id,
               saved: res.saved,
               unsaved: res.unsaved,
-              outcome: res.outcome,
+              outcome: endOutcome,
+              ...manifestBlock(args),
+              ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
               close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
