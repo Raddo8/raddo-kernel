@@ -3198,12 +3198,23 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          const { data: kernel, error: kernelErr } = await supabaseAdmin
-            .from("kernels")
-            .select("id, version")
-            .eq("tenant_id", tenant)
-            .eq("status", "active")
-            .maybeSingle();
+          const bootCid = cidOrNull(pkt0aIdentity);
+          const { data: kernel, error: kernelErr } = bootCid
+            ? await supabaseAdmin
+                .from("kernels")
+                .select("id, version, cid")
+                .eq("cid", bootCid)
+                .eq("status", "active")
+                .maybeSingle()
+            : { data: null, error: null } as any;
+          if (!bootCid) {
+            const out = { error: "no_active_kernel", tenant, outcome: "degraded", reason: "cid_unresolved", reasons: ["cid_unresolved"] };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          }
           if (!kernel) {
             const out = { error: "no_active_kernel", tenant };
             return rpcResult(id, {
@@ -3239,9 +3250,21 @@ Deno.serve(async (req) => {
             .order("booted_at", { ascending: false })
             .limit(1)
             .maybeSingle();
-          const out = {
+          const bootTelemetryOk = await logKernelAccess({
+            cid: bootCid,
+            kernel_id: kernel.id,
+            part: "manifest",
+            seq: null,
+            bytes: 0,
+            access_kind: "MANIFEST_ONLY",
+            surface: "mcp",
+            session_id: typeof args?.session_id === "string" ? args.session_id : null,
+          });
+          const out: Record<string, unknown> = {
             client: tenant,
             tenant,
+            cid: bootCid,
+            ...(bootTelemetryOk ? {} : { telemetry: "unrecorded" }),
             kernel_version: kernel.version,
             parts_manifest,
             counts: { parts: rows.length },
@@ -3298,10 +3321,12 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
+          const partCid = await resolvedCid();
+          if (!partCid) return notFoundResp();
           const { data: kernel } = await supabaseAdmin
             .from("kernels")
             .select("id")
-            .eq("tenant_id", tenant)
+            .eq("cid", partCid)
             .eq("status", "active")
             .maybeSingle();
           if (!kernel) return notFoundResp();
@@ -3315,7 +3340,21 @@ Deno.serve(async (req) => {
           const of = rows.reduce((m, r) => Math.max(m, r.seq), 0);
           const row = rows.find((r) => r.seq === seq);
           if (!row) return notFoundResp();
-          const out = { part, seq, of, content_md: row.content_md, sha256: row.sha256 };
+          const servedBytes = new TextEncoder().encode(row.content_md ?? "").length;
+          const partTelemetryOk = await logKernelAccess({
+            cid: partCid,
+            kernel_id: kernel.id,
+            part,
+            seq,
+            bytes: servedBytes,
+            access_kind: "RUNTIME_LOAD",
+            surface: "mcp",
+            session_id: typeof args?.session_id === "string" ? args.session_id : null,
+          });
+          const out = {
+            part, seq, of, content_md: row.content_md, sha256: row.sha256,
+            ...(partTelemetryOk ? {} : { telemetry: "unrecorded" }),
+          };
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
