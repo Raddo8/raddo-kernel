@@ -3390,13 +3390,17 @@ Deno.serve(async (req) => {
             id: r.id, opened_at: r.opened_at,
           }));
 
-          // 4. Active kernel (needed for kernel_version on new session row)
-          const { data: kernel, error: kernelErr } = await supabaseAdmin
-            .from("kernels")
-            .select("id, version, status")
-            .eq("tenant_id", tenant)
-            .eq("status", "active")
-            .maybeSingle();
+          // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
+          const beginCid = await resolvedCid();
+          if (!beginCid) degradedReasons.push("cid_unresolved");
+          const { data: kernel, error: kernelErr } = beginCid
+            ? await supabaseAdmin
+                .from("kernels")
+                .select("id, version, status, cid")
+                .eq("cid", beginCid)
+                .eq("status", "active")
+                .maybeSingle()
+            : { data: null, error: null } as any;
           if (kernelErr) outcome = "partial";
 
           // 3. Insert new session row
@@ -3431,6 +3435,14 @@ Deno.serve(async (req) => {
               })),
               sealed: true,
             };
+          }
+
+          if (kernel) {
+            await logKernelAccess({
+              cid: beginCid, kernel_id: kernel.id, part: "manifest", seq: null,
+              bytes: 0, access_kind: "MANIFEST_ONLY", surface: `begin_session:${surface}`,
+              session_id: sessionId,
+            });
           }
 
           // 5. Directives (active) + pending_confirm — column is tenant_id.
@@ -3540,8 +3552,11 @@ Deno.serve(async (req) => {
           } catch { outcome = "partial"; }
 
           // 9b. HONESTY GATE · a boot that loaded no identity is not a success.
-          if (!kernel || kernelBlock.parts.length === 0) degradedReasons.push("no_active_kernel");
-          if (briefRows.length === 0) degradedReasons.push("empty_brief");
+          if (!kernel) degradedReasons.push("no_active_kernel");
+          else if (kernelBlock.parts.length === 0) degradedReasons.push("kernel_parts_zero");
+          if (briefErr) degradedReasons.push("empty_brief");
+          if (dirErr || pendErr) degradedReasons.push("no_directives_surface");
+          if (cpErr) degradedReasons.push("no_checkpoint");
           if (degradedReasons.length > 0) outcome = "degraded";
 
           // 10. Ritual run
@@ -3585,6 +3600,7 @@ Deno.serve(async (req) => {
             makeup_close_owed,
             registers_empty,
             outcome,
+            ...manifestBlock(args),
             ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
           return rpcResult(id, {
@@ -4211,6 +4227,24 @@ Deno.serve(async (req) => {
               only = await retryableLayerSet(prior.save_id);
             }
 
+            const saveCid = await resolvedCid();
+            if (!saveCid) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "cid_unresolved",
+                reasons: ["cid_unresolved"],
+                ...manifestBlock(args),
+                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
 
@@ -4238,6 +4272,7 @@ Deno.serve(async (req) => {
                   verified: l.verified,
                   ...(l.layer_state ? { layer_state: l.layer_state } : {}),
                 })),
+                p_cid: saveCid,
               });
               if (recErr) throw new Error(recErr.message);
               save_id = receipt?.save_id ?? null;
@@ -4276,6 +4311,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              ...manifestBlock(args),
             };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(out) }],
@@ -4364,11 +4400,13 @@ Deno.serve(async (req) => {
             const registers_empty = await computeRegistersEmpty();
 
             // HONESTY GATE · a re-brief that returned nothing is not a success.
+            // An honestly empty source is ok. Only an UNREADABLE source degrades.
             const syncReasons: string[] = [];
-            if (briefRows.length === 0) syncReasons.push("empty_brief");
-            if ((dirs ?? []).length === 0 && (cps ?? []).length === 0 && briefRows.length === 0) {
-              syncReasons.push("no_layers_loaded");
-            }
+            if (briefErr) syncReasons.push("empty_brief");
+            if (dirsErr) syncReasons.push("no_directives_surface");
+            if (cpsErr) syncReasons.push("no_checkpoint");
+            const syncCid = await resolvedCid();
+            if (!syncCid) syncReasons.push("cid_unresolved");
             const syncOutcome: "ok" | "partial" | "degraded" =
               syncReasons.length ? "degraded" : (degraded.length ? "partial" : "ok");
 
@@ -4402,6 +4440,7 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
             };
             return rpcResult(id, {
