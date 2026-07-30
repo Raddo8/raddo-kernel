@@ -2891,6 +2891,12 @@ Deno.serve(async (req) => {
     };
   };
 
+  // Server-side CID for receipts. Name resolution first; when the display
+  // name is ambiguous, the tenant's own active kernel row carries the CID.
+  // Never sourced from the request body.
+  const serverCid = async (): Promise<string | null> =>
+    (await resolvedCid()) ?? (await activeKernel("id, cid")).cid;
+
   // Lane 1 · ITEM 4 · manifest staleness reporting. Work always completes.
   const manifestBlock = (a: any): Record<string, unknown> => {
     const client = typeof a?.client_manifest_version === "string" ? a.client_manifest_version.trim() : "";
@@ -4231,7 +4237,7 @@ Deno.serve(async (req) => {
               only = await retryableLayerSet(prior.save_id);
             }
 
-            const saveCid = await resolvedCid();
+            const saveCid = await serverCid();
             if (!saveCid) {
               const out = {
                 session_id: args?.session_id,
@@ -4409,7 +4415,7 @@ Deno.serve(async (req) => {
             if (briefErr) syncReasons.push("empty_brief");
             if (dirsErr) syncReasons.push("no_directives_surface");
             if (cpsErr) syncReasons.push("no_checkpoint");
-            const syncCid = await resolvedCid();
+            const syncCid = await serverCid();
             if (!syncCid) syncReasons.push("cid_unresolved");
             const syncOutcome: "ok" | "partial" | "degraded" =
               syncReasons.length ? "degraded" : (degraded.length ? "partial" : "ok");
@@ -4475,7 +4481,7 @@ Deno.serve(async (req) => {
           try {
             // 1. Full save leg with checkpoint kind='end'
             const endReasons: string[] = [];
-            const endCid = await resolvedCid();
+            const endCid = await serverCid();
             if (!endCid) endReasons.push("cid_unresolved");
             const res = await runSaveLeg(args ?? {}, "end");
 
