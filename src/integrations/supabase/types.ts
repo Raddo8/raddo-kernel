@@ -1728,6 +1728,103 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_artifacts: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          approved_distribution_policy: string
+          artifact_class: string
+          artifact_id: string
+          bytes: number | null
+          cid: string | null
+          content_hash: string | null
+          created_at: string
+          derived_from: string | null
+          distribution_evidence: string | null
+          distribution_verified_at: string | null
+          observed_distribution_state: string
+          rollback_target: string | null
+          sensitivity: string
+          source_id: string | null
+          source_table: string | null
+          status: string
+          supersedes: string | null
+          template_version: string | null
+          tenant_scope: string
+          version: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          approved_distribution_policy?: string
+          artifact_class: string
+          artifact_id?: string
+          bytes?: number | null
+          cid?: string | null
+          content_hash?: string | null
+          created_at?: string
+          derived_from?: string | null
+          distribution_evidence?: string | null
+          distribution_verified_at?: string | null
+          observed_distribution_state?: string
+          rollback_target?: string | null
+          sensitivity?: string
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          supersedes?: string | null
+          template_version?: string | null
+          tenant_scope: string
+          version?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          approved_distribution_policy?: string
+          artifact_class?: string
+          artifact_id?: string
+          bytes?: number | null
+          cid?: string | null
+          content_hash?: string | null
+          created_at?: string
+          derived_from?: string | null
+          distribution_evidence?: string | null
+          distribution_verified_at?: string | null
+          observed_distribution_state?: string
+          rollback_target?: string | null
+          sensitivity?: string
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          supersedes?: string | null
+          template_version?: string | null
+          tenant_scope?: string
+          version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fleet_artifacts_derived_from_fkey"
+            columns: ["derived_from"]
+            isOneToOne: false
+            referencedRelation: "fleet_artifacts"
+            referencedColumns: ["artifact_id"]
+          },
+          {
+            foreignKeyName: "fleet_artifacts_rollback_target_fkey"
+            columns: ["rollback_target"]
+            isOneToOne: false
+            referencedRelation: "fleet_artifacts"
+            referencedColumns: ["artifact_id"]
+          },
+          {
+            foreignKeyName: "fleet_artifacts_supersedes_fkey"
+            columns: ["supersedes"]
+            isOneToOne: false
+            referencedRelation: "fleet_artifacts"
+            referencedColumns: ["artifact_id"]
+          },
+        ]
+      }
       fleet_operators: {
         Row: {
           auth_user_id: string
@@ -2216,6 +2313,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      kernel_access_log: {
+        Row: {
+          access_kind: string
+          artifact_id: string | null
+          at: string
+          auth_subject: string | null
+          bytes_served: number | null
+          cid: string
+          id: string
+          kernel_id: string | null
+          part: string
+          purpose: string | null
+          seq: number | null
+          session_id: string | null
+          surface: string | null
+        }
+        Insert: {
+          access_kind: string
+          artifact_id?: string | null
+          at?: string
+          auth_subject?: string | null
+          bytes_served?: number | null
+          cid: string
+          id?: string
+          kernel_id?: string | null
+          part: string
+          purpose?: string | null
+          seq?: number | null
+          session_id?: string | null
+          surface?: string | null
+        }
+        Update: {
+          access_kind?: string
+          artifact_id?: string | null
+          at?: string
+          auth_subject?: string | null
+          bytes_served?: number | null
+          cid?: string
+          id?: string
+          kernel_id?: string | null
+          part?: string
+          purpose?: string | null
+          seq?: number | null
+          session_id?: string | null
+          surface?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kernel_access_log_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "fleet_artifacts"
+            referencedColumns: ["artifact_id"]
           },
         ]
       }
@@ -3572,6 +3725,7 @@ export type Database = {
           created_at: string
           overall_status: string
           payload_hash: string | null
+          provenance: string
           save_id: string
           session_id: string | null
           watermark: string
@@ -3583,6 +3737,7 @@ export type Database = {
           created_at?: string
           overall_status: string
           payload_hash?: string | null
+          provenance?: string
           save_id?: string
           session_id?: string | null
           watermark?: string
@@ -3594,6 +3749,7 @@ export type Database = {
           created_at?: string
           overall_status?: string
           payload_hash?: string | null
+          provenance?: string
           save_id?: string
           session_id?: string | null
           watermark?: string
@@ -4457,6 +4613,7 @@ export type Database = {
           office_mode: string
           onboarding_key: string | null
           principal: string | null
+          public_ref: string | null
           status: string
           tier: string
           updated_at: string
@@ -4471,6 +4628,7 @@ export type Database = {
           office_mode?: string
           onboarding_key?: string | null
           principal?: string | null
+          public_ref?: string | null
           status?: string
           tier?: string
           updated_at?: string
@@ -4485,6 +4643,7 @@ export type Database = {
           office_mode?: string
           onboarding_key?: string | null
           principal?: string | null
+          public_ref?: string | null
           status?: string
           tier?: string
           updated_at?: string
@@ -5039,6 +5198,21 @@ export type Database = {
           verdict: string
         }[]
       }
+      log_kernel_access: {
+        Args: {
+          p_access_kind: string
+          p_auth_subject: string
+          p_bytes: number
+          p_cid: string
+          p_kernel_id: string
+          p_part: string
+          p_purpose?: string
+          p_seq: number
+          p_session_id: string
+          p_surface: string
+        }
+        Returns: string
+      }
       mint_tenant: {
         Args: {
           p_cob_name: string
@@ -5054,6 +5228,7 @@ export type Database = {
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
       record_save_receipt: {
         Args: {
+          p_cid?: string
           p_client_request_id: string
           p_layers: Json
           p_payload_hash: string
