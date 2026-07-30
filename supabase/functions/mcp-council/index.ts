@@ -28,7 +28,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
-import { resolveEffectiveIdentity, cidOrNull } from "./effective-identity.ts";
+import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "truthful_receipts_v1";
+const BUILD_ID = "lane1_cid_telemetry_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2124,6 +2124,17 @@ const SERVER_INFO = {
   ],
 };
 
+// Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
+// input schema changes so a stale connector can detect its own staleness.
+const TOOL_MANIFEST_VERSION = "2026.07.30.1";
+
+const MANIFEST_PROP = {
+  client_manifest_version: {
+    type: "string",
+    description: "Optional. The tool manifest version your connector was registered with. If it does not match the server, the work still runs and the response reports manifest_mismatch.",
+  },
+} as const;
+
 const TOOL_RUN_COUNCIL = {
   name: "convene_council",
   title: "Convene the Council",
@@ -2238,6 +2249,7 @@ const TOOL_BEGIN_SESSION = {
     type: "object",
     properties: {
       surface: { type: "string", description: "Optional surface identifier (e.g. 'cowork', 'mcp', 'cli')." },
+      ...MANIFEST_PROP,
     },
     additionalProperties: false,
   },
@@ -2333,6 +2345,7 @@ const RITUAL_SAVE_PROPS = {
     },
     additionalProperties: false,
   },
+  ...MANIFEST_PROP,
 } as const;
 
 const TOOL_SAVE_SESSION = {
@@ -2359,6 +2372,7 @@ const TOOL_SYNC_SESSION = {
     type: "object",
     properties: {
       session_id: { type: "string", description: "Active session UUID." },
+      ...MANIFEST_PROP,
     },
     required: ["session_id"],
     additionalProperties: false,
