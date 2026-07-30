@@ -2855,6 +2855,53 @@ Deno.serve(async (req) => {
   // The legal-seat and tenant-context lookups below depend on this.
   const tenant = identity.tenant;
 
+  // Lane 1 · ITEM 1/2 · server-verified CID. Resolved once per request from
+  // the same verified claim that produced `tenant`. NEVER from the body.
+  let _cidResolution: IdentityResolution | null = null;
+  const cidResolution = async (): Promise<IdentityResolution> => {
+    if (!_cidResolution) _cidResolution = await resolveEffectiveIdentity(supabaseAdmin, tenant);
+    return _cidResolution;
+  };
+  const resolvedCid = async (): Promise<string | null> => cidOrNull(await cidResolution());
+
+  // Lane 1 · ITEM 4 · manifest staleness reporting. Work always completes.
+  const manifestBlock = (a: any): Record<string, unknown> => {
+    const client = typeof a?.client_manifest_version === "string" ? a.client_manifest_version.trim() : "";
+    const base = { tool_manifest_version: TOOL_MANIFEST_VERSION };
+    if (!client || client === TOOL_MANIFEST_VERSION) return base;
+    return {
+      ...base,
+      manifest_mismatch: { client, server: TOOL_MANIFEST_VERSION },
+      manifest_note: "Your connector is registered against an older tool manifest. Remove and re-add the connector to pick up the current tool schemas.",
+    };
+  };
+
+  // Lane 1 · ITEM 3 · kernel-access telemetry. Never blocks or fails a read.
+  const logKernelAccess = async (a: {
+    cid: string | null; kernel_id: string | null; part: string; seq: number | null;
+    bytes: number; access_kind: string; surface: string | null; session_id?: string | null;
+  }): Promise<boolean> => {
+    if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
+    try {
+      const { error } = await supabaseAdmin.rpc("log_kernel_access", {
+        p_cid: a.cid,
+        p_kernel_id: a.kernel_id,
+        p_part: a.part,
+        p_seq: a.seq,
+        p_bytes: a.bytes,
+        p_access_kind: a.access_kind,
+        p_surface: a.surface,
+        p_auth_subject: identity?.sub ?? null,
+        p_session_id: a.session_id ?? null,
+      });
+      if (error) { console.error("kernel_access_log_failed", error.message); return false; }
+      return true;
+    } catch (e) {
+      console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
+      return false;
+    }
+  };
+
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
     const ip = getClientIp(req.headers);
