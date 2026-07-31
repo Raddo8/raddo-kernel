@@ -30,7 +30,7 @@ function ritualSaveProps(): Record<string, unknown> {
   return new Function("MANIFEST_PROP", `return (${literal});`)(MANIFEST_PROP);
 }
 
-const ajv = new Ajv({ allErrors: true, strict: false });
+const ajv = new Ajv({ allErrors: true });
 const validate = ajv.compile({
   type: "object",
   properties: ritualSaveProps(),
