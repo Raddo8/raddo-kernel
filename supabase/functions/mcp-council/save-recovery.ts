@@ -193,9 +193,24 @@ export async function openDurableAttempt(admin: any, input: {
   schema_version: string;
   principal_id: string | null;
   external_identity_id: string | null;
+  /**
+   * Lane A Commit 5 · when supplied, this keyed fingerprint becomes the
+   * attempt's payload_hash, so attempt and receipt are joinable on one value.
+   * Absent → the legacy unkeyed SHA-256 over the canonical form is used.
+   */
+  fingerprint?: {
+    payload_hash: string;
+    payload_hash_algorithm: string;
+    payload_hash_key_version: string;
+    canonicalization_version: string;
+  } | null;
 }): Promise<AttemptHandle> {
   const canonical = canonicalize(input.payload ?? {});
-  const payload_hash = await sha256Hex(canonical);
+  const payload_hash = input.fingerprint?.payload_hash ?? (await sha256Hex(canonical));
+  const hash_algorithm = input.fingerprint?.payload_hash_algorithm ?? PAYLOAD_HASH_ALGORITHM;
+  const key_version = input.fingerprint?.payload_hash_key_version ?? MASTER_KEY_VERSION;
+  const canon_version = input.fingerprint?.canonicalization_version ?? CANONICALIZATION_VERSION;
+
   try {
     const aad = `${input.client_request_id}|${input.cid ?? ""}|${payload_hash}`;
     const env = await envelopeEncrypt(canonical, aad);
