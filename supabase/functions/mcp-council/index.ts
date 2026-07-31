@@ -2917,6 +2917,9 @@ Deno.serve(async (req) => {
   }): Promise<boolean> => {
     if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
     try {
+      // ITEM 4 · issuer / claim / keyed_by come from the SHARED context so
+      // kernel telemetry and shadow telemetry can never disagree again.
+      const ctx = await resolvePrincipalContext();
       const { error } = await supabaseAdmin.rpc("log_kernel_access", {
         p_cid: a.cid,
         p_kernel_id: a.kernel_id,
@@ -2925,15 +2928,15 @@ Deno.serve(async (req) => {
         p_bytes: a.bytes,
         p_access_kind: a.access_kind,
         p_surface: a.surface,
-        p_auth_subject: identity?.sub ?? null,
+        p_auth_subject: ctx.provider_subject,
         p_session_id: a.session_id ?? null,
         p_purpose: null,
-        // ITEM 2 · issuer capture. Only the server can see these.
-        p_issuer: identity?.iss ?? null,
-        p_token_version: TOOL_MANIFEST_VERSION,
-        p_tenant_claim: identity?.tenantClaim ?? tenant ?? null,
-        p_resolved_keyed_by: a.keyed_by ?? "none",
+        p_issuer: ctx.issuer,
+        p_token_version: ctx.token_version,
+        p_tenant_claim: ctx.tenant_claim,
+        p_resolved_keyed_by: a.keyed_by ?? ctx.legacy_keyed_by,
       });
+
       if (error) { console.error("kernel_access_log_failed", error.message); return false; }
       return true;
     } catch (e) {
