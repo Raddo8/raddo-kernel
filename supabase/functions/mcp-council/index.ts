@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "lane2_kernel_verify_v1";
+const BUILD_ID = "one_resolver_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2126,7 +2126,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.07.31.1";
+const TOOL_MANIFEST_VERSION = "2026.07.31.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2521,23 +2521,14 @@ function withTimeout<T>(p: PromiseLike<T>, fallback: T, label: string): Promise<
   ]);
 }
 
-async function resolveTenantCid(tenant: string | null | undefined): Promise<string | null> {
-  if (!supabaseAdmin || !tenant) return null;
-  const data = await withTimeout(
-    supabaseAdmin.rpc("resolve_cid", { k: tenant }).then((r: any) => r?.data ?? null),
-    null,
-    "resolve_cid_failed",
-  );
-  return typeof data === "string" && data.trim() ? data.trim() : null;
-}
-
-// Resolve the client identity for the welcome surfaces. Identity comes ONLY
-// from the verified token tenant; any failure degrades to a nameless client.
+// Resolve the client identity for the welcome surfaces. The CID is supplied
+// by the ONE request-scoped resolver (ITEM 1) — this helper never resolves a
+// tenant itself.
 async function resolveWelcomeClient(
-  tenant: string | null | undefined,
+  cidIn: string | null | undefined,
 ): Promise<{ cid: string | null; client: WelcomeClient }> {
   const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
-  const cid = await resolveTenantCid(tenant);
+  const cid = typeof cidIn === "string" && cidIn.trim() ? cidIn.trim() : null;
   if (!supabaseAdmin || !cid) return { cid, client: empty };
   const readTenantRow = () =>
     withTimeout(
@@ -2917,6 +2908,9 @@ Deno.serve(async (req) => {
   }): Promise<boolean> => {
     if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
     try {
+      // ITEM 4 · issuer / claim / keyed_by come from the SHARED context so
+      // kernel telemetry and shadow telemetry can never disagree again.
+      const ctx = await resolvePrincipalContext();
       const { error } = await supabaseAdmin.rpc("log_kernel_access", {
         p_cid: a.cid,
         p_kernel_id: a.kernel_id,
@@ -2925,15 +2919,15 @@ Deno.serve(async (req) => {
         p_bytes: a.bytes,
         p_access_kind: a.access_kind,
         p_surface: a.surface,
-        p_auth_subject: identity?.sub ?? null,
+        p_auth_subject: ctx.provider_subject,
         p_session_id: a.session_id ?? null,
         p_purpose: null,
-        // ITEM 2 · issuer capture. Only the server can see these.
-        p_issuer: identity?.iss ?? null,
-        p_token_version: TOOL_MANIFEST_VERSION,
-        p_tenant_claim: identity?.tenantClaim ?? tenant ?? null,
-        p_resolved_keyed_by: a.keyed_by ?? "none",
+        p_issuer: ctx.issuer,
+        p_token_version: ctx.token_version,
+        p_tenant_claim: ctx.tenant_claim,
+        p_resolved_keyed_by: a.keyed_by ?? ctx.legacy_keyed_by,
       });
+
       if (error) { console.error("kernel_access_log_failed", error.message); return false; }
       return true;
     } catch (e) {
@@ -2976,46 +2970,161 @@ Deno.serve(async (req) => {
     };
   };
 
-  // ── ITEM 3 · resolver v2 in SHADOW. Computes, controls nothing. ───────
-  const shadowResolveIdentity = async (surface: string): Promise<void> => {
-    if (!supabaseAdmin) return;
-    try {
-      const legacy = await cidResolution();
-      const legacyCid = cidOrNull(legacy);
+  // ── ONE RESOLVER · every tool goes through this and nothing else ──────
+  // ITEM 1 · resolved once per authenticated request, before tool logic.
+  // The LEGACY answer continues to serve the request. The canonical answer
+  // is observed, recorded and surfaced — it controls nothing yet.
+  type PrincipalCtx = {
+    legacy_cid: string | null;
+    legacy_keyed_by: "cid" | "tenant_id" | "none";
+    canonical_cid: string | null;
+    principal_id: string | null;
+    principal_type: string | null;
+    membership_id: string | null;
+    installation_id: string | null;
+    external_identity_id: string | null;
+    resolution_mode: string;
+    scopes: unknown;
+    token_version: string;
+    issuer: string | null;
+    provider_subject: string | null;
+    tenant_claim: string | null;
+    match_state: string;
+    reason: string | null;
+    surface: string;
+  };
+
+  let _pctx: Promise<PrincipalCtx> | null = null;
+  const resolvePrincipalContext = (surface = "mcp"): Promise<PrincipalCtx> => {
+    if (_pctx) return _pctx;
+    _pctx = (async (): Promise<PrincipalCtx> => {
       const issuer = identity?.iss ?? null;
       const subject = identity?.sub ?? null;
-      let canonical: any = null;
+      const tenantClaim = identity?.tenantClaim ?? tenant ?? null;
+
+      // 4. LEGACY — exactly as the request will be served.
+      let legacy_cid: string | null = null;
+      let legacy_keyed_by: "cid" | "tenant_id" | "none" = "none";
       try {
-        const { data } = await supabaseAdmin.rpc("resolve_identity_v2", {
-          p_issuer: issuer,
-          p_provider_subject: subject,
-        });
-        canonical = data ?? null;
-      } catch (_e) { canonical = null; }
-      const canonicalCid = typeof canonical?.cid === "string" ? canonical.cid : null;
-      const match_state = legacyCid && canonicalCid
-        ? (legacyCid === canonicalCid ? "MATCH" : "MISMATCH")
-        : legacyCid ? "LEGACY_ONLY"
-        : canonicalCid ? "CANONICAL_ONLY"
+        const lk = await activeKernel("id, cid");
+        legacy_cid = lk.cid ?? (await resolvedCid());
+        legacy_keyed_by = lk.keyed_by;
+      } catch (_e) {
+        try { legacy_cid = await resolvedCid(); legacy_keyed_by = legacy_cid ? "cid" : "none"; } catch { /* ignore */ }
+      }
+
+      let external_identity_id: string | null = null;
+      let canonical: any = null;
+
+      if (supabaseAdmin) {
+        // 2. OBSERVE — guarantees no tenant transacts without an identity
+        // trace. Writes PENDING; grants nothing.
+        try {
+          const { data, error } = await supabaseAdmin.rpc("observe_external_identity", {
+            p_issuer: issuer,
+            p_provider_subject: subject,
+            p_tenant_claim: tenantClaim,
+            p_surface: surface,
+            p_token_version: TOOL_MANIFEST_VERSION,
+            p_verified_email: null,
+          });
+          if (error) console.error("observe_identity_failed", error.message);
+          external_identity_id = typeof data?.identity_id === "string" ? data.identity_id : null;
+        } catch (e) {
+          console.error("observe_identity_exception", e instanceof Error ? e.message : String(e));
+        }
+
+        // 3. CANONICAL — the answer we are moving toward.
+        try {
+          const { data, error } = await supabaseAdmin.rpc("resolve_principal_context", {
+            p_issuer: issuer,
+            p_provider_subject: subject,
+          });
+          if (error) console.error("resolve_principal_context_failed", error.message);
+          canonical = data ?? null;
+        } catch (e) {
+          console.error("resolve_principal_context_exception", e instanceof Error ? e.message : String(e));
+        }
+      }
+
+      const canonical_cid = typeof canonical?.cid === "string" ? canonical.cid : null;
+      const match_state = legacy_cid && canonical_cid
+        ? (legacy_cid === canonical_cid ? "MATCH" : "MISMATCH")
+        : legacy_cid ? "LEGACY_ONLY"
+        : canonical_cid ? "CANONICAL_ONLY"
         : "BOTH_NULL";
-      await supabaseAdmin.from("identity_resolution_log").insert({
-        surface,
+
+      return {
+        legacy_cid,
+        legacy_keyed_by,
+        canonical_cid,
+        principal_id: canonical?.principal_id ?? null,
+        principal_type: canonical?.principal_type ?? null,
+        membership_id: canonical?.membership_id ?? null,
+        installation_id: canonical?.installation_id ?? null,
+        external_identity_id: external_identity_id ??
+          (typeof canonical?.external_identity_id === "string" ? canonical.external_identity_id : null),
+        resolution_mode: typeof canonical?.resolution_mode === "string" ? canonical.resolution_mode : "NO_IDENTITY",
+        scopes: canonical?.scopes ?? null,
         token_version: TOOL_MANIFEST_VERSION,
-        tenant_claim: identity?.tenantClaim ?? tenant ?? null,
         issuer,
         provider_subject: subject,
-        legacy_cid: legacyCid,
-        legacy_keyed_by: legacy.status === "RESOLVED" ? "cid" : "none",
-        canonical_cid: canonicalCid,
-        canonical_principal_id: canonical?.principal_id ?? null,
-        canonical_membership_id: canonical?.membership_id ?? null,
+        tenant_claim: tenantClaim,
         match_state,
-        reason: canonical?.status ?? legacy.status ?? null,
-      });
-    } catch (e) {
-      console.error("identity_shadow_failed", e instanceof Error ? e.message : String(e));
-    }
+        reason: canonical?.reason ?? null,
+        surface,
+      };
+    })();
+    return _pctx;
   };
+
+  // ITEM 2 · exactly one shadow row per authenticated request, carrying the
+  // SAME legacy values the request actually used. A MISMATCH is recorded,
+  // never acted on.
+  let _identityLogged = false;
+  const logIdentityOnce = async (surface: string): Promise<PrincipalCtx> => {
+    const ctx = await resolvePrincipalContext(surface);
+    if (_identityLogged || !supabaseAdmin) return ctx;
+    _identityLogged = true;
+    try {
+      const { error } = await supabaseAdmin.from("identity_resolution_log").insert({
+        surface,
+        token_version: ctx.token_version,
+        tenant_claim: ctx.tenant_claim,
+        issuer: ctx.issuer,
+        provider_subject: ctx.provider_subject,
+        legacy_cid: ctx.legacy_cid,
+        legacy_keyed_by: ctx.legacy_keyed_by,
+        canonical_cid: ctx.canonical_cid,
+        canonical_principal_id: ctx.principal_id,
+        canonical_membership_id: ctx.membership_id,
+        match_state: ctx.match_state,
+        reason: ctx.reason ?? ctx.resolution_mode,
+      });
+      if (error) console.error("identity_shadow_failed", error.message);
+    } catch (e) {
+      console.error("identity_shadow_exception", e instanceof Error ? e.message : String(e));
+    }
+    return ctx;
+  };
+
+  // ITEM 5 · compact, honest identity block for the session tools.
+  const identityBlock = (ctx: PrincipalCtx): Record<string, unknown> => {
+    const canonicalOk = ctx.resolution_mode === "OK" || ctx.resolution_mode === "OK_DELEGATED";
+    return {
+      identity: {
+        resolution_mode: ctx.resolution_mode,
+        keyed_by: ctx.legacy_keyed_by,
+        canonical_cid: ctx.canonical_cid,
+        principal_id: ctx.principal_id,
+        token_version: ctx.token_version,
+        ...(canonicalOk ? {} : {
+          note: "identity not yet canonical; serving on the legacy path",
+        }),
+      },
+    };
+  };
+
 
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
@@ -3084,7 +3193,8 @@ Deno.serve(async (req) => {
       }
       // Personalize server-side from the verified token tenant, so the card
       // is correct even if the host never sends the tool-result notification.
-      const { client: widgetClient } = await resolveWelcomeClient(tenant);
+      const widgetCtx = await logIdentityOnce("resources/read:welcome");
+      const { client: widgetClient } = await resolveWelcomeClient(widgetCtx.legacy_cid);
       return rpcResult(id, {
         contents: [{
           uri: WELCOME_WIDGET_URI,
@@ -3098,6 +3208,27 @@ Deno.serve(async (req) => {
       const params = body?.params ?? {};
       const name = params?.name;
       const args = params?.arguments ?? {};
+
+      // ITEM 1 · THE ONE resolution point. Every tool below is served from
+      // this single context. No tool resolves a tenant on its own.
+      const pctx = await logIdentityOnce(
+        typeof name === "string" && name ? `tool:${name}` : "tool",
+      );
+
+      // ITEM 3 · every tool leaves an identity trace, kernel path or not.
+      void recordMcpUsage(supabaseAdmin, {
+        tenant,
+        tool: typeof name === "string" ? name : "unknown",
+        agent_id: null,
+        passes: [],
+        cid: pctx.legacy_cid,
+        principal_id: pctx.principal_id,
+        external_identity_id: pctx.external_identity_id,
+        resolution_mode: pctx.resolution_mode,
+        routing_log: { identity_trace: true, keyed_by: pctx.legacy_keyed_by, match_state: pctx.match_state },
+      });
+
+
 
       const safeErrors = new Set([
         "boundary_violation",
@@ -3143,7 +3274,7 @@ Deno.serve(async (req) => {
 
       if (name === "set_chief_name") {
         const raw = typeof args?.name === "string" ? args.name : "";
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3180,7 +3311,7 @@ Deno.serve(async (req) => {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid || !supabaseAdmin) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3205,7 +3336,7 @@ Deno.serve(async (req) => {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3233,7 +3364,7 @@ Deno.serve(async (req) => {
         // failure degrades to a nameless welcome — never another tenant's name.
         const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
         try {
-          const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
+          const { cid: resolvedCid, client } = await resolveWelcomeClient(pctx.legacy_cid);
           if (name === "taylor_setup") {
             await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
             const checklist = await readChecklist(resolvedCid);
@@ -3313,7 +3444,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          void shadowResolveIdentity("boot_kernel");
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const bootLookup = await activeKernel("id, version, cid");
           const kernel = bootLookup.kernel;
           const kernelErr = bootLookup.error;
@@ -3425,7 +3556,7 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
-          void shadowResolveIdentity("load_kernel_part");
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const partLookup = await activeKernel("id, cid");
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
@@ -3492,7 +3623,7 @@ Deno.serve(async (req) => {
           }));
 
           // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
-          void shadowResolveIdentity(`begin_session:${surface}`);
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const beginLookup = await activeKernel("id, version, status, cid");
           const kernel = beginLookup.kernel;
           const kernelErr = beginLookup.error;
@@ -3730,6 +3861,7 @@ Deno.serve(async (req) => {
           try {
             await recordMcpUsage(supabaseAdmin, {
               tenant,
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tool: "begin_session",
               agent_id: null,
               passes: [],
@@ -3757,6 +3889,7 @@ Deno.serve(async (req) => {
             makeup_close_owed,
             registers_empty,
             outcome,
+            ...identityBlock(pctx),
             ...manifestBlock(args),
             ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
@@ -4526,6 +4659,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "save_session", agent_id: null, passes: [],
                 routing_log: { session_id: args?.session_id, outcome: res.outcome, overall_status, save_id, duration_ms },
               });
@@ -4541,6 +4675,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
             };
             return rpcResult(id, {
@@ -4651,6 +4786,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "sync_session", agent_id: null, passes: [],
                 routing_log: { session_id, duration_ms, outcome: syncOutcome },
               });
@@ -4670,6 +4806,7 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
             };
@@ -4755,6 +4892,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "end_session", agent_id: null, passes: [],
                 routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
               });
@@ -4770,6 +4908,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: endOutcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
@@ -4990,6 +5129,7 @@ Deno.serve(async (req) => {
           }));
 
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
               question_hash: qhash,
@@ -5182,6 +5322,7 @@ Deno.serve(async (req) => {
             minuteAny.refer_to = gap.refer_to;
           }
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
             passes,
@@ -5262,6 +5403,7 @@ Deno.serve(async (req) => {
           const target = resolved.target;
           if (!target) {
             await recordMcpUsage(supabaseAdmin, {
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes: [],
               routing_log: { outcome: resolved.reason },
             });
@@ -5302,6 +5444,7 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes,
             });
             throw new Error("boundary_violation");
@@ -5323,6 +5466,7 @@ Deno.serve(async (req) => {
           );
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "file_to_office",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
             passes,

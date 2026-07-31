@@ -86,6 +86,11 @@ export async function recordMcpUsage(
     tool: string;
     agent_id: string | null;
     passes: Pass[];
+    // Identity trace (ITEM 3) · resolved once per request, never from body.
+    cid?: string | null;
+    principal_id?: string | null;
+    external_identity_id?: string | null;
+    resolution_mode?: string | null;
     // Optional routing ledger payload (confidence-gated routing).
     // Hashed/redacted only — never raw question text.
     routing_log?: Record<string, unknown>;
@@ -104,8 +109,13 @@ export async function recordMcpUsage(
       model_breakdown,
       total_cost_usd,
       metadata,
+      cid: args.cid ?? null,
+      principal_id: args.principal_id ?? null,
+      external_identity_id: args.external_identity_id ?? null,
+      resolution_mode: args.resolution_mode ?? null,
     });
     if (error) console.error("usage_write_failed", error.message);
+
   } catch (e) {
     console.error("usage_write_exception", e instanceof Error ? e.message : String(e));
   }

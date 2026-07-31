@@ -1239,6 +1239,56 @@ export type Database = {
           },
         ]
       }
+      connector_installations: {
+        Row: {
+          authorized_at: string | null
+          cid: string | null
+          connector_server_id: string | null
+          installation_id: string
+          issuer: string | null
+          last_used_at: string | null
+          oauth_client_id: string | null
+          principal_id: string | null
+          scopes: string[]
+          status: string
+          surface: string | null
+        }
+        Insert: {
+          authorized_at?: string | null
+          cid?: string | null
+          connector_server_id?: string | null
+          installation_id?: string
+          issuer?: string | null
+          last_used_at?: string | null
+          oauth_client_id?: string | null
+          principal_id?: string | null
+          scopes?: string[]
+          status?: string
+          surface?: string | null
+        }
+        Update: {
+          authorized_at?: string | null
+          cid?: string | null
+          connector_server_id?: string | null
+          installation_id?: string
+          issuer?: string | null
+          last_used_at?: string | null
+          oauth_client_id?: string | null
+          principal_id?: string | null
+          scopes?: string[]
+          status?: string
+          surface?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_installations_principal_id_fkey"
+            columns: ["principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
+          },
+        ]
+      }
       connectors: {
         Row: {
           config: Json | null
@@ -1882,6 +1932,56 @@ export type Database = {
           undeclared_effects?: Json
         }
         Relationships: []
+      }
+      external_identities: {
+        Row: {
+          evidence: string | null
+          first_seen_at: string
+          identity_id: string
+          issuer: string
+          last_seen_at: string | null
+          principal_id: string
+          provider: string | null
+          provider_subject: string
+          status: string
+          token_version: string | null
+          verified_email: string | null
+        }
+        Insert: {
+          evidence?: string | null
+          first_seen_at?: string
+          identity_id?: string
+          issuer: string
+          last_seen_at?: string | null
+          principal_id: string
+          provider?: string | null
+          provider_subject: string
+          status?: string
+          token_version?: string | null
+          verified_email?: string | null
+        }
+        Update: {
+          evidence?: string | null
+          first_seen_at?: string
+          identity_id?: string
+          issuer?: string
+          last_seen_at?: string | null
+          principal_id?: string
+          provider?: string | null
+          provider_subject?: string
+          status?: string
+          token_version?: string | null
+          verified_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_identities_principal_id_fkey"
+            columns: ["principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
+          },
+        ]
       }
       fleet_artifacts: {
         Row: {
@@ -2840,30 +2940,42 @@ export type Database = {
       mcp_usage_events: {
         Row: {
           agent_id: string | null
+          cid: string | null
           created_at: string
+          external_identity_id: string | null
           id: string
           metadata: Json
           model_breakdown: Json
+          principal_id: string | null
+          resolution_mode: string | null
           tenant: string
           tool: string
           total_cost_usd: number
         }
         Insert: {
           agent_id?: string | null
+          cid?: string | null
           created_at?: string
+          external_identity_id?: string | null
           id?: string
           metadata?: Json
           model_breakdown?: Json
+          principal_id?: string | null
+          resolution_mode?: string | null
           tenant: string
           tool: string
           total_cost_usd?: number
         }
         Update: {
           agent_id?: string | null
+          cid?: string | null
           created_at?: string
+          external_identity_id?: string | null
           id?: string
           metadata?: Json
           model_breakdown?: Json
+          principal_id?: string | null
+          resolution_mode?: string | null
           tenant?: string
           tool?: string
           total_cost_usd?: number
@@ -3696,6 +3808,71 @@ export type Database = {
             referencedColumns: ["principal_id"]
           },
         ]
+      }
+      principal_email_alias: {
+        Row: {
+          alias_id: string
+          created_at: string
+          email: string
+          noted_by: string | null
+          principal_id: string
+          purpose: string | null
+          verified: boolean
+        }
+        Insert: {
+          alias_id?: string
+          created_at?: string
+          email: string
+          noted_by?: string | null
+          principal_id: string
+          purpose?: string | null
+          verified?: boolean
+        }
+        Update: {
+          alias_id?: string
+          created_at?: string
+          email?: string
+          noted_by?: string | null
+          principal_id?: string
+          purpose?: string | null
+          verified?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "principal_email_alias_principal_id_fkey"
+            columns: ["principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
+          },
+        ]
+      }
+      principals: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          principal_id: string
+          principal_type: string
+          revoked_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          principal_id?: string
+          principal_type: string
+          revoked_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          principal_id?: string
+          principal_type?: string
+          revoked_at?: string | null
+          status?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -4642,6 +4819,81 @@ export type Database = {
           },
         ]
       }
+      service_delegations: {
+        Row: {
+          authorized_by: string | null
+          cid: string
+          created_at: string
+          delegation_id: string
+          expires_at: string | null
+          human_principal_id: string | null
+          purpose: string
+          revoked_at: string | null
+          scopes: string[]
+          service_principal_id: string
+        }
+        Insert: {
+          authorized_by?: string | null
+          cid: string
+          created_at?: string
+          delegation_id?: string
+          expires_at?: string | null
+          human_principal_id?: string | null
+          purpose: string
+          revoked_at?: string | null
+          scopes?: string[]
+          service_principal_id: string
+        }
+        Update: {
+          authorized_by?: string | null
+          cid?: string
+          created_at?: string
+          delegation_id?: string
+          expires_at?: string | null
+          human_principal_id?: string | null
+          purpose?: string
+          revoked_at?: string | null
+          scopes?: string[]
+          service_principal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_delegations_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "service_delegations_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "service_delegations_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "service_delegations_human_principal_id_fkey"
+            columns: ["human_principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
+          },
+          {
+            foreignKeyName: "service_delegations_service_principal_id_fkey"
+            columns: ["service_principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
+          },
+        ]
+      }
       session_checkpoints: {
         Row: {
           created_at: string
@@ -5345,6 +5597,74 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
+          },
+        ]
+      }
+      tenant_memberships_v2: {
+        Row: {
+          authority_receipt: string | null
+          authorized_by: string | null
+          cid: string
+          effective_at: string | null
+          membership_id: string
+          principal_id: string
+          revoked_at: string | null
+          role: string
+          scopes: string[]
+          status: string
+        }
+        Insert: {
+          authority_receipt?: string | null
+          authorized_by?: string | null
+          cid: string
+          effective_at?: string | null
+          membership_id?: string
+          principal_id: string
+          revoked_at?: string | null
+          role?: string
+          scopes?: string[]
+          status?: string
+        }
+        Update: {
+          authority_receipt?: string | null
+          authorized_by?: string | null
+          cid?: string
+          effective_at?: string | null
+          membership_id?: string
+          principal_id?: string
+          revoked_at?: string | null
+          role?: string
+          scopes?: string[]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_memberships_v2_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_v2_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_v2_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_memberships_v2_principal_id_fkey"
+            columns: ["principal_id"]
+            isOneToOne: false
+            referencedRelation: "principals"
+            referencedColumns: ["principal_id"]
           },
         ]
       }
@@ -6279,6 +6599,17 @@ export type Database = {
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      observe_external_identity: {
+        Args: {
+          p_issuer: string
+          p_provider_subject: string
+          p_surface?: string
+          p_tenant_claim?: string
+          p_token_version?: string
+          p_verified_email?: string
+        }
+        Returns: Json
+      }
       provision_client_hq: { Args: { p_cid: string }; Returns: Json }
       record_decision: {
         Args: {
@@ -6343,6 +6674,10 @@ export type Database = {
       }
       resolve_cid: { Args: { k: string }; Returns: string }
       resolve_identity_v2: {
+        Args: { p_issuer: string; p_provider_subject: string }
+        Returns: Json
+      }
+      resolve_principal_context: {
         Args: { p_issuer: string; p_provider_subject: string }
         Returns: Json
       }
