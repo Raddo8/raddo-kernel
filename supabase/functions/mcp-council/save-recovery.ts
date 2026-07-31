@@ -57,11 +57,12 @@ function b64(bytes: ArrayBuffer | Uint8Array): string {
   return btoa(s);
 }
 
-function unb64(s: string): Uint8Array {
+function unb64(s: string): ArrayBuffer {
   const bin = atob(s);
-  const out = new Uint8Array(bin.length);
+  const buf = new ArrayBuffer(bin.length);
+  const out = new Uint8Array(buf);
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
+  return buf;
 }
 
 // ── master key ────────────────────────────────────────────────────────────
@@ -69,13 +70,13 @@ function unb64(s: string): Uint8Array {
 async function masterKey(): Promise<CryptoKey> {
   const raw = Deno.env.get("SAVE_RECOVERY_MASTER_KEY_V1") ?? "";
   if (!raw) throw new Error("recovery_master_key_missing");
-  let bytes: Uint8Array;
+  let bytes: ArrayBuffer;
   try {
     bytes = unb64(raw.trim());
   } catch {
     throw new Error("recovery_master_key_not_base64");
   }
-  if (bytes.length !== 32) throw new Error("recovery_master_key_bad_length");
+  if (bytes.byteLength !== 32) throw new Error("recovery_master_key_bad_length");
   return await crypto.subtle.importKey("raw", bytes, { name: "AES-GCM" }, false, [
     "encrypt",
     "decrypt",
@@ -95,7 +96,7 @@ export type Envelope = {
 
 /** Envelope-encrypt one canonical payload. Random DEK, random IVs, AAD bound. */
 export async function envelopeEncrypt(canonical: string, aad: string): Promise<Envelope> {
-  const plaintext = enc.encode(canonical);
+  const plaintext = enc.encode(canonical).slice().buffer as ArrayBuffer;
   if (plaintext.byteLength < 1 || plaintext.byteLength > MAX_RECOVERY_PAYLOAD_BYTES) {
     throw new Error("recovery_payload_size_out_of_bounds");
   }
@@ -103,8 +104,8 @@ export async function envelopeEncrypt(canonical: string, aad: string): Promise<E
     "encrypt",
     "decrypt",
   ]);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const aadBytes = enc.encode(aad);
+  const iv = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(12)));
+  const aadBytes = enc.encode(aad).slice().buffer as ArrayBuffer;
   const ciphertext = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv, additionalData: aadBytes },
     dek,
@@ -112,7 +113,7 @@ export async function envelopeEncrypt(canonical: string, aad: string): Promise<E
   );
 
   const dekRaw = await crypto.subtle.exportKey("raw", dek);
-  const wrapIv = crypto.getRandomValues(new Uint8Array(12));
+  const wrapIv = crypto.getRandomValues(new Uint8Array(new ArrayBuffer(12)));
   const wrapped = await crypto.subtle.encrypt(
     { name: "AES-GCM", iv: wrapIv, additionalData: aadBytes },
     await masterKey(),
@@ -139,7 +140,7 @@ export async function envelopeDecrypt(e: {
   wrap_iv_b64: string;
   aad: string;
 }): Promise<string> {
-  const aadBytes = enc.encode(e.aad);
+  const aadBytes = enc.encode(e.aad).slice().buffer as ArrayBuffer;
   const dekRaw = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: unb64(e.wrap_iv_b64), additionalData: aadBytes },
     await masterKey(),
