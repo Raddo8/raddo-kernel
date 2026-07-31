@@ -36,9 +36,17 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
+import {
+  canonicalize,
+  openDurableAttempt,
+  stampAttempt,
+  MAX_RECOVERY_PAYLOAD_BYTES,
+  type AttemptHandle,
+} from "./save-recovery.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "one_resolver_v1";
+const BUILD_ID = "durable_attempt_v1";
+
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -4580,7 +4588,43 @@ Deno.serve(async (req) => {
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
+
+          // ── REQUEST-SIZE ENFORCEMENT · before any persistence ───────────
+          const canonicalPayload = canonicalize(args ?? {});
+          const payloadBytes = new TextEncoder().encode(canonicalPayload).byteLength;
+          if (payloadBytes > MAX_RECOVERY_PAYLOAD_BYTES) {
+            return rpcError(
+              id,
+              -32602,
+              `payload_too_large · ${payloadBytes} bytes exceeds the ${MAX_RECOVERY_PAYLOAD_BYTES} byte limit for a single save. Split the save into smaller checkpoints.`,
+            );
+          }
+
+          // ── DURABLE ATTEMPT · canonicalize → fingerprint → envelope-encrypt
+          // → persist. This runs BEFORE session validation, BEFORE CID
+          // resolution and BEFORE any layer write, so a save that dies later
+          // can still be proven to have been attempted and can be recovered.
+          let attemptHandle: AttemptHandle | null = null;
           try {
+            attemptHandle = await openDurableAttempt(supabaseAdmin, {
+              client_request_id: clientRequestId,
+              payload: args ?? {},
+              cid: pctx.legacy_cid ?? null,
+              session_id: typeof args?.session_id === "string" ? args.session_id : null,
+              surface: "mcp:save_session",
+              tool_version: TOOL_MANIFEST_VERSION,
+              ritual: "save",
+              schema_version: TOOL_MANIFEST_VERSION,
+              principal_id: pctx.principal_id ?? null,
+              external_identity_id: pctx.external_identity_id ?? null,
+            });
+            if (attemptHandle?.error) console.error("save_attempt_open_failed", attemptHandle.error);
+          } catch (e) {
+            console.error("save_attempt_open_threw", e instanceof Error ? e.message : String(e));
+          }
+
+          try {
+
             // Idempotency: a prior receipt for this id decides what happens next.
             const { data: prior } = await supabaseAdmin
               .from("save_receipts")
@@ -4609,7 +4653,12 @@ Deno.serve(async (req) => {
 
             const saveCid = await serverCid();
             if (!saveCid) {
+              await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+                status: "ABANDONED",
+                failure_stage: "CID_RESOLUTION",
+              });
               const out = {
+
                 session_id: args?.session_id,
                 save_id: null,
                 overall_status: null,
@@ -4663,6 +4712,16 @@ Deno.serve(async (req) => {
               console.error("save_receipt_write_failed", receipt_error);
             }
 
+            // Receipt written → the attempt is complete. Recovery copy now
+            // holds a 15-minute retention window instead of 72 hours.
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: save_id ? "COMPLETED" : "FAILED",
+              failure_stage: save_id ? null : "RECEIPT",
+              save_id,
+              cid: saveCid,
+            });
+
+
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant,
@@ -4702,6 +4761,11 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            // Stamp the durable attempt with the exact stage that killed it.
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: msg.includes("session_not_found") ? "ABANDONED" : "FAILED",
+              failure_stage: msg.includes("session_not_found") ? "SESSION_VALIDATION" : "LEG_EXCEPTION",
+            });
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, ritual: "save", outcome: "failed",
@@ -4710,6 +4774,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             return rpcError(id, -32603, `save_session_failed:${msg}`);
           }
+
         }
 
         // ══════ sync_session ══════
