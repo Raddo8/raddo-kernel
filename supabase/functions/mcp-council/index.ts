@@ -4704,18 +4704,28 @@ Deno.serve(async (req) => {
             // Idempotency: a prior receipt for this id decides what happens next.
             const { data: prior } = await supabaseAdmin
               .from("save_receipts")
-              .select("save_id, overall_status")
+              .select("save_id, overall_status, payload_hash")
               .eq("client_request_id", clientRequestId)
               .maybeSingle();
 
             let only: Set<LayerName> | null = null;
+            let possible_duplicate = false;
             if (prior) {
+              // Same request id, DIFFERENT content. Returning the earlier
+              // receipt here is what silently discarded the new content for
+              // the whole life of this tool. It is now refused, before any
+              // layer runs, and the database guard behind it is the backstop.
+              if (fp && prior.payload_hash && prior.payload_hash !== fp.payload_hash) {
+                return await idempotencyConflictExit(prior.payload_hash);
+              }
               if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
                 const out = {
                   session_id: args?.session_id,
                   save_id: prior.save_id,
                   overall_status: prior.overall_status,
                   idempotent: true,
+                  idempotent_replay: true,
+                  payload_hash: fp?.payload_hash ?? null,
                   layers_executed: [],
                 };
                 return rpcResult(id, {
@@ -4725,7 +4735,20 @@ Deno.serve(async (req) => {
                 });
               }
               only = await retryableLayerSet(prior.save_id);
+            } else if (fp) {
+              // Different request id, same fingerprint. Permitted — the client
+              // may legitimately be re-filing — but flagged so the layer client
+              // refs, not this function, decide what it means.
+              const { data: twin } = await supabaseAdmin
+                .from("save_receipts")
+                .select("save_id")
+                .eq("payload_hash", fp.payload_hash)
+                .neq("client_request_id", clientRequestId)
+                .limit(1)
+                .maybeSingle();
+              possible_duplicate = Boolean(twin);
             }
+
 
             const saveCid = await serverCid();
             if (!saveCid) {
