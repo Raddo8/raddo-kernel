@@ -3452,7 +3452,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
-          void shadowResolveIdentity("boot_kernel");
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const bootLookup = await activeKernel("id, version, cid");
           const kernel = bootLookup.kernel;
           const kernelErr = bootLookup.error;
@@ -3564,7 +3564,7 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
-          void shadowResolveIdentity("load_kernel_part");
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const partLookup = await activeKernel("id, cid");
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
@@ -3631,7 +3631,7 @@ Deno.serve(async (req) => {
           }));
 
           // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
-          void shadowResolveIdentity(`begin_session:${surface}`);
+          // identity resolved once per request at the tools/call entry (ITEM 1).
           const beginLookup = await activeKernel("id, version, status, cid");
           const kernel = beginLookup.kernel;
           const kernelErr = beginLookup.error;
