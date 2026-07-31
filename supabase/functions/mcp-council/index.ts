@@ -4781,10 +4781,15 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            // Stamp the durable attempt with the exact stage that killed it.
+            // Two distinct worlds. Before layer processing began, nothing was
+            // written and we may say so. Once it began, the per-layer report
+            // is the authoritative record and must never be dropped.
+            const sessionMiss = msg.includes("session_not_found") && liveLayers === null;
+            const failure_stage = sessionMiss ? "SESSION_VALIDATION" : "LEG_EXCEPTION";
+
             await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-              status: msg.includes("session_not_found") ? "ABANDONED" : "FAILED",
-              failure_stage: msg.includes("session_not_found") ? "SESSION_VALIDATION" : "LEG_EXCEPTION",
+              status: sessionMiss ? "ABANDONED" : "FAILED",
+              failure_stage,
             });
             try {
               await supabaseAdmin.from("ritual_runs").insert({
@@ -4792,8 +4797,28 @@ Deno.serve(async (req) => {
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
             } catch { /* best-effort */ }
-            return rpcError(id, -32603, `save_session_failed:${msg}`);
+
+            // content_status is READ from the vault, never assumed.
+            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+            const out = buildDegradedEnvelope({
+              reason: sessionMiss ? "session_not_found" : "internal_save_failure",
+              retryable: sessionMiss ? true : false,
+              save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+              client_request_id: clientRequestId,
+              payload_hash: attemptHandle?.payload_hash ?? null,
+              failure_stage,
+              content_status: held.content_status,
+              recovery_expires_at: held.recovery_expires_at,
+              layers: sessionMiss ? null : liveLayers,
+              args,
+            });
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
           }
+
 
         }
 
