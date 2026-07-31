@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "lane1_cid_telemetry_v1";
+const BUILD_ID = "lane2_kernel_verify_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2126,7 +2126,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.07.30.1";
+const TOOL_MANIFEST_VERSION = "2026.07.31.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2793,7 +2793,7 @@ Deno.serve(async (req) => {
     const token = m[1].trim();
     if (expected && safeEqual(token, expected)) {
       authMode = "static";
-      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null };
+      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null, iss: "static-bearer", tenantClaim: "SPINNEY" };
     } else {
       try {
         identity = await verifySupabaseJwt(token);
@@ -2913,6 +2913,7 @@ Deno.serve(async (req) => {
   const logKernelAccess = async (a: {
     cid: string | null; kernel_id: string | null; part: string; seq: number | null;
     bytes: number; access_kind: string; surface: string | null; session_id?: string | null;
+    keyed_by?: "cid" | "tenant_id" | "none";
   }): Promise<boolean> => {
     if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
     try {
@@ -2926,12 +2927,93 @@ Deno.serve(async (req) => {
         p_surface: a.surface,
         p_auth_subject: identity?.sub ?? null,
         p_session_id: a.session_id ?? null,
+        p_purpose: null,
+        // ITEM 2 · issuer capture. Only the server can see these.
+        p_issuer: identity?.iss ?? null,
+        p_token_version: TOOL_MANIFEST_VERSION,
+        p_tenant_claim: identity?.tenantClaim ?? tenant ?? null,
+        p_resolved_keyed_by: a.keyed_by ?? "none",
       });
       if (error) { console.error("kernel_access_log_failed", error.message); return false; }
       return true;
     } catch (e) {
       console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
       return false;
+    }
+  };
+
+  // ── ITEM 5 · SESSION CLOCK ────────────────────────────────────────────
+  // Storage stays UTC. Presentation and day-boundary reasoning are
+  // America/Chicago: a brief delivered at 22:51 Central is not "morning".
+  const SESSION_TZ = "America/Chicago";
+  const localParts = (d = new Date()) => {
+    const f = new Intl.DateTimeFormat("en-US", {
+      timeZone: SESSION_TZ, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", weekday: "long",
+    }).formatToParts(d);
+    const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+    return {
+      date: `${g("year")}-${g("month")}-${g("day")}`,
+      time: `${g("hour")}:${g("minute")}`,
+      hour: Number(g("hour")),
+      weekday: g("weekday"),
+    };
+  };
+  const partOfDay = (h: number) =>
+    h < 5 ? "night" : h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
+  const sessionClock = () => {
+    const p = localParts();
+    return {
+      timezone: SESSION_TZ,
+      local_date: p.date,
+      local_time: p.time,
+      local_weekday: p.weekday,
+      part_of_day: partOfDay(p.hour),
+      greeting: `Good ${partOfDay(p.hour) === "night" ? "evening" : partOfDay(p.hour)}`,
+      utc: new Date().toISOString(),
+      note: `Reason about time of day and day boundaries in ${SESSION_TZ}, not UTC.`,
+    };
+  };
+
+  // ── ITEM 3 · resolver v2 in SHADOW. Computes, controls nothing. ───────
+  const shadowResolveIdentity = async (surface: string): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const legacy = await cidResolution();
+      const legacyCid = cidOrNull(legacy);
+      const issuer = identity?.iss ?? null;
+      const subject = identity?.sub ?? null;
+      let canonical: any = null;
+      try {
+        const { data } = await supabaseAdmin.rpc("resolve_identity_v2", {
+          p_issuer: issuer,
+          p_provider_subject: subject,
+        });
+        canonical = data ?? null;
+      } catch (_e) { canonical = null; }
+      const canonicalCid = typeof canonical?.cid === "string" ? canonical.cid : null;
+      const match_state = legacyCid && canonicalCid
+        ? (legacyCid === canonicalCid ? "MATCH" : "MISMATCH")
+        : legacyCid ? "LEGACY_ONLY"
+        : canonicalCid ? "CANONICAL_ONLY"
+        : "BOTH_NULL";
+      await supabaseAdmin.from("identity_resolution_log").insert({
+        surface,
+        token_version: TOOL_MANIFEST_VERSION,
+        tenant_claim: identity?.tenantClaim ?? tenant ?? null,
+        issuer,
+        provider_subject: subject,
+        legacy_cid: legacyCid,
+        legacy_keyed_by: legacy.status === "RESOLVED" ? "cid" : "none",
+        canonical_cid: canonicalCid,
+        canonical_principal_id: canonical?.principal_id ?? null,
+        canonical_membership_id: canonical?.membership_id ?? null,
+        match_state,
+        reason: canonical?.status ?? legacy.status ?? null,
+      });
+    } catch (e) {
+      console.error("identity_shadow_failed", e instanceof Error ? e.message : String(e));
     }
   };
 
