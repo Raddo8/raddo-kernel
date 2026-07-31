@@ -7229,6 +7229,14 @@ export type Database = {
           verdict: string
         }[]
       }
+      lane_a_commit2_selftest: {
+        Args: never
+        Returns: {
+          detail: string
+          result: string
+          test: string
+        }[]
+      }
       log_kernel_access: {
         Args: {
           p_access_kind: string
