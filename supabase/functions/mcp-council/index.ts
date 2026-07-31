@@ -4609,7 +4609,12 @@ Deno.serve(async (req) => {
 
             const saveCid = await serverCid();
             if (!saveCid) {
+              await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+                status: "ABANDONED",
+                failure_stage: "CID_RESOLUTION",
+              });
               const out = {
+
                 session_id: args?.session_id,
                 save_id: null,
                 overall_status: null,
