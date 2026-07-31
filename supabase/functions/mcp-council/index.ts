@@ -47,9 +47,15 @@ import {
   buildDegradedEnvelope,
   resolveContentStatus,
 } from "./degraded-envelope.ts";
+import {
+  computeFingerprint,
+  fingerprintEnabled,
+  type Fingerprint,
+} from "./save-fingerprint.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "truthful_degraded_v1";
+const BUILD_ID = "keyed_fingerprint_v1";
+
 
 
 
