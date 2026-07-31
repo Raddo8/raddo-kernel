@@ -1823,10 +1823,90 @@ export type Database = {
         }
         Relationships: []
       }
+      doctrine_amendments: {
+        Row: {
+          action: string
+          actor: string
+          amendment_id: number
+          at: string
+          from_tier: number | null
+          from_version: number | null
+          reason: string
+          receipt: string | null
+          rule_key: string | null
+          to_tier: number | null
+          to_version: number | null
+        }
+        Insert: {
+          action: string
+          actor: string
+          amendment_id?: number
+          at?: string
+          from_tier?: number | null
+          from_version?: number | null
+          reason: string
+          receipt?: string | null
+          rule_key?: string | null
+          to_tier?: number | null
+          to_version?: number | null
+        }
+        Update: {
+          action?: string
+          actor?: string
+          amendment_id?: number
+          at?: string
+          from_tier?: number | null
+          from_version?: number | null
+          reason?: string
+          receipt?: string | null
+          rule_key?: string | null
+          to_tier?: number | null
+          to_version?: number | null
+        }
+        Relationships: []
+      }
+      doctrine_publications: {
+        Row: {
+          at: string
+          corpus: Json
+          corpus_sha256: string
+          note: string | null
+          publication_id: string
+          published_by: string
+          rule_count: number
+          tier0_count: number
+        }
+        Insert: {
+          at?: string
+          corpus: Json
+          corpus_sha256: string
+          note?: string | null
+          publication_id?: string
+          published_by: string
+          rule_count: number
+          tier0_count: number
+        }
+        Update: {
+          at?: string
+          corpus?: Json
+          corpus_sha256?: string
+          note?: string | null
+          publication_id?: string
+          published_by?: string
+          rule_count?: number
+          tier0_count?: number
+        }
+        Relationships: []
+      }
       doctrine_rules: {
         Row: {
           added_at: string
+          change_reason: string | null
           cid: string | null
+          prior_tier: number | null
+          ratification_receipt: string | null
+          ratified_at: string | null
+          ratified_by: string | null
           rule_id: string
           rule_key: string
           rule_text: string
@@ -1835,10 +1915,16 @@ export type Database = {
           status: string
           superseded_by: string | null
           tier: number
+          version: number
         }
         Insert: {
           added_at?: string
+          change_reason?: string | null
           cid?: string | null
+          prior_tier?: number | null
+          ratification_receipt?: string | null
+          ratified_at?: string | null
+          ratified_by?: string | null
           rule_id?: string
           rule_key: string
           rule_text: string
@@ -1847,10 +1933,16 @@ export type Database = {
           status?: string
           superseded_by?: string | null
           tier: number
+          version?: number
         }
         Update: {
           added_at?: string
+          change_reason?: string | null
           cid?: string | null
+          prior_tier?: number | null
+          ratification_receipt?: string | null
+          ratified_at?: string | null
+          ratified_by?: string | null
           rule_id?: string
           rule_key?: string
           rule_text?: string
@@ -1859,6 +1951,7 @@ export type Database = {
           status?: string
           superseded_by?: string | null
           tier?: number
+          version?: number
         }
         Relationships: [
           {
@@ -1965,6 +2058,98 @@ export type Database = {
           },
         ]
       }
+      envelope_ledger: {
+        Row: {
+          at: string
+          commit_sha: string | null
+          credits: number | null
+          entry_id: number
+          envelope_id: string
+          evidence: string | null
+          item: string
+          outcome: string
+        }
+        Insert: {
+          at?: string
+          commit_sha?: string | null
+          credits?: number | null
+          entry_id?: number
+          envelope_id: string
+          evidence?: string | null
+          item: string
+          outcome: string
+        }
+        Update: {
+          at?: string
+          commit_sha?: string | null
+          credits?: number | null
+          entry_id?: number
+          envelope_id?: string
+          evidence?: string | null
+          item?: string
+          outcome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "envelope_ledger_envelope_id_fkey"
+            columns: ["envelope_id"]
+            isOneToOne: false
+            referencedRelation: "execution_envelopes"
+            referencedColumns: ["envelope_id"]
+          },
+        ]
+      }
+      execution_envelopes: {
+        Row: {
+          authorized_by: string
+          budget_credits: number
+          close_reason: string | null
+          closed_at: string | null
+          ends_at: string
+          envelope_id: string
+          excluded: string
+          name: string
+          scope: string
+          spent_credits: number
+          started_at: string
+          status: string
+          stop_conditions: string
+          success_criteria: string
+        }
+        Insert: {
+          authorized_by: string
+          budget_credits: number
+          close_reason?: string | null
+          closed_at?: string | null
+          ends_at: string
+          envelope_id?: string
+          excluded: string
+          name: string
+          scope: string
+          spent_credits?: number
+          started_at?: string
+          status?: string
+          stop_conditions: string
+          success_criteria: string
+        }
+        Update: {
+          authorized_by?: string
+          budget_credits?: number
+          close_reason?: string | null
+          closed_at?: string | null
+          ends_at?: string
+          envelope_id?: string
+          excluded?: string
+          name?: string
+          scope?: string
+          spent_credits?: number
+          started_at?: string
+          status?: string
+          stop_conditions?: string
+          success_criteria?: string
+        }
+        Relationships: []
+      }
       execution_receipts: {
         Row: {
           auth_mode: string | null
@@ -2049,6 +2234,45 @@ export type Database = {
           tool?: string
           tool_catalogued?: boolean
           undeclared_effects?: Json
+        }
+        Relationships: []
+      }
+      external_authority_references: {
+        Row: {
+          applies_to: string
+          authority: string
+          category: string
+          citation: string | null
+          note: string | null
+          recognised_at: string
+          recognised_by: string
+          reference_id: string
+          status: string
+          title: string
+        }
+        Insert: {
+          applies_to: string
+          authority: string
+          category: string
+          citation?: string | null
+          note?: string | null
+          recognised_at?: string
+          recognised_by: string
+          reference_id?: string
+          status?: string
+          title: string
+        }
+        Update: {
+          applies_to?: string
+          authority?: string
+          category?: string
+          citation?: string | null
+          note?: string | null
+          recognised_at?: string
+          recognised_by?: string
+          reference_id?: string
+          status?: string
+          title?: string
         }
         Relationships: []
       }
@@ -4362,6 +4586,13 @@ export type Database = {
           note?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "protected_artifact_annotations_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "effective_artifacts"
+            referencedColumns: ["artifact_id"]
+          },
           {
             foreignKeyName: "protected_artifact_annotations_artifact_id_fkey"
             columns: ["artifact_id"]
@@ -7022,6 +7253,32 @@ export type Database = {
         }
         Relationships: []
       }
+      effective_artifacts: {
+        Row: {
+          activation_gate: string | null
+          annotations: number | null
+          artifact_id: string | null
+          artifact_key: string | null
+          byte_count: number | null
+          cid: string | null
+          distribution_policy: string | null
+          effective_class: string | null
+          effective_state: string | null
+          ingested_at: string | null
+          mutation_policy: string | null
+          provenance: string | null
+          registration_state: string | null
+          runtime_status: string | null
+          sha256: string | null
+          source_authority: string | null
+          source_location: string | null
+          source_sha1: string | null
+          superseded_by_key: string | null
+          tenant: string | null
+          version: number | null
+        }
+        Relationships: []
+      }
       hq_readiness: {
         Row: {
           blocking_gap: string | null
@@ -7121,6 +7378,17 @@ export type Database = {
       }
     }
     Functions: {
+      admin_guard: { Args: never; Returns: undefined }
+      amend_doctrine_rule: {
+        Args: {
+          p_actor: string
+          p_new_text: string
+          p_reason: string
+          p_receipt?: string
+          p_rule_key: string
+        }
+        Returns: Json
+      }
       assurance_integrity_scan: {
         Args: never
         Returns: {
@@ -7143,6 +7411,15 @@ export type Database = {
           table_name: string
           total: number
         }[]
+      }
+      authorize_identity_observation: {
+        Args: {
+          p_authorized_by: string
+          p_observation_id: string
+          p_principal_id: string
+          p_receipt: string
+        }
+        Returns: Json
       }
       bridge_claim_next: {
         Args: never
@@ -7293,7 +7570,59 @@ export type Database = {
         }
         Returns: Json
       }
+      open_save_attempt_v2: {
+        Args: {
+          p_aad?: string
+          p_alg?: string
+          p_canonicalization_version?: string
+          p_cid?: string
+          p_ciphertext_b64?: string
+          p_client_request_id: string
+          p_external_identity_id?: string
+          p_hash_algorithm?: string
+          p_iv_b64?: string
+          p_master_key_version?: string
+          p_payload_hash: string
+          p_plaintext_bytes?: number
+          p_principal_id?: string
+          p_recovery_expires_at?: string
+          p_requested_layer_counts: Json
+          p_ritual?: string
+          p_schema_version?: string
+          p_session_id?: string
+          p_surface?: string
+          p_tool_version?: string
+          p_wrap_iv_b64?: string
+          p_wrapped_dek_b64?: string
+        }
+        Returns: Json
+      }
+      propose_doctrine_rule: {
+        Args: {
+          p_actor: string
+          p_cid?: string
+          p_rule_key: string
+          p_rule_text: string
+          p_scope?: string
+          p_source: string
+          p_tier: number
+        }
+        Returns: Json
+      }
       provision_client_hq: { Args: { p_cid: string }; Returns: Json }
+      publish_doctrine: {
+        Args: { p_note?: string; p_published_by: string }
+        Returns: Json
+      }
+      ratify_doctrine_rule: {
+        Args: {
+          p_ratified_by: string
+          p_receipt: string
+          p_rule_key: string
+          p_version: number
+        }
+        Returns: Json
+      }
       record_decision: {
         Args: {
           p_authority_tier?: string
@@ -7372,6 +7701,36 @@ export type Database = {
           out_source: string
           out_status: string
         }[]
+      }
+      retire_doctrine_rule: {
+        Args: {
+          p_actor: string
+          p_reason: string
+          p_receipt?: string
+          p_rule_key: string
+        }
+        Returns: Json
+      }
+      set_doctrine_tier: {
+        Args: {
+          p_actor: string
+          p_new_tier: number
+          p_reason: string
+          p_receipt?: string
+          p_rule_key: string
+        }
+        Returns: Json
+      }
+      stamp_save_attempt: {
+        Args: {
+          p_cid?: string
+          p_failure_stage?: string
+          p_recovery_expires_at?: string
+          p_save_attempt_id: string
+          p_save_id?: string
+          p_status: string
+        }
+        Returns: Json
       }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
