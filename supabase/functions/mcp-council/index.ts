@@ -4580,7 +4580,43 @@ Deno.serve(async (req) => {
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
+
+          // ── REQUEST-SIZE ENFORCEMENT · before any persistence ───────────
+          const canonicalPayload = canonicalize(args ?? {});
+          const payloadBytes = new TextEncoder().encode(canonicalPayload).byteLength;
+          if (payloadBytes > MAX_RECOVERY_PAYLOAD_BYTES) {
+            return rpcError(
+              id,
+              -32602,
+              `payload_too_large · ${payloadBytes} bytes exceeds the ${MAX_RECOVERY_PAYLOAD_BYTES} byte limit for a single save. Split the save into smaller checkpoints.`,
+            );
+          }
+
+          // ── DURABLE ATTEMPT · canonicalize → fingerprint → envelope-encrypt
+          // → persist. This runs BEFORE session validation, BEFORE CID
+          // resolution and BEFORE any layer write, so a save that dies later
+          // can still be proven to have been attempted and can be recovered.
+          let attemptHandle: AttemptHandle | null = null;
           try {
+            attemptHandle = await openDurableAttempt(supabaseAdmin, {
+              client_request_id: clientRequestId,
+              payload: args ?? {},
+              cid: pctx.legacy_cid ?? null,
+              session_id: typeof args?.session_id === "string" ? args.session_id : null,
+              surface: "mcp:save_session",
+              tool_version: TOOL_MANIFEST_VERSION,
+              ritual: "save",
+              schema_version: TOOL_MANIFEST_VERSION,
+              principal_id: pctx.principal_id ?? null,
+              external_identity_id: pctx.external_identity_id ?? null,
+            });
+            if (attemptHandle?.error) console.error("save_attempt_open_failed", attemptHandle.error);
+          } catch (e) {
+            console.error("save_attempt_open_threw", e instanceof Error ? e.message : String(e));
+          }
+
+          try {
+
             // Idempotency: a prior receipt for this id decides what happens next.
             const { data: prior } = await supabaseAdmin
               .from("save_receipts")
