@@ -4114,7 +4114,14 @@ Deno.serve(async (req) => {
           } catch { return false; }
         };
 
+        // Live handle on the per-layer accumulators of the CURRENT save leg.
+        // Set only once layer processing has actually begun (i.e. after the
+        // session check passes), so a degraded envelope can distinguish
+        // "nothing was written" from "some layers ran and this is what landed".
+        let liveLayers: LayerAcc[] | null = null;
+
         // ── Shared SAVE leg (used by save_session AND end_session) ──
+
         const runSaveLeg = async (
           argsIn: any,
           checkpointKind: "save" | "end",
