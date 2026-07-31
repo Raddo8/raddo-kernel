@@ -4674,22 +4674,25 @@ Deno.serve(async (req) => {
                 status: "ABANDONED",
                 failure_stage: "CID_RESOLUTION",
               });
-              const out = {
-
-                session_id: args?.session_id,
-                save_id: null,
-                overall_status: null,
-                outcome: "degraded",
-                reason: "cid_unresolved",
-                reasons: ["cid_unresolved"],
-                ...manifestBlock(args),
-                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
-              };
+              // content_status is READ from the vault, never assumed.
+              const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+              const out = buildDegradedEnvelope({
+                reason: "identity_binding_required",
+                retryable: false,
+                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+                client_request_id: clientRequestId,
+                payload_hash: attemptHandle?.payload_hash ?? null,
+                failure_stage: "CID_RESOLUTION",
+                content_status: held.content_status,
+                recovery_expires_at: held.recovery_expires_at,
+                args,
+              });
               return rpcResult(id, {
                 content: [{ type: "text", text: JSON.stringify(out) }],
                 structuredContent: out,
                 isError: false,
               });
+
             }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
