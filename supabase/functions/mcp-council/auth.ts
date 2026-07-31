@@ -76,6 +76,11 @@ export type ResolvedIdentity = {
   sub: string;
   scope: string;
   clientId: string | null;
+  /** Raw `iss` claim. Item 2: the issuer is invisible client-side; only the
+   *  server can record it. */
+  iss?: string | null;
+  /** Raw tenant string the token carried, before any resolution. */
+  tenantClaim?: string | null;
 };
 
 export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity> {
@@ -150,7 +155,9 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
 
   const sub = typeof payload?.sub === "string" ? payload.sub : "";
   const clientId = typeof payload?.client_id === "string" ? payload.client_id : null;
-  return { tenant, sub, scope: scopeStr, clientId };
+  const iss = typeof payload?.iss === "string" ? payload.iss : null;
+  const rawTenantClaim = typeof appMeta.tenant === "string" ? appMeta.tenant : null;
+  return { tenant, sub, scope: scopeStr, clientId, iss, tenantClaim: rawTenantClaim };
 }
 
 export const RESOURCE_METADATA_URL =

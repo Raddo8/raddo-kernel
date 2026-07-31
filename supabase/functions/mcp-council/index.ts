@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "lane1_cid_telemetry_v1";
+const BUILD_ID = "lane2_kernel_verify_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2126,7 +2126,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.07.30.1";
+const TOOL_MANIFEST_VERSION = "2026.07.31.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2793,7 +2793,7 @@ Deno.serve(async (req) => {
     const token = m[1].trim();
     if (expected && safeEqual(token, expected)) {
       authMode = "static";
-      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null };
+      identity = { tenant: "SPINNEY", sub: "static-bearer", scope: "", clientId: null, iss: "static-bearer", tenantClaim: "SPINNEY" };
     } else {
       try {
         identity = await verifySupabaseJwt(token);
@@ -2913,6 +2913,7 @@ Deno.serve(async (req) => {
   const logKernelAccess = async (a: {
     cid: string | null; kernel_id: string | null; part: string; seq: number | null;
     bytes: number; access_kind: string; surface: string | null; session_id?: string | null;
+    keyed_by?: "cid" | "tenant_id" | "none";
   }): Promise<boolean> => {
     if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
     try {
@@ -2926,12 +2927,93 @@ Deno.serve(async (req) => {
         p_surface: a.surface,
         p_auth_subject: identity?.sub ?? null,
         p_session_id: a.session_id ?? null,
+        p_purpose: null,
+        // ITEM 2 · issuer capture. Only the server can see these.
+        p_issuer: identity?.iss ?? null,
+        p_token_version: TOOL_MANIFEST_VERSION,
+        p_tenant_claim: identity?.tenantClaim ?? tenant ?? null,
+        p_resolved_keyed_by: a.keyed_by ?? "none",
       });
       if (error) { console.error("kernel_access_log_failed", error.message); return false; }
       return true;
     } catch (e) {
       console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
       return false;
+    }
+  };
+
+  // ── ITEM 5 · SESSION CLOCK ────────────────────────────────────────────
+  // Storage stays UTC. Presentation and day-boundary reasoning are
+  // America/Chicago: a brief delivered at 22:51 Central is not "morning".
+  const SESSION_TZ = "America/Chicago";
+  const localParts = (d = new Date()) => {
+    const f = new Intl.DateTimeFormat("en-US", {
+      timeZone: SESSION_TZ, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", weekday: "long",
+    }).formatToParts(d);
+    const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+    return {
+      date: `${g("year")}-${g("month")}-${g("day")}`,
+      time: `${g("hour")}:${g("minute")}`,
+      hour: Number(g("hour")),
+      weekday: g("weekday"),
+    };
+  };
+  const partOfDay = (h: number) =>
+    h < 5 ? "night" : h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
+  const sessionClock = () => {
+    const p = localParts();
+    return {
+      timezone: SESSION_TZ,
+      local_date: p.date,
+      local_time: p.time,
+      local_weekday: p.weekday,
+      part_of_day: partOfDay(p.hour),
+      greeting: `Good ${partOfDay(p.hour) === "night" ? "evening" : partOfDay(p.hour)}`,
+      utc: new Date().toISOString(),
+      note: `Reason about time of day and day boundaries in ${SESSION_TZ}, not UTC.`,
+    };
+  };
+
+  // ── ITEM 3 · resolver v2 in SHADOW. Computes, controls nothing. ───────
+  const shadowResolveIdentity = async (surface: string): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const legacy = await cidResolution();
+      const legacyCid = cidOrNull(legacy);
+      const issuer = identity?.iss ?? null;
+      const subject = identity?.sub ?? null;
+      let canonical: any = null;
+      try {
+        const { data } = await supabaseAdmin.rpc("resolve_identity_v2", {
+          p_issuer: issuer,
+          p_provider_subject: subject,
+        });
+        canonical = data ?? null;
+      } catch (_e) { canonical = null; }
+      const canonicalCid = typeof canonical?.cid === "string" ? canonical.cid : null;
+      const match_state = legacyCid && canonicalCid
+        ? (legacyCid === canonicalCid ? "MATCH" : "MISMATCH")
+        : legacyCid ? "LEGACY_ONLY"
+        : canonicalCid ? "CANONICAL_ONLY"
+        : "BOTH_NULL";
+      await supabaseAdmin.from("identity_resolution_log").insert({
+        surface,
+        token_version: TOOL_MANIFEST_VERSION,
+        tenant_claim: identity?.tenantClaim ?? tenant ?? null,
+        issuer,
+        provider_subject: subject,
+        legacy_cid: legacyCid,
+        legacy_keyed_by: legacy.status === "RESOLVED" ? "cid" : "none",
+        canonical_cid: canonicalCid,
+        canonical_principal_id: canonical?.principal_id ?? null,
+        canonical_membership_id: canonical?.membership_id ?? null,
+        match_state,
+        reason: canonical?.status ?? legacy.status ?? null,
+      });
+    } catch (e) {
+      console.error("identity_shadow_failed", e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -3231,6 +3313,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
+          void shadowResolveIdentity("boot_kernel");
           const bootLookup = await activeKernel("id, version, cid");
           const kernel = bootLookup.kernel;
           const kernelErr = bootLookup.error;
@@ -3279,6 +3362,7 @@ Deno.serve(async (req) => {
             access_kind: "MANIFEST_ONLY",
             surface: "mcp",
             session_id: typeof args?.session_id === "string" ? args.session_id : null,
+            keyed_by: bootLookup.keyed_by,
           });
           const out: Record<string, unknown> = {
             client: tenant,
@@ -3341,6 +3425,7 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
+          void shadowResolveIdentity("load_kernel_part");
           const partLookup = await activeKernel("id, cid");
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
@@ -3365,6 +3450,7 @@ Deno.serve(async (req) => {
             access_kind: "RUNTIME_LOAD",
             surface: "mcp",
             session_id: typeof args?.session_id === "string" ? args.session_id : null,
+            keyed_by: partLookup.keyed_by,
           });
           const out = {
             part, seq, of, content_md: row.content_md, sha256: row.sha256,
@@ -3406,6 +3492,7 @@ Deno.serve(async (req) => {
           }));
 
           // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
+          void shadowResolveIdentity(`begin_session:${surface}`);
           const beginLookup = await activeKernel("id, version, status, cid");
           const kernel = beginLookup.kernel;
           const kernelErr = beginLookup.error;
@@ -3428,30 +3515,87 @@ Deno.serve(async (req) => {
           }
           const sessionId = newSession.id as string;
 
-          // 4 (cont). Kernel manifest — NAMES + HASHES ONLY, no content_md.
+          // 4 (cont). ITEM 1 · LOAD AND VERIFY. The manifest alone proves
+          // nothing: begin_session now serves every part through the same
+          // read path as load_kernel_part, hashes what it received, and
+          // compares against the manifest hash. An unverified kernel can
+          // never return ok.
           let kernelBlock: any = { version: null, status: null, parts: [], sealed: true };
+          let kernelVerification: any = null;
+          let statePointer: { part: string; seq: number; content_md: string }[] = [];
           if (kernel) {
             const { data: parts, error: partsErr } = await supabaseAdmin
               .from("kernel_parts")
-              .select("part, seq, sha256, bytes")
+              .select("part, seq, sha256, bytes, content_md")
               .eq("kernel_id", kernel.id)
+              .order("part", { ascending: true })
               .order("seq", { ascending: true });
             if (partsErr) outcome = "partial";
+            const partRows = (parts ?? []) as Array<
+              { part: string; seq: number; sha256: string; bytes: number; content_md: string }
+            >;
             kernelBlock = {
               version: kernel.version,
               status: kernel.status,
-              parts: (parts ?? []).map((p: any) => ({
+              parts: partRows.map((p) => ({
                 part: p.part, seq: p.seq, sha256: p.sha256, bytes: p.bytes,
               })),
               sealed: true,
             };
+
+            const segments: any[] = [];
+            const failedParts: string[] = [];
+            for (const row of partRows) {
+              const content = typeof row.content_md === "string" ? row.content_md : "";
+              const bytes_served = new TextEncoder().encode(content).length;
+              let computed = "";
+              try {
+                const digest = await crypto.subtle.digest(
+                  "SHA-256",
+                  new TextEncoder().encode(content),
+                );
+                computed = Array.from(new Uint8Array(digest))
+                  .map((b) => b.toString(16).padStart(2, "0")).join("");
+              } catch { computed = ""; }
+              const expected = String(row.sha256 ?? "").trim().toLowerCase().replace(/^sha256:/, "");
+              const served = bytes_served > 0;
+              const hash_match = served && Boolean(expected) && computed === expected;
+              if (!hash_match) failedParts.push(`${row.part}#${row.seq}`);
+              segments.push({
+                part: row.part,
+                seq: row.seq,
+                bytes_served,
+                hash_match,
+                ...(served ? {} : { reason: "not_served" }),
+              });
+              if (row.part === "state_pointer") {
+                statePointer.push({ part: row.part, seq: row.seq, content_md: content });
+              }
+              await logKernelAccess({
+                cid: beginCid, kernel_id: kernel.id, part: row.part, seq: row.seq,
+                bytes: bytes_served, access_kind: "RUNTIME_LOAD",
+                surface: `begin_session:${surface}`, session_id: sessionId,
+                keyed_by: beginLookup.keyed_by,
+              });
+            }
+            const verified_parts = segments.filter((x) => x.hash_match).length;
+            kernelVerification = {
+              parts: segments,
+              verified_parts,
+              total_parts: segments.length,
+              failed_parts: failedParts,
+              state_pointer_read: statePointer.length > 0,
+            };
+            if (partsErr || (segments.length > 0 && verified_parts !== segments.length)) {
+              degradedReasons.push("kernel_unverified");
+            }
           }
 
           if (kernel) {
             await logKernelAccess({
               cid: beginCid, kernel_id: kernel.id, part: "manifest", seq: null,
               bytes: 0, access_kind: "MANIFEST_ONLY", surface: `begin_session:${surface}`,
-              session_id: sessionId,
+              session_id: sessionId, keyed_by: beginLookup.keyed_by,
             });
           }
 
@@ -3597,6 +3741,9 @@ Deno.serve(async (req) => {
             session_id: sessionId,
             tenant,
             kernel: kernelBlock,
+            kernel_verification: kernelVerification,
+            state_pointer: statePointer,
+            clock: sessionClock(),
             directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             last_checkpoint: lastCheckpoint ?? null,
@@ -4010,9 +4157,82 @@ Deno.serve(async (req) => {
             L.rules_captured.verified = rVerified;
           } else if (rules.length) { L.rules_captured.layer_state = "SKIPPED"; }
 
-          // ── NOTION LEGS · verified writes. decisions and signals have no
-          // gateway table: Notion IS their store, so their layer counts come
-          // from verified Notion pages. notion_mirror aggregates all surfaces.
+          // ── ITEM 4 · CANONICAL WRITES for decisions and signals ──────
+          // Postgres is now the store of record. Notion is a mirror: a 401
+          // there marks notion_mirror failed and nothing else.
+          const saveCid = await serverCid();
+          const sourceMeta = {
+            p_provenance: "CLIENT",
+            p_source_session_id: session_id,
+            p_source_subject: identity?.sub ?? null,
+            p_source_surface: `mcp:${checkpointKind === "end" ? "end_session" : "save_session"}`,
+            p_tool_version: TOOL_MANIFEST_VERSION,
+          };
+
+          if (want("decisions")) {
+            let dVerified = decisions.length > 0;
+            for (const d of decisions) {
+              L.decisions.attempted += 1;
+              try {
+                if (!saveCid) throw new Error("cid_unresolved");
+                const { data: res, error } = await supabaseAdmin.rpc("record_decision", {
+                  p_title: d.title,
+                  p_decision_md: d.decision_md ?? d.title,
+                  p_rationale_md: d.rationale ?? null,
+                  p_decision_owner: d.decision_owner ?? null,
+                  p_execution_owner: d.execution_owner ?? null,
+                  p_reversibility: d.reversible ?? null,
+                  p_authority_tier: d.authority_tier ?? null,
+                  p_client_ref: d.client_ref ?? null,
+                  p_cid: saveCid,
+                  ...sourceMeta,
+                });
+                if (error) throw new Error(error.message);
+                const rowId = typeof res?.id === "string" ? res.id : null;
+                if (rowId) L.decisions.record_ids.push(rowId);
+                L.decisions.saved += 1;
+              } catch (e) {
+                dVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.decisions, "decision_write_failed", msg, true);
+                unsaved.push({ layer: "decisions", reason: msg.slice(0, 200) });
+              }
+            }
+            L.decisions.verified = dVerified;
+          } else if (decisions.length) { L.decisions.layer_state = "SKIPPED"; }
+
+          if (want("signals")) {
+            let sVerified = signals.length > 0;
+            for (const sg of signals) {
+              L.signals.attempted += 1;
+              try {
+                if (!saveCid) throw new Error("cid_unresolved");
+                const { data: res, error } = await supabaseAdmin.rpc("record_signal", {
+                  p_title: sg.title,
+                  p_detail_md: sg.description ?? sg.implication ?? sg.title,
+                  p_pattern: sg.pattern ?? null,
+                  p_signal_type: sg.type ?? null,
+                  p_status: sg.status ?? null,
+                  p_client_ref: sg.client_ref ?? null,
+                  p_cid: saveCid,
+                  ...sourceMeta,
+                });
+                if (error) throw new Error(error.message);
+                const rowId = typeof res?.id === "string" ? res.id : null;
+                if (rowId) L.signals.record_ids.push(rowId);
+                L.signals.saved += 1;
+              } catch (e) {
+                sVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.signals, "signal_write_failed", msg, true);
+                unsaved.push({ layer: "signals", reason: msg.slice(0, 200) });
+              }
+            }
+            L.signals.verified = sVerified;
+          } else if (signals.length) { L.signals.layer_state = "SKIPPED"; }
+
+          // ── NOTION LEGS · mirror only. A mirror failure is recorded on
+          // notion_mirror and never on the canonical decision/signal layers.
           const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
           const target = resolvedTarget.target;
           const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
@@ -4073,7 +4293,7 @@ Deno.serve(async (req) => {
                   "Execution Owner": rt(d.execution_owner),
                   "Reversible": sel(d.reversible),
                 },
-              }, () => { notionOk.decisions += 1; }, L.decisions);
+              }, () => { notionOk.decisions += 1; });
             }
 
             // open_loops → surface `tasks` (also store returned page id back on the DB row)
@@ -4103,7 +4323,7 @@ Deno.serve(async (req) => {
                   "Type": sel(s.type),
                   "Status": sel(s.status),
                 },
-              }, () => { notionOk.signals += 1; }, L.signals);
+              }, () => { notionOk.signals += 1; });
             }
 
             // checkpoint → surface `session_log`
