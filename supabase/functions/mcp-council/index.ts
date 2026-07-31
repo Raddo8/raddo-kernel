@@ -3889,6 +3889,7 @@ Deno.serve(async (req) => {
             makeup_close_owed,
             registers_empty,
             outcome,
+            ...identityBlock(pctx),
             ...manifestBlock(args),
             ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
@@ -4674,6 +4675,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
             };
             return rpcResult(id, {
@@ -4804,6 +4806,7 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
             };
@@ -4905,6 +4908,7 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: endOutcome,
+              ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
