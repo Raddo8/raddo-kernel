@@ -1455,6 +1455,47 @@ export type Database = {
           },
         ]
       }
+      correction_claims: {
+        Row: {
+          at: string
+          cid: string
+          claim_id: string
+          correction_text: string
+          declared_by: string
+          overrides_tier: number
+          status: string
+          target: string
+        }
+        Insert: {
+          at?: string
+          cid: string
+          claim_id?: string
+          correction_text: string
+          declared_by: string
+          overrides_tier: number
+          status?: string
+          target: string
+        }
+        Update: {
+          at?: string
+          cid?: string
+          claim_id?: string
+          correction_text?: string
+          declared_by?: string
+          overrides_tier?: number
+          status?: string
+          target?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correction_claims_overrides_tier_fkey"
+            columns: ["overrides_tier"]
+            isOneToOne: false
+            referencedRelation: "doctrine_tiers"
+            referencedColumns: ["tier"]
+          },
+        ]
+      }
       council_minutes: {
         Row: {
           cid: string
@@ -1779,6 +1820,84 @@ export type Database = {
           tenant_id?: string
           text?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      doctrine_rules: {
+        Row: {
+          added_at: string
+          cid: string | null
+          rule_id: string
+          rule_key: string
+          rule_text: string
+          scope: string
+          source: string
+          status: string
+          superseded_by: string | null
+          tier: number
+        }
+        Insert: {
+          added_at?: string
+          cid?: string | null
+          rule_id?: string
+          rule_key: string
+          rule_text: string
+          scope?: string
+          source: string
+          status?: string
+          superseded_by?: string | null
+          tier: number
+        }
+        Update: {
+          added_at?: string
+          cid?: string | null
+          rule_id?: string
+          rule_key?: string
+          rule_text?: string
+          scope?: string
+          source?: string
+          status?: string
+          superseded_by?: string | null
+          tier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctrine_rules_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "doctrine_rules"
+            referencedColumns: ["rule_id"]
+          },
+          {
+            foreignKeyName: "doctrine_rules_tier_fkey"
+            columns: ["tier"]
+            isOneToOne: false
+            referencedRelation: "doctrine_tiers"
+            referencedColumns: ["tier"]
+          },
+        ]
+      }
+      doctrine_tiers: {
+        Row: {
+          description: string
+          name: string
+          overridable_by_client: boolean
+          tier: number
+          writable_by: string
+        }
+        Insert: {
+          description: string
+          name: string
+          overridable_by_client: boolean
+          tier: number
+          writable_by: string
+        }
+        Update: {
+          description?: string
+          name?: string
+          overridable_by_client?: boolean
+          tier?: number
+          writable_by?: string
         }
         Relationships: []
       }
