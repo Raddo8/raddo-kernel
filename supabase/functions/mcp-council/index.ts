@@ -4702,6 +4702,11 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            // Stamp the durable attempt with the exact stage that killed it.
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: msg.includes("session_not_found") ? "ABANDONED" : "FAILED",
+              failure_stage: msg.includes("session_not_found") ? "SESSION_VALIDATION" : "LEG_EXCEPTION",
+            });
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, ritual: "save", outcome: "failed",
@@ -4710,6 +4715,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             return rpcError(id, -32603, `save_session_failed:${msg}`);
           }
+
         }
 
         // ══════ sync_session ══════
