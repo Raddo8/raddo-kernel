@@ -7570,6 +7570,33 @@ export type Database = {
         }
         Returns: Json
       }
+      open_save_attempt_v2: {
+        Args: {
+          p_aad?: string
+          p_alg?: string
+          p_canonicalization_version?: string
+          p_cid?: string
+          p_ciphertext_b64?: string
+          p_client_request_id: string
+          p_external_identity_id?: string
+          p_hash_algorithm?: string
+          p_iv_b64?: string
+          p_master_key_version?: string
+          p_payload_hash: string
+          p_plaintext_bytes?: number
+          p_principal_id?: string
+          p_recovery_expires_at?: string
+          p_requested_layer_counts: Json
+          p_ritual?: string
+          p_schema_version?: string
+          p_session_id?: string
+          p_surface?: string
+          p_tool_version?: string
+          p_wrap_iv_b64?: string
+          p_wrapped_dek_b64?: string
+        }
+        Returns: Json
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -7691,6 +7718,17 @@ export type Database = {
           p_reason: string
           p_receipt?: string
           p_rule_key: string
+        }
+        Returns: Json
+      }
+      stamp_save_attempt: {
+        Args: {
+          p_cid?: string
+          p_failure_stage?: string
+          p_recovery_expires_at?: string
+          p_save_attempt_id: string
+          p_save_id?: string
+          p_status: string
         }
         Returns: Json
       }
