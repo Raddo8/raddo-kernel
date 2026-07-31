@@ -2126,7 +2126,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.07.31.2";
+const TOOL_MANIFEST_VERSION = "2026.07.31.3";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2273,6 +2273,12 @@ const RITUAL_SAVE_PROPS = {
         decision_owner: { type: "string" },
         execution_owner: { type: "string" },
         reversible: { type: "string" },
+        decision_md: {
+          type: "string",
+          description: "The full decision text. If omitted, the title is used.",
+        },
+        authority_tier: { type: "string" },
+        client_ref: { type: "string" },
       },
       required: ["title"],
       additionalProperties: false,
@@ -2302,6 +2308,8 @@ const RITUAL_SAVE_PROPS = {
         implication: { type: "string" },
         type: { type: "string" },
         status: { type: "string" },
+        pattern: { type: "string" },
+        client_ref: { type: "string" },
       },
       required: ["title"],
       additionalProperties: false,
