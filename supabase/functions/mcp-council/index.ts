@@ -3313,6 +3313,7 @@ Deno.serve(async (req) => {
               isError: false,
             });
           }
+          void shadowResolveIdentity("boot_kernel");
           const bootLookup = await activeKernel("id, version, cid");
           const kernel = bootLookup.kernel;
           const kernelErr = bootLookup.error;
@@ -3361,6 +3362,7 @@ Deno.serve(async (req) => {
             access_kind: "MANIFEST_ONLY",
             surface: "mcp",
             session_id: typeof args?.session_id === "string" ? args.session_id : null,
+            keyed_by: bootLookup.keyed_by,
           });
           const out: Record<string, unknown> = {
             client: tenant,
@@ -3423,6 +3425,7 @@ Deno.serve(async (req) => {
         });
         if (!part || !supabaseAdmin) return notFoundResp();
         try {
+          void shadowResolveIdentity("load_kernel_part");
           const partLookup = await activeKernel("id, cid");
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
@@ -3447,6 +3450,7 @@ Deno.serve(async (req) => {
             access_kind: "RUNTIME_LOAD",
             surface: "mcp",
             session_id: typeof args?.session_id === "string" ? args.session_id : null,
+            keyed_by: partLookup.keyed_by,
           });
           const out = {
             part, seq, of, content_md: row.content_md, sha256: row.sha256,
@@ -3488,6 +3492,7 @@ Deno.serve(async (req) => {
           }));
 
           // 4. Active kernel · keyed on the server-verified CID (ITEM 2).
+          void shadowResolveIdentity(`begin_session:${surface}`);
           const beginLookup = await activeKernel("id, version, status, cid");
           const kernel = beginLookup.kernel;
           const kernelErr = beginLookup.error;
@@ -3533,7 +3538,7 @@ Deno.serve(async (req) => {
             await logKernelAccess({
               cid: beginCid, kernel_id: kernel.id, part: "manifest", seq: null,
               bytes: 0, access_kind: "MANIFEST_ONLY", surface: `begin_session:${surface}`,
-              session_id: sessionId,
+              session_id: sessionId, keyed_by: beginLookup.keyed_by,
             });
           }
 
