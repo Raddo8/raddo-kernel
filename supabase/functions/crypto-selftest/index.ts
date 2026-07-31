@@ -192,9 +192,13 @@ Deno.serve(async (req) => {
   const auth = req.headers.get("Authorization") ?? "";
   const token = auth.replace(/^Bearer\s+/i, "").trim();
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!token || !serviceRole || token !== serviceRole) {
+  // TEMP (Horizon op 1 one-shot proof): removed immediately after the run.
+  const tempInvoke = Deno.env.get("CRYPTO_SELFTEST_TEMP_INVOKE") ?? "";
+  const authorized = !!token && ((!!serviceRole && token === serviceRole) || (!!tempInvoke && token === tempInvoke));
+  if (!authorized) {
     return json({ error: "unauthorized", detail: "service_role authorization required" }, 401);
   }
+
 
   const { results, secret } = await runProofs();
   const all_pass = results.every((r) => r.pass);
