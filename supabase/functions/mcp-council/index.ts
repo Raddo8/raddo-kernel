@@ -3026,7 +3026,8 @@ Deno.serve(async (req) => {
 
       if (supabaseAdmin) {
         // 2. OBSERVE — guarantees no tenant transacts without an identity
-        // trace. Writes PENDING; grants nothing.
+        // trace. Writes a non-authoritative observation only; creates no
+        // principal, binding, membership or delegation, and grants nothing.
         try {
           const { data, error } = await supabaseAdmin.rpc("observe_external_identity", {
             p_issuer: issuer,
@@ -3037,7 +3038,15 @@ Deno.serve(async (req) => {
             p_verified_email: null,
           });
           if (error) console.error("observe_identity_failed", error.message);
-          external_identity_id = typeof data?.identity_id === "string" ? data.identity_id : null;
+          const observationId = typeof data?.observation_id === "string" ? data.observation_id : null;
+          if (observationId) {
+            console.log("identity_observed", JSON.stringify({
+              observation_id: observationId,
+              review_status: data?.review_status ?? null,
+              bound: data?.bound === true,
+              newly_seen: data?.newly_seen === true,
+            }));
+          }
         } catch (e) {
           console.error("observe_identity_exception", e instanceof Error ? e.message : String(e));
         }
