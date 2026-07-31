@@ -36,28 +36,9 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
-import {
-  canonicalize,
-  openDurableAttempt,
-  stampAttempt,
-  MAX_RECOVERY_PAYLOAD_BYTES,
-  type AttemptHandle,
-} from "./save-recovery.ts";
-import {
-  buildDegradedEnvelope,
-  resolveContentStatus,
-} from "./degraded-envelope.ts";
-import {
-  computeFingerprint,
-  fingerprintEnabled,
-  type Fingerprint,
-} from "./save-fingerprint.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "keyed_fingerprint_v1";
-
-
-
+const BUILD_ID = "one_resolver_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -4125,14 +4106,7 @@ Deno.serve(async (req) => {
           } catch { return false; }
         };
 
-        // Live handle on the per-layer accumulators of the CURRENT save leg.
-        // Set only once layer processing has actually begun (i.e. after the
-        // session check passes), so a degraded envelope can distinguish
-        // "nothing was written" from "some layers ran and this is what landed".
-        let liveLayers: LayerAcc[] | null = null;
-
         // ── Shared SAVE leg (used by save_session AND end_session) ──
-
         const runSaveLeg = async (
           argsIn: any,
           checkpointKind: "save" | "end",
@@ -4184,11 +4158,6 @@ Deno.serve(async (req) => {
           const { data: sess } = await supabaseAdmin
             .from("sessions").select("id, tenant").eq("id", session_id).maybeSingle();
           if (!sess || sess.tenant !== tenant) throw new Error("session_not_found");
-
-          // Layer processing begins here. From this point on a failure must
-          // report what landed, never "nothing was saved".
-          liveLayers = ALL_LAYERS.map((l) => L[l]);
-
 
           // Nothing submitted → nothing written. Honest NOOP.
           if (totalRequested === 0) {
@@ -4611,127 +4580,22 @@ Deno.serve(async (req) => {
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
-
-          // ── REQUEST-SIZE ENFORCEMENT · before any persistence ───────────
-          const canonicalPayload = canonicalize(args ?? {});
-          const payloadBytes = new TextEncoder().encode(canonicalPayload).byteLength;
-          if (payloadBytes > MAX_RECOVERY_PAYLOAD_BYTES) {
-            return rpcError(
-              id,
-              -32602,
-              `payload_too_large · ${payloadBytes} bytes exceeds the ${MAX_RECOVERY_PAYLOAD_BYTES} byte limit for a single save. Split the save into smaller checkpoints.`,
-            );
-          }
-
-          // ── IDEMPOTENCY FINGERPRINT · Lane A Commit 5 ───────────────────
-          // Keyed HMAC over the canonical SEMANTIC envelope only. Computed
-          // before anything is written so the attempt and the receipt carry
-          // the same value and are joinable on it.
-          let fp: Fingerprint | null = null;
-          let fingerprintError: string | null = null;
-          const fingerprintOn = fingerprintEnabled();
-          if (fingerprintOn) {
-            try {
-              fp = await computeFingerprint({
-                ritual: "save",
-                schema_version: TOOL_MANIFEST_VERSION,
-                cid: pctx.legacy_cid ?? null,
-                session_id: typeof args?.session_id === "string" ? args.session_id : null,
-                payload: (args ?? {}) as Record<string, unknown>,
-              });
-            } catch (e) {
-              // An uncomputable fingerprint must never fail a save. It degrades
-              // to the pre-commit behaviour for THIS request only.
-              fingerprintError = e instanceof Error ? e.message : String(e);
-              console.error("save_fingerprint_failed", fingerprintError);
-            }
-          }
-
-          // ── DURABLE ATTEMPT · canonicalize → fingerprint → envelope-encrypt
-          // → persist. This runs BEFORE session validation, BEFORE CID
-          // resolution and BEFORE any layer write, so a save that dies later
-          // can still be proven to have been attempted and can be recovered.
-          let attemptHandle: AttemptHandle | null = null;
           try {
-            attemptHandle = await openDurableAttempt(supabaseAdmin, {
-              client_request_id: clientRequestId,
-              payload: args ?? {},
-              cid: pctx.legacy_cid ?? null,
-              session_id: typeof args?.session_id === "string" ? args.session_id : null,
-              surface: "mcp:save_session",
-              tool_version: TOOL_MANIFEST_VERSION,
-              ritual: "save",
-              schema_version: TOOL_MANIFEST_VERSION,
-              principal_id: pctx.principal_id ?? null,
-              external_identity_id: pctx.external_identity_id ?? null,
-              fingerprint: fp,
-            });
-            if (attemptHandle?.error) console.error("save_attempt_open_failed", attemptHandle.error);
-          } catch (e) {
-            console.error("save_attempt_open_threw", e instanceof Error ? e.message : String(e));
-          }
-
-          /** One structured exit for a request id reused with different content. */
-          const idempotencyConflictExit = async (priorHash: string | null) => {
-            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-              status: "IDEMPOTENCY_CONFLICT",
-              failure_stage: "RECEIPT",
-            });
-            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
-            const out = {
-              ...buildDegradedEnvelope({
-                reason: "idempotency_conflict",
-                retryable: false,
-                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
-                client_request_id: clientRequestId,
-                payload_hash: fp?.payload_hash ?? null,
-                failure_stage: "RECEIPT",
-                content_status: held.content_status,
-                recovery_expires_at: held.recovery_expires_at,
-                layers: [], // ZERO layers were written on this path
-                args,
-              }),
-              prior_payload_hash: priorHash,
-            };
-            console.error(
-              "save_idempotency_conflict",
-              JSON.stringify({ client_request_id: clientRequestId, prior: priorHash, incoming: fp?.payload_hash ?? null }),
-            );
-            return rpcResult(id, {
-              content: [{ type: "text", text: JSON.stringify(out) }],
-              structuredContent: out,
-              isError: false,
-            });
-          };
-
-
-          try {
-
             // Idempotency: a prior receipt for this id decides what happens next.
             const { data: prior } = await supabaseAdmin
               .from("save_receipts")
-              .select("save_id, overall_status, payload_hash")
+              .select("save_id, overall_status")
               .eq("client_request_id", clientRequestId)
               .maybeSingle();
 
             let only: Set<LayerName> | null = null;
-            let possible_duplicate = false;
             if (prior) {
-              // Same request id, DIFFERENT content. Returning the earlier
-              // receipt here is what silently discarded the new content for
-              // the whole life of this tool. It is now refused, before any
-              // layer runs, and the database guard behind it is the backstop.
-              if (fp && prior.payload_hash && prior.payload_hash !== fp.payload_hash) {
-                return await idempotencyConflictExit(prior.payload_hash);
-              }
               if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
                 const out = {
                   session_id: args?.session_id,
                   save_id: prior.save_id,
                   overall_status: prior.overall_status,
                   idempotent: true,
-                  idempotent_replay: true,
-                  payload_hash: fp?.payload_hash ?? null,
                   layers_executed: [],
                 };
                 return rpcResult(id, {
@@ -4741,46 +4605,25 @@ Deno.serve(async (req) => {
                 });
               }
               only = await retryableLayerSet(prior.save_id);
-            } else if (fp) {
-              // Different request id, same fingerprint. Permitted — the client
-              // may legitimately be re-filing — but flagged so the layer client
-              // refs, not this function, decide what it means.
-              const { data: twin } = await supabaseAdmin
-                .from("save_receipts")
-                .select("save_id")
-                .eq("payload_hash", fp.payload_hash)
-                .neq("client_request_id", clientRequestId)
-                .limit(1)
-                .maybeSingle();
-              possible_duplicate = Boolean(twin);
             }
-
 
             const saveCid = await serverCid();
             if (!saveCid) {
-              await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-                status: "ABANDONED",
-                failure_stage: "CID_RESOLUTION",
-              });
-              // content_status is READ from the vault, never assumed.
-              const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
-              const out = buildDegradedEnvelope({
-                reason: "identity_binding_required",
-                retryable: false,
-                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
-                client_request_id: clientRequestId,
-                payload_hash: attemptHandle?.payload_hash ?? null,
-                failure_stage: "CID_RESOLUTION",
-                content_status: held.content_status,
-                recovery_expires_at: held.recovery_expires_at,
-                args,
-              });
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "cid_unresolved",
+                reasons: ["cid_unresolved"],
+                ...manifestBlock(args),
+                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
+              };
               return rpcResult(id, {
                 content: [{ type: "text", text: JSON.stringify(out) }],
                 structuredContent: out,
                 isError: false,
               });
-
             }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
@@ -4794,10 +4637,7 @@ Deno.serve(async (req) => {
               const { data: receipt, error: recErr } = await supabaseAdmin.rpc("record_save_receipt", {
                 p_client_request_id: clientRequestId,
                 p_session_id: typeof args?.session_id === "string" ? args.session_id : null,
-                // ROLLBACK SWITCH: SAVE_FINGERPRINT_DISABLED puts this back to
-                // null, which is exactly the pre-commit behaviour.
-                p_payload_hash: fp?.payload_hash ?? null,
-
+                p_payload_hash: null,
                 p_layers: res.layers.map((l) => ({
                   layer: l.layer,
                   requested: l.requested,
@@ -4821,24 +4661,7 @@ Deno.serve(async (req) => {
             } catch (e) {
               receipt_error = e instanceof Error ? e.message : String(e);
               console.error("save_receipt_write_failed", receipt_error);
-              // The database guard is the race backstop for two concurrent
-              // saves on one request id. It must land as a structured outcome,
-              // never as a raw 23505 protocol failure.
-              if (/IDEMPOTENCY_CONFLICT|duplicate key value/i.test(receipt_error)) {
-                return await idempotencyConflictExit(prior?.payload_hash ?? null);
-              }
             }
-
-
-            // Receipt written → the attempt is complete. Recovery copy now
-            // holds a 15-minute retention window instead of 72 hours.
-            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-              status: save_id ? "COMPLETED" : "FAILED",
-              failure_stage: save_id ? null : "RECEIPT",
-              save_id,
-              cid: saveCid,
-            });
-
 
             try {
               await supabaseAdmin.from("ritual_runs").insert({
@@ -4864,15 +4687,7 @@ Deno.serve(async (req) => {
               save_id,
               overall_status,
               idempotent,
-              idempotent_replay: idempotent,
-              payload_hash: fp?.payload_hash ?? null,
-              payload_hash_algorithm: fp?.payload_hash_algorithm ?? null,
-              canonicalization_version: fp?.canonicalization_version ?? null,
-              ...(possible_duplicate ? { possible_duplicate: true } : {}),
-              ...(fingerprintError ? { fingerprint_error: fingerprintError } : {}),
-              ...(fingerprintOn ? {} : { fingerprint_disabled: true }),
               ...(receipt_error ? { receipt_error } : {}),
-
               layers: res.layers,
               saved: res.saved,
               unsaved: res.unsaved,
@@ -4887,45 +4702,14 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            // Two distinct worlds. Before layer processing began, nothing was
-            // written and we may say so. Once it began, the per-layer report
-            // is the authoritative record and must never be dropped.
-            const sessionMiss = msg.includes("session_not_found") && liveLayers === null;
-            const failure_stage = sessionMiss ? "SESSION_VALIDATION" : "LEG_EXCEPTION";
-
-            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-              status: sessionMiss ? "ABANDONED" : "FAILED",
-              failure_stage,
-            });
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant, ritual: "save", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
             } catch { /* best-effort */ }
-
-            // content_status is READ from the vault, never assumed.
-            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
-            const out = buildDegradedEnvelope({
-              reason: sessionMiss ? "session_not_found" : "internal_save_failure",
-              retryable: sessionMiss ? true : false,
-              save_attempt_id: attemptHandle?.save_attempt_id ?? null,
-              client_request_id: clientRequestId,
-              payload_hash: attemptHandle?.payload_hash ?? null,
-              failure_stage,
-              content_status: held.content_status,
-              recovery_expires_at: held.recovery_expires_at,
-              layers: sessionMiss ? null : liveLayers,
-              args,
-            });
-            return rpcResult(id, {
-              content: [{ type: "text", text: JSON.stringify(out) }],
-              structuredContent: out,
-              isError: false,
-            });
+            return rpcError(id, -32603, `save_session_failed:${msg}`);
           }
-
-
         }
 
         // ══════ sync_session ══════
