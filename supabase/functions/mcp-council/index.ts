@@ -4788,7 +4788,10 @@ Deno.serve(async (req) => {
               const { data: receipt, error: recErr } = await supabaseAdmin.rpc("record_save_receipt", {
                 p_client_request_id: clientRequestId,
                 p_session_id: typeof args?.session_id === "string" ? args.session_id : null,
-                p_payload_hash: null,
+                // ROLLBACK SWITCH: SAVE_FINGERPRINT_DISABLED puts this back to
+                // null, which is exactly the pre-commit behaviour.
+                p_payload_hash: fp?.payload_hash ?? null,
+
                 p_layers: res.layers.map((l) => ({
                   layer: l.layer,
                   requested: l.requested,
