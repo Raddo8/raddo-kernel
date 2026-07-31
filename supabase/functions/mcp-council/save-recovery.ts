@@ -193,9 +193,26 @@ export async function openDurableAttempt(admin: any, input: {
   schema_version: string;
   principal_id: string | null;
   external_identity_id: string | null;
+  /**
+   * Lane A Commit 5 · when supplied, this keyed fingerprint becomes the
+   * attempt's payload_hash, so attempt and receipt are joinable on one value.
+   * Absent → the legacy unkeyed SHA-256 over the canonical form is used.
+   */
+  fingerprint?: {
+    payload_hash: string;
+    payload_hash_algorithm: string;
+    payload_hash_key_version: string;
+    canonicalization_version: string;
+  } | null;
 }): Promise<AttemptHandle> {
   const canonical = canonicalize(input.payload ?? {});
-  const payload_hash = await sha256Hex(canonical);
+  const payload_hash = input.fingerprint?.payload_hash ?? (await sha256Hex(canonical));
+  const hash_algorithm = input.fingerprint?.payload_hash_algorithm ?? PAYLOAD_HASH_ALGORITHM;
+  // The RPC writes payload_hash_key_version from p_master_key_version; both the
+  // vault master key and the fingerprint key are V1, so one parameter serves both.
+
+  const canon_version = input.fingerprint?.canonicalization_version ?? CANONICALIZATION_VERSION;
+
   try {
     const aad = `${input.client_request_id}|${input.cid ?? ""}|${payload_hash}`;
     const env = await envelopeEncrypt(canonical, aad);
@@ -211,8 +228,9 @@ export async function openDurableAttempt(admin: any, input: {
       p_tool_version: input.tool_version,
       p_ritual: input.ritual,
       p_schema_version: input.schema_version,
-      p_hash_algorithm: PAYLOAD_HASH_ALGORITHM,
-      p_canonicalization_version: CANONICALIZATION_VERSION,
+      p_hash_algorithm: hash_algorithm,
+      p_canonicalization_version: canon_version,
+
       p_principal_id: input.principal_id,
       p_external_identity_id: input.external_identity_id,
       p_ciphertext_b64: env.ciphertext_b64,

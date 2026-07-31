@@ -47,9 +47,15 @@ import {
   buildDegradedEnvelope,
   resolveContentStatus,
 } from "./degraded-envelope.ts";
+import {
+  computeFingerprint,
+  fingerprintEnabled,
+  type Fingerprint,
+} from "./save-fingerprint.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "truthful_degraded_v1";
+const BUILD_ID = "keyed_fingerprint_v1";
+
 
 
 
@@ -4617,6 +4623,30 @@ Deno.serve(async (req) => {
             );
           }
 
+          // ── IDEMPOTENCY FINGERPRINT · Lane A Commit 5 ───────────────────
+          // Keyed HMAC over the canonical SEMANTIC envelope only. Computed
+          // before anything is written so the attempt and the receipt carry
+          // the same value and are joinable on it.
+          let fp: Fingerprint | null = null;
+          let fingerprintError: string | null = null;
+          const fingerprintOn = fingerprintEnabled();
+          if (fingerprintOn) {
+            try {
+              fp = await computeFingerprint({
+                ritual: "save",
+                schema_version: TOOL_MANIFEST_VERSION,
+                cid: pctx.legacy_cid ?? null,
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                payload: (args ?? {}) as Record<string, unknown>,
+              });
+            } catch (e) {
+              // An uncomputable fingerprint must never fail a save. It degrades
+              // to the pre-commit behaviour for THIS request only.
+              fingerprintError = e instanceof Error ? e.message : String(e);
+              console.error("save_fingerprint_failed", fingerprintError);
+            }
+          }
+
           // ── DURABLE ATTEMPT · canonicalize → fingerprint → envelope-encrypt
           // → persist. This runs BEFORE session validation, BEFORE CID
           // resolution and BEFORE any layer write, so a save that dies later
@@ -4634,29 +4664,74 @@ Deno.serve(async (req) => {
               schema_version: TOOL_MANIFEST_VERSION,
               principal_id: pctx.principal_id ?? null,
               external_identity_id: pctx.external_identity_id ?? null,
+              fingerprint: fp,
             });
             if (attemptHandle?.error) console.error("save_attempt_open_failed", attemptHandle.error);
           } catch (e) {
             console.error("save_attempt_open_threw", e instanceof Error ? e.message : String(e));
           }
 
+          /** One structured exit for a request id reused with different content. */
+          const idempotencyConflictExit = async (priorHash: string | null) => {
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: "IDEMPOTENCY_CONFLICT",
+              failure_stage: "RECEIPT",
+            });
+            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+            const out = {
+              ...buildDegradedEnvelope({
+                reason: "idempotency_conflict",
+                retryable: false,
+                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+                client_request_id: clientRequestId,
+                payload_hash: fp?.payload_hash ?? null,
+                failure_stage: "RECEIPT",
+                content_status: held.content_status,
+                recovery_expires_at: held.recovery_expires_at,
+                layers: [], // ZERO layers were written on this path
+                args,
+              }),
+              prior_payload_hash: priorHash,
+            };
+            console.error(
+              "save_idempotency_conflict",
+              JSON.stringify({ client_request_id: clientRequestId, prior: priorHash, incoming: fp?.payload_hash ?? null }),
+            );
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          };
+
+
           try {
 
             // Idempotency: a prior receipt for this id decides what happens next.
             const { data: prior } = await supabaseAdmin
               .from("save_receipts")
-              .select("save_id, overall_status")
+              .select("save_id, overall_status, payload_hash")
               .eq("client_request_id", clientRequestId)
               .maybeSingle();
 
             let only: Set<LayerName> | null = null;
+            let possible_duplicate = false;
             if (prior) {
+              // Same request id, DIFFERENT content. Returning the earlier
+              // receipt here is what silently discarded the new content for
+              // the whole life of this tool. It is now refused, before any
+              // layer runs, and the database guard behind it is the backstop.
+              if (fp && prior.payload_hash && prior.payload_hash !== fp.payload_hash) {
+                return await idempotencyConflictExit(prior.payload_hash);
+              }
               if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
                 const out = {
                   session_id: args?.session_id,
                   save_id: prior.save_id,
                   overall_status: prior.overall_status,
                   idempotent: true,
+                  idempotent_replay: true,
+                  payload_hash: fp?.payload_hash ?? null,
                   layers_executed: [],
                 };
                 return rpcResult(id, {
@@ -4666,7 +4741,20 @@ Deno.serve(async (req) => {
                 });
               }
               only = await retryableLayerSet(prior.save_id);
+            } else if (fp) {
+              // Different request id, same fingerprint. Permitted — the client
+              // may legitimately be re-filing — but flagged so the layer client
+              // refs, not this function, decide what it means.
+              const { data: twin } = await supabaseAdmin
+                .from("save_receipts")
+                .select("save_id")
+                .eq("payload_hash", fp.payload_hash)
+                .neq("client_request_id", clientRequestId)
+                .limit(1)
+                .maybeSingle();
+              possible_duplicate = Boolean(twin);
             }
+
 
             const saveCid = await serverCid();
             if (!saveCid) {
@@ -4706,7 +4794,10 @@ Deno.serve(async (req) => {
               const { data: receipt, error: recErr } = await supabaseAdmin.rpc("record_save_receipt", {
                 p_client_request_id: clientRequestId,
                 p_session_id: typeof args?.session_id === "string" ? args.session_id : null,
-                p_payload_hash: null,
+                // ROLLBACK SWITCH: SAVE_FINGERPRINT_DISABLED puts this back to
+                // null, which is exactly the pre-commit behaviour.
+                p_payload_hash: fp?.payload_hash ?? null,
+
                 p_layers: res.layers.map((l) => ({
                   layer: l.layer,
                   requested: l.requested,
@@ -4730,7 +4821,14 @@ Deno.serve(async (req) => {
             } catch (e) {
               receipt_error = e instanceof Error ? e.message : String(e);
               console.error("save_receipt_write_failed", receipt_error);
+              // The database guard is the race backstop for two concurrent
+              // saves on one request id. It must land as a structured outcome,
+              // never as a raw 23505 protocol failure.
+              if (/IDEMPOTENCY_CONFLICT|duplicate key value/i.test(receipt_error)) {
+                return await idempotencyConflictExit(prior?.payload_hash ?? null);
+              }
             }
+
 
             // Receipt written → the attempt is complete. Recovery copy now
             // holds a 15-minute retention window instead of 72 hours.
@@ -4766,7 +4864,15 @@ Deno.serve(async (req) => {
               save_id,
               overall_status,
               idempotent,
+              idempotent_replay: idempotent,
+              payload_hash: fp?.payload_hash ?? null,
+              payload_hash_algorithm: fp?.payload_hash_algorithm ?? null,
+              canonicalization_version: fp?.canonicalization_version ?? null,
+              ...(possible_duplicate ? { possible_duplicate: true } : {}),
+              ...(fingerprintError ? { fingerprint_error: fingerprintError } : {}),
+              ...(fingerprintOn ? {} : { fingerprint_disabled: true }),
               ...(receipt_error ? { receipt_error } : {}),
+
               layers: res.layers,
               saved: res.saved,
               unsaved: res.unsaved,

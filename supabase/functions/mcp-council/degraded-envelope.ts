@@ -27,7 +27,9 @@ export type ContentStatus = "RECOVERY_HELD" | "NOT_HELD";
 export type DegradedReason =
   | "session_not_found"
   | "identity_binding_required"
-  | "internal_save_failure";
+  | "internal_save_failure"
+  | "idempotency_conflict";
+
 
 export type DegradedEnvelope = {
   outcome: "degraded" | "failed";
@@ -96,13 +98,17 @@ const NOTES: Record<DegradedReason, string> = {
     "I could not connect this save to an authorized workspace, so no client records were written. I preserved a short-lived recovery copy and returned your content here. Reconnect or authorize the account before saving again.",
   internal_save_failure:
     "I could not complete this save. The layer report below is the authoritative record of what landed. I preserved the original request for recovery. Do not recreate anything already marked verified.",
+  idempotency_conflict:
+    "This request id was already used for different content, so I did not write anything. Returning the earlier receipt would have quietly discarded what you just sent. I preserved a short-lived recovery copy and returned your content here. Submit it again with a new request id.",
 };
 
 const NEXT_ACTIONS: Record<DegradedReason, string> = {
   session_not_found: "open a new session, then resubmit with a NEW client_request_id",
   identity_binding_required: "reconnect or authorize the account, then save again",
   internal_save_failure: "review the layer report, then resubmit only the layers not marked verified",
+  idempotency_conflict: "resubmit with a new client_request_id",
 };
+
 
 /**
  * Assemble the envelope. Every key is always present; callers may not omit.
