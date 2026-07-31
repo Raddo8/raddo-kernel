@@ -2308,6 +2308,8 @@ const RITUAL_SAVE_PROPS = {
         implication: { type: "string" },
         type: { type: "string" },
         status: { type: "string" },
+        pattern: { type: "string" },
+        client_ref: { type: "string" },
       },
       required: ["title"],
       additionalProperties: false,
