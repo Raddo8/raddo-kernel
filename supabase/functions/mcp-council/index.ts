@@ -4617,6 +4617,30 @@ Deno.serve(async (req) => {
             );
           }
 
+          // ── IDEMPOTENCY FINGERPRINT · Lane A Commit 5 ───────────────────
+          // Keyed HMAC over the canonical SEMANTIC envelope only. Computed
+          // before anything is written so the attempt and the receipt carry
+          // the same value and are joinable on it.
+          let fp: Fingerprint | null = null;
+          let fingerprintError: string | null = null;
+          const fingerprintOn = fingerprintEnabled();
+          if (fingerprintOn) {
+            try {
+              fp = await computeFingerprint({
+                ritual: "save",
+                schema_version: TOOL_MANIFEST_VERSION,
+                cid: pctx.legacy_cid ?? null,
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                payload: (args ?? {}) as Record<string, unknown>,
+              });
+            } catch (e) {
+              // An uncomputable fingerprint must never fail a save. It degrades
+              // to the pre-commit behaviour for THIS request only.
+              fingerprintError = e instanceof Error ? e.message : String(e);
+              console.error("save_fingerprint_failed", fingerprintError);
+            }
+          }
+
           // ── DURABLE ATTEMPT · canonicalize → fingerprint → envelope-encrypt
           // → persist. This runs BEFORE session validation, BEFORE CID
           // resolution and BEFORE any layer write, so a save that dies later
@@ -4634,11 +4658,46 @@ Deno.serve(async (req) => {
               schema_version: TOOL_MANIFEST_VERSION,
               principal_id: pctx.principal_id ?? null,
               external_identity_id: pctx.external_identity_id ?? null,
+              fingerprint: fp,
             });
             if (attemptHandle?.error) console.error("save_attempt_open_failed", attemptHandle.error);
           } catch (e) {
             console.error("save_attempt_open_threw", e instanceof Error ? e.message : String(e));
           }
+
+          /** One structured exit for a request id reused with different content. */
+          const idempotencyConflictExit = async (priorHash: string | null) => {
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: "IDEMPOTENCY_CONFLICT",
+              failure_stage: "RECEIPT",
+            });
+            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+            const out = {
+              ...buildDegradedEnvelope({
+                reason: "idempotency_conflict",
+                retryable: false,
+                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+                client_request_id: clientRequestId,
+                payload_hash: fp?.payload_hash ?? null,
+                failure_stage: "RECEIPT",
+                content_status: held.content_status,
+                recovery_expires_at: held.recovery_expires_at,
+                layers: [], // ZERO layers were written on this path
+                args,
+              }),
+              prior_payload_hash: priorHash,
+            };
+            console.error(
+              "save_idempotency_conflict",
+              JSON.stringify({ client_request_id: clientRequestId, prior: priorHash, incoming: fp?.payload_hash ?? null }),
+            );
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
+          };
+
 
           try {
 
