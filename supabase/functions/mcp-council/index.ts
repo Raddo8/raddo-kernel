@@ -2521,23 +2521,14 @@ function withTimeout<T>(p: PromiseLike<T>, fallback: T, label: string): Promise<
   ]);
 }
 
-async function resolveTenantCid(tenant: string | null | undefined): Promise<string | null> {
-  if (!supabaseAdmin || !tenant) return null;
-  const data = await withTimeout(
-    supabaseAdmin.rpc("resolve_cid", { k: tenant }).then((r: any) => r?.data ?? null),
-    null,
-    "resolve_cid_failed",
-  );
-  return typeof data === "string" && data.trim() ? data.trim() : null;
-}
-
-// Resolve the client identity for the welcome surfaces. Identity comes ONLY
-// from the verified token tenant; any failure degrades to a nameless client.
+// Resolve the client identity for the welcome surfaces. The CID is supplied
+// by the ONE request-scoped resolver (ITEM 1) — this helper never resolves a
+// tenant itself.
 async function resolveWelcomeClient(
-  tenant: string | null | undefined,
+  cidIn: string | null | undefined,
 ): Promise<{ cid: string | null; client: WelcomeClient }> {
   const empty: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
-  const cid = await resolveTenantCid(tenant);
+  const cid = typeof cidIn === "string" && cidIn.trim() ? cidIn.trim() : null;
   if (!supabaseAdmin || !cid) return { cid, client: empty };
   const readTenantRow = () =>
     withTimeout(
@@ -3202,7 +3193,8 @@ Deno.serve(async (req) => {
       }
       // Personalize server-side from the verified token tenant, so the card
       // is correct even if the host never sends the tool-result notification.
-      const { client: widgetClient } = await resolveWelcomeClient(tenant);
+      const widgetCtx = await logIdentityOnce("resources/read:welcome");
+      const { client: widgetClient } = await resolveWelcomeClient(widgetCtx.legacy_cid);
       return rpcResult(id, {
         contents: [{
           uri: WELCOME_WIDGET_URI,
@@ -3282,7 +3274,7 @@ Deno.serve(async (req) => {
 
       if (name === "set_chief_name") {
         const raw = typeof args?.name === "string" ? args.name : "";
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3319,7 +3311,7 @@ Deno.serve(async (req) => {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid || !supabaseAdmin) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3344,7 +3336,7 @@ Deno.serve(async (req) => {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
-        const cid = await resolveTenantCid(tenant);
+        const cid = pctx.legacy_cid;
         if (!cid) {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -3372,7 +3364,7 @@ Deno.serve(async (req) => {
         // failure degrades to a nameless welcome — never another tenant's name.
         const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
         try {
-          const { cid: resolvedCid, client } = await resolveWelcomeClient(tenant);
+          const { cid: resolvedCid, client } = await resolveWelcomeClient(pctx.legacy_cid);
           if (name === "taylor_setup") {
             await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
             const checklist = await readChecklist(resolvedCid);
