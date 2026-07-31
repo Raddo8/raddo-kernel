@@ -36,9 +36,17 @@ import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injec
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
+import {
+  canonicalize,
+  openDurableAttempt,
+  stampAttempt,
+  MAX_RECOVERY_PAYLOAD_BYTES,
+  type AttemptHandle,
+} from "./save-recovery.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "one_resolver_v1";
+const BUILD_ID = "durable_attempt_v1";
+
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
