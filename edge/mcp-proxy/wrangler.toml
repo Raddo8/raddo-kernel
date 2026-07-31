@@ -12,7 +12,7 @@ routes = [
 [vars]
 # Upstream Supabase Edge Function host. Phase 2B targets the Lovable Cloud
 # project; Phase 4 eject swaps this to the Jake-owned project ref.
-UPSTREAM_URL = "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council-v2"
+UPSTREAM_URL = "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-council"
 # Authorization Server lives on a separate, Jake-owned Supabase project
 # (ref: rnjqpwmzmbnnaonppfkm). Lovable Cloud does not expose the OAuth 2.1
 # Server toggle, so the AS is hosted externally and mcp-council verifies
