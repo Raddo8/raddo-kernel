@@ -4663,6 +4663,16 @@ Deno.serve(async (req) => {
               console.error("save_receipt_write_failed", receipt_error);
             }
 
+            // Receipt written → the attempt is complete. Recovery copy now
+            // holds a 15-minute retention window instead of 72 hours.
+            await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
+              status: save_id ? "COMPLETED" : "FAILED",
+              failure_stage: save_id ? null : "RECEIPT",
+              save_id,
+              cid: saveCid,
+            });
+
+
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 tenant,
