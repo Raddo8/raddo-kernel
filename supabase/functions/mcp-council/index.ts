@@ -43,9 +43,14 @@ import {
   MAX_RECOVERY_PAYLOAD_BYTES,
   type AttemptHandle,
 } from "./save-recovery.ts";
+import {
+  buildDegradedEnvelope,
+  resolveContentStatus,
+} from "./degraded-envelope.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "durable_attempt_v1";
+const BUILD_ID = "truthful_degraded_v1";
+
 
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
