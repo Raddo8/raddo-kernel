@@ -1001,6 +1001,20 @@ export type Database = {
             foreignKeyName: "bulletins_cid_fkey"
             columns: ["cid"]
             isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "bulletins_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "bulletins_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
           },
@@ -1111,6 +1125,20 @@ export type Database = {
             foreignKeyName: "client_intake_cid_fkey"
             columns: ["cid"]
             isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "client_intake_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "client_intake_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
           },
@@ -1139,6 +1167,20 @@ export type Database = {
           redeemed_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "code_redemptions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "code_redemptions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "code_redemptions_cid_fkey"
             columns: ["cid"]
@@ -1408,13 +1450,61 @@ export type Database = {
             foreignKeyName: "council_minutes_cid_fkey"
             columns: ["cid"]
             isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "council_minutes_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "council_minutes_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
           },
         ]
       }
+      cutover_lease: {
+        Row: {
+          acquired_at: string
+          cid: string
+          drift_at_acquire: number | null
+          drift_at_flip: number | null
+          lease_id: string
+          outcome: string | null
+          register_key: string
+          released_at: string | null
+        }
+        Insert: {
+          acquired_at?: string
+          cid: string
+          drift_at_acquire?: number | null
+          drift_at_flip?: number | null
+          lease_id?: string
+          outcome?: string | null
+          register_key: string
+          released_at?: string | null
+        }
+        Update: {
+          acquired_at?: string
+          cid?: string
+          drift_at_acquire?: number | null
+          drift_at_flip?: number | null
+          lease_id?: string
+          outcome?: string | null
+          register_key?: string
+          released_at?: string | null
+        }
+        Relationships: []
+      }
       decisions: {
         Row: {
+          authoritative: boolean
           authority_tier: string | null
           cid: string
           curn: string | null
@@ -1423,12 +1513,20 @@ export type Database = {
           decision_md: string
           id: string
           minute_id: string | null
+          provenance: string
           rationale_md: string | null
           reversibility: string | null
+          source_session_id: string | null
+          source_subject: string | null
+          source_surface: string | null
           superseded_by: string | null
+          test_run_id: string | null
           title: string
+          tool_version: string | null
+          verification_state: string | null
         }
         Insert: {
+          authoritative?: boolean
           authority_tier?: string | null
           cid: string
           curn?: string | null
@@ -1437,12 +1535,20 @@ export type Database = {
           decision_md: string
           id?: string
           minute_id?: string | null
+          provenance?: string
           rationale_md?: string | null
           reversibility?: string | null
+          source_session_id?: string | null
+          source_subject?: string | null
+          source_surface?: string | null
           superseded_by?: string | null
+          test_run_id?: string | null
           title: string
+          tool_version?: string | null
+          verification_state?: string | null
         }
         Update: {
+          authoritative?: boolean
           authority_tier?: string | null
           cid?: string
           curn?: string | null
@@ -1451,12 +1557,33 @@ export type Database = {
           decision_md?: string
           id?: string
           minute_id?: string | null
+          provenance?: string
           rationale_md?: string | null
           reversibility?: string | null
+          source_session_id?: string | null
+          source_subject?: string | null
+          source_surface?: string | null
           superseded_by?: string | null
+          test_run_id?: string | null
           title?: string
+          tool_version?: string | null
+          verification_state?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "decisions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "decisions_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "decisions_cid_fkey"
             columns: ["cid"]
@@ -1547,6 +1674,20 @@ export type Database = {
             foreignKeyName: "directive_log_cid_fkey"
             columns: ["cid"]
             isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "directive_log_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "directive_log_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
           },
@@ -1632,6 +1773,20 @@ export type Database = {
           observed_sha256?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "document_registry_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "document_registry_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "document_registry_cid_fkey"
             columns: ["cid"]
@@ -1900,9 +2055,61 @@ export type Database = {
         }
         Relationships: []
       }
+      identity_resolution_log: {
+        Row: {
+          at: string
+          canonical_cid: string | null
+          canonical_membership_id: string | null
+          canonical_principal_id: string | null
+          id: string
+          issuer: string | null
+          legacy_cid: string | null
+          legacy_keyed_by: string | null
+          match_state: string
+          provider_subject: string | null
+          reason: string | null
+          surface: string | null
+          tenant_claim: string | null
+          token_version: string | null
+        }
+        Insert: {
+          at?: string
+          canonical_cid?: string | null
+          canonical_membership_id?: string | null
+          canonical_principal_id?: string | null
+          id?: string
+          issuer?: string | null
+          legacy_cid?: string | null
+          legacy_keyed_by?: string | null
+          match_state: string
+          provider_subject?: string | null
+          reason?: string | null
+          surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
+        }
+        Update: {
+          at?: string
+          canonical_cid?: string | null
+          canonical_membership_id?: string | null
+          canonical_principal_id?: string | null
+          id?: string
+          issuer?: string | null
+          legacy_cid?: string | null
+          legacy_keyed_by?: string | null
+          match_state?: string
+          provider_subject?: string | null
+          reason?: string | null
+          surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
+        }
+        Relationships: []
+      }
       improvement_signals: {
         Row: {
           audience: string
+          authoritative: boolean
           cid: string
           curn: string | null
           detail_md: string | null
@@ -1910,12 +2117,20 @@ export type Database = {
           id: string
           last_seen: string
           pattern: string
+          provenance: string
           recurrence: number
           silent: boolean
+          source_session_id: string | null
+          source_subject: string | null
+          source_surface: string | null
           status: string
+          test_run_id: string | null
+          tool_version: string | null
+          verification_state: string | null
         }
         Insert: {
           audience?: string
+          authoritative?: boolean
           cid: string
           curn?: string | null
           detail_md?: string | null
@@ -1923,12 +2138,20 @@ export type Database = {
           id?: string
           last_seen?: string
           pattern: string
+          provenance?: string
           recurrence?: number
           silent?: boolean
+          source_session_id?: string | null
+          source_subject?: string | null
+          source_surface?: string | null
           status?: string
+          test_run_id?: string | null
+          tool_version?: string | null
+          verification_state?: string | null
         }
         Update: {
           audience?: string
+          authoritative?: boolean
           cid?: string
           curn?: string | null
           detail_md?: string | null
@@ -1936,11 +2159,32 @@ export type Database = {
           id?: string
           last_seen?: string
           pattern?: string
+          provenance?: string
           recurrence?: number
           silent?: boolean
+          source_session_id?: string | null
+          source_subject?: string | null
+          source_surface?: string | null
           status?: string
+          test_run_id?: string | null
+          tool_version?: string | null
+          verification_state?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "improvement_signals_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "improvement_signals_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "improvement_signals_cid_fkey"
             columns: ["cid"]
@@ -2325,12 +2569,16 @@ export type Database = {
           bytes_served: number | null
           cid: string
           id: string
+          issuer: string | null
           kernel_id: string | null
           part: string
           purpose: string | null
+          resolved_keyed_by: string | null
           seq: number | null
           session_id: string | null
           surface: string | null
+          tenant_claim: string | null
+          token_version: string | null
         }
         Insert: {
           access_kind: string
@@ -2340,12 +2588,16 @@ export type Database = {
           bytes_served?: number | null
           cid: string
           id?: string
+          issuer?: string | null
           kernel_id?: string | null
           part: string
           purpose?: string | null
+          resolved_keyed_by?: string | null
           seq?: number | null
           session_id?: string | null
           surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
         }
         Update: {
           access_kind?: string
@@ -2355,12 +2607,16 @@ export type Database = {
           bytes_served?: number | null
           cid?: string
           id?: string
+          issuer?: string | null
           kernel_id?: string | null
           part?: string
           purpose?: string | null
+          resolved_keyed_by?: string | null
           seq?: number | null
           session_id?: string | null
           surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
         }
         Relationships: [
           {
@@ -2489,6 +2745,20 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "kernels_cid_fk"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "kernels_cid_fk"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "kernels_cid_fk"
             columns: ["cid"]
@@ -2785,10 +3055,43 @@ export type Database = {
           },
         ]
       }
+      onboarding_program: {
+        Row: {
+          created_at: string
+          effective_from: string | null
+          notes: string | null
+          program_version: string
+          published_at: string | null
+          published_by: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          effective_from?: string | null
+          notes?: string | null
+          program_version: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          effective_from?: string | null
+          notes?: string | null
+          program_version?: string
+          published_at?: string | null
+          published_by?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       onboarding_progress: {
         Row: {
           cid: string
           detail: string | null
+          ordinal: number | null
+          phase: string | null
+          program_version: string | null
           source: string
           status: string
           step_key: string
@@ -2797,6 +3100,9 @@ export type Database = {
         Insert: {
           cid: string
           detail?: string | null
+          ordinal?: number | null
+          phase?: string | null
+          program_version?: string | null
           source: string
           status?: string
           step_key: string
@@ -2805,12 +3111,29 @@ export type Database = {
         Update: {
           cid?: string
           detail?: string | null
+          ordinal?: number | null
+          phase?: string | null
+          program_version?: string | null
           source?: string
           status?: string
           step_key?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "onboarding_progress_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "onboarding_progress_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "onboarding_progress_cid_fkey"
             columns: ["cid"]
@@ -2840,6 +3163,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      onboarding_step_template: {
+        Row: {
+          evidence_required: string
+          gate_kind: string
+          ordinal: number
+          outcome_md: string
+          phase: string
+          program_version: string
+          step_key: string
+        }
+        Insert: {
+          evidence_required: string
+          gate_kind?: string
+          ordinal: number
+          outcome_md: string
+          phase: string
+          program_version: string
+          step_key: string
+        }
+        Update: {
+          evidence_required?: string
+          gate_kind?: string
+          ordinal?: number
+          outcome_md?: string
+          phase?: string
+          program_version?: string
+          step_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_step_template_program_version_fkey"
+            columns: ["program_version"]
+            isOneToOne: false
+            referencedRelation: "onboarding_program"
+            referencedColumns: ["program_version"]
+          },
+        ]
       }
       onboarding_tenants: {
         Row: {
@@ -2903,6 +3264,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "onboarding_tenants_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "onboarding_tenants_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "onboarding_tenants_cid_fkey"
             columns: ["cid"]
@@ -3239,6 +3614,89 @@ export type Database = {
           },
         ]
       }
+      principal_binding: {
+        Row: {
+          authority_receipt: string | null
+          cid: string
+          created_at: string
+          delegated_by: string | null
+          issuer: string | null
+          membership_id: string | null
+          principal_id: string
+          principal_type: string
+          provider: string | null
+          provider_subject: string | null
+          revoked_at: string | null
+          role: string | null
+          scopes: string[]
+          status: string
+          verified_email: string | null
+        }
+        Insert: {
+          authority_receipt?: string | null
+          cid: string
+          created_at?: string
+          delegated_by?: string | null
+          issuer?: string | null
+          membership_id?: string | null
+          principal_id?: string
+          principal_type: string
+          provider?: string | null
+          provider_subject?: string | null
+          revoked_at?: string | null
+          role?: string | null
+          scopes?: string[]
+          status?: string
+          verified_email?: string | null
+        }
+        Update: {
+          authority_receipt?: string | null
+          cid?: string
+          created_at?: string
+          delegated_by?: string | null
+          issuer?: string | null
+          membership_id?: string | null
+          principal_id?: string
+          principal_type?: string
+          provider?: string | null
+          provider_subject?: string | null
+          revoked_at?: string | null
+          role?: string | null
+          scopes?: string[]
+          status?: string
+          verified_email?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "principal_binding_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "principal_binding_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "principal_binding_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "principal_binding_delegated_by_fkey"
+            columns: ["delegated_by"]
+            isOneToOne: false
+            referencedRelation: "principal_binding"
+            referencedColumns: ["principal_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3375,6 +3833,109 @@ export type Database = {
           },
         ]
       }
+      provisioning_receipt: {
+        Row: {
+          action: string
+          at: string
+          cid: string
+          object_class: string
+          object_id: string
+          program_version: string
+          receipt_id: string
+          request_id: string
+        }
+        Insert: {
+          action: string
+          at?: string
+          cid: string
+          object_class: string
+          object_id: string
+          program_version: string
+          receipt_id?: string
+          request_id: string
+        }
+        Update: {
+          action?: string
+          at?: string
+          cid?: string
+          object_class?: string
+          object_id?: string
+          program_version?: string
+          receipt_id?: string
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_receipt_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "provisioning_request"
+            referencedColumns: ["request_id"]
+          },
+        ]
+      }
+      provisioning_request: {
+        Row: {
+          attempts: number
+          cid: string
+          completed_at: string | null
+          last_error: string | null
+          program_version: string
+          request_id: string
+          requested_at: string
+          state: string
+        }
+        Insert: {
+          attempts?: number
+          cid: string
+          completed_at?: string | null
+          last_error?: string | null
+          program_version: string
+          request_id?: string
+          requested_at?: string
+          state?: string
+        }
+        Update: {
+          attempts?: number
+          cid?: string
+          completed_at?: string | null
+          last_error?: string | null
+          program_version?: string
+          request_id?: string
+          requested_at?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provisioning_request_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "provisioning_request_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "provisioning_request_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "provisioning_request_program_version_fkey"
+            columns: ["program_version"]
+            isOneToOne: false
+            referencedRelation: "onboarding_program"
+            referencedColumns: ["program_version"]
+          },
+        ]
+      }
       rate_limits: {
         Row: {
           key: string
@@ -3390,6 +3951,51 @@ export type Database = {
           key?: string
           request_count?: number
           window_start?: string
+        }
+        Relationships: []
+      }
+      reconciliation_run: {
+        Row: {
+          cid: string
+          conflicts: number | null
+          destination_count: number | null
+          destination_only: number | null
+          matching_hashes: number | null
+          ran_at: string
+          register_key: string
+          run_id: string
+          source_count: number | null
+          source_only: number | null
+          unresolved: number | null
+          verdict: string
+        }
+        Insert: {
+          cid: string
+          conflicts?: number | null
+          destination_count?: number | null
+          destination_only?: number | null
+          matching_hashes?: number | null
+          ran_at?: string
+          register_key: string
+          run_id?: string
+          source_count?: number | null
+          source_only?: number | null
+          unresolved?: number | null
+          verdict: string
+        }
+        Update: {
+          cid?: string
+          conflicts?: number | null
+          destination_count?: number | null
+          destination_only?: number | null
+          matching_hashes?: number | null
+          ran_at?: string
+          register_key?: string
+          run_id?: string
+          source_count?: number | null
+          source_only?: number | null
+          unresolved?: number | null
+          verdict?: string
         }
         Relationships: []
       }
@@ -3461,6 +4067,125 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "workspaces"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      recovery_source_status: {
+        Row: {
+          cid: string
+          evidence: string
+          source_key: string
+          status: string
+          verified_at: string
+        }
+        Insert: {
+          cid: string
+          evidence: string
+          source_key: string
+          status: string
+          verified_at?: string
+        }
+        Update: {
+          cid?: string
+          evidence?: string
+          source_key?: string
+          status?: string
+          verified_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recovery_source_status_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "recovery_source_status_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "recovery_source_status_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      register_migration_contract: {
+        Row: {
+          authority_policy: string
+          canonical_reader: string
+          canonical_writer: string
+          cid: string
+          conflict_policy: string
+          cutover_state: string
+          destination_register: string
+          direct_source_edits_allowed: boolean
+          merge_policy: string
+          mirror_target: string
+          reconciliation_method: string
+          register_key: string
+          rollback_method: string
+          source_system: string
+        }
+        Insert: {
+          authority_policy: string
+          canonical_reader?: string
+          canonical_writer?: string
+          cid: string
+          conflict_policy: string
+          cutover_state?: string
+          destination_register: string
+          direct_source_edits_allowed?: boolean
+          merge_policy: string
+          mirror_target?: string
+          reconciliation_method?: string
+          register_key: string
+          rollback_method?: string
+          source_system?: string
+        }
+        Update: {
+          authority_policy?: string
+          canonical_reader?: string
+          canonical_writer?: string
+          cid?: string
+          conflict_policy?: string
+          cutover_state?: string
+          destination_register?: string
+          direct_source_edits_allowed?: boolean
+          merge_policy?: string
+          mirror_target?: string
+          reconciliation_method?: string
+          register_key?: string
+          rollback_method?: string
+          source_system?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "register_migration_contract_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "register_migration_contract_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "register_migration_contract_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
           },
         ]
       }
@@ -3654,6 +4379,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      rollback_receipt: {
+        Row: {
+          at: string
+          cid: string
+          lease_id: string | null
+          reason: string
+          receipt_id: string
+          register_key: string
+          restored_reader: string
+        }
+        Insert: {
+          at?: string
+          cid: string
+          lease_id?: string | null
+          reason: string
+          receipt_id?: string
+          register_key: string
+          restored_reader: string
+        }
+        Update: {
+          at?: string
+          cid?: string
+          lease_id?: string | null
+          reason?: string
+          receipt_id?: string
+          register_key?: string
+          restored_reader?: string
+        }
+        Relationships: []
       }
       save_receipt_layers: {
         Row: {
@@ -4012,6 +4767,30 @@ export type Database = {
         }
         Relationships: []
       }
+      start1a_rollback_snapshot: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          name: string | null
+          slug: string | null
+          snapshot_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          slug?: string | null
+          snapshot_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          name?: string | null
+          slug?: string | null
+          snapshot_at?: string | null
+        }
+        Relationships: []
+      }
       storyline: {
         Row: {
           body_md: string
@@ -4053,6 +4832,20 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "storyline_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "storyline_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "storyline_cid_fkey"
             columns: ["cid"]
@@ -4226,6 +5019,20 @@ export type Database = {
           version?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "surface_pin_cid_fkey"
             columns: ["cid"]
@@ -4404,6 +5211,27 @@ export type Database = {
           },
         ]
       }
+      tenancy_freeze: {
+        Row: {
+          frozen_at: string
+          frozen_by: string
+          id: number
+          rule_md: string
+        }
+        Insert: {
+          frozen_at?: string
+          frozen_by: string
+          id?: number
+          rule_md: string
+        }
+        Update: {
+          frozen_at?: string
+          frozen_by?: string
+          id?: number
+          rule_md?: string
+        }
+        Relationships: []
+      }
       tenant_alias: {
         Row: {
           alias: string
@@ -4430,6 +5258,20 @@ export type Database = {
           note?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tenant_alias_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_alias_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "tenant_alias_cid_fkey"
             columns: ["cid"]
@@ -4487,6 +5329,84 @@ export type Database = {
             foreignKeyName: "tenant_members_cid_fkey"
             columns: ["cid"]
             isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_members_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_members_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
+      tenant_migration: {
+        Row: {
+          cid: string
+          client_verification_owner: string | null
+          cutover_owner: string | null
+          identity_mode: string
+          last_verified_at: string | null
+          migration_wave: number
+          notes: string | null
+          public_ref: string | null
+          source_canon: string
+          started_at: string | null
+          target_canon: string
+        }
+        Insert: {
+          cid: string
+          client_verification_owner?: string | null
+          cutover_owner?: string | null
+          identity_mode?: string
+          last_verified_at?: string | null
+          migration_wave?: number
+          notes?: string | null
+          public_ref?: string | null
+          source_canon?: string
+          started_at?: string | null
+          target_canon?: string
+        }
+        Update: {
+          cid?: string
+          client_verification_owner?: string | null
+          cutover_owner?: string | null
+          identity_mode?: string
+          last_verified_at?: string | null
+          migration_wave?: number
+          notes?: string | null
+          public_ref?: string | null
+          source_canon?: string
+          started_at?: string | null
+          target_canon?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_migration_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_migration_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "tenant_migration_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: true
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
           },
@@ -4606,9 +5526,12 @@ export type Database = {
         Row: {
           cid: string
           cob_name: string | null
+          cob_name_normalized: string | null
           created_at: string
           display_name: string
           enterprise: string | null
+          normalized_at: string | null
+          normalizer_version: string | null
           notes: string | null
           office_mode: string
           onboarding_key: string | null
@@ -4621,9 +5544,12 @@ export type Database = {
         Insert: {
           cid: string
           cob_name?: string | null
+          cob_name_normalized?: string | null
           created_at?: string
           display_name: string
           enterprise?: string | null
+          normalized_at?: string | null
+          normalizer_version?: string | null
           notes?: string | null
           office_mode?: string
           onboarding_key?: string | null
@@ -4636,9 +5562,12 @@ export type Database = {
         Update: {
           cid?: string
           cob_name?: string | null
+          cob_name_normalized?: string | null
           created_at?: string
           display_name?: string
           enterprise?: string | null
+          normalized_at?: string | null
+          normalizer_version?: string | null
           notes?: string | null
           office_mode?: string
           onboarding_key?: string | null
@@ -4995,30 +5924,67 @@ export type Database = {
       }
       workspaces: {
         Row: {
+          cid: string | null
+          classified_at: string | null
+          classified_by: string | null
           created_at: string
           id: string
+          lifecycle_status: string
           name: string
           settings: Json | null
           slug: string
           updated_at: string
+          workspace_kind: string
         }
         Insert: {
+          cid?: string | null
+          classified_at?: string | null
+          classified_by?: string | null
           created_at?: string
           id?: string
+          lifecycle_status?: string
           name: string
           settings?: Json | null
           slug: string
           updated_at?: string
+          workspace_kind?: string
         }
         Update: {
+          cid?: string | null
+          classified_at?: string | null
+          classified_by?: string | null
           created_at?: string
           id?: string
+          lifecycle_status?: string
           name?: string
           settings?: Json | null
           slug?: string
           updated_at?: string
+          workspace_kind?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "workspaces_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "workspaces_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "workspaces_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
       }
     }
     Views: {
@@ -5029,6 +5995,24 @@ export type Database = {
           hash_col: string | null
           table_name: string | null
           total: number | null
+          verdict: string | null
+        }
+        Relationships: []
+      }
+      assurance_name_keyed_tenancy: {
+        Row: {
+          has_cid_column: boolean | null
+          name_keyed_column: unknown
+          table_name: unknown
+          verdict: string | null
+        }
+        Relationships: []
+      }
+      assurance_tenancy_freeze_violations: {
+        Row: {
+          frozen_at: string | null
+          name_keyed_column: unknown
+          table_name: unknown
           verdict: string | null
         }
         Relationships: []
@@ -5060,6 +6044,57 @@ export type Database = {
         }
         Relationships: []
       }
+      hq_readiness: {
+        Row: {
+          blocking_gap: string | null
+          cid: string | null
+          cob_name: string | null
+          kernel: number | null
+          pinned_steps: number | null
+          primary_ws: number | null
+          prov: string | null
+          readiness: string | null
+          subjects: number | null
+          verified_saves: number | null
+        }
+        Relationships: []
+      }
+      identity_census: {
+        Row: {
+          active_kernel: number | null
+          active_memberships: number | null
+          alias_resolves_to: string | null
+          ambiguous_alias: boolean | null
+          canonical_principals: number | null
+          cid: string | null
+          cob_name: string | null
+          current_resolution_path: string | null
+          identity_mode: string | null
+        }
+        Insert: {
+          active_kernel?: never
+          active_memberships?: never
+          alias_resolves_to?: never
+          ambiguous_alias?: never
+          canonical_principals?: never
+          cid?: string | null
+          cob_name?: string | null
+          current_resolution_path?: never
+          identity_mode?: never
+        }
+        Update: {
+          active_kernel?: never
+          active_memberships?: never
+          alias_resolves_to?: never
+          ambiguous_alias?: never
+          canonical_principals?: never
+          cid?: string | null
+          cob_name?: string | null
+          current_resolution_path?: never
+          identity_mode?: never
+        }
+        Relationships: []
+      }
       surface_pin_unrestorable: {
         Row: {
           cid: string | null
@@ -5073,6 +6108,20 @@ export type Database = {
           version: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "surface_pin_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
           {
             foreignKeyName: "surface_pin_cid_fkey"
             columns: ["cid"]
@@ -5204,12 +6253,16 @@ export type Database = {
           p_auth_subject: string
           p_bytes: number
           p_cid: string
+          p_issuer?: string
           p_kernel_id: string
           p_part: string
           p_purpose?: string
+          p_resolved_keyed_by?: string
           p_seq: number
           p_session_id: string
           p_surface: string
+          p_tenant_claim?: string
+          p_token_version?: string
         }
         Returns: string
       }
@@ -5226,6 +6279,26 @@ export type Database = {
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      provision_client_hq: { Args: { p_cid: string }; Returns: Json }
+      record_decision: {
+        Args: {
+          p_authority_tier?: string
+          p_cid?: string
+          p_client_ref?: string
+          p_decision_md: string
+          p_decision_owner?: string
+          p_execution_owner?: string
+          p_provenance?: string
+          p_rationale_md?: string
+          p_reversibility?: string
+          p_source_session_id?: string
+          p_source_subject?: string
+          p_source_surface?: string
+          p_title: string
+          p_tool_version?: string
+        }
+        Returns: Json
+      }
       record_save_receipt: {
         Args: {
           p_cid?: string
@@ -5233,6 +6306,23 @@ export type Database = {
           p_layers: Json
           p_payload_hash: string
           p_session_id: string
+        }
+        Returns: Json
+      }
+      record_signal: {
+        Args: {
+          p_cid?: string
+          p_client_ref?: string
+          p_detail_md?: string
+          p_pattern?: string
+          p_provenance?: string
+          p_signal_type?: string
+          p_source_session_id?: string
+          p_source_subject?: string
+          p_source_surface?: string
+          p_status?: string
+          p_title: string
+          p_tool_version?: string
         }
         Returns: Json
       }
@@ -5252,6 +6342,10 @@ export type Database = {
         Returns: Json
       }
       resolve_cid: { Args: { k: string }; Returns: string }
+      resolve_identity_v2: {
+        Args: { p_issuer: string; p_provider_subject: string }
+        Returns: Json
+      }
       resolve_tenant_context: {
         Args: { p_session_id?: string }
         Returns: {
