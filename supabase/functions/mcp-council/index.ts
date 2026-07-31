@@ -3515,23 +3515,81 @@ Deno.serve(async (req) => {
           }
           const sessionId = newSession.id as string;
 
-          // 4 (cont). Kernel manifest — NAMES + HASHES ONLY, no content_md.
+          // 4 (cont). ITEM 1 · LOAD AND VERIFY. The manifest alone proves
+          // nothing: begin_session now serves every part through the same
+          // read path as load_kernel_part, hashes what it received, and
+          // compares against the manifest hash. An unverified kernel can
+          // never return ok.
           let kernelBlock: any = { version: null, status: null, parts: [], sealed: true };
+          let kernelVerification: any = null;
+          let statePointer: { part: string; seq: number; content_md: string }[] = [];
           if (kernel) {
             const { data: parts, error: partsErr } = await supabaseAdmin
               .from("kernel_parts")
-              .select("part, seq, sha256, bytes")
+              .select("part, seq, sha256, bytes, content_md")
               .eq("kernel_id", kernel.id)
+              .order("part", { ascending: true })
               .order("seq", { ascending: true });
             if (partsErr) outcome = "partial";
+            const partRows = (parts ?? []) as Array<
+              { part: string; seq: number; sha256: string; bytes: number; content_md: string }
+            >;
             kernelBlock = {
               version: kernel.version,
               status: kernel.status,
-              parts: (parts ?? []).map((p: any) => ({
+              parts: partRows.map((p) => ({
                 part: p.part, seq: p.seq, sha256: p.sha256, bytes: p.bytes,
               })),
               sealed: true,
             };
+
+            const segments: any[] = [];
+            const failedParts: string[] = [];
+            for (const row of partRows) {
+              const content = typeof row.content_md === "string" ? row.content_md : "";
+              const bytes_served = new TextEncoder().encode(content).length;
+              let computed = "";
+              try {
+                const digest = await crypto.subtle.digest(
+                  "SHA-256",
+                  new TextEncoder().encode(content),
+                );
+                computed = Array.from(new Uint8Array(digest))
+                  .map((b) => b.toString(16).padStart(2, "0")).join("");
+              } catch { computed = ""; }
+              const expected = String(row.sha256 ?? "").trim().toLowerCase().replace(/^sha256:/, "");
+              const served = bytes_served > 0;
+              const hash_match = served && Boolean(expected) && computed === expected;
+              if (!hash_match) failedParts.push(`${row.part}#${row.seq}`);
+              segments.push({
+                part: row.part,
+                seq: row.seq,
+                bytes_served,
+                hash_match,
+                ...(served ? {} : { reason: "not_served" }),
+              });
+              if (row.part === "state_pointer") {
+                statePointer.push({ part: row.part, seq: row.seq, content_md: content });
+              }
+              await logKernelAccess({
+                cid: beginCid, kernel_id: kernel.id, part: row.part, seq: row.seq,
+                bytes: bytes_served, access_kind: "RUNTIME_LOAD",
+                surface: `begin_session:${surface}`, session_id: sessionId,
+                keyed_by: beginLookup.keyed_by,
+              });
+            }
+            const verified_parts = segments.filter((x) => x.hash_match).length;
+            kernelVerification = {
+              parts: segments,
+              verified_parts,
+              total_parts: segments.length,
+              failed_parts: failedParts,
+              state_pointer_read: statePointer.length > 0,
+            };
+            if (partsErr || (segments.length > 0 && verified_parts !== segments.length)) {
+              degradedReasons.push("kernel_unverified");
+            }
+            if (statePointer.length === 0) degradedReasons.push("no_state_pointer");
           }
 
           if (kernel) {
@@ -3684,6 +3742,9 @@ Deno.serve(async (req) => {
             session_id: sessionId,
             tenant,
             kernel: kernelBlock,
+            kernel_verification: kernelVerification,
+            state_pointer: statePointer,
+            clock: sessionClock(),
             directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             last_checkpoint: lastCheckpoint ?? null,
