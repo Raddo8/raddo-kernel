@@ -4174,6 +4174,11 @@ Deno.serve(async (req) => {
             .from("sessions").select("id, tenant").eq("id", session_id).maybeSingle();
           if (!sess || sess.tenant !== tenant) throw new Error("session_not_found");
 
+          // Layer processing begins here. From this point on a failure must
+          // report what landed, never "nothing was saved".
+          liveLayers = ALL_LAYERS.map((l) => L[l]);
+
+
           // Nothing submitted → nothing written. Honest NOOP.
           if (totalRequested === 0) {
             for (const l of ALL_LAYERS) L[l].layer_state = "EMPTY_EXPECTED";
