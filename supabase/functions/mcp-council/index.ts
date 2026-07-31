@@ -3861,6 +3861,7 @@ Deno.serve(async (req) => {
           try {
             await recordMcpUsage(supabaseAdmin, {
               tenant,
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tool: "begin_session",
               agent_id: null,
               passes: [],
@@ -4657,6 +4658,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "save_session", agent_id: null, passes: [],
                 routing_log: { session_id: args?.session_id, outcome: res.outcome, overall_status, save_id, duration_ms },
               });
@@ -4782,6 +4784,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "sync_session", agent_id: null, passes: [],
                 routing_log: { session_id, duration_ms, outcome: syncOutcome },
               });
@@ -4886,6 +4889,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+                cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "end_session", agent_id: null, passes: [],
                 routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
               });
@@ -5121,6 +5125,7 @@ Deno.serve(async (req) => {
           }));
 
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
               question_hash: qhash,
@@ -5313,6 +5318,7 @@ Deno.serve(async (req) => {
             minuteAny.refer_to = gap.refer_to;
           }
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
             passes,
@@ -5393,6 +5399,7 @@ Deno.serve(async (req) => {
           const target = resolved.target;
           if (!target) {
             await recordMcpUsage(supabaseAdmin, {
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes: [],
               routing_log: { outcome: resolved.reason },
             });
@@ -5433,6 +5440,7 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(notionPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
+              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes,
             });
             throw new Error("boundary_violation");
@@ -5454,6 +5462,7 @@ Deno.serve(async (req) => {
           );
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "file_to_office",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
             passes,
