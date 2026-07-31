@@ -3589,7 +3589,6 @@ Deno.serve(async (req) => {
             if (partsErr || (segments.length > 0 && verified_parts !== segments.length)) {
               degradedReasons.push("kernel_unverified");
             }
-            if (statePointer.length === 0) degradedReasons.push("no_state_pointer");
           }
 
           if (kernel) {
@@ -4158,9 +4157,82 @@ Deno.serve(async (req) => {
             L.rules_captured.verified = rVerified;
           } else if (rules.length) { L.rules_captured.layer_state = "SKIPPED"; }
 
-          // ── NOTION LEGS · verified writes. decisions and signals have no
-          // gateway table: Notion IS their store, so their layer counts come
-          // from verified Notion pages. notion_mirror aggregates all surfaces.
+          // ── ITEM 4 · CANONICAL WRITES for decisions and signals ──────
+          // Postgres is now the store of record. Notion is a mirror: a 401
+          // there marks notion_mirror failed and nothing else.
+          const saveCid = await serverCid();
+          const sourceMeta = {
+            p_provenance: "CLIENT",
+            p_source_session_id: session_id,
+            p_source_subject: identity?.sub ?? null,
+            p_source_surface: `mcp:${checkpointKind === "end" ? "end_session" : "save_session"}`,
+            p_tool_version: TOOL_MANIFEST_VERSION,
+          };
+
+          if (want("decisions")) {
+            let dVerified = decisions.length > 0;
+            for (const d of decisions) {
+              L.decisions.attempted += 1;
+              try {
+                if (!saveCid) throw new Error("cid_unresolved");
+                const { data: res, error } = await supabaseAdmin.rpc("record_decision", {
+                  p_title: d.title,
+                  p_decision_md: d.decision_md ?? d.title,
+                  p_rationale_md: d.rationale ?? null,
+                  p_decision_owner: d.decision_owner ?? null,
+                  p_execution_owner: d.execution_owner ?? null,
+                  p_reversibility: d.reversible ?? null,
+                  p_authority_tier: d.authority_tier ?? null,
+                  p_client_ref: d.client_ref ?? null,
+                  p_cid: saveCid,
+                  ...sourceMeta,
+                });
+                if (error) throw new Error(error.message);
+                const rowId = typeof res?.id === "string" ? res.id : null;
+                if (rowId) L.decisions.record_ids.push(rowId);
+                L.decisions.saved += 1;
+              } catch (e) {
+                dVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.decisions, "decision_write_failed", msg, true);
+                unsaved.push({ layer: "decisions", reason: msg.slice(0, 200) });
+              }
+            }
+            L.decisions.verified = dVerified;
+          } else if (decisions.length) { L.decisions.layer_state = "SKIPPED"; }
+
+          if (want("signals")) {
+            let sVerified = signals.length > 0;
+            for (const sg of signals) {
+              L.signals.attempted += 1;
+              try {
+                if (!saveCid) throw new Error("cid_unresolved");
+                const { data: res, error } = await supabaseAdmin.rpc("record_signal", {
+                  p_title: sg.title,
+                  p_detail_md: sg.description ?? sg.implication ?? sg.title,
+                  p_pattern: sg.pattern ?? null,
+                  p_signal_type: sg.type ?? null,
+                  p_status: sg.status ?? null,
+                  p_client_ref: sg.client_ref ?? null,
+                  p_cid: saveCid,
+                  ...sourceMeta,
+                });
+                if (error) throw new Error(error.message);
+                const rowId = typeof res?.id === "string" ? res.id : null;
+                if (rowId) L.signals.record_ids.push(rowId);
+                L.signals.saved += 1;
+              } catch (e) {
+                sVerified = false;
+                const msg = e instanceof Error ? e.message : String(e);
+                noteFailure(L.signals, "signal_write_failed", msg, true);
+                unsaved.push({ layer: "signals", reason: msg.slice(0, 200) });
+              }
+            }
+            L.signals.verified = sVerified;
+          } else if (signals.length) { L.signals.layer_state = "SKIPPED"; }
+
+          // ── NOTION LEGS · mirror only. A mirror failure is recorded on
+          // notion_mirror and never on the canonical decision/signal layers.
           const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
           const target = resolvedTarget.target;
           const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
@@ -4221,7 +4293,7 @@ Deno.serve(async (req) => {
                   "Execution Owner": rt(d.execution_owner),
                   "Reversible": sel(d.reversible),
                 },
-              }, () => { notionOk.decisions += 1; }, L.decisions);
+              }, () => { notionOk.decisions += 1; });
             }
 
             // open_loops → surface `tasks` (also store returned page id back on the DB row)
@@ -4251,7 +4323,7 @@ Deno.serve(async (req) => {
                   "Type": sel(s.type),
                   "Status": sel(s.status),
                 },
-              }, () => { notionOk.signals += 1; }, L.signals);
+              }, () => { notionOk.signals += 1; });
             }
 
             // checkpoint → surface `session_log`
