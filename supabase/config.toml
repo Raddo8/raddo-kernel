@@ -82,3 +82,7 @@ verify_jwt = false
 [functions.slack-bridge-worker]
 verify_jwt = false
 
+[functions.crypto-selftest]
+verify_jwt = false
+
+
