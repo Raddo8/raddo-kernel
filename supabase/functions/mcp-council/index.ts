@@ -2273,6 +2273,12 @@ const RITUAL_SAVE_PROPS = {
         decision_owner: { type: "string" },
         execution_owner: { type: "string" },
         reversible: { type: "string" },
+        decision_md: {
+          type: "string",
+          description: "The full decision text. If omitted, the title is used.",
+        },
+        authority_tier: { type: "string" },
+        client_ref: { type: "string" },
       },
       required: ["title"],
       additionalProperties: false,
