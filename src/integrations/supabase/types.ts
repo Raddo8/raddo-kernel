@@ -2155,6 +2155,63 @@ export type Database = {
         }
         Relationships: []
       }
+      identity_observations: {
+        Row: {
+          authorization_receipt: string | null
+          authorized_at: string | null
+          authorized_by: string | null
+          call_count: number
+          evidence: string
+          first_seen_at: string
+          issuer: string
+          last_seen_at: string
+          linked_principal_id: string | null
+          observation_id: string
+          provider_subject: string
+          review_status: string
+          surface: string | null
+          tenant_claim: string | null
+          token_version: string | null
+          verified_email: string | null
+        }
+        Insert: {
+          authorization_receipt?: string | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          call_count?: number
+          evidence: string
+          first_seen_at?: string
+          issuer: string
+          last_seen_at?: string
+          linked_principal_id?: string | null
+          observation_id?: string
+          provider_subject: string
+          review_status?: string
+          surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
+          verified_email?: string | null
+        }
+        Update: {
+          authorization_receipt?: string | null
+          authorized_at?: string | null
+          authorized_by?: string | null
+          call_count?: number
+          evidence?: string
+          first_seen_at?: string
+          issuer?: string
+          last_seen_at?: string
+          linked_principal_id?: string | null
+          observation_id?: string
+          provider_subject?: string
+          review_status?: string
+          surface?: string | null
+          tenant_claim?: string | null
+          token_version?: string | null
+          verified_email?: string | null
+        }
+        Relationships: []
+      }
       identity_resolution_log: {
         Row: {
           at: string
@@ -2293,6 +2350,60 @@ export type Database = {
             referencedColumns: ["cid"]
           },
         ]
+      }
+      incident_ledger: {
+        Row: {
+          cid: string
+          client_ratified: boolean
+          client_request_id: string | null
+          closed_at: string | null
+          incident_id: string
+          item_id: string
+          notes: string | null
+          occurred_at: string | null
+          opened_at: string
+          persisted_records: Json | null
+          receipt_outcome: string | null
+          recovery_state: string
+          requested_layers: Json | null
+          session_id: string | null
+          source_available: string | null
+        }
+        Insert: {
+          cid: string
+          client_ratified?: boolean
+          client_request_id?: string | null
+          closed_at?: string | null
+          incident_id: string
+          item_id?: string
+          notes?: string | null
+          occurred_at?: string | null
+          opened_at?: string
+          persisted_records?: Json | null
+          receipt_outcome?: string | null
+          recovery_state?: string
+          requested_layers?: Json | null
+          session_id?: string | null
+          source_available?: string | null
+        }
+        Update: {
+          cid?: string
+          client_ratified?: boolean
+          client_request_id?: string | null
+          closed_at?: string | null
+          incident_id?: string
+          item_id?: string
+          notes?: string | null
+          occurred_at?: string | null
+          opened_at?: string
+          persisted_records?: Json | null
+          receipt_outcome?: string | null
+          recovery_state?: string
+          requested_layers?: Json | null
+          session_id?: string | null
+          source_available?: string | null
+        }
+        Relationships: []
       }
       intake_facts: {
         Row: {
@@ -2771,6 +2882,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kernel_part_audit: {
+        Row: {
+          at: string
+          audit_id: number
+          cid: string | null
+          content_changed: boolean | null
+          db_user: string
+          declared_actor: string | null
+          declared_reason: string | null
+          jwt_role: string | null
+          kernel_id: string | null
+          new_bytes: number | null
+          new_sha256: string | null
+          old_bytes: number | null
+          old_sha256: string | null
+          op: string
+          part: string | null
+          seq: number | null
+        }
+        Insert: {
+          at?: string
+          audit_id?: number
+          cid?: string | null
+          content_changed?: boolean | null
+          db_user: string
+          declared_actor?: string | null
+          declared_reason?: string | null
+          jwt_role?: string | null
+          kernel_id?: string | null
+          new_bytes?: number | null
+          new_sha256?: string | null
+          old_bytes?: number | null
+          old_sha256?: string | null
+          op: string
+          part?: string | null
+          seq?: number | null
+        }
+        Update: {
+          at?: string
+          audit_id?: number
+          cid?: string | null
+          content_changed?: boolean | null
+          db_user?: string
+          declared_actor?: string | null
+          declared_reason?: string | null
+          jwt_role?: string | null
+          kernel_id?: string | null
+          new_bytes?: number | null
+          new_sha256?: string | null
+          old_bytes?: number | null
+          old_sha256?: string | null
+          op?: string
+          part?: string | null
+          seq?: number | null
+        }
+        Relationships: []
       }
       kernel_parts: {
         Row: {
@@ -4010,6 +4178,141 @@ export type Database = {
           },
         ]
       }
+      protected_artifact_access_log: {
+        Row: {
+          access_id: number
+          action: string
+          artifact_id: string | null
+          artifact_key: string | null
+          at: string
+          db_user: string
+          declared_actor: string | null
+          jwt_role: string | null
+          outcome: string
+          reason: string | null
+        }
+        Insert: {
+          access_id?: number
+          action: string
+          artifact_id?: string | null
+          artifact_key?: string | null
+          at?: string
+          db_user: string
+          declared_actor?: string | null
+          jwt_role?: string | null
+          outcome: string
+          reason?: string | null
+        }
+        Update: {
+          access_id?: number
+          action?: string
+          artifact_id?: string | null
+          artifact_key?: string | null
+          at?: string
+          db_user?: string
+          declared_actor?: string | null
+          jwt_role?: string | null
+          outcome?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      protected_artifacts: {
+        Row: {
+          activation_gate: string | null
+          artifact_class: string
+          artifact_id: string
+          artifact_key: string
+          byte_count: number
+          cid: string | null
+          content_bytes: string
+          distribution_policy: string
+          ingested_at: string
+          ingested_by: string
+          mutation_policy: string
+          provenance: string
+          runtime_status: string
+          sha256: string
+          source_authority: string
+          source_location: string
+          tenant: string | null
+          version: number
+        }
+        Insert: {
+          activation_gate?: string | null
+          artifact_class: string
+          artifact_id?: string
+          artifact_key: string
+          byte_count: number
+          cid?: string | null
+          content_bytes: string
+          distribution_policy: string
+          ingested_at?: string
+          ingested_by: string
+          mutation_policy?: string
+          provenance: string
+          runtime_status: string
+          sha256: string
+          source_authority: string
+          source_location: string
+          tenant?: string | null
+          version: number
+        }
+        Update: {
+          activation_gate?: string | null
+          artifact_class?: string
+          artifact_id?: string
+          artifact_key?: string
+          byte_count?: number
+          cid?: string | null
+          content_bytes?: string
+          distribution_policy?: string
+          ingested_at?: string
+          ingested_by?: string
+          mutation_policy?: string
+          provenance?: string
+          runtime_status?: string
+          sha256?: string
+          source_authority?: string
+          source_location?: string
+          tenant?: string | null
+          version?: number
+        }
+        Relationships: []
+      }
+      protected_kernel_registry: {
+        Row: {
+          added_at: string
+          added_by: string
+          cid: string
+          part: string
+          protection_id: string
+          reason: string
+          release_reason: string | null
+          released_at: string | null
+        }
+        Insert: {
+          added_at?: string
+          added_by: string
+          cid: string
+          part: string
+          protection_id?: string
+          reason: string
+          release_reason?: string | null
+          released_at?: string | null
+        }
+        Update: {
+          added_at?: string
+          added_by?: string
+          cid?: string
+          part?: string
+          protection_id?: string
+          reason?: string
+          release_reason?: string | null
+          released_at?: string | null
+        }
+        Relationships: []
+      }
       provisioning_receipt: {
         Row: {
           action: string
@@ -4587,6 +4890,95 @@ export type Database = {
         }
         Relationships: []
       }
+      save_attempt: {
+        Row: {
+          canonicalization_version: string | null
+          cid: string | null
+          client_request_id: string
+          completed_at: string | null
+          external_identity_id: string | null
+          failure_stage: string | null
+          payload_hash: string
+          payload_hash_algorithm: string | null
+          payload_hash_key_version: string | null
+          possible_duplicate: boolean
+          principal_id: string | null
+          received_at: string
+          recovery_expires_at: string | null
+          recovery_payload: Json | null
+          recovery_state: string
+          requested_layer_counts: Json
+          ritual: string | null
+          save_attempt_id: string
+          save_id: string | null
+          schema_version: string | null
+          session_id: string | null
+          status: string
+          surface: string | null
+          tool_version: string | null
+        }
+        Insert: {
+          canonicalization_version?: string | null
+          cid?: string | null
+          client_request_id: string
+          completed_at?: string | null
+          external_identity_id?: string | null
+          failure_stage?: string | null
+          payload_hash: string
+          payload_hash_algorithm?: string | null
+          payload_hash_key_version?: string | null
+          possible_duplicate?: boolean
+          principal_id?: string | null
+          received_at?: string
+          recovery_expires_at?: string | null
+          recovery_payload?: Json | null
+          recovery_state?: string
+          requested_layer_counts: Json
+          ritual?: string | null
+          save_attempt_id?: string
+          save_id?: string | null
+          schema_version?: string | null
+          session_id?: string | null
+          status?: string
+          surface?: string | null
+          tool_version?: string | null
+        }
+        Update: {
+          canonicalization_version?: string | null
+          cid?: string | null
+          client_request_id?: string
+          completed_at?: string | null
+          external_identity_id?: string | null
+          failure_stage?: string | null
+          payload_hash?: string
+          payload_hash_algorithm?: string | null
+          payload_hash_key_version?: string | null
+          possible_duplicate?: boolean
+          principal_id?: string | null
+          received_at?: string
+          recovery_expires_at?: string | null
+          recovery_payload?: Json | null
+          recovery_state?: string
+          requested_layer_counts?: Json
+          ritual?: string | null
+          save_attempt_id?: string
+          save_id?: string | null
+          schema_version?: string | null
+          session_id?: string | null
+          status?: string
+          surface?: string | null
+          tool_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "save_attempt_save_id_fkey"
+            columns: ["save_id"]
+            isOneToOne: false
+            referencedRelation: "save_receipts"
+            referencedColumns: ["save_id"]
+          },
+        ]
+      }
       save_receipt_layers: {
         Row: {
           attempted: number
@@ -4687,6 +5079,106 @@ export type Database = {
           watermark?: string
         }
         Relationships: []
+      }
+      save_recovery_access_log: {
+        Row: {
+          access_id: string
+          action: string
+          actor_principal: string | null
+          actor_subject: string | null
+          at: string
+          authorized_by: string | null
+          reason: string
+          vault_id: string
+        }
+        Insert: {
+          access_id?: string
+          action: string
+          actor_principal?: string | null
+          actor_subject?: string | null
+          at?: string
+          authorized_by?: string | null
+          reason: string
+          vault_id: string
+        }
+        Update: {
+          access_id?: string
+          action?: string
+          actor_principal?: string | null
+          actor_subject?: string | null
+          at?: string
+          authorized_by?: string | null
+          reason?: string
+          vault_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "save_recovery_access_log_vault_id_fkey"
+            columns: ["vault_id"]
+            isOneToOne: false
+            referencedRelation: "save_recovery_vault"
+            referencedColumns: ["vault_id"]
+          },
+        ]
+      }
+      save_recovery_vault: {
+        Row: {
+          aad: string
+          alg: string
+          ciphertext: string
+          created_at: string
+          erase_reason: string | null
+          erased_at: string | null
+          expires_at: string
+          iv: string
+          master_key_version: string
+          plaintext_bytes: number
+          save_attempt_id: string
+          vault_id: string
+          wrap_iv: string
+          wrapped_dek: string | null
+        }
+        Insert: {
+          aad: string
+          alg?: string
+          ciphertext: string
+          created_at?: string
+          erase_reason?: string | null
+          erased_at?: string | null
+          expires_at: string
+          iv: string
+          master_key_version: string
+          plaintext_bytes: number
+          save_attempt_id: string
+          vault_id?: string
+          wrap_iv: string
+          wrapped_dek?: string | null
+        }
+        Update: {
+          aad?: string
+          alg?: string
+          ciphertext?: string
+          created_at?: string
+          erase_reason?: string | null
+          erased_at?: string | null
+          expires_at?: string
+          iv?: string
+          master_key_version?: string
+          plaintext_bytes?: number
+          save_attempt_id?: string
+          vault_id?: string
+          wrap_iv?: string
+          wrapped_dek?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "save_recovery_vault_save_attempt_id_fkey"
+            columns: ["save_attempt_id"]
+            isOneToOne: false
+            referencedRelation: "save_attempt"
+            referencedColumns: ["save_attempt_id"]
+          },
+        ]
       }
       scheduled_actions: {
         Row: {
@@ -6535,6 +7027,10 @@ export type Database = {
         Returns: Json
       }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      crypto_erase_expired_recovery: {
+        Args: { p_reason?: string }
+        Returns: Json
+      }
       current_cid: { Args: never; Returns: string }
       get_action_response_status: {
         Args: { p_action_id: string }
@@ -6607,6 +7103,19 @@ export type Database = {
           p_tenant_claim?: string
           p_token_version?: string
           p_verified_email?: string
+        }
+        Returns: Json
+      }
+      open_save_attempt: {
+        Args: {
+          p_cid: string
+          p_client_request_id: string
+          p_external_identity_id?: string
+          p_payload: Json
+          p_principal_id?: string
+          p_session_id: string
+          p_surface: string
+          p_tool_version: string
         }
         Returns: Json
       }
