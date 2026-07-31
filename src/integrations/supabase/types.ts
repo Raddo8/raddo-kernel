@@ -2940,30 +2940,42 @@ export type Database = {
       mcp_usage_events: {
         Row: {
           agent_id: string | null
+          cid: string | null
           created_at: string
+          external_identity_id: string | null
           id: string
           metadata: Json
           model_breakdown: Json
+          principal_id: string | null
+          resolution_mode: string | null
           tenant: string
           tool: string
           total_cost_usd: number
         }
         Insert: {
           agent_id?: string | null
+          cid?: string | null
           created_at?: string
+          external_identity_id?: string | null
           id?: string
           metadata?: Json
           model_breakdown?: Json
+          principal_id?: string | null
+          resolution_mode?: string | null
           tenant: string
           tool: string
           total_cost_usd?: number
         }
         Update: {
           agent_id?: string | null
+          cid?: string | null
           created_at?: string
+          external_identity_id?: string | null
           id?: string
           metadata?: Json
           model_breakdown?: Json
+          principal_id?: string | null
+          resolution_mode?: string | null
           tenant?: string
           tool?: string
           total_cost_usd?: number
