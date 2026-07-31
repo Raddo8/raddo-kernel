@@ -4217,6 +4217,41 @@ export type Database = {
         }
         Relationships: []
       }
+      protected_artifact_annotations: {
+        Row: {
+          annotation_id: number
+          artifact_id: string
+          at: string
+          authored_by: string
+          kind: string
+          note: string
+        }
+        Insert: {
+          annotation_id?: number
+          artifact_id: string
+          at?: string
+          authored_by: string
+          kind: string
+          note: string
+        }
+        Update: {
+          annotation_id?: number
+          artifact_id?: string
+          at?: string
+          authored_by?: string
+          kind?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "protected_artifact_annotations_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "protected_artifacts"
+            referencedColumns: ["artifact_id"]
+          },
+        ]
+      }
       protected_artifacts: {
         Row: {
           activation_gate: string | null
@@ -4225,16 +4260,20 @@ export type Database = {
           artifact_key: string
           byte_count: number
           cid: string | null
-          content_bytes: string
+          content_bytes: string | null
           distribution_policy: string
           ingested_at: string
           ingested_by: string
           mutation_policy: string
+          notes: string | null
           provenance: string
+          registration_state: string
           runtime_status: string
-          sha256: string
+          sha256: string | null
           source_authority: string
           source_location: string
+          source_sha1: string | null
+          supersedes_artifact_id: string | null
           tenant: string | null
           version: number
         }
@@ -4245,16 +4284,20 @@ export type Database = {
           artifact_key: string
           byte_count: number
           cid?: string | null
-          content_bytes: string
+          content_bytes?: string | null
           distribution_policy: string
           ingested_at?: string
           ingested_by: string
           mutation_policy?: string
+          notes?: string | null
           provenance: string
+          registration_state?: string
           runtime_status: string
-          sha256: string
+          sha256?: string | null
           source_authority: string
           source_location: string
+          source_sha1?: string | null
+          supersedes_artifact_id?: string | null
           tenant?: string | null
           version: number
         }
@@ -4265,16 +4308,20 @@ export type Database = {
           artifact_key?: string
           byte_count?: number
           cid?: string | null
-          content_bytes?: string
+          content_bytes?: string | null
           distribution_policy?: string
           ingested_at?: string
           ingested_by?: string
           mutation_policy?: string
+          notes?: string | null
           provenance?: string
+          registration_state?: string
           runtime_status?: string
-          sha256?: string
+          sha256?: string | null
           source_authority?: string
           source_location?: string
+          source_sha1?: string | null
+          supersedes_artifact_id?: string | null
           tenant?: string | null
           version?: number
         }
