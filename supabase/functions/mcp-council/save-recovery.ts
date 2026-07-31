@@ -208,7 +208,9 @@ export async function openDurableAttempt(admin: any, input: {
   const canonical = canonicalize(input.payload ?? {});
   const payload_hash = input.fingerprint?.payload_hash ?? (await sha256Hex(canonical));
   const hash_algorithm = input.fingerprint?.payload_hash_algorithm ?? PAYLOAD_HASH_ALGORITHM;
-  const key_version = input.fingerprint?.payload_hash_key_version ?? MASTER_KEY_VERSION;
+  // The RPC writes payload_hash_key_version from p_master_key_version; both the
+  // vault master key and the fingerprint key are V1, so one parameter serves both.
+
   const canon_version = input.fingerprint?.canonicalization_version ?? CANONICALIZATION_VERSION;
 
   try {
