@@ -3217,6 +3217,27 @@ Deno.serve(async (req) => {
       const name = params?.name;
       const args = params?.arguments ?? {};
 
+      // ITEM 1 · THE ONE resolution point. Every tool below is served from
+      // this single context. No tool resolves a tenant on its own.
+      const pctx = await logIdentityOnce(
+        typeof name === "string" && name ? `tool:${name}` : "tool",
+      );
+
+      // ITEM 3 · every tool leaves an identity trace, kernel path or not.
+      void recordMcpUsage(supabaseAdmin, {
+        tenant,
+        tool: typeof name === "string" ? name : "unknown",
+        agent_id: null,
+        passes: [],
+        cid: pctx.legacy_cid,
+        principal_id: pctx.principal_id,
+        external_identity_id: pctx.external_identity_id,
+        resolution_mode: pctx.resolution_mode,
+        routing_log: { identity_trace: true, keyed_by: pctx.legacy_keyed_by, match_state: pctx.match_state },
+      });
+
+
+
       const safeErrors = new Set([
         "boundary_violation",
         "minute_shape",
