@@ -43,9 +43,14 @@ import {
   MAX_RECOVERY_PAYLOAD_BYTES,
   type AttemptHandle,
 } from "./save-recovery.ts";
+import {
+  buildDegradedEnvelope,
+  resolveContentStatus,
+} from "./degraded-envelope.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "durable_attempt_v1";
+const BUILD_ID = "truthful_degraded_v1";
+
 
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
@@ -4114,7 +4119,14 @@ Deno.serve(async (req) => {
           } catch { return false; }
         };
 
+        // Live handle on the per-layer accumulators of the CURRENT save leg.
+        // Set only once layer processing has actually begun (i.e. after the
+        // session check passes), so a degraded envelope can distinguish
+        // "nothing was written" from "some layers ran and this is what landed".
+        let liveLayers: LayerAcc[] | null = null;
+
         // ── Shared SAVE leg (used by save_session AND end_session) ──
+
         const runSaveLeg = async (
           argsIn: any,
           checkpointKind: "save" | "end",
@@ -4166,6 +4178,11 @@ Deno.serve(async (req) => {
           const { data: sess } = await supabaseAdmin
             .from("sessions").select("id, tenant").eq("id", session_id).maybeSingle();
           if (!sess || sess.tenant !== tenant) throw new Error("session_not_found");
+
+          // Layer processing begins here. From this point on a failure must
+          // report what landed, never "nothing was saved".
+          liveLayers = ALL_LAYERS.map((l) => L[l]);
+
 
           // Nothing submitted → nothing written. Honest NOOP.
           if (totalRequested === 0) {
@@ -4657,22 +4674,25 @@ Deno.serve(async (req) => {
                 status: "ABANDONED",
                 failure_stage: "CID_RESOLUTION",
               });
-              const out = {
-
-                session_id: args?.session_id,
-                save_id: null,
-                overall_status: null,
-                outcome: "degraded",
-                reason: "cid_unresolved",
-                reasons: ["cid_unresolved"],
-                ...manifestBlock(args),
-                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
-              };
+              // content_status is READ from the vault, never assumed.
+              const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+              const out = buildDegradedEnvelope({
+                reason: "identity_binding_required",
+                retryable: false,
+                save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+                client_request_id: clientRequestId,
+                payload_hash: attemptHandle?.payload_hash ?? null,
+                failure_stage: "CID_RESOLUTION",
+                content_status: held.content_status,
+                recovery_expires_at: held.recovery_expires_at,
+                args,
+              });
               return rpcResult(id, {
                 content: [{ type: "text", text: JSON.stringify(out) }],
                 structuredContent: out,
                 isError: false,
               });
+
             }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
@@ -4761,10 +4781,15 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
-            // Stamp the durable attempt with the exact stage that killed it.
+            // Two distinct worlds. Before layer processing began, nothing was
+            // written and we may say so. Once it began, the per-layer report
+            // is the authoritative record and must never be dropped.
+            const sessionMiss = msg.includes("session_not_found") && liveLayers === null;
+            const failure_stage = sessionMiss ? "SESSION_VALIDATION" : "LEG_EXCEPTION";
+
             await stampAttempt(supabaseAdmin, attemptHandle?.save_attempt_id ?? null, {
-              status: msg.includes("session_not_found") ? "ABANDONED" : "FAILED",
-              failure_stage: msg.includes("session_not_found") ? "SESSION_VALIDATION" : "LEG_EXCEPTION",
+              status: sessionMiss ? "ABANDONED" : "FAILED",
+              failure_stage,
             });
             try {
               await supabaseAdmin.from("ritual_runs").insert({
@@ -4772,8 +4797,28 @@ Deno.serve(async (req) => {
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
             } catch { /* best-effort */ }
-            return rpcError(id, -32603, `save_session_failed:${msg}`);
+
+            // content_status is READ from the vault, never assumed.
+            const held = await resolveContentStatus(supabaseAdmin, attemptHandle?.save_attempt_id ?? null);
+            const out = buildDegradedEnvelope({
+              reason: sessionMiss ? "session_not_found" : "internal_save_failure",
+              retryable: sessionMiss ? true : false,
+              save_attempt_id: attemptHandle?.save_attempt_id ?? null,
+              client_request_id: clientRequestId,
+              payload_hash: attemptHandle?.payload_hash ?? null,
+              failure_stage,
+              content_status: held.content_status,
+              recovery_expires_at: held.recovery_expires_at,
+              layers: sessionMiss ? null : liveLayers,
+              args,
+            });
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: false,
+            });
           }
+
 
         }
 
