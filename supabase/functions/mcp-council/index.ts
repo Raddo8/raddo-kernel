@@ -2976,46 +2976,161 @@ Deno.serve(async (req) => {
     };
   };
 
-  // ── ITEM 3 · resolver v2 in SHADOW. Computes, controls nothing. ───────
-  const shadowResolveIdentity = async (surface: string): Promise<void> => {
-    if (!supabaseAdmin) return;
-    try {
-      const legacy = await cidResolution();
-      const legacyCid = cidOrNull(legacy);
+  // ── ONE RESOLVER · every tool goes through this and nothing else ──────
+  // ITEM 1 · resolved once per authenticated request, before tool logic.
+  // The LEGACY answer continues to serve the request. The canonical answer
+  // is observed, recorded and surfaced — it controls nothing yet.
+  type PrincipalCtx = {
+    legacy_cid: string | null;
+    legacy_keyed_by: "cid" | "tenant_id" | "none";
+    canonical_cid: string | null;
+    principal_id: string | null;
+    principal_type: string | null;
+    membership_id: string | null;
+    installation_id: string | null;
+    external_identity_id: string | null;
+    resolution_mode: string;
+    scopes: unknown;
+    token_version: string;
+    issuer: string | null;
+    provider_subject: string | null;
+    tenant_claim: string | null;
+    match_state: string;
+    reason: string | null;
+    surface: string;
+  };
+
+  let _pctx: Promise<PrincipalCtx> | null = null;
+  const resolvePrincipalContext = (surface = "mcp"): Promise<PrincipalCtx> => {
+    if (_pctx) return _pctx;
+    _pctx = (async (): Promise<PrincipalCtx> => {
       const issuer = identity?.iss ?? null;
       const subject = identity?.sub ?? null;
-      let canonical: any = null;
+      const tenantClaim = identity?.tenantClaim ?? tenant ?? null;
+
+      // 4. LEGACY — exactly as the request will be served.
+      let legacy_cid: string | null = null;
+      let legacy_keyed_by: "cid" | "tenant_id" | "none" = "none";
       try {
-        const { data } = await supabaseAdmin.rpc("resolve_identity_v2", {
-          p_issuer: issuer,
-          p_provider_subject: subject,
-        });
-        canonical = data ?? null;
-      } catch (_e) { canonical = null; }
-      const canonicalCid = typeof canonical?.cid === "string" ? canonical.cid : null;
-      const match_state = legacyCid && canonicalCid
-        ? (legacyCid === canonicalCid ? "MATCH" : "MISMATCH")
-        : legacyCid ? "LEGACY_ONLY"
-        : canonicalCid ? "CANONICAL_ONLY"
+        const lk = await activeKernel("id, cid");
+        legacy_cid = lk.cid ?? (await resolvedCid());
+        legacy_keyed_by = lk.keyed_by;
+      } catch (_e) {
+        try { legacy_cid = await resolvedCid(); legacy_keyed_by = legacy_cid ? "cid" : "none"; } catch { /* ignore */ }
+      }
+
+      let external_identity_id: string | null = null;
+      let canonical: any = null;
+
+      if (supabaseAdmin) {
+        // 2. OBSERVE — guarantees no tenant transacts without an identity
+        // trace. Writes PENDING; grants nothing.
+        try {
+          const { data, error } = await supabaseAdmin.rpc("observe_external_identity", {
+            p_issuer: issuer,
+            p_provider_subject: subject,
+            p_tenant_claim: tenantClaim,
+            p_surface: surface,
+            p_token_version: TOOL_MANIFEST_VERSION,
+            p_verified_email: null,
+          });
+          if (error) console.error("observe_identity_failed", error.message);
+          external_identity_id = typeof data?.identity_id === "string" ? data.identity_id : null;
+        } catch (e) {
+          console.error("observe_identity_exception", e instanceof Error ? e.message : String(e));
+        }
+
+        // 3. CANONICAL — the answer we are moving toward.
+        try {
+          const { data, error } = await supabaseAdmin.rpc("resolve_principal_context", {
+            p_issuer: issuer,
+            p_provider_subject: subject,
+          });
+          if (error) console.error("resolve_principal_context_failed", error.message);
+          canonical = data ?? null;
+        } catch (e) {
+          console.error("resolve_principal_context_exception", e instanceof Error ? e.message : String(e));
+        }
+      }
+
+      const canonical_cid = typeof canonical?.cid === "string" ? canonical.cid : null;
+      const match_state = legacy_cid && canonical_cid
+        ? (legacy_cid === canonical_cid ? "MATCH" : "MISMATCH")
+        : legacy_cid ? "LEGACY_ONLY"
+        : canonical_cid ? "CANONICAL_ONLY"
         : "BOTH_NULL";
-      await supabaseAdmin.from("identity_resolution_log").insert({
-        surface,
+
+      return {
+        legacy_cid,
+        legacy_keyed_by,
+        canonical_cid,
+        principal_id: canonical?.principal_id ?? null,
+        principal_type: canonical?.principal_type ?? null,
+        membership_id: canonical?.membership_id ?? null,
+        installation_id: canonical?.installation_id ?? null,
+        external_identity_id: external_identity_id ??
+          (typeof canonical?.external_identity_id === "string" ? canonical.external_identity_id : null),
+        resolution_mode: typeof canonical?.resolution_mode === "string" ? canonical.resolution_mode : "NO_IDENTITY",
+        scopes: canonical?.scopes ?? null,
         token_version: TOOL_MANIFEST_VERSION,
-        tenant_claim: identity?.tenantClaim ?? tenant ?? null,
         issuer,
         provider_subject: subject,
-        legacy_cid: legacyCid,
-        legacy_keyed_by: legacy.status === "RESOLVED" ? "cid" : "none",
-        canonical_cid: canonicalCid,
-        canonical_principal_id: canonical?.principal_id ?? null,
-        canonical_membership_id: canonical?.membership_id ?? null,
+        tenant_claim: tenantClaim,
         match_state,
-        reason: canonical?.status ?? legacy.status ?? null,
-      });
-    } catch (e) {
-      console.error("identity_shadow_failed", e instanceof Error ? e.message : String(e));
-    }
+        reason: canonical?.reason ?? null,
+        surface,
+      };
+    })();
+    return _pctx;
   };
+
+  // ITEM 2 · exactly one shadow row per authenticated request, carrying the
+  // SAME legacy values the request actually used. A MISMATCH is recorded,
+  // never acted on.
+  let _identityLogged = false;
+  const logIdentityOnce = async (surface: string): Promise<PrincipalCtx> => {
+    const ctx = await resolvePrincipalContext(surface);
+    if (_identityLogged || !supabaseAdmin) return ctx;
+    _identityLogged = true;
+    try {
+      const { error } = await supabaseAdmin.from("identity_resolution_log").insert({
+        surface,
+        token_version: ctx.token_version,
+        tenant_claim: ctx.tenant_claim,
+        issuer: ctx.issuer,
+        provider_subject: ctx.provider_subject,
+        legacy_cid: ctx.legacy_cid,
+        legacy_keyed_by: ctx.legacy_keyed_by,
+        canonical_cid: ctx.canonical_cid,
+        canonical_principal_id: ctx.principal_id,
+        canonical_membership_id: ctx.membership_id,
+        match_state: ctx.match_state,
+        reason: ctx.reason ?? ctx.resolution_mode,
+      });
+      if (error) console.error("identity_shadow_failed", error.message);
+    } catch (e) {
+      console.error("identity_shadow_exception", e instanceof Error ? e.message : String(e));
+    }
+    return ctx;
+  };
+
+  // ITEM 5 · compact, honest identity block for the session tools.
+  const identityBlock = (ctx: PrincipalCtx): Record<string, unknown> => {
+    const canonicalOk = ctx.resolution_mode === "OK" || ctx.resolution_mode === "OK_DELEGATED";
+    return {
+      identity: {
+        resolution_mode: ctx.resolution_mode,
+        keyed_by: ctx.legacy_keyed_by,
+        canonical_cid: ctx.canonical_cid,
+        principal_id: ctx.principal_id,
+        token_version: ctx.token_version,
+        ...(canonicalOk ? {} : {
+          note: "identity not yet canonical; serving on the legacy path",
+        }),
+      },
+    };
+  };
+
 
   // Rate limit · per-IP, 30 req/min.
   if (supabaseAdmin) {
