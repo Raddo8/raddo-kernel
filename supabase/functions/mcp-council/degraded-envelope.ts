@@ -27,7 +27,9 @@ export type ContentStatus = "RECOVERY_HELD" | "NOT_HELD";
 export type DegradedReason =
   | "session_not_found"
   | "identity_binding_required"
-  | "internal_save_failure";
+  | "internal_save_failure"
+  | "idempotency_conflict";
+
 
 export type DegradedEnvelope = {
   outcome: "degraded" | "failed";
