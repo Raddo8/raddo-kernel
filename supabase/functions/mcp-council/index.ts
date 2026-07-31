@@ -4815,7 +4815,14 @@ Deno.serve(async (req) => {
             } catch (e) {
               receipt_error = e instanceof Error ? e.message : String(e);
               console.error("save_receipt_write_failed", receipt_error);
+              // The database guard is the race backstop for two concurrent
+              // saves on one request id. It must land as a structured outcome,
+              // never as a raw 23505 protocol failure.
+              if (/IDEMPOTENCY_CONFLICT|duplicate key value/i.test(receipt_error)) {
+                return await idempotencyConflictExit(prior?.payload_hash ?? null);
+              }
             }
+
 
             // Receipt written → the attempt is complete. Recovery copy now
             // holds a 15-minute retention window instead of 72 hours.
