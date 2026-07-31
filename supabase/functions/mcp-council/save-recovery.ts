@@ -226,8 +226,9 @@ export async function openDurableAttempt(admin: any, input: {
       p_tool_version: input.tool_version,
       p_ritual: input.ritual,
       p_schema_version: input.schema_version,
-      p_hash_algorithm: PAYLOAD_HASH_ALGORITHM,
-      p_canonicalization_version: CANONICALIZATION_VERSION,
+      p_hash_algorithm: hash_algorithm,
+      p_canonicalization_version: canon_version,
+
       p_principal_id: input.principal_id,
       p_external_identity_id: input.external_identity_id,
       p_ciphertext_b64: env.ciphertext_b64,
