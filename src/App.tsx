@@ -176,6 +176,11 @@ const App = () => (
               <Route index element={<KernelBoard />} />
             </Route>
 
+            <Route path="/control/hq-next" element={<ControlShell />}>
+              <Route index element={<HqNextOperator />} />
+            </Route>
+
+
             <Route path="/control/system" element={<ControlShell />}>
               <Route index element={<SchedulerHealth />} />
             </Route>
