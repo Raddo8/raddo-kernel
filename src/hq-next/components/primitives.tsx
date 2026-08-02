@@ -9,16 +9,20 @@ export function Section({ title, source, right, children }: { title: string; sou
 export function ProvenanceBar({ env }: { env: HqReadEnvelope<unknown> }) {
   const p = env.provenance;
   if (!p) return <div className="prov"><span className="warnq">NO PROVENANCE</span><span className="sep">·</span><span>cannot state where or when it read</span></div>;
-  const age = Math.max(0, Math.round((Date.now() - new Date(p.as_of).getTime()) / 1000));
+  const anchor = p.captured_at ?? p.as_of;
+  const age = Math.max(0, Math.round((Date.now() - new Date(anchor).getTime()) / 1000));
   const ageTxt = age < 90 ? `${age}s ago` : age < 5400 ? `${Math.round(age/60)}m ago` : `${Math.round(age/3600)}h ago`;
+  const isFixture = p.connection === 'FIXTURE';
   return (<div className="prov">
     <StateBadge state={env.state} /><span className="sep">·</span><span>{p.source}</span>
-    <span className="sep">·</span><span>read {ageTxt}</span>
+    <span className="sep">·</span><span>{isFixture ? `captured ${ageTxt}` : `read ${ageTxt}`}</span>
+    {isFixture && p.captured_at && <><span className="sep">·</span><span>snapshot {p.captured_at.slice(0,16).replace('T',' ')}Z</span></>}
     <span className="sep">·</span><span>watermark {p.source_watermark ? p.source_watermark.slice(0,10) : 'none'}</span>
     <span className="sep">·</span><span>{env.row_count} rows</span>
     <span className="sep">·</span><span>{env.projection} projection</span>
     <span className="sep">·</span><span>backend {p.backend}</span>
-    <span className="sep">·</span>{p.receipt_id ? <span>receipt {p.receipt_id}</span> : p.telemetry_id ? <span>telemetry {p.telemetry_id}</span> : <span className="warnq">UNRECEIPTED</span>}
+    <span className="sep">·</span><span>connection {p.connection}</span>
+    <span className="sep">·</span>{p.receipt_id ? <span>receipt {p.receipt_id}</span> : p.telemetry_id ? <span>telemetry {p.telemetry_id}</span> : isFixture ? <span>no telemetry (snapshot)</span> : <span className="warnq">UNRECEIPTED</span>}
   </div>);
 }
 export function StateBlock({ state, reasons }: { state: EpistemicState; reasons?: string[] }) {

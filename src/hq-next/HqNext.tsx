@@ -88,7 +88,7 @@ export function HqNext({ viewer }: HqNextProps) {
     <div className="flagbar"><b>HQ React Foundation v0.1</b><span>· FIXTURE SNAPSHOT · captured 2026-08-01/02 from production · NOT LIVE · golden master hq v29-r28 remains at /hq</span></div>
     <div className="hqx-app">
       <nav className="hqx-rail">
-        <div className="hqx-brand"><b>COB · HQ</b><span>{viewer.tenant} · {viewer.cid}</span></div>
+        <div className="hqx-brand"><b>COB · HQ</b><span>{viewer.displayName ?? viewer.cid} · {viewer.cid}</span></div>
         {groups.map(g => (<div key={g}><div className="hqx-grp">{g}</div>
           {visible.filter(n => n.group === g).map(n => (
             <button key={n.id} className={`nl ${page === n.id ? 'on' : ''}`} onClick={() => { setPage(n.id); try { location.hash = n.id; } catch {} }}>

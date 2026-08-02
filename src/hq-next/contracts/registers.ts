@@ -12,7 +12,7 @@ export interface SkillRowTenant { name: string; version: string; category: strin
 export interface AdvisorRow { id: string; name: string; lens: string; seated: boolean }
 export interface ToolRowFleet { tool_key: string; family: string; circuit: string|null; status: string; verified_at: string|null; verified_how: string|null }
 export interface ToolRowTenant { tool_key: string; family: string; available: boolean }
-export interface ReceiptRowFleet { id: string; kind: string; tenant: string; status: string; layers_failed: number; created_at: string }
+export interface ReceiptRowFleet { id: string; kind: string; cid: string; tenant: string; status: string; layers_failed: number; created_at: string }
 /** A client sees only its own receipts, and no other tenant's name ever appears. */
 export interface ReceiptRowTenant { id: string; kind: string; status: string; created_at: string }
 export interface KernelPartRow { part: string; seq: number; bytes: number; sha256_prefix: string; hash_match: boolean }
