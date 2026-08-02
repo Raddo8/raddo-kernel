@@ -6,8 +6,8 @@
  * 3. Fixture provenance is honest: connection FIXTURE, no telemetry id, no receipt id,
  *    captured_at carries the snapshot's true capture time while as_of is the read time.
  *    A fixture envelope can never report LIVE.
- * 4. There is NO synthetic-state machinery here. Forced states exist only in
- *    src/hq-next/preview/forceEnvelope.ts, which production never imports. */
+ * 4. There is NO synthetic-state machinery here. Preview-only state mutation lives
+ *    in the preview tree, which production never imports. */
 import React from 'react';
 import { type HqReadEnvelope, type HqReadRequest, type HqModule, type Projection, FRESHNESS_WINDOW_SEC, MODULE_PLANE } from './contracts/hq-read';
 import { deriveState } from './contracts/status';
