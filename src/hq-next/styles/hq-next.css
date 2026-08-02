@@ -1,0 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* v0.1 · EVERY selector below is scoped under .hqx — nothing global. */
+.hqx { --paper:#FAF8F4; --white:#FFF; --ink:#042C53; --ink-soft:#2A4E78; --charcoal:#2C2C2A; --ash:#5F5E5A;
+  --brass:#EF9F27; --brass-lite:#F6B44A; --brass-deep:#854F0B; --edge:#E5E3DE; --edge2:#ECE8DF;
+  --edge-navy:rgba(250,248,244,.14); --pon:#E9EEF4; --mon:#A7BAD0; --don:#6E88A6; --ok:#2E6B4F; --warn:#8A5A00; --err:#8C2F2F;
+  --rail:224px; --sans:'Hanken Grotesk',system-ui,sans-serif; --serif:'Figtree','Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --navytex:radial-gradient(620px 320px at 18% 0%,rgba(239,159,39,.10),transparent 70%),linear-gradient(rgba(250,248,244,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(250,248,244,.045) 1px,transparent 1px);
+  font-family:var(--sans); color:var(--charcoal); background:var(--paper); -webkit-font-smoothing:antialiased; }
+.hqx * { box-sizing:border-box; }
+.hqx .hqx-app { display:flex; min-height:100vh; }
+.hqx .hqx-rail { width:var(--rail); flex:0 0 var(--rail); background:var(--ink); background-image:var(--navytex); background-size:auto,22px 22px,22px 22px; color:var(--paper); padding:18px 0 28px; position:sticky; top:0; height:100vh; overflow-y:auto; }
+.hqx .hqx-brand { padding:0 18px 16px; border-bottom:1px solid var(--edge-navy); margin-bottom:12px; }
+.hqx .hqx-brand b { font-family:var(--serif); font-weight:800; font-size:15px; display:block; }
+.hqx .hqx-brand span { font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--mon); }
+.hqx .hqx-grp { padding:14px 18px 5px; font-family:var(--mono); font-size:8px; letter-spacing:.16em; text-transform:uppercase; color:var(--don); }
+.hqx .nl { display:flex; align-items:center; gap:8px; width:100%; padding:6px 18px; border:0; background:none; cursor:pointer; font-family:var(--sans); font-size:12.5px; color:rgba(250,248,244,.80); text-align:left; border-left:2px solid transparent; }
+.hqx .nl:hover { background:rgba(250,248,244,.06); color:var(--paper); }
+.hqx .nl.on { background:rgba(250,248,244,.09); color:var(--paper); border-left-color:var(--brass); font-weight:600; }
+.hqx .nl .ct { margin-left:auto; font-family:var(--mono); font-size:9px; color:var(--mon); }
+.hqx .hqx-main { flex:1; min-width:0; padding:26px 30px 60px; max-width:1180px; }
+.hqx .hqx-ph { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px; }
+.hqx .hqx-ph h1 { font-family:var(--serif); font-size:24px; font-weight:800; color:var(--ink); margin:0; }
+.hqx .hqx-sub { color:var(--ash); font-size:12.5px; margin:3px 0 0; max-width:76ch; line-height:1.5; }
+.hqx .sec { margin-top:26px; }
+.hqx .sec-h { display:flex; align-items:baseline; gap:10px; border-bottom:2px solid var(--ink); padding-bottom:6px; margin-bottom:2px; flex-wrap:wrap; }
+.hqx .sec-h h2 { font-family:var(--serif); font-size:13px; font-weight:700; color:var(--ink); margin:0; }
+.hqx .sec-h .src { margin-left:auto; font-family:var(--mono); font-size:8.5px; color:var(--ash); }
+.hqx .reg { width:100%; border-collapse:separate; border-spacing:0; background:#FFF; border:1px solid var(--edge); border-radius:9px; overflow:hidden; box-shadow:0 1px 2px rgba(44,44,42,.04); margin-top:10px; font-size:12px; }
+.hqx .reg th { text-align:left; font-family:var(--mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ash); font-weight:500; padding:8px 12px; background:#FBFAF7; border-bottom:1px solid var(--edge); white-space:nowrap; cursor:pointer; }
+.hqx .reg td { padding:8px 12px; border-bottom:1px solid var(--edge2); vertical-align:middle; }
+.hqx .reg tbody tr:last-child td { border-bottom:none; }
+.hqx .reg tbody tr:hover { background:#FCFBF8; }
+.hqx .rt { font-weight:600; color:var(--ink); }
+.hqx .rd { color:var(--ash); font-size:11.5px; }
+.hqx .rk { font-family:var(--mono); font-size:9.5px; color:var(--ash); white-space:nowrap; }
+.hqx .num { font-family:var(--mono); font-size:10.5px; text-align:right; }
+.hqx .g { display:inline-block; font-family:var(--mono); font-size:8.5px; letter-spacing:.06em; border-radius:3px; padding:1.5px 6px; border:1px solid var(--edge); color:var(--ash); white-space:nowrap; text-transform:uppercase; }
+.hqx .g.act, .hqx .g.live { border-color:#BFD6C4; background:#EEF6F0; color:var(--ok); }
+.hqx .g.sealed, .hqx .g.durable, .hqx .g.fixed, .hqx .g.store { border-color:#C3D2E2; background:#EEF3F8; color:var(--ink-soft); }
+.hqx .g.notion { border-color:#D6CFC0; background:#F7F4EC; color:var(--brass-deep); }
+.hqx .g.pend, .hqx .g.owed, .hqx .g.open { border-color:#E4CE9C; background:#FBF3E2; color:var(--warn); }
+.hqx .g.hi { border-color:#DDB9B9; background:#F8EDED; color:var(--err); }
+.hqx .g.dorm, .hqx .g.closed, .hqx .g.private { border-color:var(--edge); background:#F5F3EF; color:var(--ash); }
+.hqx .g.e-good { border-color:#9DC3A9; background:#E6F2EA; color:#1F5138; font-weight:500; }
+.hqx .g.e-warn { border-color:#DDB86A; background:#FBEFD6; color:#7A4E00; font-weight:500; }
+.hqx .g.e-bad { border-color:#CE9494; background:#F8E5E5; color:#7A2020; font-weight:500; }
+.hqx .g.e-unknown { border-color:var(--mon); background:#EDF1F6; color:var(--don); font-weight:500; }
+.hqx .g.e-neutral { border-color:var(--edge); background:#F2F0EB; color:var(--ash); font-weight:500; }
+.hqx .fct-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(158px,1fr)); gap:10px; margin-top:12px; }
+.hqx .fct { position:relative; background:#fff; border:1px solid var(--edge); border-radius:10px; padding:11px 13px 12px; box-shadow:0 1px 2px rgba(44,44,42,.04); }
+.hqx .fct .k { font-family:var(--mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ash); }
+.hqx .fct .v { font-family:var(--serif); font-size:22px; font-weight:800; color:var(--ink); margin-top:4px; }
+.hqx .fct .n { font-size:10.5px; color:var(--ash); margin-top:3px; line-height:1.35; }
+.hqx .fct.bad { border-top:3px solid var(--err); } .hqx .fct.warn { border-top:3px solid var(--brass); } .hqx .fct.good { border-top:3px solid var(--ok); }
+.hqx .prov { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; padding:7px 11px; background:#FBFAF7; border:1px solid var(--edge); border-radius:7px; font-family:var(--mono); font-size:9px; color:var(--ash); }
+.hqx .prov .sep { color:var(--mon); } .hqx .prov .warnq { color:var(--err); font-weight:500; }
+.hqx .stateblk { margin-top:10px; border:1px dashed var(--edge); border-radius:9px; padding:22px 20px; background:#FCFBF8; }
+.hqx .stateblk.bad { border-color:#CE9494; background:#FCF6F6; } .hqx .stateblk.warn { border-color:#DDB86A; background:#FDF9F0; } .hqx .stateblk.unknown { border-color:var(--mon); background:#F8FAFC; }
+.hqx .stateblk h3 { font-family:var(--serif); font-size:13px; color:var(--ink); margin:8px 0 4px; }
+.hqx .stateblk p { font-size:11.5px; color:var(--ash); margin:0; line-height:1.5; max-width:68ch; }
+.hqx .xbar { margin-top:12px; border:1px solid #DDB86A; background:#FDF6E7; border-radius:9px; padding:10px 13px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.hqx .xbar .xt { font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--brass-deep); font-weight:500; }
+.hqx .xbar .xd { font-size:11.5px; color:var(--charcoal); }
+.hqx .flagbar { background:#FBF3E2; border-bottom:1px solid #E4CE9C; padding:6px 30px; font-family:var(--mono); font-size:9.5px; color:var(--brass-deep); display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.hqx .flagbar b { color:var(--ink); }
+.hqx .seg { font-family:var(--mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; border:1px solid var(--edge); background:var(--paper); color:var(--ash); padding:5px 12px; border-radius:16px; cursor:pointer; }
+.hqx .seg.on { background:#fff; color:var(--ink); box-shadow:0 1px 2px rgba(44,44,42,.10); font-weight:600; }
+@media (max-width:900px) { .hqx .hqx-app { flex-direction:column; } .hqx .hqx-rail { width:100%; height:auto; position:static; } }
