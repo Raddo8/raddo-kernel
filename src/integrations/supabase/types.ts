@@ -7253,6 +7253,17 @@ export type Database = {
         }
         Relationships: []
       }
+      connector_identity_shadow_report_v1: {
+        Row: {
+          count: number | null
+          evidence_scope: string | null
+          latest_observation_at: string | null
+          match_state: string | null
+          observation_day: string | null
+          surface: string | null
+        }
+        Relationships: []
+      }
       effective_artifacts: {
         Row: {
           activation_gate: string | null
@@ -7685,6 +7696,10 @@ export type Database = {
         Returns: Json
       }
       resolve_cid: { Args: { k: string }; Returns: string }
+      resolve_hq_authority_v1: {
+        Args: { p_auth_user_id: string; p_session_id?: string }
+        Returns: Json
+      }
       resolve_identity_v2: {
         Args: { p_issuer: string; p_provider_subject: string }
         Returns: Json
