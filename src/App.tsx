@@ -58,7 +58,9 @@ import SelectWorkspace from "@/pages/SelectWorkspace";
 import { FleetOperatorGate } from "@/components/FleetOperatorGate";
 import { ClientReadinessGate } from "@/components/ClientReadinessGate";
 import OnboardingAdmin from "@/pages/onboarding/OnboardingAdmin";
+import { HqNextClient, HqNextOperator } from "@/hq-next/routes";
 import { ThemeOverridesProvider } from "@/lib/theme-overrides";
+
 import { MotionPreferenceProvider } from "@/lib/motion-preference";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,6 +124,7 @@ const App = () => (
             <Route path="/signin/landing" element={<SignInLanding />} />
             <Route path="/signin/reset" element={<ResetPassword />} />
             <Route path="/reset-password" element={<Navigate to="/signin/reset" replace />} />
+            <Route path="/hq-next" element={<AuthGate><ClientReadinessGate><HqNextClient /></ClientReadinessGate></AuthGate>} />
 
             {/* Client zone */}
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
@@ -172,6 +175,11 @@ const App = () => (
             <Route path="/control/kernel" element={<ControlShell />}>
               <Route index element={<KernelBoard />} />
             </Route>
+
+            <Route path="/control/hq-next" element={<ControlShell />}>
+              <Route index element={<HqNextOperator />} />
+            </Route>
+
 
             <Route path="/control/system" element={<ControlShell />}>
               <Route index element={<SchedulerHealth />} />
