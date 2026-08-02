@@ -1,27 +1,28 @@
 /** HQ-NEXT v0.1 · the only seam. No component imports a DB client or names a table.
- * v0.1 CORRECTIONS APPLIED:
- * 1. viewer is MANDATORY. There is no UNRESOLVED fallback that returns rows —
- *    a missing viewer yields an UNAUTHORIZED envelope with zero rows for EVERY
- *    module, including modules whose plane is 'both'. (Old A3 failure closed.)
- * 2. Fixture provenance carries the snapshot's TRUE capture time, never now().
- * 3. Projection is decided per-viewer: operator → fleet; client → tenant-safe.
- *    In production this decision is SERVER-side from derived authority; this
- *    mirror exists so rendering matches what the server would send. */
+ * BINDING:
+ * 1. viewer is MANDATORY. A missing viewer yields an UNAUTHORIZED envelope with zero
+ *    rows for EVERY module, including modules whose plane is 'both'.
+ * 2. CID is the ONLY scoping key. displayName is a label and is never used to filter.
+ * 3. Fixture provenance is honest: connection FIXTURE, no telemetry id, no receipt id,
+ *    captured_at carries the snapshot's true capture time while as_of is the read time.
+ *    A fixture envelope can never report LIVE.
+ * 4. There is NO synthetic-state machinery here. Forced states exist only in
+ *    src/hq-next/preview/forceEnvelope.ts, which production never imports. */
 import React from 'react';
 import { type HqReadEnvelope, type HqReadRequest, type HqModule, type Projection, FRESHNESS_WINDOW_SEC, MODULE_PLANE } from './contracts/hq-read';
 import { deriveState } from './contracts/status';
 import { CAPTURED, SKILLS, ADVISORS, TOOLS, PULSE, KERNEL_PARTS, MEMORY, OFFICE_SURFACES, RECEIPTS } from './fixtures/data';
 import type { SkillRowTenant, ToolRowTenant, ReceiptRowTenant } from './contracts/registers';
 
-export interface Viewer { isOperator: boolean; cid: string; tenant: string }
-export type ForceState = undefined | 'stale' | 'degraded' | 'unauthorized' | 'empty';
+export interface Viewer { isOperator: boolean; cid: string; displayName?: string | null }
 
 interface Spec { rows: unknown[]; source: string; zeroIsExpected: boolean; capturedAt: string; watermark: string | null }
 
 /** Tenant-safe projections — a client sees permitted capability, never fleet internals. */
 const skillsTenant = (): SkillRowTenant[] => SKILLS.filter(s => s.distribution_status === 'SERVABLE').map(s => ({ name: s.name, version: s.version, category: s.category, enabled: true }));
 const toolsTenant = (): ToolRowTenant[] => TOOLS.map(t => ({ tool_key: t.tool_key, family: t.family, available: t.status === 'live' }));
-const receiptsTenant = (viewerTenant: string): ReceiptRowTenant[] => RECEIPTS.filter(r => r.tenant === viewerTenant).map(r => ({ id: r.id, kind: r.kind, status: r.status, created_at: r.created_at }));
+/** Scoped by CID only. Never by a display name. */
+const receiptsTenant = (viewerCid: string): ReceiptRowTenant[] => RECEIPTS.filter(r => r.cid === viewerCid).map(r => ({ id: r.id, kind: r.kind, status: r.status, created_at: r.created_at }));
 
 function fixtureFor(req: HqReadRequest, projection: Projection, viewer: Viewer): Spec {
   const v = req.view ?? '';
@@ -38,13 +39,13 @@ function fixtureFor(req: HqReadRequest, projection: Projection, viewer: Viewer):
     case 'office':
       return { rows: OFFICE_SURFACES, source: 'vac · tenant_surfaces + OFFICE (Notion)', zeroIsExpected: false, capturedAt: CAPTURED.office, watermark: '2026-06-25T00:00:00Z' };
     case 'receipts':
-      return { rows: projection === 'fleet' ? RECEIPTS : receiptsTenant(viewer.tenant), source: 'vac · save_receipts + ritual_runs', zeroIsExpected: false, capturedAt: CAPTURED.receipts, watermark: CAPTURED.receipts };
+      return { rows: projection === 'fleet' ? RECEIPTS : receiptsTenant(viewer.cid), source: 'vac · save_receipts + ritual_runs', zeroIsExpected: false, capturedAt: CAPTURED.receipts, watermark: CAPTURED.receipts };
     default:
       return { rows: [], source: 'not wired', zeroIsExpected: true, capturedAt: CAPTURED.pulse, watermark: null };
   }
 }
 
-export function readEnvelope<T = unknown>(req: HqReadRequest, viewer: Viewer | null | undefined, force?: ForceState): HqReadEnvelope<T> {
+export function readEnvelope<T = unknown>(req: HqReadRequest, viewer: Viewer | null | undefined): HqReadEnvelope<T> {
   // MANDATORY VIEWER — no fallback, no fixture rows, for ANY module.
   if (!viewer) {
     return { module: req.module, view: req.view ?? null, projection: 'tenant', ok: false, authorized: false, partial: false,
@@ -53,27 +54,27 @@ export function readEnvelope<T = unknown>(req: HqReadRequest, viewer: Viewer | n
   }
   const plane = MODULE_PLANE[req.module as HqModule];
   const projection: Projection = viewer.isOperator ? 'fleet' : 'tenant';
-  const authorized = force === 'unauthorized' ? false : (plane === 'both' || viewer.isOperator);
+  const authorized = plane === 'both' || viewer.isOperator;
   const spec = fixtureFor(req, projection, viewer);
-  const rows = force === 'empty' ? [] : spec.rows;
-  const ok = force !== 'degraded';
-  const partial = force === 'degraded';
-  const asOf = force === 'stale' ? new Date(new Date(spec.capturedAt).getTime() - 6 * 3600 * 1000).toISOString() : spec.capturedAt;
+  const rows = spec.rows;
+  const asOf = new Date().toISOString();
   const reasons: string[] = [];
-  if (partial) reasons.push('one source leg failed; remainder shown');
   if (!authorized) reasons.push(`module "${req.module}" fleet projection is operator-plane; caller resolved to ${viewer.cid}`);
-  const state = deriveState({ ok, authorized, rowCount: rows.length, zeroIsExpected: spec.zeroIsExpected, asOf: authorized ? asOf : null, freshnessWindowSec: FRESHNESS_WINDOW_SEC[req.module as HqModule] ?? 300, partial });
+  // Freshness is anchored on the SNAPSHOT capture time, not the read time.
+  const derived = deriveState({ ok: true, authorized, rowCount: rows.length, zeroIsExpected: spec.zeroIsExpected, asOf: authorized ? spec.capturedAt : null, freshnessWindowSec: FRESHNESS_WINDOW_SEC[req.module as HqModule] ?? 300, partial: false });
+  // A fixture read is never LIVE, whatever the arithmetic says.
+  const state = derived === 'LIVE' ? 'STALE' : derived;
   return {
-    module: req.module, view: req.view ?? null, projection, ok, authorized, partial, reasons,
+    module: req.module, view: req.view ?? null, projection, ok: true, authorized, partial: false, reasons,
     zero_is_expected: spec.zeroIsExpected, row_count: authorized ? rows.length : 0, rows: (authorized ? rows : []) as T[],
     next_cursor: null,
-    provenance: authorized ? { as_of: asOf, source_watermark: spec.watermark, source: spec.source, backend: 'fixture', receipt_id: null, telemetry_id: 'fixture-telemetry', last_successful_read: asOf, last_attempted_read: asOf, connection: 'ONLINE' } : null,
+    provenance: authorized ? { as_of: asOf, captured_at: spec.capturedAt, source_watermark: spec.watermark, source: spec.source, backend: 'fixture', receipt_id: null, telemetry_id: null, last_successful_read: asOf, last_attempted_read: asOf, connection: 'FIXTURE' } : null,
     state,
   };
 }
 
-export function useHqRead<T = unknown>(req: HqReadRequest, viewer: Viewer | null | undefined, force?: ForceState): HqReadEnvelope<T> {
-  const key = `${req.module}::${req.view ?? ''}::${force ?? ''}::${viewer ? viewer.cid + viewer.isOperator : 'none'}`;
-  return React.useMemo(() => readEnvelope<T>(req, viewer, force), [key]);
+export function useHqRead<T = unknown>(req: HqReadRequest, viewer: Viewer | null | undefined): HqReadEnvelope<T> {
+  const key = `${req.module}::${req.view ?? ''}::${viewer ? viewer.cid + viewer.isOperator : 'none'}`;
+  return React.useMemo(() => readEnvelope<T>(req, viewer), [key]);
 }
 export { MEMORY_STATS } from './fixtures/data';
