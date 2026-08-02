@@ -21,6 +21,7 @@ export const FRESHNESS_WINDOW_SEC: Record<HqModule, number> = { pulse:60, arsena
 export interface HqReadRequest { module: HqModule; view?: string; filters?: Record<string,string|number|boolean>; cursor?: string|null; limit?: number }
 export interface HqReadProvenance {
   as_of: string;                       // server clock at read — never browser time
+  captured_at: string | null;          // snapshot capture time (fixtures); distinct from as_of
   source_watermark: string | null;     // the source's own last-write time
   source: string;
   backend: 'fixture'|'vacj'|'rnj';
@@ -28,7 +29,7 @@ export interface HqReadProvenance {
   telemetry_id: string | null;         // aggregated counter for routine reads
   last_successful_read: string | null;
   last_attempted_read: string | null;
-  connection: 'ONLINE'|'DEGRADED'|'OFFLINE';
+  connection: 'ONLINE'|'DEGRADED'|'OFFLINE'|'FIXTURE';
 }
 export interface HqReadEnvelope<T> {
   module: HqModule; view: string|null; projection: Projection;

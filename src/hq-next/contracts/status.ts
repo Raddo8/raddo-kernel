@@ -22,8 +22,10 @@ export function deriveState(a: { ok: boolean; authorized: boolean; rowCount: num
   if (!a.ok) return 'DEGRADED';
   if (a.partial) return 'DEGRADED';
   if (!a.asOf) return 'UNVERIFIED';
+  // Emptiness is a finding in its own right and outranks age: an old empty read
+  // is still EMPTY_*, never STALE.
+  if (a.rowCount === 0) return a.zeroIsExpected ? 'EMPTY_EXPECTED' : 'EMPTY_UNEXPECTED';
   const age = ((a.now ?? new Date()).getTime() - new Date(a.asOf).getTime()) / 1000;
   if (age > a.freshnessWindowSec) return 'STALE';
-  if (a.rowCount === 0) return a.zeroIsExpected ? 'EMPTY_EXPECTED' : 'EMPTY_UNEXPECTED';
   return 'LIVE';
 }
