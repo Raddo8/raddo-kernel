@@ -124,6 +124,7 @@ const App = () => (
             <Route path="/signin/landing" element={<SignInLanding />} />
             <Route path="/signin/reset" element={<ResetPassword />} />
             <Route path="/reset-password" element={<Navigate to="/signin/reset" replace />} />
+            <Route path="/hq-next" element={<AuthGate><ClientReadinessGate><HqNextClient /></ClientReadinessGate></AuthGate>} />
 
             {/* Client zone */}
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
