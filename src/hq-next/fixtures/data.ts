@@ -96,6 +96,6 @@ export const OFFICE_SURFACES: OfficeSurfaceRow[] = [
   { surface_key:'records', label:'Records / Files Index', kind:'data_source', notion_id_present:true, write_policy:'direct', row_count:null, last_entry_at:null, postgres_table:'knowledge_files', status:'REGISTERED' },
 ];
 export const RECEIPTS: ReceiptRowFleet[] = [
-  { id:'1a10ea17', kind:'save', tenant:'COB-HQ', status:'PARTIAL', layers_failed:19, created_at:'2026-08-02T04:30:00Z' },
-  { id:'4ad0f62a', kind:'save', tenant:'COB-HQ', status:'PARTIAL', layers_failed:3, created_at:'2026-08-02T04:45:00Z' },
+  { id:'1a10ea17', kind:'save', cid:'CID-100001', tenant:'COB-HQ', status:'PARTIAL', layers_failed:19, created_at:'2026-08-02T04:30:00Z' },
+  { id:'4ad0f62a', kind:'save', cid:'CID-100001', tenant:'COB-HQ', status:'PARTIAL', layers_failed:3, created_at:'2026-08-02T04:45:00Z' },
 ];

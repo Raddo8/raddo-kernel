@@ -38,14 +38,15 @@ function useResolvedViewer(): Resolution {
         .select("cid, cob_name")
         .eq("cid", cid)
         .maybeSingle();
-      if (tenantRes.error) return { kind: "unauthorized" };
+      // A missing or errored tenant record is a refusal, never a scoped viewer.
+      if (tenantRes.error || !tenantRes.data) return { kind: "unauthorized" };
 
       const opRes = await supabase.rpc("is_fleet_operator");
       const isOperator = !opRes.error && opRes.data === true;
 
       return {
         kind: "ready",
-        viewer: { isOperator, cid, tenant: tenantRes.data?.cob_name ?? cid },
+        viewer: { isOperator, cid, displayName: tenantRes.data.cob_name ?? null },
       };
     };
 

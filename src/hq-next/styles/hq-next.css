@@ -1,9 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;600;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Figtree:wght@400;600;800&family=Spline+Sans+Mono:wght@400;500&display=swap');
 /* v0.1 · EVERY selector below is scoped under .hqx — nothing global. */
 .hqx { --paper:#FAF8F4; --white:#FFF; --ink:#042C53; --ink-soft:#2A4E78; --charcoal:#2C2C2A; --ash:#5F5E5A;
   --brass:#EF9F27; --brass-lite:#F6B44A; --brass-deep:#854F0B; --edge:#E5E3DE; --edge2:#ECE8DF;
   --edge-navy:rgba(250,248,244,.14); --pon:#E9EEF4; --mon:#A7BAD0; --don:#6E88A6; --ok:#2E6B4F; --warn:#8A5A00; --err:#8C2F2F;
-  --rail:224px; --sans:'Hanken Grotesk',system-ui,sans-serif; --serif:'Figtree','Hanken Grotesk',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --rail:224px; --sans:'Hanken Grotesk',system-ui,sans-serif; --serif:'Figtree','Hanken Grotesk',system-ui,sans-serif; --mono:'Spline Sans Mono',ui-monospace,monospace;
   --navytex:radial-gradient(620px 320px at 18% 0%,rgba(239,159,39,.10),transparent 70%),linear-gradient(rgba(250,248,244,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(250,248,244,.045) 1px,transparent 1px);
   font-family:var(--sans); color:var(--charcoal); background:var(--paper); -webkit-font-smoothing:antialiased; }
 .hqx * { box-sizing:border-box; }
