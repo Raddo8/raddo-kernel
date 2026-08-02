@@ -1,11 +1,11 @@
 import React from 'react';
-import { useHqRead, type Viewer, type ForceState } from '../useHqRead';
+import { useHqRead, type Viewer } from '../useHqRead';
 import type { SkillRowFleet, SkillRowTenant, AdvisorRow } from '../contracts/registers';
 import { Section, ProvenanceBar, StateBlock, FactTile, FactRow, Badge, StateBadge, RegisterTable, ExceptionsBar, type Column } from '../components/primitives';
 const DIST: Record<string, string> = { SERVABLE: 'act', RECOVERING: 'pend', QUARANTINED: 'hi', VERSION_UNRESOLVED: 'open', RETIRED: 'dorm' };
-export function Arsenal({ viewer, force }: { viewer: Viewer; force?: ForceState }) {
-  const skills = useHqRead<SkillRowFleet | SkillRowTenant>({ module: 'arsenal', view: 'skills' }, viewer, force);
-  const advisors = useHqRead<AdvisorRow>({ module: 'arsenal', view: 'advisors' }, viewer, force);
+export function Arsenal({ viewer }: { viewer: Viewer }) {
+  const skills = useHqRead<SkillRowFleet | SkillRowTenant>({ module: 'arsenal', view: 'skills' }, viewer);
+  const advisors = useHqRead<AdvisorRow>({ module: 'arsenal', view: 'advisors' }, viewer);
   const fleet = skills.projection === 'fleet';
   const fleetRows = fleet ? (skills.rows as SkillRowFleet[]) : [];
   const held = fleetRows.filter(s => s.hq_holds_body).length;

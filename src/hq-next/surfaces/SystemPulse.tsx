@@ -1,5 +1,5 @@
 import React from 'react';
-import { useHqRead, type Viewer, type ForceState } from '../useHqRead';
+import { useHqRead, type Viewer } from '../useHqRead';
 import type { PulseRow, KernelPartRow } from '../contracts/registers';
 import { Section, ProvenanceBar, StateBlock, FactTile, FactRow, Badge, StateBadge, RegisterTable, ExceptionsBar, type Column } from '../components/primitives';
 const cols: Column<KernelPartRow>[] = [
@@ -9,9 +9,9 @@ const cols: Column<KernelPartRow>[] = [
   { key: 'sha', label: 'sha256', render: r => <span className="rk">{r.sha256_prefix}\u2026</span> },
   { key: 'ok', label: 'Integrity', render: r => r.hash_match ? <Badge kind="act">hash match</Badge> : <Badge kind="hi">MISMATCH</Badge> },
 ];
-export function SystemPulse({ viewer, force }: { viewer: Viewer; force?: ForceState }) {
-  const pulse = useHqRead<PulseRow>({ module: 'pulse' }, viewer, force);
-  const parts = useHqRead<KernelPartRow>({ module: 'pulse', view: 'kernel' }, viewer, force);
+export function SystemPulse({ viewer }: { viewer: Viewer }) {
+  const pulse = useHqRead<PulseRow>({ module: 'pulse' }, viewer);
+  const parts = useHqRead<KernelPartRow>({ module: 'pulse', view: 'kernel' }, viewer);
   const p = pulse.rows[0];
   return (<>
     <div className="hqx-ph"><h1>System Pulse</h1><StateBadge state={pulse.state} /></div>

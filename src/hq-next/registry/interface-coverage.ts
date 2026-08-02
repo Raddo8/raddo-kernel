@@ -19,11 +19,11 @@ export const INTERFACES: InterfaceEntry[] = [
   E('hq.arsenal','Intelligence Registry','both','vac · study_skills+study_agents+tool_catalog','FIXTURE_VALIDATED','hq v29-r28 #arsenal','Arsenal'),
   E('hq.blueprints','Blueprints','operator','vac · blueprints','DISCOVERED','hq v29-r28 #blueprints'),
   E('hq.collection','Collection','both','vac · connectors','DISCOVERED','hq v29-r28 #collection'),
-  E('hq.memories','Memory','both','vac · memory_entries','FIXTURE_VALIDATED','hq v29-r28 #memories','Memory'),
+  E('hq.memories','Memory','both','vac · memory_entries','DISCOVERED','hq v29-r28 #memories',null),
   E('hq.record','Record','both','OFFICE · Session Log + Decisions','DISCOVERED','hq v29-r28 #record'),
   E('hq.operations','Operations','both','OFFICE · Initiatives + Tasks','DISCOVERED','hq v29-r28 #operations'),
   E('hq.personalize','Personalize','both','OFFICE · rules surface','DISCOVERED','hq v29-r28 #personalize'),
-  E('hq.office','Office Plane','both','vac · tenant_surfaces + OFFICE','FIXTURE_VALIDATED','tenant_surfaces','OfficePlane'),
+  E('hq.office','Office Plane','both','vac · tenant_surfaces + OFFICE','DISCOVERED','tenant_surfaces',null),
   E('hq.provenance','Provenance','operator','OFFICE · change_log','DISCOVERED','hq v29-r28 #provenance'),
   E('hq.account','Account','both','vac · tenants + principals','DISCOVERED','hq v29-r28 #account'),
   E('hq.fleet','Fleet','operator','vac · tenants','DISCOVERED','hq v29-r28 #fleet'),
@@ -42,6 +42,6 @@ export const INTERFACES: InterfaceEntry[] = [
   ...['business','lane','workstream','initiative','tenant','principal','goal','record']
     .map(s => E(`entity.${s}`, `Entity · ${s}`, 'both', 'DOMAIN MODEL UNDECIDED — not items', 'MISSING')),
   // receipts module (v0.1: tenant-safe + fleet projections)
-  E('hq.receipts','Receipts & Audit','both','vac · save_receipts + ritual_runs + execution_receipts','DESIGN_PORTED'),
+  E('hq.receipts','Receipts & Audit','both','vac · save_receipts + ritual_runs + execution_receipts','FIXTURE_VALIDATED',null,'Receipts'),
 ];
 export const COUNTS = INTERFACES.reduce((m, e) => (m[e.life] = (m[e.life] ?? 0) + 1, m), {} as Record<string, number>);

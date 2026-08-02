@@ -1,9 +1,9 @@
 import React from 'react';
-import { useHqRead, type Viewer, type ForceState } from '../useHqRead';
+import { useHqRead, type Viewer } from '../useHqRead';
 import type { ReceiptRowFleet, ReceiptRowTenant } from '../contracts/registers';
 import { Section, ProvenanceBar, StateBlock, Badge, StateBadge, RegisterTable, type Column } from '../components/primitives';
-export function Receipts({ viewer, force }: { viewer: Viewer; force?: ForceState }) {
-  const env = useHqRead<ReceiptRowFleet | ReceiptRowTenant>({ module: 'receipts' }, viewer, force);
+export function Receipts({ viewer }: { viewer: Viewer }) {
+  const env = useHqRead<ReceiptRowFleet | ReceiptRowTenant>({ module: 'receipts' }, viewer);
   const fleet = env.projection === 'fleet';
   const fleetCols: Column<ReceiptRowFleet>[] = [
     { key: 'i', label: 'Receipt', render: r => <span className="rk">{r.id}</span> },

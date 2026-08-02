@@ -12,7 +12,7 @@ import { Entities } from './surfaces/Entities';
 import { INTERFACES, COUNTS } from './registry/interface-coverage';
 import { REGISTERS } from './registry/register-migration';
 import { Section, StateBlock, Badge, RegisterTable, type Column } from './components/primitives';
-import type { Viewer, ForceState } from './useHqRead';
+import type { Viewer } from './useHqRead';
 import type { InterfaceEntry } from './registry/interface-coverage';
 import type { RegisterEntry } from './registry/register-migration';
 
@@ -62,8 +62,8 @@ function Migration() {
   </>);
 }
 
-export interface HqNextProps { viewer: Viewer; forceState?: ForceState }
-export function HqNext({ viewer, forceState }: HqNextProps) {
+export interface HqNextProps { viewer: Viewer }
+export function HqNext({ viewer }: HqNextProps) {
   const [page, setPage] = React.useState('kernel');
   React.useEffect(() => {
     const apply = () => { const h = (location.hash || '').replace(/^#/, ''); if (h && NAV.some(n => n.id === h)) setPage(h); };
@@ -74,9 +74,9 @@ export function HqNext({ viewer, forceState }: HqNextProps) {
   const body = (() => {
     if (!viewer.isOperator && NAV.find(n => n.id === page)?.operatorOnly) return <Section title="Access"><StateBlock state="UNAUTHORIZED" /></Section>;
     switch (page) {
-      case 'kernel': return <SystemPulse viewer={viewer} force={forceState} />;
-      case 'arsenal': return <Arsenal viewer={viewer} force={forceState} />;
-      case 'receipts': return <Receipts viewer={viewer} force={forceState} />;
+      case 'kernel': return <SystemPulse viewer={viewer} />;
+      case 'arsenal': return <Arsenal viewer={viewer} />;
+      case 'receipts': return <Receipts viewer={viewer} />;
       case 'business': case 'lane': case 'workstream': return <Entities kind={page as 'business'|'lane'|'workstream'} />;
       case 'coverage': return <Coverage />;
       case 'migration': return <Migration />;
