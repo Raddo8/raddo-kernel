@@ -1,6 +1,7 @@
 /** v0.1 static acceptance + correction-dispatch regression, in Vitest. */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { renderToString } from 'react-dom/server';
 import { readEnvelope } from '../useHqRead';
 import { deriveState } from '../contracts/status';
@@ -84,7 +85,7 @@ describe('hq-next v0.1 acceptance', () => {
 describe('correction dispatch regressions', () => {
   // R1 — the read seam holds no synthetic-state machinery
   it('R1 useHqRead.ts has no force token and no preview import', () => {
-    const src = readFileSync(new URL('../useHqRead.ts', import.meta.url), 'utf8');
+    const src = readFileSync(join(process.cwd(), 'src/hq-next/useHqRead.ts'), 'utf8');
     expect(/force/i.test(src)).toBe(false);
     expect(src.includes('preview/')).toBe(false);
     expect(readEnvelope.length).toBe(2);
