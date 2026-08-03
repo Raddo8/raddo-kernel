@@ -18,6 +18,18 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  // UNIT 1 · one identity. The credential created here is also the credential
+  // the COB connector signs in with, so it is mirrored to the authorization
+  // server after every successful sign-in or sign-up. Fire and forget: the
+  // mirror never blocks or fails the auth path.
+  const mirrorConnectorIdentity = (emailValue: string, passwordValue: string) => {
+    void supabase.functions
+      .invoke("provision-connector-identity", {
+        body: { email: emailValue.trim().toLowerCase(), password: passwordValue },
+      })
+      .catch(() => undefined);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -25,6 +37,7 @@ export default function Auth() {
       if (isLogin) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        mirrorConnectorIdentity(email, password);
         navigate("/control/desk");
       } else {
         const { error } = await supabase.auth.signUp({
@@ -33,6 +46,7 @@ export default function Auth() {
           options: { data: { full_name: fullName } },
         });
         if (error) throw error;
+        mirrorConnectorIdentity(email, password);
         toast.success("Check your email to confirm your account");
       }
     } catch (err: any) {
@@ -41,6 +55,7 @@ export default function Auth() {
       setLoading(false);
     }
   };
+
 
   return (
     <DossierSplit

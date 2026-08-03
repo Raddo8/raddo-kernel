@@ -150,6 +150,7 @@ export default function OAuthConsent() {
       <DossierSplit
         wide
         brand={{
+          mark: true,
           chip: "dossier · authorization",
           headline: "Grant an application",
           keyword: "consent",

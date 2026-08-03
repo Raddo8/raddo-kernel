@@ -73,6 +73,7 @@ export default function OAuthLogin() {
       />
       <DossierSplit
         brand={{
+          mark: true,
           chip: "dossier · sign in",
           headline: "Authenticate to review the",
           keyword: "access",
