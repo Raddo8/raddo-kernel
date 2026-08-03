@@ -19,16 +19,29 @@ export function DossierBrandPane({
   keyword,
   headlineTrail,
   pitch,
+  mark = false,
 }: {
   chip?: string;
   headline: string;
   keyword: string;
   headlineTrail?: string;
   pitch: string;
+  /** Renders the canonical COB square mark above the chip. */
+  mark?: boolean;
 }) {
   return (
     <aside className="dossier-navy-pane relative flex min-h-full flex-col justify-between px-8 py-12 md:px-14 md:py-16">
       <div>
+        {mark ? (
+          <img
+            src={cobMark}
+            alt="Chief of Business"
+            width={56}
+            height={56}
+            className="mb-7 block"
+            style={{ width: 56, height: 56, borderRadius: 8 }}
+          />
+        ) : null}
         <Link
           to="/"
           className="dossier-brass-chip"
@@ -36,6 +49,7 @@ export function DossierBrandPane({
         >
           {chip}
         </Link>
+
         <h2
           className="font-display mt-8 text-dossier-paper"
           style={{ fontSize: "clamp(28px, 3.6vw, 44px)", fontWeight: 800, lineHeight: 1.1 }}

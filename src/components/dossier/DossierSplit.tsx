@@ -17,10 +17,12 @@ export function DossierSplit({
     keyword: string;
     headlineTrail?: string;
     pitch: string;
+    mark?: boolean;
   };
   children: ReactNode;
   wide?: boolean;
 }) {
+
   return (
     <main className="min-h-screen bg-dossier-paper">
       {/* Mobile compact chip lockup · replaces the pane below md */}
