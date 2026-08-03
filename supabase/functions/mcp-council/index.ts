@@ -38,7 +38,7 @@ import { scrubRitualArgs } from "./ritual-scrub.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "one_resolver_v1";
+const BUILD_ID = "connector_backbone_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2895,6 +2895,70 @@ Deno.serve(async (req) => {
   // Never sourced from the request body.
   const serverCid = async (): Promise<string | null> =>
     (await resolvedCid()) ?? (await activeKernel("id, cid")).cid;
+
+  // UNIT 1 · CONNECTOR-SUCCESS SIGNAL. Records the first time a tenant's
+  // connector completes an authenticated MCP request. Additive, keyed on
+  // CID, fire-and-forget: it can never fail or slow a request.
+  const recordConnectorSuccess = async (cid: string): Promise<void> => {
+    if (!supabaseAdmin || !cid) return;
+    try {
+      const { data: row } = await supabaseAdmin
+        .from("onboarding_tenants")
+        .select("id, connector_connected_at")
+        .eq("cid", cid)
+        .maybeSingle();
+      if (row?.connector_connected_at) return;
+
+      if (row?.id) {
+        await supabaseAdmin
+          .from("onboarding_tenants")
+          .update({
+            connector_connected_at: new Date().toISOString(),
+            connector_first_client: identity?.clientId ?? null,
+          })
+          .eq("id", row.id)
+          .is("connector_connected_at", null);
+      }
+
+      await supabaseAdmin.from("connector_events").insert({
+        cid,
+        event: "connector_first_session",
+        surface: "mcp",
+        client_id: identity?.clientId ?? null,
+        detail: { issuer: identity?.iss ?? null, build_id: BUILD_ID },
+      });
+    } catch (e) {
+      console.error("connector_success_exception", e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  // UNIT 1 · RELIABILITY. A stale pre-claim connector token verifies against
+  // the AS but no longer resolves to any tenant on this resource server.
+  // Rather than failing dark deep inside a tool, return a clean 401 carrying
+  // the discovery pointer so the client re-runs the OAuth handshake.
+  if (authMode === "oauth") {
+    const gateCid = await serverCid();
+    if (!gateCid) {
+      return new Response(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: null,
+          error: { code: -32001, message: "unauthorized" },
+        }),
+        {
+          status: 401,
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+            ...unauthorizedHeaders("invalid_token"),
+          },
+        },
+      );
+    }
+    void recordConnectorSuccess(gateCid);
+  }
+
+
 
   // Lane 1 · ITEM 4 · manifest staleness reporting. Work always completes.
   const manifestBlock = (a: any): Record<string, unknown> => {
