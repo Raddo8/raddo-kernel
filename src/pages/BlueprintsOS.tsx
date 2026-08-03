@@ -1,23 +1,33 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+/** BLUEPRINTS OS · client plane, LIVE reads, strictly READ-ONLY.
+ * Adopts the hq-next design system: same shell, rail, Section / RegisterTable /
+ * FactTile / Badge vocabulary and tokens. No shadcn chrome. No DB writes. */
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { format, addDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addMonths, isSameDay, isSameMonth } from "date-fns";
-import { ChevronLeft, ChevronRight, RefreshCw, AlertTriangle, LayoutGrid } from "lucide-react";
+import {
+  format,
+  addDays,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addMonths,
+  isSameDay,
+  isSameMonth,
+} from "date-fns";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-
-import PageHeader from "@/components/PageHeader";
-import EmptyState from "@/components/EmptyState";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import "@/hq-next/styles/hq-next.css";
+import {
+  Section,
+  StateBlock,
+  Badge,
+  FactTile,
+  FactRow,
+  RegisterTable,
+  type Column,
+} from "@/hq-next/components/primitives";
+import type { Viewer } from "@/hq-next/useHqRead";
 
 /** Shapes mirror the read-only RPC contracts; the page never writes. */
 interface BlueprintRow {
@@ -57,8 +67,6 @@ type Selection =
   | { kind: "blueprint"; row: BlueprintRow }
   | null;
 
-const MONO = "font-mono text-[11px] uppercase tracking-[0.14em] text-muted-foreground";
-
 const READ_ONLY_NOTE =
   "Builds are created, scheduled, and moved through your COB Connector · just ask your COB.";
 
@@ -86,6 +94,15 @@ function stageOf(row: ScheduledRow): string {
 
 const STAGES = ["Queued", "Scheduled", "Awaiting GO", "In Motion", "In Audit", "Done"] as const;
 
+const STAGE_KIND: Record<string, string> = {
+  Queued: "dorm",
+  Scheduled: "sealed",
+  "Awaiting GO": "pend",
+  "In Motion": "act",
+  "In Audit": "hi",
+  Done: "act",
+};
+
 /** Project grouping derived from the blueprint title prefix. */
 function projectOf(title: string): string {
   const t = title ?? "";
@@ -100,46 +117,90 @@ function projectOf(title: string): string {
   return "Other";
 }
 
-function gatesLabel(row: ScheduledRow): string | null {
-  if (row.gates_total == null) return null;
-  return `gates ${row.gates_passed ?? 0}/${row.gates_total}`;
+function gatesLabel(row: ScheduledRow): string {
+  if (row.gates_total == null) return "\u2014";
+  return `${row.gates_passed ?? 0}/${row.gates_total}`;
 }
 
-function MonoLabel({ children }: { children: React.ReactNode }) {
-  return <div className={MONO}>{children}</div>;
+function statusKind(status: string | null): string {
+  const s = (status ?? "").toLowerCase();
+  if (s.includes("done") || s.includes("complete") || s === "active") return "act";
+  if (s.includes("draft") || s.includes("propos") || s.includes("pending")) return "pend";
+  if (s.includes("block") || s.includes("fail")) return "hi";
+  if (s.includes("sealed") || s.includes("ready")) return "sealed";
+  return "dorm";
 }
 
-function ScheduledCard({ row, onOpen }: { row: ScheduledRow; onOpen: () => void }) {
-  const gates = gatesLabel(row);
+/** Server-derived viewer · identical resolution path to src/hq-next/routes.tsx. */
+type Resolution =
+  | { kind: "loading" }
+  | { kind: "ready"; viewer: Viewer }
+  | { kind: "unauthorized" };
+
+function useResolvedViewer(): Resolution {
+  const [state, setState] = useState<Resolution>({ kind: "loading" });
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async (): Promise<Resolution> => {
+      const cidRes = await supabase.rpc("current_cid");
+      const cid = cidRes.error ? null : (cidRes.data as string | null);
+      if (!cid) return { kind: "unauthorized" };
+      const tenantRes = await supabase
+        .from("tenants")
+        .select("cid, cob_name")
+        .eq("cid", cid)
+        .maybeSingle();
+      if (tenantRes.error || !tenantRes.data) return { kind: "unauthorized" };
+      const opRes = await supabase.rpc("is_fleet_operator");
+      return {
+        kind: "ready",
+        viewer: {
+          isOperator: !opRes.error && opRes.data === true,
+          cid,
+          displayName: tenantRes.data.cob_name ?? null,
+        },
+      };
+    };
+    void resolve().then((r) => {
+      if (!cancelled) setState(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return state;
+}
+
+const VIEWS = ["Board", "Today", "Month", "Portfolio"] as const;
+type View = (typeof VIEWS)[number];
+
+function Shell({ cid, children }: { cid: string | null; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="w-full rounded-none border border-border bg-card p-3 text-left transition-colors hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="text-sm font-medium leading-snug">{row.title ?? "Untitled"}</div>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
-        {row.program && (
-          <Badge variant="secondary" className="rounded-none font-mono text-[10px] uppercase tracking-wider">
-            {row.program}
-          </Badge>
-        )}
-        {gates && <span className={MONO}>{gates}</span>}
+    <div className="hqx">
+      <div className="hqx-app">
+        <nav className="hqx-rail">
+          <div className="hqx-brand">
+            <b>COB · HQ</b>
+            <span>{cid ?? "resolving\u2026"}</span>
+          </div>
+          <div>
+            <div className="hqx-grp">Plan</div>
+            <a className="nl on" href="/hq/blueprints"><span>Blueprints</span></a>
+            <a className="nl" href="/hq-next"><span>HQ</span></a>
+          </div>
+        </nav>
+        <main className="hqx-main">{children}</main>
       </div>
-      {row.run_at && (
-        <div className={cn(MONO, "mt-2")}>
-          {format(new Date(row.run_at), "dd MMM yyyy")} · {format(new Date(row.run_at), "HH:mm")}
-        </div>
-      )}
-    </button>
+    </div>
   );
 }
 
-export default function BlueprintsOS() {
+export function BlueprintsOS() {
+  const resolution = useResolvedViewer();
+  const [view, setView] = useState<View>("Board");
+  const [monthCursor, setMonthCursor] = useState<Date>(new Date());
   const [selection, setSelection] = useState<Selection>(null);
-  const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
 
-  // Tenant is resolved server-side from the caller's session; these RPCs take no arguments.
   const blueprintsQuery = useQuery({
     queryKey: ["hq-blueprints"],
     enabled: true,
@@ -160,11 +221,13 @@ export default function BlueprintsOS() {
     },
   });
 
-  const blueprints = blueprintsQuery.data ?? [];
-  const scheduled = scheduledQuery.data ?? [];
+  const blueprints = useMemo(() => blueprintsQuery.data ?? [], [blueprintsQuery.data]);
+  const scheduled = useMemo(() => scheduledQuery.data ?? [], [scheduledQuery.data]);
 
   const byStage = useMemo(() => {
-    const map: Record<string, ScheduledRow[]> = Object.fromEntries(STAGES.map((s) => [s, [] as ScheduledRow[]]));
+    const map: Record<string, ScheduledRow[]> = Object.fromEntries(
+      STAGES.map((s) => [s, [] as ScheduledRow[]])
+    );
     for (const row of scheduled) map[stageOf(row)].push(row);
     return map;
   }, [scheduled]);
@@ -186,10 +249,10 @@ export default function BlueprintsOS() {
         const spec = (r.spec_status ?? "").toUpperCase();
         return spec === "DRAFT" || stageOf(r) === "Awaiting GO";
       }),
-      soon: scheduled.filter((r) => r.run_at && new Date(r.run_at) >= now && new Date(r.run_at) <= soonLimit),
-      done: scheduled
-        .filter((r) => (r.status ?? "").toLowerCase() === "completed")
-        .slice(0, 12),
+      soon: scheduled.filter(
+        (r) => r.run_at && new Date(r.run_at) >= now && new Date(r.run_at) <= soonLimit
+      ),
+      done: scheduled.filter((r) => (r.status ?? "").toLowerCase() === "completed").slice(0, 12),
     };
   }, [scheduled]);
 
@@ -201,17 +264,55 @@ export default function BlueprintsOS() {
     return days;
   }, [monthCursor]);
 
+  const scheduledCols: Column<ScheduledRow>[] = useMemo(
+    () => [
+      {
+        key: "title",
+        label: "Title",
+        render: (r) => (
+          <button type="button" className="lnk" onClick={() => setSelection({ kind: "scheduled", row: r })}>
+            <span className="rt">{r.title ?? "Untitled"}</span>
+          </button>
+        ),
+      },
+      { key: "program", label: "Program", render: (r) => <Badge kind="private">{r.program ?? "\u2014"}</Badge> },
+      {
+        key: "run",
+        label: "Run at",
+        render: (r) => (
+          <span className="rk">{r.run_at ? format(new Date(r.run_at), "dd MMM yyyy · HH:mm") : "\u2014"}</span>
+        ),
+      },
+      { key: "gates", label: "Gates", render: (r) => <span className="rk">{gatesLabel(r)}</span>, align: "right" },
+    ],
+    []
+  );
 
-
+  const blueprintCols: Column<BlueprintRow>[] = useMemo(
+    () => [
+      {
+        key: "title",
+        label: "Title",
+        render: (r) => (
+          <button type="button" className="lnk" onClick={() => setSelection({ kind: "blueprint", row: r })}>
+            <span className="rt">{r.title}</span>
+          </button>
+        ),
+      },
+      { key: "owner", label: "Owner", render: (r) => <span className="rd">{r.owner ?? "\u2014"}</span> },
+      {
+        key: "status",
+        label: "Status",
+        render: (r) => <Badge kind={statusKind(r.status)}>{r.status ?? "unknown"}</Badge>,
+      },
+    ],
+    []
+  );
 
   const isLoading = blueprintsQuery.isLoading || scheduledQuery.isLoading;
   const isError = blueprintsQuery.isError || scheduledQuery.isError;
   const isEmpty = !isLoading && !isError && blueprints.length === 0 && scheduled.length === 0;
-
-  const refetchAll = () => {
-    void blueprintsQuery.refetch();
-    void scheduledQuery.refetch();
-  };
+  const total = blueprints.length + scheduled.length;
 
   const linkedBlueprint =
     selection?.kind === "scheduled" && selection.row.blueprint_id
@@ -220,288 +321,307 @@ export default function BlueprintsOS() {
         ? selection.row
         : null;
 
-  return (
-    <main className="min-h-screen bg-background">
-      <PageHeader
-        title="Blueprints"
-        subtitle="Your build plan · from intent to done"
-        actions={
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/hq">HQ</Link>
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-none" onClick={refetchAll}>
-              <RefreshCw className="mr-2 h-3.5 w-3.5" /> Refresh
-            </Button>
-            <Button size="sm" className="rounded-none" onClick={notifyReadOnly}>
-              Kick it off
-            </Button>
-          </div>
-        }
-      />
+  if (resolution.kind === "loading") {
+    return (
+      <Shell cid={null}>
+        <Section title="Identity">
+          <p className="hqx-sub">resolving viewer from server context…</p>
+        </Section>
+      </Shell>
+    );
+  }
 
-      <div className="space-y-6 p-6">
-        {isError && (
-          <Alert variant="destructive" className="rounded-none">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Could not load your plan</AlertTitle>
-            <AlertDescription className="flex items-center gap-3">
-              <span>The read failed. Nothing was changed.</span>
-              <Button variant="outline" size="sm" className="rounded-none" onClick={refetchAll}>
-                Try again
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
+  if (resolution.kind === "unauthorized") {
+    return (
+      <Shell cid={null}>
+        <Section title="Access">
+          <StateBlock state="UNAUTHORIZED" reasons={["server context did not resolve a viewer"]} />
+        </Section>
+      </Shell>
+    );
+  }
 
-        {isLoading && <p className="text-sm text-muted-foreground">Loading your plan...</p>}
-
-        {isEmpty && (
-          <EmptyState
-            icon={LayoutGrid}
-            title="No plans yet"
-            description="No plans yet · ask your COB to start one."
+  const body = (() => {
+    if (isLoading)
+      return (
+        <Section title="Plan">
+          <StateBlock state="LOADING" />
+        </Section>
+      );
+    if (isError)
+      return (
+        <Section title="Plan">
+          <StateBlock
+            state="DEGRADED"
+            reasons={["the read failed · nothing was changed", "reload the page to retry"]}
           />
-        )}
+        </Section>
+      );
+    if (isEmpty)
+      return (
+        <Section title="Plan">
+          <StateBlock
+            state="EMPTY_UNEXPECTED"
+            reasons={["no plans yet · ask your COB to start one"]}
+          />
+        </Section>
+      );
 
-        {!isLoading && !isError && !isEmpty && (
-          <Tabs defaultValue="board">
-            <TabsList className="rounded-none">
-              <TabsTrigger value="board" className="rounded-none font-mono text-xs uppercase tracking-wider">Board</TabsTrigger>
-              <TabsTrigger value="today" className="rounded-none font-mono text-xs uppercase tracking-wider">Today</TabsTrigger>
-              <TabsTrigger value="month" className="rounded-none font-mono text-xs uppercase tracking-wider">Month</TabsTrigger>
-              <TabsTrigger value="portfolio" className="rounded-none font-mono text-xs uppercase tracking-wider">Portfolio</TabsTrigger>
-            </TabsList>
+    if (view === "Board")
+      return (
+        <>
+          <FactRow>
+            {STAGES.map((s) => (
+              <FactTile
+                key={s}
+                k={s}
+                v={byStage[s].length}
+                tone={s === "In Audit" && byStage[s].length > 0 ? "warn" : undefined}
+              />
+            ))}
+          </FactRow>
+          {STAGES.map((stage) => (
+            <Section
+              key={stage}
+              title={`${stage} · ${byStage[stage].length}`}
+              source="rpc · hq_scheduled_read"
+              right={<Badge kind={STAGE_KIND[stage]}>{stage}</Badge>}
+            >
+              {byStage[stage].length === 0 ? (
+                <StateBlock state="EMPTY_EXPECTED" />
+              ) : (
+                <RegisterTable columns={scheduledCols} rows={byStage[stage]} rowKey={(r) => r.id} />
+              )}
+            </Section>
+          ))}
+        </>
+      );
 
-            {/* BOARD */}
-            <TabsContent value="board" className="mt-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-6">
-                {STAGES.map((stage) => (
-                  <div key={stage} className="border border-border bg-secondary/30">
-                    <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                      <MonoLabel>{stage}</MonoLabel>
-                      <span className={MONO}>{byStage[stage].length}</span>
-                    </div>
-                    <div className="space-y-2 p-2">
-                      {byStage[stage].length === 0 ? (
-                        <p className="px-1 py-3 text-xs text-muted-foreground">Nothing here.</p>
-                      ) : (
-                        byStage[stage].map((row) => (
-                          <ScheduledCard key={row.id} row={row} onOpen={() => setSelection({ kind: "scheduled", row })} />
-                        ))
-                      )}
-                      <button
-                        type="button"
-                        onClick={notifyReadOnly}
-                        className="w-full border border-dashed border-border px-2 py-2 text-left font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground hover:border-accent"
-                      >
-                        + Add to {stage}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
+    if (view === "Today")
+      return (
+        <>
+          <FactRow>
+            <FactTile k="Needs attention" v={today.attention.length} tone={today.attention.length ? "warn" : undefined} />
+            <FactTile k="Scheduled soon" v={today.soon.length} />
+            <FactTile k="Recently done" v={today.done.length} tone="good" />
+          </FactRow>
+          {[
+            { label: "Needs attention", rows: today.attention },
+            { label: "Scheduled soon", rows: today.soon },
+            { label: "Recently done", rows: today.done },
+          ].map((col) => (
+            <Section key={col.label} title={`${col.label} · ${col.rows.length}`} source="rpc · hq_scheduled_read">
+              {col.rows.length === 0 ? (
+                <StateBlock state="EMPTY_EXPECTED" />
+              ) : (
+                <RegisterTable columns={scheduledCols} rows={col.rows} rowKey={(r) => r.id} />
+              )}
+            </Section>
+          ))}
+        </>
+      );
 
-            {/* TODAY */}
-            <TabsContent value="today" className="mt-6">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-                {[
-                  { label: "Needs attention", rows: today.attention },
-                  { label: "Scheduled soon", rows: today.soon },
-                  { label: "Recently done", rows: today.done },
-                ].map((col) => (
-                  <Card key={col.label} className="rounded-none">
-                    <CardHeader className="border-b border-border py-3">
-                      <CardTitle className={cn(MONO, "text-foreground")}>
-                        {col.label} · {col.rows.length}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2 p-3">
-                      {col.rows.length === 0 ? (
-                        <p className="text-xs text-muted-foreground">Nothing here.</p>
-                      ) : (
-                        col.rows.map((row) => (
-                          <ScheduledCard key={row.id} row={row} onOpen={() => setSelection({ kind: "scheduled", row })} />
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </TabsContent>
-
-            {/* MONTH */}
-            <TabsContent value="month" className="mt-6">
-              <div className="mb-3 flex items-center justify-between">
-                <MonoLabel>{format(monthCursor, "MMMM yyyy")}</MonoLabel>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-none" onClick={() => setMonthCursor(addMonths(monthCursor, -1))} aria-label="Previous month">
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-8 w-8 rounded-none" onClick={() => setMonthCursor(addMonths(monthCursor, 1))} aria-label="Next month">
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              <div className="grid grid-cols-7 border-l border-t border-border">
-                {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-                  <div key={d} className={cn(MONO, "border-b border-r border-border px-2 py-1")}>{d}</div>
-                ))}
-                {monthDays.map((day) => {
-                  const events = scheduled.filter((r) => r.run_at && isSameDay(new Date(r.run_at), day));
-                  return (
-                    <div
-                      key={day.toISOString()}
-                      className={cn(
-                        "min-h-[104px] border-b border-r border-border p-1.5",
-                        !isSameMonth(day, monthCursor) && "bg-secondary/40",
-                        isSameDay(day, new Date()) && "ring-1 ring-inset ring-accent"
-                      )}
+    if (view === "Month")
+      return (
+        <Section
+          title={format(monthCursor, "MMMM yyyy")}
+          source="rpc · hq_scheduled_read"
+          right={
+            <span className="hqx-navbtns">
+              <button type="button" className="seg" onClick={() => setMonthCursor(addMonths(monthCursor, -1))} aria-label="Previous month">
+                ‹ prev
+              </button>
+              <button type="button" className="seg" onClick={() => setMonthCursor(addMonths(monthCursor, 1))} aria-label="Next month">
+                next ›
+              </button>
+            </span>
+          }
+        >
+          <div className="cal">
+            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+              <div key={d} className="cal-h">{d}</div>
+            ))}
+            {monthDays.map((day) => {
+              const events = scheduled.filter((r) => r.run_at && isSameDay(new Date(r.run_at), day));
+              const cls = [
+                "cal-d",
+                isSameMonth(day, monthCursor) ? "" : "out",
+                isSameDay(day, new Date()) ? "now" : "",
+              ]
+                .filter(Boolean)
+                .join(" ");
+              return (
+                <div key={day.toISOString()} className={cls}>
+                  <div className="cal-n">{format(day, "d")}</div>
+                  {events.map((row) => (
+                    <button
+                      key={row.id}
+                      type="button"
+                      className="cal-e"
+                      onClick={() => setSelection({ kind: "scheduled", row })}
                     >
-                      <div className={cn(MONO, "mb-1")}>{format(day, "d")}</div>
-                      <div className="space-y-1">
-                        {events.map((row) => (
-                          <button
-                            key={row.id}
-                            type="button"
-                            onClick={() => setSelection({ kind: "scheduled", row })}
-                            className="block w-full truncate border border-border bg-card px-1.5 py-1 text-left text-[11px] hover:border-accent"
-                          >
-                            <span className="font-mono">{format(new Date(row.run_at as string), "HH:mm")}</span>{" "}
-                            {row.title ?? "Untitled"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </TabsContent>
+                      <span className="rk">{format(new Date(row.run_at as string), "HH:mm")}</span>{" "}
+                      {row.title ?? "Untitled"}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      );
 
-            {/* PORTFOLIO */}
-            <TabsContent value="portfolio" className="mt-6 space-y-4">
-              {portfolio.map(([project, rows]) => (
-                <Card key={project} className="rounded-none">
-                  <CardHeader className="flex flex-row items-center justify-between border-b border-border py-3">
-                    <CardTitle className={cn(MONO, "text-foreground")}>{project}</CardTitle>
-                    <span className={MONO}>{rows.length} records</span>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Owner</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {rows.map((bp) => (
-                          <TableRow
-                            key={bp.id}
-                            className="cursor-pointer"
-                            onClick={() => setSelection({ kind: "blueprint", row: bp })}
-                          >
-                            <TableCell className="font-medium">{bp.title}</TableCell>
-                            <TableCell className="text-muted-foreground">{bp.owner ?? "·"}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="rounded-none font-mono text-[10px] uppercase tracking-wider">
-                                {bp.status ?? "unknown"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardContent>
-                </Card>
-              ))}
-            </TabsContent>
-          </Tabs>
-        )}
+    return (
+      <>
+        <FactRow>
+          <FactTile k="Blueprints" v={blueprints.length} />
+          <FactTile k="Projects" v={portfolio.length} />
+        </FactRow>
+        {portfolio.map(([project, rows]) => (
+          <Section key={project} title={`${project} · ${rows.length} records`} source="rpc · hq_blueprints_read">
+            <RegisterTable columns={blueprintCols} rows={rows} rowKey={(r) => r.id} />
+          </Section>
+        ))}
+      </>
+    );
+  })();
+
+  return (
+    <Shell cid={resolution.viewer.cid}>
+      <div className="hqx-ph">
+        <h1>Blueprints</h1>
+      </div>
+      <p className="hqx-sub">
+        Your build plan · from intent to done · {total} records · read live
+      </p>
+      <div className="prov">
+        <Badge kind="act">LIVE</Badge>
+        <span className="sep">·</span>
+        <span>rpc · hq_blueprints_read + hq_scheduled_read</span>
+        <span className="sep">·</span>
+        <span>{total} rows read</span>
+        <span className="sep">·</span>
+        <span>tenant projection</span>
+        <span className="sep">·</span>
+        <span>read only</span>
       </div>
 
-      {/* DRAWER */}
-      <Sheet open={!!selection} onOpenChange={(open) => !open && setSelection(null)}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-          {selection && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="text-left">
-                  {selection.kind === "scheduled" ? selection.row.title ?? "Untitled" : selection.row.title}
-                </SheetTitle>
-                <SheetDescription className="text-left">Build packet · read only</SheetDescription>
-              </SheetHeader>
+      <div className="segrow">
+        {VIEWS.map((v) => (
+          <button key={v} type="button" className={`seg ${view === v ? "on" : ""}`} onClick={() => setView(v)}>
+            {v}
+          </button>
+        ))}
+        <button type="button" className="seg brass" onClick={notifyReadOnly}>
+          Kick it off
+        </button>
+      </div>
 
+      {body}
+
+      {selection && (
+        <>
+          <div className="drw-scrim" onClick={() => setSelection(null)} />
+          <aside className="drw" role="dialog" aria-label="Build packet">
+            <div className="drw-h">
+              <div>
+                <h2>{selection.kind === "scheduled" ? selection.row.title ?? "Untitled" : selection.row.title}</h2>
+                <span className="rk">Build packet · read only</span>
+              </div>
+              <button type="button" className="seg" onClick={() => setSelection(null)}>close</button>
+            </div>
+            <div className="drw-b">
               {selection.kind === "scheduled" && (
-                <div className="mt-6 space-y-4">
-                  <dl className="grid grid-cols-2 gap-4">
-                    <div><MonoLabel>Program</MonoLabel><dd className="text-sm">{selection.row.program ?? "·"}</dd></div>
-                    <div><MonoLabel>Run at</MonoLabel><dd className="text-sm">{selection.row.run_at ? format(new Date(selection.row.run_at), "dd MMM yyyy · HH:mm") : "·"}</dd></div>
-                    <div><MonoLabel>Cadence</MonoLabel><dd className="text-sm">{selection.row.cadence ?? "·"}</dd></div>
-                    <div><MonoLabel>Spec status</MonoLabel><dd className="text-sm">{selection.row.spec_status ?? "·"}</dd></div>
-                    <div><MonoLabel>Gates</MonoLabel><dd className="text-sm">{gatesLabel(selection.row) ?? "·"}</dd></div>
-                    <div><MonoLabel>Stage</MonoLabel><dd className="text-sm">{stageOf(selection.row)}</dd></div>
-                  </dl>
+                <>
+                  <FactRow>
+                    <FactTile k="Program" v={selection.row.program ?? "\u2014"} />
+                    <FactTile k="Stage" v={stageOf(selection.row)} />
+                    <FactTile k="Gates" v={gatesLabel(selection.row)} />
+                    <FactTile k="Spec status" v={selection.row.spec_status ?? "\u2014"} />
+                  </FactRow>
+                  <div className="drw-f">
+                    <div className="k">Run at</div>
+                    <div className="v">
+                      {selection.row.run_at ? format(new Date(selection.row.run_at), "dd MMM yyyy · HH:mm") : "\u2014"}
+                    </div>
+                  </div>
+                  <div className="drw-f">
+                    <div className="k">Cadence</div>
+                    <div className="v">{selection.row.cadence ?? "\u2014"}</div>
+                  </div>
                   {selection.row.detail && (
-                    <div><MonoLabel>Detail</MonoLabel><p className="mt-1 whitespace-pre-wrap text-sm">{selection.row.detail}</p></div>
+                    <div className="drw-f">
+                      <div className="k">Detail</div>
+                      <div className="v">{selection.row.detail}</div>
+                    </div>
                   )}
                   {selection.row.build_spec != null && (
-                    <div>
-                      <MonoLabel>Build spec</MonoLabel>
-                      <pre className="mt-1 overflow-x-auto border border-border bg-secondary/40 p-3 font-mono text-[11px]">
+                    <div className="drw-f">
+                      <div className="k">Build spec</div>
+                      <pre className="drw-pre">
                         {typeof selection.row.build_spec === "string"
                           ? selection.row.build_spec
                           : JSON.stringify(selection.row.build_spec, null, 2)}
                       </pre>
                     </div>
                   )}
-                </div>
+                </>
               )}
 
               {linkedBlueprint && (
-                <div className="mt-6 space-y-4">
-                  {selection.kind === "scheduled" && <Separator />}
-                  <MonoLabel>Blueprint</MonoLabel>
-                  <div className="space-y-3">
-                    <div className="text-sm font-medium">{linkedBlueprint.title}</div>
-                    <dl className="grid grid-cols-2 gap-4">
-                      <div><MonoLabel>Status</MonoLabel><dd className="text-sm">{linkedBlueprint.status ?? "·"}</dd></div>
-                      <div><MonoLabel>Owner</MonoLabel><dd className="text-sm">{linkedBlueprint.owner ?? "·"}</dd></div>
-                    </dl>
-                    {linkedBlueprint.intent && (
-                      <div><MonoLabel>Intent</MonoLabel><p className="mt-1 text-sm">{linkedBlueprint.intent}</p></div>
-                    )}
-                    {linkedBlueprint.current_state && (
-                      <div><MonoLabel>Current state</MonoLabel><p className="mt-1 text-sm">{linkedBlueprint.current_state}</p></div>
-                    )}
-                    {linkedBlueprint.next_action && (
-                      <div><MonoLabel>Next action</MonoLabel><p className="mt-1 text-sm">{linkedBlueprint.next_action}</p></div>
-                    )}
-                    {milestonesOf(linkedBlueprint.milestones).length > 0 && (
-                      <div>
-                        <MonoLabel>Milestones</MonoLabel>
-                        <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-                          {milestonesOf(linkedBlueprint.milestones).map((m, i) => (
-                            <li key={i}>{m}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                <Section title="Blueprint" source="rpc · hq_blueprints_read">
+                  <div className="drw-f">
+                    <div className="k">Title</div>
+                    <div className="v">{linkedBlueprint.title}</div>
                   </div>
-                </div>
+                  <div className="drw-f">
+                    <div className="k">Status</div>
+                    <div className="v"><Badge kind={statusKind(linkedBlueprint.status)}>{linkedBlueprint.status ?? "unknown"}</Badge></div>
+                  </div>
+                  <div className="drw-f">
+                    <div className="k">Owner</div>
+                    <div className="v">{linkedBlueprint.owner ?? "\u2014"}</div>
+                  </div>
+                  {linkedBlueprint.intent && (
+                    <div className="drw-f">
+                      <div className="k">Intent</div>
+                      <div className="v">{linkedBlueprint.intent}</div>
+                    </div>
+                  )}
+                  {linkedBlueprint.current_state && (
+                    <div className="drw-f">
+                      <div className="k">Current state</div>
+                      <div className="v">{linkedBlueprint.current_state}</div>
+                    </div>
+                  )}
+                  {linkedBlueprint.next_action && (
+                    <div className="drw-f">
+                      <div className="k">Next action</div>
+                      <div className="v">{linkedBlueprint.next_action}</div>
+                    </div>
+                  )}
+                  {milestonesOf(linkedBlueprint.milestones).length > 0 && (
+                    <div className="drw-f">
+                      <div className="k">Milestones</div>
+                      <ul className="drw-ul">
+                        {milestonesOf(linkedBlueprint.milestones).map((m, i) => (
+                          <li key={i}>{m}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </Section>
               )}
 
-              <div className="mt-8">
-                <Button className="w-full rounded-none" onClick={notifyReadOnly}>
-                  Kick it off
-                </Button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
-    </main>
+              <button type="button" className="seg brass wide" onClick={notifyReadOnly}>
+                Kick it off
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+    </Shell>
   );
 }
+
+export default BlueprintsOS;
