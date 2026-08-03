@@ -1294,6 +1294,58 @@ export type Database = {
           },
         ]
       }
+      connector_events: {
+        Row: {
+          cid: string
+          client_id: string | null
+          created_at: string
+          detail: Json
+          event: string
+          id: string
+          surface: string | null
+        }
+        Insert: {
+          cid: string
+          client_id?: string | null
+          created_at?: string
+          detail?: Json
+          event: string
+          id?: string
+          surface?: string | null
+        }
+        Update: {
+          cid?: string
+          client_id?: string | null
+          created_at?: string
+          detail?: Json
+          event?: string
+          id?: string
+          surface?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connector_events_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "connector_events_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "connector_events_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       connector_installations: {
         Row: {
           authorized_at: string | null
@@ -3891,6 +3943,8 @@ export type Database = {
           bound_at: string | null
           bound_by: string | null
           cid: string | null
+          connector_connected_at: string | null
+          connector_first_client: string | null
           connectors: Json
           consent_signed_at: string | null
           consent_signed_name: string | null
@@ -3911,6 +3965,8 @@ export type Database = {
           bound_at?: string | null
           bound_by?: string | null
           cid?: string | null
+          connector_connected_at?: string | null
+          connector_first_client?: string | null
           connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
@@ -3931,6 +3987,8 @@ export type Database = {
           bound_at?: string | null
           bound_by?: string | null
           cid?: string | null
+          connector_connected_at?: string | null
+          connector_first_client?: string | null
           connectors?: Json
           consent_signed_at?: string | null
           consent_signed_name?: string | null
