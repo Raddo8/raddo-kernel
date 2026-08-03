@@ -7556,6 +7556,22 @@ export type Database = {
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
       hq_blueprints_read:
         | {
+            Args: never
+            Returns: {
+              current_state: string
+              id: string
+              intent: string
+              loop_cadence: string
+              milestones: Json
+              next_action: string
+              owner: string
+              status: string
+              title: string
+              updated_at: string
+              version: number
+            }[]
+          }
+        | {
             Args: { p_cid: string }
             Returns: {
               current_state: string
@@ -7588,6 +7604,25 @@ export type Database = {
             }[]
           }
       hq_scheduled_read:
+        | {
+            Args: never
+            Returns: {
+              blueprint_id: string
+              cadence: string
+              detail: string
+              gates_passed: number
+              gates_total: number
+              id: string
+              outcome: string
+              owner: string
+              program: string
+              run_at: string
+              seq: number
+              spec_status: string
+              status: string
+              title: string
+            }[]
+          }
         | {
             Args: { p_cid: string }
             Returns: {

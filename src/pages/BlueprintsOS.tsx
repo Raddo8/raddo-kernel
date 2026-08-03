@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, AlertTriangle, LayoutGrid } from 
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspace } from "@/lib/workspace-context";
+
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -136,25 +136,25 @@ function ScheduledCard({ row, onOpen }: { row: ScheduledRow; onOpen: () => void 
 }
 
 export default function BlueprintsOS() {
-  const { workspace, loading } = useWorkspace();
   const [selection, setSelection] = useState<Selection>(null);
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
 
+  // Tenant is resolved server-side from the caller's session; these RPCs take no arguments.
   const blueprintsQuery = useQuery({
-    queryKey: ["hq-blueprints", workspace?.id],
-    enabled: !!workspace?.id,
+    queryKey: ["hq-blueprints"],
+    enabled: true,
     queryFn: async (): Promise<BlueprintRow[]> => {
-      const { data, error } = await supabase.rpc("hq_blueprints_read", { p_workspace_id: workspace!.id });
+      const { data, error } = await supabase.rpc("hq_blueprints_read");
       if (error) throw error;
       return (data ?? []) as unknown as BlueprintRow[];
     },
   });
 
   const scheduledQuery = useQuery({
-    queryKey: ["hq-scheduled", workspace?.id],
-    enabled: !!workspace?.id,
+    queryKey: ["hq-scheduled"],
+    enabled: true,
     queryFn: async (): Promise<ScheduledRow[]> => {
-      const { data, error } = await supabase.rpc("hq_scheduled_read", { p_workspace_id: workspace!.id });
+      const { data, error } = await supabase.rpc("hq_scheduled_read");
       if (error) throw error;
       return (data ?? []) as unknown as ScheduledRow[];
     },
@@ -201,13 +201,8 @@ export default function BlueprintsOS() {
     return days;
   }, [monthCursor]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
+
+
 
   const isLoading = blueprintsQuery.isLoading || scheduledQuery.isLoading;
   const isError = blueprintsQuery.isError || scheduledQuery.isError;
