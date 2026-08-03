@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import cobMark from "@/assets/cob-square-dark.png";
+
 
 /**
  * Left-side navy brandpane used across auth-adjacent split compositions.
