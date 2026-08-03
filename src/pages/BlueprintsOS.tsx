@@ -201,13 +201,8 @@ export default function BlueprintsOS() {
     return days;
   }, [monthCursor]);
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
+
+
 
   const isLoading = blueprintsQuery.isLoading || scheduledQuery.isLoading;
   const isError = blueprintsQuery.isError || scheduledQuery.isError;
