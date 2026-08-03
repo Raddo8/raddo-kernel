@@ -2,7 +2,7 @@
  * Reproduces the golden master /hq surface (surface_version hq v29-r28):
  * navy .rail, white .filehead + .fh-strip, numbered .sec sections, flat .reg
  * register tables, .g badges. Styles come from hq-golden.css, scoped under .hqg.
- * No DB writes · every mutation路 routes through the COB Connector. */
+ * No DB writes · every change routes through the COB Connector. */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -436,7 +436,7 @@ export function BlueprintsOS() {
     if (isLoading)
       return (
         <Sec n={1} title="Plan">
-          <div className="bpempty">reading live \u00b7 one moment</div>
+          <div className="bpempty">reading live &middot; one moment</div>
         </Sec>
       );
     if (isError)
