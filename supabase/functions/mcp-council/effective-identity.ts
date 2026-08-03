@@ -25,6 +25,7 @@ export async function resolveEffectiveIdentity(
   supabaseAdmin: any | null,
   tenantClaim: string,
 ): Promise<IdentityResolution> {
+  const raw = String(tenantClaim ?? "").trim();
   const name = normalizeTenantClaim(tenantClaim);
 
   if (!supabaseAdmin) {
@@ -33,6 +34,21 @@ export async function resolveEffectiveIdentity(
   if (!name) {
     return { status: "UNRESOLVED", reason: "empty_claim", matched_name: null };
   }
+
+  // UNIT 1 · CID-FIRST. A connector identity minted by the onboarding
+  // provisioner carries the CID itself in app_metadata.tenant. A CID is an
+  // exact key and can never be ambiguous, so it is tried before any
+  // display-name lookup. Alias rows resolve through the same path.
+  try {
+    const { data, error } = await supabaseAdmin.rpc("resolve_cid", { k: raw });
+    const cid = typeof data === "string" && data.trim() ? data.trim() : null;
+    if (!error && cid) {
+      return { status: "RESOLVED", cid, matched_name: raw };
+    }
+  } catch (_e) {
+    // fall through to the display-name path
+  }
+
 
   try {
     const { data, error } = await supabaseAdmin
