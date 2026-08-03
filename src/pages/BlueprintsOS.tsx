@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, AlertTriangle, LayoutGrid } from 
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { useWorkspace } from "@/lib/workspace-context";
+
 import PageHeader from "@/components/PageHeader";
 import EmptyState from "@/components/EmptyState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
