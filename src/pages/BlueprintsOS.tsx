@@ -1,6 +1,8 @@
 /** BLUEPRINTS OS · client plane, LIVE reads, strictly READ-ONLY.
- * Adopts the hq-next design system: same shell, rail, Section / RegisterTable /
- * FactTile / Badge vocabulary and tokens. No shadcn chrome. No DB writes. */
+ * Renders the golden-master /hq structure (surface_version hq v29-r28):
+ * navy .rail, white .filehead with .fh-strip, numbered .sec sections,
+ * .reg register tables, .g badges. Styles live in hq-golden.css, scoped .hqg.
+ * No DB writes. */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -17,16 +19,8 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import "@/hq-next/styles/hq-next.css";
-import {
-  Section,
-  StateBlock,
-  Badge,
-  FactTile,
-  FactRow,
-  RegisterTable,
-  type Column,
-} from "@/hq-next/components/primitives";
+import "@/hq-next/styles/hq-golden.css";
+import cobMark from "@/assets/cob-mark.png.asset.json";
 import type { Viewer } from "@/hq-next/useHqRead";
 
 /** Shapes mirror the read-only RPC contracts; the page never writes. */
@@ -94,12 +88,13 @@ function stageOf(row: ScheduledRow): string {
 
 const STAGES = ["Queued", "Scheduled", "Awaiting GO", "In Motion", "In Audit", "Done"] as const;
 
+/** Golden `.g` badge modifiers · no new palette. */
 const STAGE_KIND: Record<string, string> = {
   Queued: "dorm",
   Scheduled: "sealed",
   "Awaiting GO": "pend",
-  "In Motion": "act",
-  "In Audit": "hi",
+  "In Motion": "live",
+  "In Audit": "owed",
   Done: "act",
 };
 
@@ -126,9 +121,13 @@ function statusKind(status: string | null): string {
   const s = (status ?? "").toLowerCase();
   if (s.includes("done") || s.includes("complete") || s === "active") return "act";
   if (s.includes("draft") || s.includes("propos") || s.includes("pending")) return "pend";
-  if (s.includes("block") || s.includes("fail")) return "hi";
+  if (s.includes("block") || s.includes("fail")) return "owed";
   if (s.includes("sealed") || s.includes("ready")) return "sealed";
   return "dorm";
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
 }
 
 /** Server-derived viewer · identical resolution path to src/hq-next/routes.tsx. */
@@ -174,23 +173,100 @@ function useResolvedViewer(): Resolution {
 const VIEWS = ["Board", "Today", "Month", "Portfolio"] as const;
 type View = (typeof VIEWS)[number];
 
-function Shell({ cid, children }: { cid: string | null; children: React.ReactNode }) {
+/** Golden rail · COB logo tile, PLAN group, numbered nav links. */
+function Rail({ cid }: { cid: string | null }) {
   return (
-    <div className="hqx">
-      <div className="hqx-app">
-        <nav className="hqx-rail">
-          <div className="hqx-brand">
-            <b>COB · HQ</b>
-            <span>{cid ?? "resolving\u2026"}</span>
+    <aside className="rail">
+      <div className="rail-brand">
+        <div className="mark">
+          <div className="mark-tile">
+            <img src={cobMark.url} alt="COB" style={{ width: "100%", height: "100%", borderRadius: 7 }} />
           </div>
           <div>
-            <div className="hqx-grp">Plan</div>
-            <a className="nl on" href="/hq/blueprints"><span>Blueprints</span></a>
-            <a className="nl" href="/hq-next"><span>HQ</span></a>
+            <div className="mark-name">COB · HQ</div>
+            <div className="mark-sub">{cid ?? "resolving\u2026"}</div>
           </div>
-        </nav>
-        <main className="hqx-main">{children}</main>
+        </div>
       </div>
+      <nav className="rail-nav">
+        <div className="nav-k">Plan</div>
+        <a className="nl on" href="/hq/blueprints">
+          <span className="nn">01</span>
+          <span>Blueprints</span>
+        </a>
+        <a className="nl" href="/hq">
+          <span className="nn">02</span>
+          <span>HQ</span>
+        </a>
+      </nav>
+      <div className="rail-foot">
+        <span className="dot" />
+        read live · read only
+      </div>
+    </aside>
+  );
+}
+
+/** Flat register table in the golden `.reg` idiom. */
+interface Column<T> {
+  key: string;
+  label: string;
+  width?: number;
+  render: (row: T) => React.ReactNode;
+}
+
+function Reg<T>({
+  columns,
+  rows,
+  rowKey,
+}: {
+  columns: Column<T>[];
+  rows: T[];
+  rowKey: (row: T) => string;
+}) {
+  return (
+    <table className="reg">
+      <thead>
+        <tr>
+          {columns.map((c) => (
+            <th key={c.key} style={c.width ? { width: c.width } : undefined}>
+              {c.label}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={rowKey(r)}>
+            {columns.map((c) => (
+              <td key={c.key}>{c.render(r)}</td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function Sec({
+  n,
+  title,
+  count,
+  children,
+}: {
+  n: string;
+  title: string;
+  count?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="sec">
+      <div className="sec-h">
+        <span className="n">{n}</span>
+        <h2>{title}</h2>
+        {count && <span className="cnt">{count}</span>}
+      </div>
+      {children}
     </div>
   );
 }
@@ -270,20 +346,38 @@ export function BlueprintsOS() {
         key: "title",
         label: "Title",
         render: (r) => (
-          <button type="button" className="lnk" onClick={() => setSelection({ kind: "scheduled", row: r })}>
+          <button
+            type="button"
+            className="bpb"
+            style={{ border: "none", background: "none", padding: 0, margin: 0, textAlign: "left" }}
+            onClick={() => setSelection({ kind: "scheduled", row: r })}
+          >
             <span className="rt">{r.title ?? "Untitled"}</span>
           </button>
         ),
       },
-      { key: "program", label: "Program", render: (r) => <Badge kind="private">{r.program ?? "\u2014"}</Badge> },
+      {
+        key: "program",
+        label: "Program",
+        width: 150,
+        render: (r) => <span className="g private">{r.program ?? "\u2014"}</span>,
+      },
       {
         key: "run",
         label: "Run at",
+        width: 190,
         render: (r) => (
-          <span className="rk">{r.run_at ? format(new Date(r.run_at), "dd MMM yyyy · HH:mm") : "\u2014"}</span>
+          <span className="rk">
+            {r.run_at ? format(new Date(r.run_at), "dd MMM yyyy · HH:mm") : "\u2014"}
+          </span>
         ),
       },
-      { key: "gates", label: "Gates", render: (r) => <span className="rk">{gatesLabel(r)}</span>, align: "right" },
+      {
+        key: "gates",
+        label: "Gates",
+        width: 70,
+        render: (r) => <span className="rk">{gatesLabel(r)}</span>,
+      },
     ],
     []
   );
@@ -294,16 +388,22 @@ export function BlueprintsOS() {
         key: "title",
         label: "Title",
         render: (r) => (
-          <button type="button" className="lnk" onClick={() => setSelection({ kind: "blueprint", row: r })}>
+          <button
+            type="button"
+            className="bpb"
+            style={{ border: "none", background: "none", padding: 0, margin: 0, textAlign: "left" }}
+            onClick={() => setSelection({ kind: "blueprint", row: r })}
+          >
             <span className="rt">{r.title}</span>
           </button>
         ),
       },
-      { key: "owner", label: "Owner", render: (r) => <span className="rd">{r.owner ?? "\u2014"}</span> },
+      { key: "owner", label: "Owner", width: 150, render: (r) => <span className="rd">{r.owner ?? "\u2014"}</span> },
       {
         key: "status",
         label: "Status",
-        render: (r) => <Badge kind={statusKind(r.status)}>{r.status ?? "unknown"}</Badge>,
+        width: 130,
+        render: (r) => <span className={`g ${statusKind(r.status)}`}>{r.status ?? "unknown"}</span>,
       },
     ],
     []
@@ -323,76 +423,79 @@ export function BlueprintsOS() {
 
   if (resolution.kind === "loading") {
     return (
-      <Shell cid={null}>
-        <Section title="Identity">
-          <p className="hqx-sub">resolving viewer from server context…</p>
-        </Section>
-      </Shell>
+      <div className="hqg">
+        <Rail cid={null} />
+        <main className="main">
+          <div className="filehead">
+            <div className="fh-top">
+              <div>
+                <div className="fh-sub">Blueprints</div>
+                <div className="fh-name">Your build plan</div>
+              </div>
+            </div>
+          </div>
+          <section className="page on">
+            <p className="bpempty">resolving viewer from server context…</p>
+          </section>
+        </main>
+      </div>
     );
   }
 
   if (resolution.kind === "unauthorized") {
     return (
-      <Shell cid={null}>
-        <Section title="Access">
-          <StateBlock state="UNAUTHORIZED" reasons={["server context did not resolve a viewer"]} />
-        </Section>
-      </Shell>
+      <div className="hqg">
+        <Rail cid={null} />
+        <main className="main">
+          <div className="filehead">
+            <div className="fh-top">
+              <div>
+                <div className="fh-sub">Access</div>
+                <div className="fh-name">Not available</div>
+              </div>
+            </div>
+          </div>
+          <section className="page on">
+            <p className="note">
+              <b>Unauthorized.</b> Server context did not resolve a viewer for this session.
+            </p>
+          </section>
+        </main>
+      </div>
     );
   }
 
   const body = (() => {
-    if (isLoading)
-      return (
-        <Section title="Plan">
-          <StateBlock state="LOADING" />
-        </Section>
-      );
+    if (isLoading) return <p className="bpempty">reading live…</p>;
     if (isError)
       return (
-        <Section title="Plan">
-          <StateBlock
-            state="DEGRADED"
-            reasons={["the read failed · nothing was changed", "reload the page to retry"]}
-          />
-        </Section>
+        <p className="note">
+          <b>The read failed.</b> Nothing was changed · reload the page to read again.
+        </p>
       );
     if (isEmpty)
       return (
-        <Section title="Plan">
-          <StateBlock
-            state="EMPTY_UNEXPECTED"
-            reasons={["no plans yet · ask your COB to start one"]}
-          />
-        </Section>
+        <p className="note">
+          <b>No plans yet.</b> Ask your COB to start one.
+        </p>
       );
 
     if (view === "Board")
       return (
         <>
-          <FactRow>
-            {STAGES.map((s) => (
-              <FactTile
-                key={s}
-                k={s}
-                v={byStage[s].length}
-                tone={s === "In Audit" && byStage[s].length > 0 ? "warn" : undefined}
-              />
-            ))}
-          </FactRow>
-          {STAGES.map((stage) => (
-            <Section
+          {STAGES.map((stage, i) => (
+            <Sec
               key={stage}
-              title={`${stage} · ${byStage[stage].length}`}
-              source="rpc · hq_scheduled_read"
-              right={<Badge kind={STAGE_KIND[stage]}>{stage}</Badge>}
+              n={pad2(i + 1)}
+              title={stage}
+              count={`${byStage[stage].length} records`}
             >
               {byStage[stage].length === 0 ? (
-                <StateBlock state="EMPTY_EXPECTED" />
+                <p className="bpempty">none</p>
               ) : (
-                <RegisterTable columns={scheduledCols} rows={byStage[stage]} rowKey={(r) => r.id} />
+                <Reg columns={scheduledCols} rows={byStage[stage]} rowKey={(r) => r.id} />
               )}
-            </Section>
+            </Sec>
           ))}
         </>
       );
@@ -400,67 +503,62 @@ export function BlueprintsOS() {
     if (view === "Today")
       return (
         <>
-          <FactRow>
-            <FactTile k="Needs attention" v={today.attention.length} tone={today.attention.length ? "warn" : undefined} />
-            <FactTile k="Scheduled soon" v={today.soon.length} />
-            <FactTile k="Recently done" v={today.done.length} tone="good" />
-          </FactRow>
           {[
             { label: "Needs attention", rows: today.attention },
             { label: "Scheduled soon", rows: today.soon },
             { label: "Recently done", rows: today.done },
-          ].map((col) => (
-            <Section key={col.label} title={`${col.label} · ${col.rows.length}`} source="rpc · hq_scheduled_read">
+          ].map((col, i) => (
+            <Sec key={col.label} n={pad2(i + 1)} title={col.label} count={`${col.rows.length} records`}>
               {col.rows.length === 0 ? (
-                <StateBlock state="EMPTY_EXPECTED" />
+                <p className="bpempty">none</p>
               ) : (
-                <RegisterTable columns={scheduledCols} rows={col.rows} rowKey={(r) => r.id} />
+                <Reg columns={scheduledCols} rows={col.rows} rowKey={(r) => r.id} />
               )}
-            </Section>
+            </Sec>
           ))}
         </>
       );
 
     if (view === "Month")
       return (
-        <Section
+        <Sec
+          n="01"
           title={format(monthCursor, "MMMM yyyy")}
-          source="rpc · hq_scheduled_read"
-          right={
-            <span className="hqx-navbtns">
-              <button type="button" className="seg" onClick={() => setMonthCursor(addMonths(monthCursor, -1))} aria-label="Previous month">
-                ‹ prev
-              </button>
-              <button type="button" className="seg" onClick={() => setMonthCursor(addMonths(monthCursor, 1))} aria-label="Next month">
-                next ›
-              </button>
-            </span>
-          }
+          count={`${scheduled.filter((r) => r.run_at && isSameMonth(new Date(r.run_at), monthCursor)).length} scheduled`}
         >
-          <div className="cal">
+          <div className="bpvs">
+            <button type="button" className="bpb" onClick={() => setMonthCursor(addMonths(monthCursor, -1))}>
+              ‹ prev
+            </button>
+            <button type="button" className="bpb" onClick={() => setMonthCursor(addMonths(monthCursor, 1))}>
+              next ›
+            </button>
+          </div>
+          <div className="bpcal" style={{ marginTop: 12 }}>
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="cal-h">{d}</div>
+              <div key={d} className="bpday" style={{ minHeight: 0 }}>
+                <div className="bpdn">{d.toUpperCase()}</div>
+              </div>
             ))}
             {monthDays.map((day) => {
               const events = scheduled.filter((r) => r.run_at && isSameDay(new Date(r.run_at), day));
-              const cls = [
-                "cal-d",
-                isSameMonth(day, monthCursor) ? "" : "out",
-                isSameDay(day, new Date()) ? "now" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
+              const cls = ["bpday", isSameDay(day, new Date()) ? "bptoday" : ""].filter(Boolean).join(" ");
               return (
-                <div key={day.toISOString()} className={cls}>
-                  <div className="cal-n">{format(day, "d")}</div>
+                <div
+                  key={day.toISOString()}
+                  className={cls}
+                  style={isSameMonth(day, monthCursor) ? undefined : { opacity: 0.42 }}
+                >
+                  <div className="bpdn">{format(day, "d")}</div>
                   {events.map((row) => (
                     <button
                       key={row.id}
                       type="button"
-                      className="cal-e"
+                      className="bpev"
+                      style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer" }}
                       onClick={() => setSelection({ kind: "scheduled", row })}
                     >
-                      <span className="rk">{format(new Date(row.run_at as string), "HH:mm")}</span>{" "}
+                      <b>{format(new Date(row.run_at as string), "HH:mm")}</b>
                       {row.title ?? "Untitled"}
                     </button>
                   ))}
@@ -468,97 +566,138 @@ export function BlueprintsOS() {
               );
             })}
           </div>
-        </Section>
+        </Sec>
       );
 
     return (
       <>
-        <FactRow>
-          <FactTile k="Blueprints" v={blueprints.length} />
-          <FactTile k="Projects" v={portfolio.length} />
-        </FactRow>
-        {portfolio.map(([project, rows]) => (
-          <Section key={project} title={`${project} · ${rows.length} records`} source="rpc · hq_blueprints_read">
-            <RegisterTable columns={blueprintCols} rows={rows} rowKey={(r) => r.id} />
-          </Section>
+        {portfolio.map(([project, rows], i) => (
+          <Sec key={project} n={pad2(i + 1)} title={project} count={`${rows.length} records`}>
+            <Reg columns={blueprintCols} rows={rows} rowKey={(r) => r.id} />
+          </Sec>
         ))}
       </>
     );
   })();
 
+  const awaitingGo = byStage["Awaiting GO"]?.length ?? 0;
+  const done = byStage["Done"]?.length ?? 0;
+
   return (
-    <Shell cid={resolution.viewer.cid}>
-      <div className="hqx-ph">
-        <h1>Blueprints</h1>
-      </div>
-      <p className="hqx-sub">
-        Your build plan · from intent to done · {total} records · read live
-      </p>
-      <div className="prov">
-        <Badge kind="act">LIVE</Badge>
-        <span className="sep">·</span>
-        <span>rpc · hq_blueprints_read + hq_scheduled_read</span>
-        <span className="sep">·</span>
-        <span>{total} rows read</span>
-        <span className="sep">·</span>
-        <span>tenant projection</span>
-        <span className="sep">·</span>
-        <span>read only</span>
-      </div>
+    <div className="hqg">
+      <Rail cid={resolution.viewer.cid} />
+      <main className="main">
+        <div className="filehead">
+          <div className="fh-top">
+            <div>
+              <div className="fh-sub">Blueprints</div>
+              <div className="fh-name">Your build plan</div>
+            </div>
+            <div className="fh-meta">
+              READ LIVE · TENANT PROJECTION
+              <br />
+              {total} ROWS READ · READ ONLY
+            </div>
+          </div>
+          <div className="fh-strip">
+            <div className="fh-cell">
+              <b>{blueprints.length}</b>
+              <span>blueprints</span>
+            </div>
+            <div className="fh-cell">
+              <b>{scheduled.length}</b>
+              <span>scheduled</span>
+            </div>
+            <div className="fh-cell">
+              <b>{awaitingGo}</b>
+              <span>awaiting go</span>
+            </div>
+            <div className="fh-cell">
+              <b>{done}</b>
+              <span>done</span>
+            </div>
+          </div>
+        </div>
 
-      <div className="segrow">
-        {VIEWS.map((v) => (
-          <button key={v} type="button" className={`seg ${view === v ? "on" : ""}`} onClick={() => setView(v)}>
-            {v}
-          </button>
-        ))}
-        <button type="button" className="seg brass" onClick={notifyReadOnly}>
-          Kick it off
-        </button>
-      </div>
+        <section className="page on">
+          <div className="bpvs">
+            <div className="segs">
+              {VIEWS.map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  className={`seg ${view === v ? "on" : ""}`}
+                  onClick={() => setView(v)}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button type="button" className="bpb bppri" onClick={notifyReadOnly}>
+              Kick it off
+            </button>
+          </div>
 
-      {body}
+          {body}
+        </section>
+      </main>
 
       {selection && (
         <>
-          <div className="drw-scrim" onClick={() => setSelection(null)} />
-          <aside className="drw" role="dialog" aria-label="Build packet">
-            <div className="drw-h">
+          <div className="bpdrw-scrim" onClick={() => setSelection(null)} />
+          <aside className="bpdrw" role="dialog" aria-label="Build packet">
+            <div className="bpdrw-h">
               <div>
                 <h2>{selection.kind === "scheduled" ? selection.row.title ?? "Untitled" : selection.row.title}</h2>
                 <span className="rk">Build packet · read only</span>
               </div>
-              <button type="button" className="seg" onClick={() => setSelection(null)}>close</button>
+              <button type="button" className="bpb" onClick={() => setSelection(null)}>
+                close
+              </button>
             </div>
-            <div className="drw-b">
+            <div className="bpdrw-b">
               {selection.kind === "scheduled" && (
                 <>
-                  <FactRow>
-                    <FactTile k="Program" v={selection.row.program ?? "\u2014"} />
-                    <FactTile k="Stage" v={stageOf(selection.row)} />
-                    <FactTile k="Gates" v={gatesLabel(selection.row)} />
-                    <FactTile k="Spec status" v={selection.row.spec_status ?? "\u2014"} />
-                  </FactRow>
-                  <div className="drw-f">
-                    <div className="k">Run at</div>
-                    <div className="v">
-                      {selection.row.run_at ? format(new Date(selection.row.run_at), "dd MMM yyyy · HH:mm") : "\u2014"}
+                  <div className="fh-strip" style={{ marginTop: 0, borderTop: "none" }}>
+                    <div className="fh-cell">
+                      <b>{selection.row.program ?? "\u2014"}</b>
+                      <span>program</span>
+                    </div>
+                    <div className="fh-cell">
+                      <b>{stageOf(selection.row)}</b>
+                      <span>stage</span>
+                    </div>
+                    <div className="fh-cell">
+                      <b>{gatesLabel(selection.row)}</b>
+                      <span>gates</span>
+                    </div>
+                    <div className="fh-cell">
+                      <b>{selection.row.spec_status ?? "\u2014"}</b>
+                      <span>spec status</span>
                     </div>
                   </div>
-                  <div className="drw-f">
+                  <div className="bpdrw-f">
+                    <div className="k">Run at</div>
+                    <div className="v">
+                      {selection.row.run_at
+                        ? format(new Date(selection.row.run_at), "dd MMM yyyy · HH:mm")
+                        : "\u2014"}
+                    </div>
+                  </div>
+                  <div className="bpdrw-f">
                     <div className="k">Cadence</div>
                     <div className="v">{selection.row.cadence ?? "\u2014"}</div>
                   </div>
                   {selection.row.detail && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Detail</div>
                       <div className="v">{selection.row.detail}</div>
                     </div>
                   )}
                   {selection.row.build_spec != null && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Build spec</div>
-                      <pre className="drw-pre">
+                      <pre className="bpdrw-pre">
                         {typeof selection.row.build_spec === "string"
                           ? selection.row.build_spec
                           : JSON.stringify(selection.row.build_spec, null, 2)}
@@ -569,58 +708,64 @@ export function BlueprintsOS() {
               )}
 
               {linkedBlueprint && (
-                <Section title="Blueprint" source="rpc · hq_blueprints_read">
-                  <div className="drw-f">
+                <Sec n="B" title="Blueprint">
+                  <div className="bpdrw-f">
                     <div className="k">Title</div>
                     <div className="v">{linkedBlueprint.title}</div>
                   </div>
-                  <div className="drw-f">
+                  <div className="bpdrw-f">
                     <div className="k">Status</div>
-                    <div className="v"><Badge kind={statusKind(linkedBlueprint.status)}>{linkedBlueprint.status ?? "unknown"}</Badge></div>
+                    <div className="v">
+                      <span className={`g ${statusKind(linkedBlueprint.status)}`}>
+                        {linkedBlueprint.status ?? "unknown"}
+                      </span>
+                    </div>
                   </div>
-                  <div className="drw-f">
+                  <div className="bpdrw-f">
                     <div className="k">Owner</div>
                     <div className="v">{linkedBlueprint.owner ?? "\u2014"}</div>
                   </div>
                   {linkedBlueprint.intent && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Intent</div>
                       <div className="v">{linkedBlueprint.intent}</div>
                     </div>
                   )}
                   {linkedBlueprint.current_state && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Current state</div>
                       <div className="v">{linkedBlueprint.current_state}</div>
                     </div>
                   )}
                   {linkedBlueprint.next_action && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Next action</div>
                       <div className="v">{linkedBlueprint.next_action}</div>
                     </div>
                   )}
                   {milestonesOf(linkedBlueprint.milestones).length > 0 && (
-                    <div className="drw-f">
+                    <div className="bpdrw-f">
                       <div className="k">Milestones</div>
-                      <ul className="drw-ul">
+                      <ul className="bpdrw-ul">
                         {milestonesOf(linkedBlueprint.milestones).map((m, i) => (
                           <li key={i}>{m}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-                </Section>
+                </Sec>
               )}
 
-              <button type="button" className="seg brass wide" onClick={notifyReadOnly}>
-                Kick it off
-              </button>
+              <div className="bpvs">
+                <button type="button" className="bpb bppri" onClick={notifyReadOnly}>
+                  Kick it off
+                </button>
+              </div>
             </div>
           </aside>
         </>
       )}
-    </Shell>
+    </div>
   );
 }
 
