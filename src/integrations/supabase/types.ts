@@ -822,6 +822,61 @@ export type Database = {
         }
         Relationships: []
       }
+      buddy_worklog: {
+        Row: {
+          blueprint_id: string | null
+          body_md: string | null
+          cid: string
+          confidence_e: number | null
+          confidence_r: number | null
+          created_at: string
+          id: string
+          kind: string
+        }
+        Insert: {
+          blueprint_id?: string | null
+          body_md?: string | null
+          cid: string
+          confidence_e?: number | null
+          confidence_r?: number | null
+          created_at?: string
+          id?: string
+          kind: string
+        }
+        Update: {
+          blueprint_id?: string | null
+          body_md?: string | null
+          cid?: string
+          confidence_e?: number | null
+          confidence_r?: number | null
+          created_at?: string
+          id?: string
+          kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "buddy_worklog_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "buddy_worklog_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "buddy_worklog_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       build_receipts: {
         Row: {
           build_id: string | null
@@ -3327,7 +3382,9 @@ export type Database = {
           cid: string
           created_at: string
           id: string
+          kernel_kind: string
           notes: string | null
+          persona_key: string | null
           status: string
           tenant_id: string
           verification_state: string | null
@@ -3338,7 +3395,9 @@ export type Database = {
           cid: string
           created_at?: string
           id?: string
+          kernel_kind?: string
           notes?: string | null
+          persona_key?: string | null
           status?: string
           tenant_id: string
           verification_state?: string | null
@@ -3349,7 +3408,9 @@ export type Database = {
           cid?: string
           created_at?: string
           id?: string
+          kernel_kind?: string
           notes?: string | null
+          persona_key?: string | null
           status?: string
           tenant_id?: string
           verification_state?: string | null
