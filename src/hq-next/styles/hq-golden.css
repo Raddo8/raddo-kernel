@@ -72,3 +72,17 @@
   box-shadow:0 1px 2px rgba(44,44,42,.04)}.hqg .pbtn:hover{border-color:var(--brass);color:var(--brass-deep);transform:translateY(-1px)}.hqg .pbtn.done{background:#EEF6F1;border-color:#C7DCD1;color:var(--ok);pointer-events:none}.hqg .pnote{font-size:11px;color:var(--ash);flex-basis:100%;margin-top:6px}.hqg .dcb{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:7.5px;
   letter-spacing:.12em;text-transform:uppercase;border-radius:12px;padding:3px 9px;margin-left:10px;
   border:1px solid var(--edge);background:var(--white);color:var(--ash);cursor:help}.hqg .dcb .dd{width:6px;height:6px;border-radius:50%;background:#C9C6BF}.hqg .dcb.fed{border-color:#C7DCD1;background:#EEF6F1;color:var(--ok)}.hqg .dcb.fed .dd{background:var(--ok)}.hqg .dcb.hand{border-color:#EBD5A8;background:#FBF1DD;color:var(--brass-deep)}.hqg .dcb.hand .dd{background:var(--brass)}
+
+/* Blueprints OS · build-packet drawer, tokens only (no new palette) */
+.hqg .bpdrw-scrim{position:fixed;inset:0;background:rgba(4,44,83,.36);z-index:60}
+.hqg .bpdrw{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--white);border-left:1px solid var(--edge);z-index:61;display:flex;flex-direction:column;overflow:hidden}
+.hqg .bpdrw-h{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;border-bottom:1px solid var(--edge);background:var(--white)}
+.hqg .bpdrw-h h2{font-family:var(--serif);font-size:17px;font-weight:700;color:var(--ink);line-height:1.2}
+.hqg .bpdrw-b{padding:16px 20px 40px;overflow-y:auto;flex:1}
+.hqg .bpdrw-f{padding:8px 0;border-bottom:1px solid var(--edge2)}
+.hqg .bpdrw-f .k{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ash)}
+.hqg .bpdrw-f .v{font-size:12.5px;color:var(--charcoal);margin-top:2px}
+.hqg .bpdrw-pre{font-family:var(--mono);font-size:10.5px;background:var(--paper);border:1px solid var(--edge);border-radius:6px;padding:9px 11px;white-space:pre-wrap;margin-top:4px;max-height:280px;overflow:auto}
+.hqg .bpdrw-ul{margin:4px 0 0 16px;font-size:12.5px}
+.hqg .bpvs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+.hqg .bpempty{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash);padding:12px 0}
