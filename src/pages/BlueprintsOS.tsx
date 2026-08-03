@@ -136,25 +136,25 @@ function ScheduledCard({ row, onOpen }: { row: ScheduledRow; onOpen: () => void 
 }
 
 export default function BlueprintsOS() {
-  const { workspace, loading } = useWorkspace();
   const [selection, setSelection] = useState<Selection>(null);
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
 
+  // Tenant is resolved server-side from the caller's session; these RPCs take no arguments.
   const blueprintsQuery = useQuery({
-    queryKey: ["hq-blueprints", workspace?.id],
-    enabled: !!workspace?.id,
+    queryKey: ["hq-blueprints"],
+    enabled: true,
     queryFn: async (): Promise<BlueprintRow[]> => {
-      const { data, error } = await supabase.rpc("hq_blueprints_read", { p_workspace_id: workspace!.id });
+      const { data, error } = await supabase.rpc("hq_blueprints_read");
       if (error) throw error;
       return (data ?? []) as unknown as BlueprintRow[];
     },
   });
 
   const scheduledQuery = useQuery({
-    queryKey: ["hq-scheduled", workspace?.id],
-    enabled: !!workspace?.id,
+    queryKey: ["hq-scheduled"],
+    enabled: true,
     queryFn: async (): Promise<ScheduledRow[]> => {
-      const { data, error } = await supabase.rpc("hq_scheduled_read", { p_workspace_id: workspace!.id });
+      const { data, error } = await supabase.rpc("hq_scheduled_read");
       if (error) throw error;
       return (data ?? []) as unknown as ScheduledRow[];
     },
