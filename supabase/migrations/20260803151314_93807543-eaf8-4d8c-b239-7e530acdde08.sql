@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.resolve_identity_v2(text, text) FROM sandbox_exec;
