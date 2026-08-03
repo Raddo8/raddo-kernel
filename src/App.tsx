@@ -50,6 +50,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import BuildView from "@/pages/BuildView";
 import BuildsAdmin from "@/pages/BuildsAdmin";
 import HqSurface from "@/pages/HqSurface";
+import BlueprintsOS from "@/pages/BlueprintsOS";
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
 import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
@@ -128,6 +129,7 @@ const App = () => (
 
             {/* Client zone */}
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
 
             {/* Operator zone · index is the full-viewport panel surface */}
             <Route path="/control" element={<AuthGate><FleetOperatorGate><PanelSurface /></FleetOperatorGate></AuthGate>} />

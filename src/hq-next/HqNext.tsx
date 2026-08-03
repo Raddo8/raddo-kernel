@@ -89,6 +89,10 @@ export function HqNext({ viewer }: HqNextProps) {
     <div className="hqx-app">
       <nav className="hqx-rail">
         <div className="hqx-brand"><b>COB · HQ</b><span>{viewer.displayName ?? viewer.cid} · {viewer.cid}</span></div>
+        <div><div className="hqx-grp">Plan</div>
+          <a className="nl" href="/hq/blueprints"><span>Blueprints</span></a>
+        </div>
+
         {groups.map(g => (<div key={g}><div className="hqx-grp">{g}</div>
           {visible.filter(n => n.group === g).map(n => (
             <button key={n.id} className={`nl ${page === n.id ? 'on' : ''}`} onClick={() => { setPage(n.id); try { location.hash = n.id; } catch {} }}>
