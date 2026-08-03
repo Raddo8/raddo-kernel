@@ -50,6 +50,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import BuildView from "@/pages/BuildView";
 import BuildsAdmin from "@/pages/BuildsAdmin";
 import HqSurface from "@/pages/HqSurface";
+import BlueprintsOS from "@/pages/BlueprintsOS";
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
 import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
