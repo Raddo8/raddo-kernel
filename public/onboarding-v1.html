@@ -668,7 +668,6 @@ const COB={
   const add=(k,v)=>{if(v==null)return;v=String(v&&v.n!=null?v.n:v).trim().replace(/^[\-\u00b7\*\d\.\)\s]+/,"");if(v.length<2)return;v=v.slice(0,44);if(w[k].length<24&&w[k].indexOf(v)<0)w[k].push(v);};
   const pull=(src)=>{if(!src||typeof src!=="object")return;["entities","people","systems","priorities"].forEach(k=>(Array.isArray(src[k])?src[k]:[]).forEach(x=>add(k,x)));};
   pull(U);pull(D);
-  if(!w.entities.length&&this.state.user){const st=this.state.study||{};add("entities",st.prof?this.state.user.name+" \u00b7 "+st.prof.slice(0,22):this.state.user.name+" \u00b7 principal");}
   (this.state.wishlist||[]).forEach(s=>add("systems",s));
   const CL={cob:"COB Connector",gmail:"Email",gcal:"Calendar",drive:"Files",books:"Accounting"};
   const cn=this.state.connectors||{};Object.keys(cn).forEach(k=>{if(cn[k]==="done")add("systems",CL[k]||k);});
