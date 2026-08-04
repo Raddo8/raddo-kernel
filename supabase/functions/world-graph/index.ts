@@ -18,7 +18,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
 
-const BUILD_ID = "w1c.1";
+const BUILD_ID = "w1d.1";
 const HIDDEN = ["privileged", "third-party-npi"];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
