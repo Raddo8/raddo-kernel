@@ -7560,6 +7560,7 @@ export type Database = {
           cid: string
           confidence: number | null
           created_at: string
+          created_by: string | null
           grade: string
           id: string
           miner: string | null
@@ -7582,6 +7583,7 @@ export type Database = {
           cid: string
           confidence?: number | null
           created_at?: string
+          created_by?: string | null
           grade?: string
           id?: string
           miner?: string | null
@@ -7604,6 +7606,7 @@ export type Database = {
           cid?: string
           confidence?: number | null
           created_at?: string
+          created_by?: string | null
           grade?: string
           id?: string
           miner?: string | null
