@@ -344,6 +344,40 @@
 
 
 
+    // 2R4 · connector truth is the SERVER record. The connector-success signal
+    // writes connector_connected_at / connector_first_client on onboarding_tenants;
+    // the surface renders from that, never from a local "mark connected" click.
+    function applyServerRecord(t) {
+      if (!t) return;
+      var prev = COB.state.server || {};
+      var next = {
+        connector_connected_at: t.connector_connected_at || null,
+        connector_first_client: t.connector_first_client || null,
+        status: t.status || null,
+      };
+      if (prev.connector_connected_at === next.connector_connected_at &&
+          prev.connector_first_client === next.connector_first_client &&
+          prev.status === next.status) return false;
+      COB.state.server = next;
+      if (next.connector_connected_at) {
+        COB.state.connectors = COB.state.connectors || {};
+        COB.state.connectors.cob = "done";
+        if (!COB.state.connectedAt) COB.state.connectedAt = next.connector_connected_at;
+      }
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      return true;
+    }
+
+    async function pollServerRecord() {
+      if (!TENANT) return;
+      try {
+        var r = await sb.from("onboarding_tenants")
+          .select("status,connector_connected_at,connector_first_client")
+          .eq("id", TENANT.id).maybeSingle();
+        if (r && r.data && applyServerRecord(r.data)) rerender();
+      } catch (e) {}
+    }
+
     async function hydrateFromServer() {
       if (HYDRATED) return;
       HYDRATED = true;
@@ -351,6 +385,7 @@
       var user = s.data.session && s.data.session.user;
       if (!user) { HYDRATED = false; return; }
       TENANT = await loadOrCreateTenant(user.id, user.email || "");
+      applyServerRecord(TENANT);
 
       // Pull the authoritative onboarding_state row.
       var serverState = null;
@@ -415,6 +450,7 @@
       rerender();
       subscribeRealtime();
       loadFactsInitial();
+      setInterval(pollServerRecord, 20000);
 
       // Tell the host the record is hydrated so it can reveal the surface.
       try {
