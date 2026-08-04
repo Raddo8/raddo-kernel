@@ -41,6 +41,8 @@ export type TaylorSharedContext = {
   progress: Array<{ step_key: string; status: string; source: string | null }>;
   /** DRY-RUN 2R5 · item 5. Standing corrections. These beat every raw fact. */
   corrections: Correction[];
+  /** T1 · standing boundaries recorded by boundaries_record. Honored every turn. */
+  boundaries: Array<{ id: string; text: string; rank: number | null }>;
 };
 
 /** A factual correction the client made in conversation, cited to its message. */
@@ -191,6 +193,7 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
     material_index: [],
     progress: [],
     corrections: [],
+    boundaries: [],
   };
 
   // DRY-RUN 2R5 · item 5. Corrections load FIRST so nothing below is served raw.
@@ -205,6 +208,22 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
       .then((r: any) => (r?.data ?? []) as Correction[]),
     [],
     "taylor_corrections_read_failed",
+  );
+
+  // T1 · standing boundaries. Read on every turn so nothing out of bounds
+  // is ever pursued and the no store rule is never violated.
+  ctx.boundaries = await safe<Array<{ id: string; text: string; rank: number | null }>>(
+    admin
+      .from("directives")
+      .select("id, text, rank")
+      .eq("cid", cid)
+      .eq("scope", "SITUATIONAL")
+      .eq("status", "active")
+      .order("rank", { ascending: true })
+      .limit(80)
+      .then((r: any) => (r?.data ?? []) as Array<{ id: string; text: string; rank: number | null }>),
+    [],
+    "taylor_boundaries_read_failed",
   );
 
 
@@ -336,6 +355,12 @@ export function contextDigest(ctx: TaylorSharedContext): string {
       lines.push(`  right: ${String(c.corrected_to).slice(0, 240)}`);
     }
   }
+  if (ctx.boundaries?.length) {
+    lines.push("standing boundaries the client set. honor these every turn, without exception:");
+    for (const b of ctx.boundaries.slice(0, 30)) lines.push(`  ${String(b.text).slice(0, 300)}`);
+  }
+
+
 
   if (ctx.business.display_name) lines.push(`business: ${ctx.business.display_name}`);
   if (ctx.business.principal) lines.push(`principal: ${ctx.business.principal}`);

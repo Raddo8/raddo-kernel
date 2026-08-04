@@ -44,6 +44,17 @@ import {
   resolveThread as taylorResolveThread,
 } from "../_shared/taylor-shared.ts";
 import { postConnectorIntroVerified, setCobName, taylorConnectorIntro } from "../_shared/cob-name.ts";
+import {
+  boundariesRecord,
+  consentRecord,
+  deepdiveCommit,
+  harvestRecord,
+  kernelInputsCheck,
+  laneRecord,
+  recordConnections,
+  taylorHandoff,
+  wireGrantsRecord,
+} from "./taylor-tools.ts";
 
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
@@ -2500,7 +2511,7 @@ const TOOL_RECORD_INTAKE = {
   name: "record_intake",
   title: "Record Intake",
   description:
-    "Record something the client just told TAYLOR, or something TAYLOR observed with consent, to the client's permanent record. One topic per call.",
+    "Record something the client just told TAYLOR, or something TAYLOR observed with consent, to the client's permanent record. One topic per call. Optionally attach the connections inventory: the systems the client runs on, each with a category, whether it is personal or professional, and whether access has been granted yet.",
   annotations: { title: "Record Intake" },
   inputSchema: {
     type: "object",
@@ -2511,11 +2522,218 @@ const TOOL_RECORD_INTAKE = {
       },
       content: { type: "string", minLength: 3, maxLength: 4000 },
       source: { type: "string", enum: ["fireside-connector", "discovery-sweep"] },
+      connections: {
+        type: "array",
+        maxItems: 100,
+        description: "Typed connections inventory. Pass with a topic, or on its own to record only the inventory.",
+        items: {
+          type: "object",
+          properties: {
+            system: { type: "string", minLength: 1, maxLength: 80 },
+            category: { type: "string", maxLength: 40, description: "email, calendar, files, accounting, crm, chat, other" },
+            role: { type: "string", enum: ["personal", "professional", "both"] },
+            grant_status: { type: "string", enum: ["not-requested", "pending", "granted", "declined", "revoked"] },
+          },
+          required: ["system"],
+          additionalProperties: false,
+        },
+      },
     },
-    required: ["topic", "content", "source"],
+    required: [],
     additionalProperties: false,
   },
 };
+
+// ── TAYLOR BUILD UNIT · T1 · gate coverage tools ──────────────────────────
+const TOOL_CONSENT_RECORD = {
+  name: "consent_record",
+  title: "Consent Record",
+  description:
+    "Stamp the client's agreement to scope on their onboarding record. Idempotent: calling again updates the stamp rather than adding a second consent.",
+  annotations: { title: "Consent Record" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      signed_name: { type: "string", minLength: 2, maxLength: 160, description: "The name the client typed to accept." },
+      accepted: { type: "boolean", description: "True only when the client explicitly accepted." },
+    },
+    required: ["signed_name", "accepted"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_LANE_RECORD = {
+  name: "lane_record",
+  title: "Lane Record",
+  description:
+    "Record the three quick questions and set the client's lane. Any yes puts them in the regulated lane, otherwise standard.",
+  annotations: { title: "Lane Record" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      holds_financial_account_data: { type: "boolean", description: "Does the client or their business hold customers' financial account data." },
+      handles_regulated_data: { type: "boolean", description: "Do they handle health, legal or otherwise regulated records." },
+      custodies_client_funds: { type: "boolean", description: "Do they hold or move client money." },
+      notes: { type: "string", maxLength: 800 },
+    },
+    required: ["holds_financial_account_data", "handles_regulated_data", "custodies_client_funds"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_BOUNDARIES_RECORD = {
+  name: "boundaries_record",
+  title: "Boundaries Record",
+  description:
+    "Capture what is in bounds, what is out of bounds, and the narrow no store rule as standing directives the COB honors every turn.",
+  annotations: { title: "Boundaries Record" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      in_bounds: { type: "array", maxItems: 40, items: { type: "string", minLength: 2, maxLength: 600 } },
+      out_of_bounds: { type: "array", maxItems: 40, items: { type: "string", minLength: 2, maxLength: 600 } },
+      no_store_rule: { type: "string", maxLength: 600, description: "The one narrow category never to be stored." },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const WORLD_ITEM_LIST = {
+  type: "array",
+  maxItems: 100,
+  items: {
+    type: "object",
+    properties: {
+      title: { type: "string", minLength: 1, maxLength: 160 },
+      body: { type: "string", maxLength: 4000 },
+      confidence: { type: "number", minimum: 0, maximum: 1 },
+      provenance: { type: "object", description: "Where this came from: surface, document, message id." },
+      provenance_refs: { type: "array", maxItems: 25, items: { type: "string", maxLength: 200 } },
+    },
+    required: ["title"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_DEEPDIVE_COMMIT = {
+  name: "deepdive_commit",
+  title: "Deep Dive Commit",
+  description:
+    "Commit the deep dive as typed, provenanced records: the understanding of the business, its entities, its people, its priorities and its systems, plus the brief. Each becomes a staged world item.",
+  annotations: { title: "Deep Dive Commit" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      understanding: {
+        type: "object",
+        properties: {
+          biz: WORLD_ITEM_LIST,
+          entities: WORLD_ITEM_LIST,
+          people: WORLD_ITEM_LIST,
+          priorities: WORLD_ITEM_LIST,
+          systems: WORLD_ITEM_LIST,
+        },
+        additionalProperties: false,
+      },
+      brief: { type: "string", maxLength: 8000 },
+      provenance: { type: "object", description: "Shared provenance applied to every item." },
+      synthetic: { type: "boolean", description: "True only for test tenants." },
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_HARVEST_RECORD = {
+  name: "harvest_record",
+  title: "Harvest Record",
+  description:
+    "Record distilled foundation material as typed, provenanced world items. Distilled items only, never raw dumps. Provenance is required on every item.",
+  annotations: { title: "Harvest Record" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        minItems: 1,
+        maxItems: 100,
+        items: {
+          type: "object",
+          properties: {
+            type: { type: "string", maxLength: 40, description: "business, entity, person, priority, system, note." },
+            title: { type: "string", minLength: 1, maxLength: 160 },
+            body: { type: "string", minLength: 1, maxLength: 4000 },
+            confidence: { type: "number", minimum: 0, maximum: 1 },
+            provenance: { type: "object", description: "Required. Folder, export, document or conversation this came from." },
+            provenance_refs: { type: "array", maxItems: 25, items: { type: "string", maxLength: 200 } },
+          },
+          required: ["title", "body", "provenance"],
+          additionalProperties: false,
+        },
+      },
+      synthetic: { type: "boolean" },
+    },
+    required: ["items"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_WIRE_GRANTS_RECORD = {
+  name: "wire_grants_record",
+  title: "Wire Grants Record",
+  description:
+    "Record which sources the client has authorized for the pull: email, calendar, files, accounting, CRM, chat. This is the authorization ledger, not the pull itself.",
+  annotations: { title: "Wire Grants Record" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      grants: {
+        type: "array",
+        minItems: 1,
+        maxItems: 40,
+        items: {
+          type: "object",
+          properties: {
+            source: { type: "string", enum: ["email", "calendar", "files", "accounting", "crm", "chat", "other"] },
+            provider: { type: "string", maxLength: 80, description: "The named system, for example the mail or accounting product." },
+            status: { type: "string", enum: ["pending", "granted", "declined", "revoked"] },
+            granted_at: { type: "string", maxLength: 40 },
+            notes: { type: "string", maxLength: 400 },
+          },
+          required: ["source", "status"],
+          additionalProperties: false,
+        },
+      },
+    },
+    required: ["grants"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_KERNEL_INPUTS_CHECK = {
+  name: "kernel_inputs_check",
+  title: "Kernel Inputs Check",
+  description:
+    "Read only. Check whether the compiled record covers every kernel fill: identity, entities, voice signals, roster, office refs, consent, boundaries, dive and fireside. Returns the gaps and what closes each one.",
+  annotations: { title: "Kernel Inputs Check", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_TAYLOR_HANDOFF = {
+  name: "taylor_handoff",
+  title: "TAYLOR Handoff",
+  description:
+    "Pass the baton. Posts TAYLOR's handoff message into the shared thread and marks setup handed off. Idempotent: a second call reports that handoff already happened.",
+  annotations: { title: "TAYLOR Handoff" },
+  inputSchema: {
+    type: "object",
+    properties: { message: { type: "string", maxLength: 2000, description: "Optional custom handoff wording." } },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
 
 const TOOL_TAYLOR_THREAD_READ = {
   name: "taylor_thread_read",
@@ -2571,7 +2789,7 @@ const TOOL_MEMORY_SEARCH = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -3471,11 +3689,40 @@ Deno.serve(async (req) => {
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
 
+      // ── TAYLOR BUILD UNIT · T1 · gate coverage tools ────────────────────
+      if (
+        name === "consent_record" || name === "lane_record" || name === "boundaries_record" ||
+        name === "deepdive_commit" || name === "harvest_record" || name === "wire_grants_record" ||
+        name === "kernel_inputs_check" || name === "taylor_handoff"
+      ) {
+        const cid = pctx.legacy_cid;
+        if (!cid || !supabaseAdmin) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        let out: unknown;
+        switch (name) {
+          case "consent_record": out = await consentRecord(supabaseAdmin, cid, args); break;
+          case "lane_record": out = await laneRecord(supabaseAdmin, cid, args); break;
+          case "boundaries_record": out = await boundariesRecord(supabaseAdmin, cid, args); break;
+          case "deepdive_commit": out = await deepdiveCommit(supabaseAdmin, cid, args); break;
+          case "harvest_record": out = await harvestRecord(supabaseAdmin, cid, args); break;
+          case "wire_grants_record": out = await wireGrantsRecord(supabaseAdmin, cid, args); break;
+          case "kernel_inputs_check": out = await kernelInputsCheck(supabaseAdmin, cid); break;
+          default: out = await taylorHandoff(supabaseAdmin, cid, args); break;
+        }
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out as any, isError: false });
+      }
+
       if (name === "record_intake") {
         const topic = typeof args?.topic === "string" ? args.topic : "";
         const content = typeof args?.content === "string" ? args.content.trim() : "";
         const source = typeof args?.source === "string" ? args.source : "";
-        if (!INTAKE_TOPICS.has(topic) || !INTAKE_SOURCES.has(source) || content.length < 3 || content.length > 4000) {
+        const connections = Array.isArray(args?.connections) ? args.connections : null;
+        // Backward compatible: the original three-argument call is unchanged.
+        // A call carrying only `connections` records the inventory alone.
+        const wantsIntake = Boolean(topic || content || source) || !connections;
+        if (wantsIntake && (!INTAKE_TOPICS.has(topic) || !INTAKE_SOURCES.has(source) || content.length < 3 || content.length > 4000)) {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
@@ -3484,32 +3731,46 @@ Deno.serve(async (req) => {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
         }
-        const { error: intakeErr } = await supabaseAdmin
-          .from("client_intake")
-          .insert({ cid, topic, content_md: content, source });
-        if (intakeErr) {
-          console.error("record_intake_failed", intakeErr.message);
-          const out = { ok: false, reason: "save-failed" };
-          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
-        }
-        // Shared thread mirror · the panel must see what the connector collected.
-        try {
-          const threadId = await taylorResolveThread(supabaseAdmin, cid);
-          if (threadId) {
-            await taylorPostMessage(supabaseAdmin, {
-              threadId,
-              cid,
-              role: "client",
-              surface: "connector",
-              content: `[${topic}] ${content}`,
-            });
+        if (wantsIntake) {
+          const { error: intakeErr } = await supabaseAdmin
+            .from("client_intake")
+            .insert({ cid, topic, content_md: content, source });
+          if (intakeErr) {
+            console.error("record_intake_failed", intakeErr.message);
+            const out = { ok: false, reason: "save-failed" };
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
           }
-        } catch (e) {
-          console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+          // Shared thread mirror · the panel must see what the connector collected.
+          try {
+            const threadId = await taylorResolveThread(supabaseAdmin, cid);
+            if (threadId) {
+              await taylorPostMessage(supabaseAdmin, {
+                threadId,
+                cid,
+                role: "client",
+                surface: "connector",
+                content: `[${topic}] ${content}`,
+              });
+            }
+          } catch (e) {
+            console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+          }
         }
-        const out = { ok: true, recorded: topic };
+        let inventory: unknown = null;
+        if (connections) {
+          const res = await recordConnections(supabaseAdmin, cid, connections);
+          if (!res.ok) {
+            const bad = { ok: false, reason: res.reason };
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
+          }
+          inventory = { recorded: res.recorded, connection_ids: res.connection_ids };
+        }
+        const out = wantsIntake
+          ? { ok: true, recorded: topic, ...(inventory ? { connections: inventory } : {}) }
+          : { ok: true, recorded: "connections", connections: inventory };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
+
 
       if (name === "setup_progress") {
         const step = typeof args?.step === "string" ? args.step : "";
