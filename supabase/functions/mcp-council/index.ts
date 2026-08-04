@@ -3523,7 +3523,35 @@ Deno.serve(async (req) => {
             });
           }
           await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
+          // UNIT 3 · on the FIRST connector session TAYLOR introduces himself
+          // into the shared thread, so the /start panel carries the same words.
+          try {
+            if (supabaseAdmin && resolvedCid) {
+              const threadId = await taylorResolveThread(supabaseAdmin, resolvedCid);
+              if (threadId) {
+                const { data: priorIntro } = await supabaseAdmin
+                  .from("taylor_messages")
+                  .select("id")
+                  .eq("thread_id", threadId)
+                  .eq("role", "taylor")
+                  .eq("surface", "connector")
+                  .limit(1);
+                if (!Array.isArray(priorIntro) || priorIntro.length === 0) {
+                  await taylorPostMessage(supabaseAdmin, {
+                    threadId,
+                    cid: resolvedCid,
+                    role: "taylor",
+                    surface: "connector",
+                    content: taylorConnectorIntro(client.cob_name, client.first_name),
+                  });
+                }
+              }
+            }
+          } catch (e) {
+            console.error("welcome_intro_thread_post_failed", e instanceof Error ? e.message : String(e));
+          }
           const payload = buildWelcomePayload(client);
+
           return rpcResult(id, {
             content: [{ type: "text", text: payload.instructions }],
             structuredContent: payload,
