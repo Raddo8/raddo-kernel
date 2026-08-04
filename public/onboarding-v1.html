@@ -903,7 +903,14 @@ const COB={
  consTab(k){this._consTab=k;this.render();},
  stepCheck(k){this.state.checks=this.state.checks||{};this.state.checks[k]=!this.state.checks[k];this.save();this.render();},
  consent(){const v=document.getElementById('c-name').value.trim();if(v.length<4){this.toast("Type your full name to sign.");return;}
-  this.state.consentName=v;this.state.consentAt=new Date().toISOString();this.save();this.go("#/gate");},
+  const at=new Date().toISOString();
+  this.state.consentName=v;this.state.consentAt=at;this.save();
+  /* DRY-RUN 2R5 · item 3. CONSENT HAS ONE HOME. The signature is written to the
+     authoritative server columns; the local copy is only a mirror of it. */
+  this.state.server=this.state.server||{};
+  this.state.server.consent_signed_at=at;this.state.server.consent_signed_name=v;
+  try{if(typeof this._onConsent==="function")this._onConsent({at:at,name:v});}catch(e){}
+  this.go("#/gate");},
  vGate(){const g=this.state.gate;
   return `<div class="q-wrap">${this.backbar()}
   <p class="kicker">three quick questions</p><h1>Three questions before <span class="brass-u">we start</span>.</h1>
