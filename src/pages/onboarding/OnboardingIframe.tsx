@@ -481,6 +481,16 @@ export default function OnboardingIframe({
       {phase.kind === "ready" && hydrated && taylorVisible && (
         <TaylorPanel pageCtx={`page:${screen}`} />
       )}
+      {welcome.show && welcome.state && (
+        <WelcomeParty
+          cobName={welcome.state.cob_name}
+          displayName={welcome.state.display_name}
+          firstName={firstNameOf(welcome.state.principal)}
+          onRename={welcome.rename}
+          onDismiss={() => void welcome.dismiss()}
+        />
+      )}
+
     </>
 
   );
