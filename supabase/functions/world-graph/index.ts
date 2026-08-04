@@ -454,7 +454,7 @@ async function actionEntities(p: Principal) {
   const allowed = readableSensitivities(p);
   const { data, error } = await admin!
     .from("world_entities")
-    .select("id, etype, name, tag, status, sensitivity, merged_into, updated_at")
+    .select("id, etype, name, tag, status, sensitivity, resolution_keys, merged_into, updated_at")
     .eq("cid", p.cid)
     .is("merged_into", null)
     .in("sensitivity", allowed)
