@@ -1,0 +1,110 @@
+/**
+ * UNIT 2 · TAYLOR panel backend (app surface of the shared thread).
+ *
+ * Actions:
+ *   read  -> thread messages (both surfaces) + shared context
+ *   post  -> append the client's message, call the model, append TAYLOR's reply
+ *
+ * Every failure state has its OWN error string. Nothing is ever a generic
+ * exception, and no two different failures share a code.
+ */
+import { createClient } from "npm:@supabase/supabase-js@2";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
+import {
+  contextDigest,
+  postThreadMessage,
+  readSharedContext,
+  readThreadMessages,
+  renderThreadForModel,
+  resolveThread,
+  taylorModelId,
+  TAYLOR_SYSTEM,
+} from "../_shared/taylor-shared.ts";
+
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader?.startsWith("Bearer ")) return json({ error: "taylor_missing_bearer" }, 401);
+
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const ANON = Deno.env.get("SUPABASE_ANON_KEY");
+  const SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !ANON) return json({ error: "taylor_runtime_supabase_config_missing" }, 500);
+  if (!SERVICE) return json({ error: "taylor_runtime_service_role_missing" }, 500);
+
+  const asUser = createClient(SUPABASE_URL, ANON, { global: { headers: { Authorization: authHeader } } });
+  const admin = createClient(SUPABASE_URL, SERVICE, { auth: { persistSession: false, autoRefreshToken: false } });
+
+  const token = authHeader.replace("Bearer ", "");
+  const { data: claims, error: authErr } = await asUser.auth.getClaims(token);
+  if (authErr || !claims?.claims) return json({ error: "taylor_token_rejected" }, 401);
+
+  // CID is DERIVED server side from the caller's own membership. Never accepted.
+  const { data: cidData, error: cidErr } = await asUser.rpc("current_cid");
+  if (cidErr) return json({ error: "taylor_cid_lookup_failed", detail: cidErr.message }, 500);
+  const cid = typeof cidData === "string" ? cidData.trim() : "";
+  if (!cid) return json({ error: "taylor_no_tenant_for_caller" }, 403);
+
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const action = String((body as any)?.action || "read");
+
+  const threadId = await resolveThread(admin, cid);
+  if (!threadId) return json({ error: "taylor_thread_unavailable" }, 500);
+
+  if (action === "read") {
+    const [messages, context] = await Promise.all([readThreadMessages(admin, threadId), readSharedContext(admin, cid)]);
+    return json({ thread_id: threadId, cid, messages, context, model: taylorModelId(Deno.env) });
+  }
+
+  if (action !== "post") return json({ error: "taylor_unknown_action" }, 400);
+
+  const message = String((body as any)?.message || "").trim().slice(0, 4000);
+  const pageCtx = String((body as any)?.page_ctx || "").slice(0, 200);
+  if (!message) return json({ error: "taylor_empty_message" }, 400);
+
+  const key = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) return json({ error: "taylor_model_key_unresolvable" }, 503);
+  const model = taylorModelId(Deno.env);
+
+  const posted = await postThreadMessage(admin, { threadId, cid, role: "client", surface: "start_panel", content: message });
+  if (!posted) return json({ error: "taylor_client_message_not_recorded" }, 500);
+
+  const [messages, context] = await Promise.all([readThreadMessages(admin, threadId), readSharedContext(admin, cid)]);
+  const history = renderThreadForModel(messages);
+  const system = `${TAYLOR_SYSTEM}\n\n[shared context, trusted]\n${contextDigest(context)}${
+    pageCtx ? `\n\n[the screen they are on right now] ${pageCtx}` : ""
+  }`;
+
+  let res: Response;
+  try {
+    res = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model, max_tokens: 400, temperature: 0.7, system, messages: history }),
+    });
+  } catch (e) {
+    return json({ error: "taylor_model_unreachable", detail: String(e instanceof Error ? e.message : e).slice(0, 300), client_message_id: posted.id }, 502);
+  }
+  if (!res.ok) {
+    const detail = (await res.text()).slice(0, 400);
+    return json({ error: "taylor_model_call_rejected", status: res.status, detail, model, client_message_id: posted.id }, 502);
+  }
+
+  const payload = await res.json().catch(() => null);
+  const answer = String(
+    (Array.isArray(payload?.content) ? payload.content : [])
+      .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+      .map((p: any) => p.text)
+      .join(""),
+  ).trim();
+  if (!answer) return json({ error: "taylor_model_returned_nothing", model, client_message_id: posted.id }, 502);
+
+  const reply = await postThreadMessage(admin, { threadId, cid, role: "taylor", surface: "start_panel", content: answer });
+  if (!reply) return json({ error: "taylor_reply_not_recorded", answer, model }, 500);
+
+  return json({ thread_id: threadId, model, client_message_id: posted.id, reply_id: reply.id, answer });
+});
