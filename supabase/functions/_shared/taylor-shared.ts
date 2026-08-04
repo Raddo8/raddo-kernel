@@ -355,6 +355,12 @@ export function contextDigest(ctx: TaylorSharedContext): string {
       lines.push(`  right: ${String(c.corrected_to).slice(0, 240)}`);
     }
   }
+  if (ctx.boundaries?.length) {
+    lines.push("standing boundaries the client set. honor these every turn, without exception:");
+    for (const b of ctx.boundaries.slice(0, 30)) lines.push(`  ${String(b.text).slice(0, 300)}`);
+  }
+
+
 
   if (ctx.business.display_name) lines.push(`business: ${ctx.business.display_name}`);
   if (ctx.business.principal) lines.push(`principal: ${ctx.business.principal}`);
