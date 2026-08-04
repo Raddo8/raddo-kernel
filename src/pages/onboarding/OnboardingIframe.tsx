@@ -139,7 +139,10 @@ export default function OnboardingIframe({
   const [phase, setPhase] = useState<Phase>({ kind: "resolving" });
   const [hydrated, setHydrated] = useState(false);
   const [hydrationFailed, setHydrationFailed] = useState(false);
-  const taylorVisible = useTaylorPanelVisible();
+  const wideEnough = useTaylorPanelVisible();
+  const screen = useIframeScreen(ref, phase.kind === "ready" && hydrated);
+  const taylorVisible = wideEnough && !TAYLOR_HIDDEN_SCREENS.has(screen);
+
 
 
   useEffect(() => {
