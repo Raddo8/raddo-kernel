@@ -41,6 +41,8 @@ export type TaylorSharedContext = {
   progress: Array<{ step_key: string; status: string; source: string | null }>;
   /** DRY-RUN 2R5 · item 5. Standing corrections. These beat every raw fact. */
   corrections: Correction[];
+  /** T1 · standing boundaries recorded by boundaries_record. Honored every turn. */
+  boundaries: Array<{ id: string; text: string; rank: number | null }>;
 };
 
 /** A factual correction the client made in conversation, cited to its message. */
