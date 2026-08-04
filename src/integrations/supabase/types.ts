@@ -2855,6 +2855,66 @@ export type Database = {
         }
         Relationships: []
       }
+      intake_corrections: {
+        Row: {
+          cid: string
+          claim: string
+          corrected_to: string
+          created_at: string
+          declared_by: string
+          id: string
+          is_synthetic: boolean
+          source_message_id: string | null
+          source_surface: string
+          status: string
+          tenant_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          claim: string
+          corrected_to: string
+          created_at?: string
+          declared_by?: string
+          id?: string
+          is_synthetic?: boolean
+          source_message_id?: string | null
+          source_surface?: string
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          claim?: string
+          corrected_to?: string
+          created_at?: string
+          declared_by?: string
+          id?: string
+          is_synthetic?: boolean
+          source_message_id?: string | null
+          source_surface?: string
+          status?: string
+          tenant_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "intake_corrections_source_message_id_fkey"
+            columns: ["source_message_id"]
+            isOneToOne: false
+            referencedRelation: "taylor_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "intake_corrections_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "onboarding_tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       intake_facts: {
         Row: {
           created_at: string
