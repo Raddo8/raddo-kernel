@@ -327,6 +327,16 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
 export function contextDigest(ctx: TaylorSharedContext): string {
   const lines: string[] = [];
   lines.push(`client id: ${ctx.cid}`);
+  if (ctx.corrections.length) {
+    lines.push(
+      "corrections the client has made. these OVERRIDE anything below and anything you remember. never restate the corrected version's original:",
+    );
+    for (const c of ctx.corrections.slice(0, 20)) {
+      lines.push(`  wrong: ${String(c.claim).slice(0, 240)}`);
+      lines.push(`  right: ${String(c.corrected_to).slice(0, 240)}`);
+    }
+  }
+
   if (ctx.business.display_name) lines.push(`business: ${ctx.business.display_name}`);
   if (ctx.business.principal) lines.push(`principal: ${ctx.business.principal}`);
   if (ctx.business.cob_name) lines.push(`their COB is called: ${ctx.business.cob_name}`);
