@@ -748,35 +748,42 @@ const COB={
  route(){const h=(location.hash||"#/welcome").slice(2).split("/");return{p:h[0]||"welcome",a:h[1],b:h[2]};},
  render(){const r=this.route();const app=document.getElementById('app');if(this._lastHash!==location.hash){window.scrollTo(0,0);this._lastHash=location.hash;}
   document.getElementById('progBar').style.width=this.pct()+"%";
-  const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
-  let crumb=crumbs[r.p]??r.p;
-  if(r.p==="ch"){crumb="fireside chat";}
-  document.getElementById('crumb').textContent=crumb;
-  this.acctRender();
-  const _ri=this.RES.findIndex(h=>h.split("/")[1]===r.p);
-  if(_ri>-1&&_ri>(this.state.reached||0)){this.state.reached=_ri;this.save();}
-  if(["reveal","plugin","world","review"].includes(r.p)){this.state.seen=this.state.seen||{};
-   if(!this.state.seen[r.p]){this.state.seen[r.p]=1;this.save();}}
-  const needsUser=["consent","gate","reveal","plugin","world","fireside","ch","review","harvest","claude","connect","done","dashboard"];
-  if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
-  const _rp=(location.hash||"#/welcome").split("/")[1]||"welcome";document.documentElement.classList.toggle('rsame',this._lastR===_rp);this._lastR=_rp;
-  document.body.classList.toggle('withrail',["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p));
-  if(r.p==="welcome")app.innerHTML=this.vWelcome();
-  else if(r.p==="account")app.innerHTML=this.vAccount();
-  else if(r.p==="consent")app.innerHTML=this.shell(this.vConsent(),null);
-  else if(r.p==="gate")app.innerHTML=this.shell(this.vGate(),null);
-  else if(r.p==="reveal")app.innerHTML=this.shell(this.vReveal(),null);
-  else if(r.p==="plugin")app.innerHTML=this.shell(this.vPlugin(),null);
-  else if(r.p==="world")app.innerHTML=this.shell(this.vUnderstanding(),null);
-  else if(r.p==="fireside")app.innerHTML=this.shell(this.vFireside(),null);
-  else if(r.p==="ch"){this.go("#/fireside");return;}
-  else if(r.p==="review")app.innerHTML=this.shell(this.vReview(),null);
-  else if(r.p==="harvest"){this.go("#/world");return;}
-  else if(r.p==="claude")app.innerHTML=this.shell(this.vClaude(),null);
-  else if(r.p==="connect")app.innerHTML=this.shell(this.vConnect(),null);
-  else if(r.p==="done")app.innerHTML=this.shell(this.vDone(),null);
-  else if(r.p==="dashboard")app.innerHTML=this.vDashboard();
-  else app.innerHTML=this.shell(`<div class="q-wrap"><p class="kicker">lost page · 404</p><h1>That room isn't in this building.</h1><p>Your work is safe. Head back to where you left off.</p><button class="btn" onclick="COB.go('#/dashboard')">Back to your build</button></div>`,null);
+   const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner","connect-first":"the first connection",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
+   let crumb=crumbs[r.p]??r.p;
+   if(r.p==="ch"){crumb="fireside chat";}
+   document.getElementById('crumb').textContent=crumb;
+   this.acctRender();
+   /* DRY-RUN 2R5 · item 2. The pointer may never run ahead of proven outcomes:
+      visiting a screen no longer certifies the gate behind it. */
+   const _ri=this.RES.findIndex(h=>h.split("/")[1]===r.p);
+   const _cap=this.earliestIncomplete();
+   const _next=Math.min(_ri,_cap);
+   if(_ri>-1&&_next>(this.state.reached||0)){this.state.reached=_next;this.save();}
+   if(["reveal","plugin","world","review"].includes(r.p)){this.state.seen=this.state.seen||{};
+    if(!this.state.seen[r.p]){this.state.seen[r.p]=1;this.save();}}
+   const needsUser=["consent","gate","reveal","plugin","connect-first","world","fireside","ch","review","harvest","claude","connect","done","dashboard"];
+   if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
+   const _rp=(location.hash||"#/welcome").split("/")[1]||"welcome";document.documentElement.classList.toggle('rsame',this._lastR===_rp);this._lastR=_rp;
+   document.body.classList.toggle('withrail',["consent","gate","reveal","plugin","connect-first","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p));
+   if(r.p==="welcome")app.innerHTML=this.vWelcome();
+   else if(r.p==="account")app.innerHTML=this.vAccount();
+   else if(r.p==="consent")app.innerHTML=this.shell(this.vConsent(),null);
+   else if(r.p==="gate")app.innerHTML=this.shell(this.vGate(),null);
+   else if(r.p==="reveal")app.innerHTML=this.shell(this.vReveal(),null);
+   else if(r.p==="plugin")app.innerHTML=this.shell(this.vPlugin(),null);
+   else if(r.p==="connect-first")app.innerHTML=this.shell(this.vConnectFirst(),null);
+   else if(r.p==="world")app.innerHTML=this.shell(this.vUnderstanding(),null);
+   else if(r.p==="fireside")app.innerHTML=this.shell(this.vFireside(),null);
+   else if(r.p==="ch"){this.go("#/fireside");return;}
+   else if(r.p==="review")app.innerHTML=this.shell(this.vReview(),null);
+   /* Old links to the deleted harvest screen land on the restored page. */
+   else if(r.p==="harvest"){this.go("#/connect-first");return;}
+   else if(r.p==="claude")app.innerHTML=this.shell(this.vClaude(),null);
+   else if(r.p==="connect")app.innerHTML=this.shell(this.vConnect(),null);
+   else if(r.p==="done")app.innerHTML=this.shell(this.vDone(),null);
+   else if(r.p==="dashboard")app.innerHTML=this.vDashboard();
+   else app.innerHTML=this.shell(`<div class="q-wrap"><p class="kicker">lost page · 404</p><h1>That room isn't in this building.</h1><p>Your work is safe. Head back to where you left off.</p><button class="btn" onclick="COB.go('#/dashboard')">Back to your build</button></div>`,null);
+
   this.mobNav(r);this.dockSync(r);const f=app.querySelector("textarea,input");if(f&&r.p==="ch")f.focus();},
  mobNav(r){const m=document.getElementById('mobNav');
   const inShell=["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p);
