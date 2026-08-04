@@ -399,6 +399,50 @@ async function actionDelta(p: Principal) {
   return json({ ok: true, action: "delta", cid: p.cid, rows: data ?? [], count: (data ?? []).length, build_id: BUILD_ID });
 }
 
+/** Read-only roster of entities for the caller's cid. Merged entities are
+ * withheld (reads follow merged_into one hop, so the survivor stands in). */
+async function actionEntities(p: Principal) {
+  const allowed = readableSensitivities(p);
+  const { data, error } = await admin!
+    .from("world_entities")
+    .select("id, etype, name, tag, status, sensitivity, merged_into, updated_at")
+    .eq("cid", p.cid)
+    .is("merged_into", null)
+    .in("sensitivity", allowed)
+    .order("name", { ascending: true })
+    .limit(1000);
+  if (error) return fail("entities_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "entities",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+/** Read-only roster of mined sources for the caller's cid. */
+async function actionSources(p: Principal) {
+  const { data, error } = await admin!
+    .from("world_sources")
+    .select("id, kind, label, scope, connected_at, last_wave, last_mined_at, meta")
+    .eq("cid", p.cid)
+    .order("last_mined_at", { ascending: false, nullsFirst: false })
+    .limit(500);
+  if (error) return fail("sources_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "sources",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+
+
 async function actionProfile(p: Principal, body: any) {
   const entityId = str(body?.entity_id);
   if (!entityId) return fail("entity_id_required");
