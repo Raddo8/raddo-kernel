@@ -93,6 +93,8 @@ export default function OnboardingIframe({
   const [phase, setPhase] = useState<Phase>({ kind: "resolving" });
   const [hydrated, setHydrated] = useState(false);
   const [hydrationFailed, setHydrationFailed] = useState(false);
+  const taylorVisible = useTaylorPanelVisible();
+
 
   useEffect(() => {
     document.title = "Meet your COB · onboarding";
@@ -312,8 +314,11 @@ export default function OnboardingIframe({
           title="Chief of Business onboarding"
           style={{
             position: "fixed",
-            inset: 0,
-            width: "100vw",
+            top: 0,
+            left: 0,
+            bottom: 0,
+            right: taylorVisible ? TAYLOR_PANEL_WIDTH : 0,
+            width: taylorVisible ? `calc(100vw - ${TAYLOR_PANEL_WIDTH}px)` : "100vw",
             height: "100vh",
             border: 0,
             margin: 0,
@@ -324,6 +329,10 @@ export default function OnboardingIframe({
           allow="clipboard-read; clipboard-write; microphone"
         />
       )}
+      {phase.kind === "ready" && hydrated && taylorVisible && (
+        <TaylorPanel pageCtx={initialHash ? `page:${initialHash}` : "page:start"} />
+      )}
     </>
+
   );
 }
