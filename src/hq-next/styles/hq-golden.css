@@ -86,3 +86,21 @@
 .hqg .bpdrw-ul{margin:4px 0 0 16px;font-size:12.5px}
 .hqg .bpvs{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:16px 0 0}
 .hqg .bpempty{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ash);padding:12px 0}
+
+/* HqShell · shared chrome additions. Tokens only, no new palette. */
+.hqg .nl.off{opacity:.5;cursor:default}
+.hqg .nl.off:hover{background:transparent}
+.hqg .nl .soon{margin-left:auto;font-family:var(--mono);font-size:7.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--don)}
+.hqg .rail-toggle{display:none;align-items:center;gap:8px;position:sticky;top:0;z-index:50;width:100%;
+  background:var(--ink);background-image:var(--navytex);background-size:auto,24px 24px,24px 24px;color:var(--paper);
+  border:0;border-bottom:1px solid var(--edge-navy);padding:10px 14px;font-family:var(--mono);font-size:9px;
+  letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+.hqg .rail-scrim{display:none}
+@media(max-width:940px){
+  .hqg{--rail:0px}
+  .hqg .rail-toggle{display:flex}
+  .hqg .rail{display:flex;width:224px;transform:translateX(-100%);transition:transform .16s ease}
+  .hqg .rail.open{transform:none}
+  .hqg .rail-scrim{display:block;position:fixed;inset:0;background:rgba(4,44,83,.42);z-index:39}
+}
+@media(prefers-reduced-motion:reduce){.hqg .rail{transition:none}}
