@@ -193,6 +193,7 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
     material_index: [],
     progress: [],
     corrections: [],
+    boundaries: [],
   };
 
   // DRY-RUN 2R5 · item 5. Corrections load FIRST so nothing below is served raw.
