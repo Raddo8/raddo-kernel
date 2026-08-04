@@ -221,6 +221,8 @@ async function actionStage(p: Principal, body: any) {
       confidence: Number.isFinite(Number(c?.confidence)) ? Number(c.confidence) : null,
       valid_from: str(c?.valid_from),
       valid_to: str(c?.valid_to),
+      // H-SHELL: authorship is recorded on every write. Staged claims carry the miner.
+      created_by: miner ?? "miner:unnamed",
     });
   }
 
@@ -232,6 +234,7 @@ async function actionStage(p: Principal, body: any) {
       wave,
       status: "staged",
       sensitivity: "operational",
+      created_by: miner ?? "miner:unnamed",
       ...x,
     });
   }
@@ -347,6 +350,8 @@ async function actionGovern(p: Principal, body: any) {
         grade: "client-asserted",
         status: "confirmed",
         sensitivity: "operational",
+        // Governing claims carry the resolved principal identity, never a name.
+        created_by: `${p.mode}:${p.subject ?? p.cid}`,
         supersedes: newStatus === "flagged" ? c.id : null,
       })),
     )
@@ -411,6 +416,7 @@ async function actionMerge(p: Principal, body: any) {
       grade: "client-asserted",
       status: "confirmed",
       sensitivity: "operational",
+      created_by: `${p.mode}:${p.subject ?? p.cid}`,
     })
     .select("id")
     .single();
