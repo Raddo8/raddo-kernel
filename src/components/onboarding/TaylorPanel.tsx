@@ -126,7 +126,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
             <p
               className="text-sm whitespace-pre-wrap"
               style={{
-                color: m.role === "taylor" ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-charcoal, var(--dossier-ink-deep)))",
+                color: m.role === "taylor" ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-charcoal))",
                 borderLeft: m.role === "taylor" ? "2px solid hsl(var(--dossier-brass))" : "2px solid hsl(var(--dossier-paper-edge))",
                 paddingLeft: 10,
               }}
