@@ -1,6 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { TaylorPanel } from "@/components/onboarding/TaylorPanel";
+
+/** UNIT 2 · width reserved for the TAYLOR panel on desks wide enough for it. */
+const TAYLOR_PANEL_WIDTH = 360;
+
+function useTaylorPanelVisible() {
+  const [visible, setVisible] = useState(
+    typeof window !== "undefined" ? window.matchMedia("(min-width: 1100px)").matches : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1100px)");
+    const onChange = () => setVisible(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  return visible;
+}
+
 
 type Identity = { userId: string; email: string | null; cid: string | null };
 
