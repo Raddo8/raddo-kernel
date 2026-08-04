@@ -1,133 +1,183 @@
-/* THE WORLD · /hq/world · HQ DESIGN light language.
- * Tokens inherited from hq-design.css. Everything scoped under .hqd.world so
- * no other surface can be reached by these rules. */
+/* THE WORLD · /hq/world · W1d.
+ * Faithful port of the principal-approved COB_HQ_WORLD_v1_TEMPLATE.
+ * Every rule scoped under .cobworld so no other surface can be reached. */
 
-.hqd.world {
-  --serif: Georgia, 'Times New Roman', serif;
-  --sans: Georgia, 'Times New Roman', serif;
-  --mono: 'Courier New', Courier, monospace;
-  font-family: var(--sans);
+.cobworld {
+  --cream: #FAF8F4;
+  --paper: #FFFFFF;
+  --edge: #E5DFD3;
+  --navy: #042C53;
+  --brass: #EF9B25;
+  --brass-deep: #B87A1E;
+  --ash: #6B6257;
+  --new: #FBF1E2;
+  background: var(--cream);
+  font-family: Georgia, serif;
+  color: var(--navy);
+  min-height: 100vh;
 }
+.cobworld * { box-sizing: border-box; }
+.cobworld .mono { font-family: 'Courier New', monospace; letter-spacing: .18em; text-transform: uppercase; }
 
-.hqd.world .shell {
-  max-width: 1240px;
-  margin: 0 auto;
-  padding: 30px 22px 80px;
-  display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
-  gap: 26px;
-  align-items: start;
+.cobworld header.wh {
+  text-align: center; padding: 24px 16px 16px; border-bottom: 1px solid var(--edge);
+  background: var(--paper); position: sticky; top: 0; z-index: 9;
 }
+.cobworld header.wh .k { font-size: 11px; color: var(--brass-deep); font-weight: 700; }
+.cobworld header.wh h1 { font-size: 25px; margin: 7px 0 0; font-weight: 700; }
+.cobworld header.wh .s { font-size: 12.5px; color: var(--ash); margin-top: 4px; }
 
-/* left rail */
-.hqd.world .rail { position: sticky; top: 22px; display: flex; flex-direction: column; gap: 6px; }
-.hqd.world .rb {
-  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-s);
-  padding: 11px 12px; cursor: pointer; color: var(--ash);
-  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
-  transition: border-color 120ms var(--curve), color 120ms var(--curve);
+.cobworld .wrap { display: flex; max-width: 1180px; margin: 0 auto; }
+.cobworld nav.wn {
+  width: 262px; flex: none; border-right: 1px solid var(--edge); padding: 14px 0 30px;
+  background: var(--paper); height: calc(100vh - 96px); position: sticky; top: 96px; overflow-y: auto;
 }
-.hqd.world .rb:hover { border-color: var(--brass); color: var(--navy); }
-.hqd.world .rb.on { background: var(--navy); border-color: var(--navy); color: var(--paper); }
-.hqd.world .rb .n {
-  margin-left: auto; font-size: 9.5px; letter-spacing: 0.08em;
-  background: var(--brass); color: #2C2C2A; border-radius: 999px; padding: 1px 7px; font-weight: 700;
+.cobworld nav.wn .lbl {
+  font-size: 10px; color: var(--brass-deep); font-weight: 700; padding: 12px 18px 5px;
+  font-family: 'Courier New', monospace; letter-spacing: .18em; text-transform: uppercase;
 }
-.hqd.world .rb.on .n { background: var(--brass); }
-.hqd.world .rail-note {
-  margin-top: 12px; font-family: var(--mono); font-size: 9px; line-height: 1.7;
-  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash);
+.cobworld nav.wn button {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  border-left: 3px solid transparent; padding: 9px 18px; font-family: Georgia, serif;
+  font-size: 13.5px; color: var(--navy); cursor: pointer; line-height: 1.35;
 }
-
-/* header */
-.hqd.world .head { border-bottom: 2px solid var(--navy); padding-bottom: 12px; }
-.hqd.world .head h1 { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--navy); margin: 6px 0 0; }
-.hqd.world .head p { color: var(--ash); font-size: 14px; line-height: 1.6; margin: 8px 0 0; max-width: 66ch; }
-
-/* claim / entity cards */
-.hqd.world .wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 12px; margin-top: 14px; }
-.hqd.world .wcard {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l);
-  padding: 14px 15px; box-shadow: var(--shadow); text-align: left;
-}
-.hqd.world button.wcard { cursor: pointer; width: 100%; transition: border-color 120ms var(--curve), transform 120ms var(--curve); }
-.hqd.world button.wcard:hover { border-color: var(--brass); transform: translateY(-1px); }
-.hqd.world .wcard.soft { background: var(--paper-2); }
-.hqd.world .wcard .claim { font-size: 14px; line-height: 1.55; color: var(--ink); }
-.hqd.world .wcard .nm { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--navy); line-height: 1.3; }
-.hqd.world .prov {
-  margin-top: 10px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em;
-  color: var(--ash); line-height: 1.7; word-break: break-word;
-}
-.hqd.world .openitem {
-  border: 1px dashed var(--brass); background: var(--brass-wash); border-radius: var(--r-s); padding: 12px 13px;
+.cobworld nav.wn button:hover { background: var(--cream); }
+.cobworld nav.wn button.on { border-left-color: var(--brass); background: var(--cream); font-weight: bold; }
+.cobworld nav.wn button:disabled { color: var(--ash); cursor: default; }
+.cobworld nav.wn .cnt { font-family: 'Courier New', monospace; font-size: 10px; color: var(--ash); margin-left: 5px; }
+.cobworld .newdot {
+  display: inline-block; background: var(--brass); color: #fff; font-family: 'Courier New', monospace;
+  font-size: 9px; padding: 1px 5px; margin-left: 5px; letter-spacing: .08em;
 }
 
-/* approval rail */
-.hqd.world .arail { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
-.hqd.world .ab {
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
-  border: 1px solid var(--line); background: var(--paper); color: var(--navy);
-  border-radius: var(--r-s); padding: 7px 10px; cursor: pointer;
-  transition: background 120ms var(--curve), border-color 120ms var(--curve);
+.cobworld main.wm { flex: 1; padding: 26px 32px 70px; min-width: 0; }
+.cobworld h2 { font-size: 22px; margin: 0 0 4px; font-weight: 700; }
+.cobworld .sub { font-size: 13px; color: var(--ash); margin-bottom: 16px; }
+.cobworld .card {
+  background: var(--paper); border: 1px solid var(--edge); padding: 13px 16px;
+  margin-bottom: 10px; font-size: 14px; line-height: 1.55;
 }
-.hqd.world .ab:hover:not(:disabled) { border-color: var(--brass); background: var(--brass-wash); }
-.hqd.world .ab.primary { background: var(--brass); border-color: var(--brass); color: #2C2C2A; font-weight: 700; }
-.hqd.world .ab.primary:hover:not(:disabled) { background: var(--brass-deep); border-color: var(--brass-deep); color: var(--paper); }
-.hqd.world .ab:disabled { opacity: 0.45; cursor: not-allowed; }
-.hqd.world .noted {
-  margin-top: 12px; border-left: 3px solid var(--ok); background: var(--ok-wash);
-  border-radius: var(--r-s); padding: 10px 12px; font-size: 13px; color: var(--ok); line-height: 1.55;
+.cobworld .card .prov {
+  font-family: 'Courier New', monospace; font-size: 10px; color: var(--ash);
+  display: block; margin-top: 6px; letter-spacing: .05em;
 }
-.hqd.world .noteform { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-.hqd.world input[type="text"], .hqd.world input[type="search"] {
-  flex: 1 1 160px; min-width: 0; background: var(--card); border: 1px solid var(--line);
-  border-radius: var(--r-s); padding: 8px 10px; font-family: var(--sans); font-size: 13px; color: var(--ink);
+.cobworld .card.new { background: var(--new); border-color: var(--brass); }
+.cobworld .card.dim { opacity: .72; }
+.cobworld .badge {
+  font-family: 'Courier New', monospace; font-size: 9.5px; font-weight: 700; letter-spacing: .12em;
+  padding: 2px 7px; margin-right: 8px; text-transform: uppercase; white-space: nowrap;
 }
-.hqd.world input:focus-visible, .hqd.world .rb:focus-visible, .hqd.world .ab:focus-visible,
-.hqd.world button.wcard:focus-visible, .hqd.world .tab:focus-visible, .hqd.world .relchip:focus-visible {
+.cobworld .b-new { background: var(--brass); color: #fff; }
+.cobworld .b-conf { background: var(--navy); color: var(--cream); }
+.cobworld .b-sens { background: #EEE7DA; color: var(--brass-deep); border: 1px solid var(--brass-deep); }
+.cobworld .b-gap { background: var(--paper); color: var(--brass-deep); border: 1px dashed var(--brass-deep); }
+.cobworld .b-adv { background: #7A1E1E; color: #fff; }
+
+.cobworld .approve { margin-top: 9px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cobworld .approve button, .cobworld .wbtn {
+  font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: .1em; padding: 5px 12px;
+  border: 1px solid var(--brass-deep); background: var(--paper); color: var(--brass-deep);
+  cursor: pointer; text-transform: uppercase;
+}
+.cobworld .approve button.primary, .cobworld .wbtn.primary { background: var(--brass); border-color: var(--brass); color: #fff; }
+.cobworld .approve button:disabled, .cobworld .wbtn:disabled { opacity: .45; cursor: not-allowed; }
+.cobworld .notedline {
+  font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: .1em; color: var(--brass-deep);
+  text-transform: uppercase;
+}
+
+.cobworld .deadline { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px dotted var(--edge); font-size: 14px; }
+.cobworld .deadline .d { font-size: 10.5px; font-weight: 700; color: var(--brass-deep); min-width: 104px; padding-top: 2px; }
+.cobworld .relrow { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 14px; }
+.cobworld .plink {
+  font-family: 'Courier New', monospace; font-size: 10.5px; letter-spacing: .06em; padding: 4px 10px;
+  border: 1px solid var(--edge); background: var(--paper); color: var(--navy); cursor: pointer;
+}
+.cobworld .plink:hover { border-color: var(--brass); color: var(--brass-deep); }
+.cobworld .psec {
+  font-size: 11px; color: var(--brass-deep); margin: 18px 0 8px; letter-spacing: .16em;
+  font-family: 'Courier New', monospace; text-transform: uppercase;
+}
+.cobworld .ptabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.cobworld .ptab {
+  font-size: 10px; letter-spacing: .12em; padding: 6px 11px; border: 1px solid var(--edge);
+  background: var(--paper); color: var(--navy); cursor: pointer;
+  font-family: 'Courier New', monospace; text-transform: uppercase;
+}
+.cobworld .ptab.on { background: var(--navy); color: var(--cream); border-color: var(--navy); }
+.cobworld .psearch {
+  width: 100%; font-family: Georgia, serif; font-size: 14px; padding: 9px 12px;
+  border: 1px solid var(--edge); background: var(--paper); color: var(--navy); margin-bottom: 14px;
+}
+.cobworld .psearch:focus { outline: none; border-color: var(--brass); }
+.cobworld .pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.cobworld .pcard { background: var(--paper); border: 1px solid var(--edge); padding: 13px 14px; cursor: pointer; text-align: left; }
+.cobworld .pcard:hover { border-color: var(--brass); }
+.cobworld .ptype { font-size: 9px; color: var(--brass-deep); letter-spacing: .16em; margin-bottom: 5px; font-family: 'Courier New', monospace; text-transform: uppercase; }
+.cobworld .pname { font-size: 15.5px; font-weight: bold; line-height: 1.3; }
+.cobworld .ptag { font-size: 12.5px; color: var(--ash); margin-top: 4px; line-height: 1.45; }
+.cobworld .backbtn {
+  font-size: 10px; letter-spacing: .12em; padding: 6px 12px; border: 1px solid var(--edge);
+  background: var(--paper); color: var(--navy); cursor: pointer; margin-bottom: 16px;
+  font-family: 'Courier New', monospace; text-transform: uppercase;
+}
+.cobworld .backbtn:hover { border-color: var(--brass); }
+.cobworld .openit {
+  background: var(--paper); border: 1px dashed var(--brass-deep); padding: 9px 13px;
+  margin-bottom: 8px; font-size: 13.5px; color: var(--brass-deep);
+}
+
+/* review room */
+.cobworld .rrbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+.cobworld .meter { flex: 1 1 180px; min-width: 140px; height: 6px; background: var(--edge); position: relative; }
+.cobworld .meter i { display: block; height: 100%; background: var(--brass); }
+.cobworld .metert { font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: .12em; color: var(--ash); text-transform: uppercase; }
+.cobworld .grp { border: 1px solid var(--edge); background: var(--paper); margin-bottom: 8px; }
+.cobworld .grph {
+  display: flex; flex-wrap: wrap; gap: 8px; align-items: center; width: 100%; text-align: left;
+  padding: 10px 13px; background: none; border: none; cursor: pointer; font-family: Georgia, serif;
+  font-size: 14px; color: var(--navy);
+}
+.cobworld .grph:hover { background: var(--cream); }
+.cobworld .grph .gn { font-family: 'Courier New', monospace; font-size: 10px; letter-spacing: .12em; color: var(--brass-deep); text-transform: uppercase; }
+.cobworld .grph .gnames { font-size: 12.5px; color: var(--ash); flex: 1 1 auto; }
+.cobworld .grpb { border-top: 1px solid var(--edge); padding: 10px 13px 13px; }
+.cobworld .rrow { border-bottom: 1px dotted var(--edge); padding: 8px 0; font-size: 13.5px; line-height: 1.5; display: flex; gap: 9px; align-items: flex-start; }
+.cobworld .rrow:last-child { border-bottom: none; }
+.cobworld .rrow .hl { flex: 1 1 auto; cursor: pointer; }
+.cobworld .wtable { width: 100%; border-collapse: collapse; }
+.cobworld .wtable th {
+  font-family: 'Courier New', monospace; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--brass-deep); text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--edge); cursor: pointer;
+  white-space: nowrap;
+}
+.cobworld .wtable td { padding: 7px 8px; border-bottom: 1px dotted var(--edge); font-size: 12.5px; line-height: 1.45; vertical-align: top; }
+.cobworld .wtable td.m { font-family: 'Courier New', monospace; font-size: 10px; color: var(--ash); letter-spacing: .05em; }
+.cobworld .notice {
+  background: #FBEDED; border: 1px solid #7A1E1E; color: #7A1E1E; padding: 9px 13px;
+  margin-bottom: 12px; font-size: 13px;
+}
+.cobworld .empty { background: var(--paper); border: 1px solid var(--edge); padding: 22px; color: var(--ash); font-size: 13.5px; }
+.cobworld input[type="checkbox"] { accent-color: var(--brass); margin-top: 3px; }
+.cobworld .noteform { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.cobworld .noteform input[type="text"] {
+  flex: 1 1 180px; min-width: 0; font-family: Georgia, serif; font-size: 13px; padding: 7px 10px;
+  border: 1px solid var(--edge); background: var(--paper); color: var(--navy);
+}
+.cobworld footer.wf { text-align: center; font-size: 10.5px; color: var(--brass-deep); padding: 24px; }
+
+.cobworld button:focus-visible, .cobworld input:focus-visible, .cobworld th:focus-visible {
   outline: 2px solid var(--brass); outline-offset: 2px;
 }
 
-/* filter tabs */
-.hqd.world .tabs { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 16px; }
-.hqd.world .tab {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  border: 1px solid var(--line); background: var(--card); color: var(--ash);
-  border-radius: var(--r-s); padding: 7px 11px; cursor: pointer;
-}
-.hqd.world .tab.on { background: var(--navy); border-color: var(--navy); color: var(--paper); }
-
-.hqd.world .relchip {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
-  border: 1px solid var(--line); background: var(--paper-2); color: var(--navy);
-  border-radius: 999px; padding: 5px 11px; cursor: pointer;
-}
-.hqd.world .relchip:hover { border-color: var(--brass); background: var(--brass-wash); }
-
-.hqd.world .sub {
-  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--brass-deep); margin: 26px 0 0;
-}
-.hqd.world .empty {
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l);
-  padding: 26px 22px; color: var(--ash); font-size: 13.5px; margin-top: 14px; line-height: 1.6;
-}
-.hqd.world .wfoot {
-  margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line);
-  font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash);
-}
-.hqd.world .muted { opacity: 0.82; }
-
-@media (max-width: 860px) {
-  .hqd.world .shell { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px 16px 70px; }
-  .hqd.world .rail { position: static; flex-direction: row; flex-wrap: wrap; }
-  .hqd.world .rb { width: auto; flex: 1 1 auto; }
-  .hqd.world .head h1 { font-size: 24px; }
+@media (max-width: 820px) {
+  .cobworld .wrap { flex-direction: column; }
+  .cobworld nav.wn { width: 100%; height: auto; position: static; display: flex; flex-wrap: wrap; }
+  .cobworld nav.wn .lbl { width: 100%; }
+  .cobworld nav.wn button { width: auto; }
+  .cobworld main.wm { padding: 20px 16px 60px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hqd.world * { transition: none !important; }
-  .hqd.world button.wcard:hover { transform: none; }
+  .cobworld * { transition: none !important; }
 }
