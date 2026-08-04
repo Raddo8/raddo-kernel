@@ -190,7 +190,23 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
     fireside_answers: [],
     material_index: [],
     progress: [],
+    corrections: [],
   };
+
+  // DRY-RUN 2R5 · item 5. Corrections load FIRST so nothing below is served raw.
+  ctx.corrections = await safe<Correction[]>(
+    admin
+      .from("intake_corrections")
+      .select("id, claim, corrected_to, source_message_id, source_surface, created_at")
+      .eq("cid", cid)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(80)
+      .then((r: any) => (r?.data ?? []) as Correction[]),
+    [],
+    "taylor_corrections_read_failed",
+  );
+
 
   const rec = await safe<any>(
     admin
