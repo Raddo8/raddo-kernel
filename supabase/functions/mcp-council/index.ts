@@ -3689,11 +3689,40 @@ Deno.serve(async (req) => {
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
 
+      // ── TAYLOR BUILD UNIT · T1 · gate coverage tools ────────────────────
+      if (
+        name === "consent_record" || name === "lane_record" || name === "boundaries_record" ||
+        name === "deepdive_commit" || name === "harvest_record" || name === "wire_grants_record" ||
+        name === "kernel_inputs_check" || name === "taylor_handoff"
+      ) {
+        const cid = pctx.legacy_cid;
+        if (!cid || !supabaseAdmin) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        let out: unknown;
+        switch (name) {
+          case "consent_record": out = await consentRecord(supabaseAdmin, cid, args); break;
+          case "lane_record": out = await laneRecord(supabaseAdmin, cid, args); break;
+          case "boundaries_record": out = await boundariesRecord(supabaseAdmin, cid, args); break;
+          case "deepdive_commit": out = await deepdiveCommit(supabaseAdmin, cid, args); break;
+          case "harvest_record": out = await harvestRecord(supabaseAdmin, cid, args); break;
+          case "wire_grants_record": out = await wireGrantsRecord(supabaseAdmin, cid, args); break;
+          case "kernel_inputs_check": out = await kernelInputsCheck(supabaseAdmin, cid); break;
+          default: out = await taylorHandoff(supabaseAdmin, cid, args); break;
+        }
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out as any, isError: false });
+      }
+
       if (name === "record_intake") {
         const topic = typeof args?.topic === "string" ? args.topic : "";
         const content = typeof args?.content === "string" ? args.content.trim() : "";
         const source = typeof args?.source === "string" ? args.source : "";
-        if (!INTAKE_TOPICS.has(topic) || !INTAKE_SOURCES.has(source) || content.length < 3 || content.length > 4000) {
+        const connections = Array.isArray(args?.connections) ? args.connections : null;
+        // Backward compatible: the original three-argument call is unchanged.
+        // A call carrying only `connections` records the inventory alone.
+        const wantsIntake = Boolean(topic || content || source) || !connections;
+        if (wantsIntake && (!INTAKE_TOPICS.has(topic) || !INTAKE_SOURCES.has(source) || content.length < 3 || content.length > 4000)) {
           const bad = { ok: false, reason: "invalid-input" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
         }
@@ -3702,32 +3731,46 @@ Deno.serve(async (req) => {
           const out = { ok: false, reason: "not-enrolled" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
         }
-        const { error: intakeErr } = await supabaseAdmin
-          .from("client_intake")
-          .insert({ cid, topic, content_md: content, source });
-        if (intakeErr) {
-          console.error("record_intake_failed", intakeErr.message);
-          const out = { ok: false, reason: "save-failed" };
-          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
-        }
-        // Shared thread mirror · the panel must see what the connector collected.
-        try {
-          const threadId = await taylorResolveThread(supabaseAdmin, cid);
-          if (threadId) {
-            await taylorPostMessage(supabaseAdmin, {
-              threadId,
-              cid,
-              role: "client",
-              surface: "connector",
-              content: `[${topic}] ${content}`,
-            });
+        if (wantsIntake) {
+          const { error: intakeErr } = await supabaseAdmin
+            .from("client_intake")
+            .insert({ cid, topic, content_md: content, source });
+          if (intakeErr) {
+            console.error("record_intake_failed", intakeErr.message);
+            const out = { ok: false, reason: "save-failed" };
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
           }
-        } catch (e) {
-          console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+          // Shared thread mirror · the panel must see what the connector collected.
+          try {
+            const threadId = await taylorResolveThread(supabaseAdmin, cid);
+            if (threadId) {
+              await taylorPostMessage(supabaseAdmin, {
+                threadId,
+                cid,
+                role: "client",
+                surface: "connector",
+                content: `[${topic}] ${content}`,
+              });
+            }
+          } catch (e) {
+            console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+          }
         }
-        const out = { ok: true, recorded: topic };
+        let inventory: unknown = null;
+        if (connections) {
+          const res = await recordConnections(supabaseAdmin, cid, connections);
+          if (!res.ok) {
+            const bad = { ok: false, reason: res.reason };
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
+          }
+          inventory = { recorded: res.recorded, connection_ids: res.connection_ids };
+        }
+        const out = wantsIntake
+          ? { ok: true, recorded: topic, ...(inventory ? { connections: inventory } : {}) }
+          : { ok: true, recorded: "connections", connections: inventory };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
+
 
       if (name === "setup_progress") {
         const step = typeof args?.step === "string" ? args.step : "";
