@@ -337,11 +337,9 @@ export function WorldSurface() {
     try {
       const res = await callWorld<{ claim_status: string; governing_claim_id: string }>("govern", {
         claim_id: claimId,
-        action,
+        verdict: action,
         note: note ?? null,
       });
-      // note: the discriminator is applied last in callWorld, so a body key
-      // named "action" (the verdict) can never shadow it.
       setNoted((prev) => ({
         ...prev,
         [claimId]: {
