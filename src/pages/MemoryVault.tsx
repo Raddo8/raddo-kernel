@@ -317,7 +317,7 @@ export function MemoryVault() {
             </div>
           </div>
         </div>
-      </div>
+      </HqShell>
     );
   }
 
@@ -334,7 +334,7 @@ export function MemoryVault() {
             </div>
           </div>
         </div>
-      </div>
+      </HqShell>
     );
   }
 
@@ -553,7 +553,7 @@ export function MemoryVault() {
           </aside>
         </>
       )}
-    </div>
+    </HqShell>
   );
 }
 
