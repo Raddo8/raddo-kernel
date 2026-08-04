@@ -43,7 +43,20 @@ const SURFACE_LABEL: Record<string, string> = {
   fireside: " · from the fireside",
 };
 
-export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
+/**
+ * UNIT 4 · one TAYLOR everywhere. On wide screens this is the fixed right rail.
+ * Under 1100px the same component is rendered as a drawer over the flow, with a
+ * close control · same thread, same everything.
+ */
+export function TaylorPanel({
+  pageCtx,
+  narrow = false,
+  onClose,
+}: {
+  pageCtx?: string;
+  narrow?: boolean;
+  onClose?: () => void;
+}) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -124,8 +137,11 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
         top: 0,
         right: 0,
         bottom: 0,
-        width: 360,
-        zIndex: 3,
+        left: narrow ? 0 : undefined,
+        width: narrow ? "100%" : 360,
+        maxWidth: narrow ? 480 : undefined,
+        marginLeft: narrow ? "auto" : undefined,
+        zIndex: narrow ? 40 : 3,
         boxSizing: "border-box",
         borderColor: "hsl(var(--dossier-ink-deep))",
       }}
@@ -159,6 +175,27 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
             He sets up your COB with you. Same conversation here and in your Claude chat.
           </p>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close TAYLOR"
+            className="ml-auto flex items-center justify-center"
+            style={{
+              width: 34,
+              height: 34,
+              flex: "none",
+              borderRadius: 4,
+              color: "hsl(var(--dossier-brass))",
+              border: "1px solid hsl(var(--dossier-brass))",
+              background: "transparent",
+              fontSize: 16,
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        )}
       </header>
 
       <div ref={scroller} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">

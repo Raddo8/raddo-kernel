@@ -217,7 +217,14 @@ export default function OnboardingIframe({
   const [hydrationFailed, setHydrationFailed] = useState(false);
   const wideEnough = useTaylorPanelVisible();
   const screen = useIframeScreen(ref, phase.kind === "ready" && hydrated);
-  const taylorVisible = wideEnough && !TAYLOR_HIDDEN_SCREENS.has(screen);
+  const taylorAllowed = !TAYLOR_HIDDEN_SCREENS.has(screen);
+  const taylorVisible = wideEnough && taylorAllowed;
+  /** UNIT 4 · under 1100px TAYLOR is a tab, never absent. */
+  const taylorDrawerAvailable = !wideEnough && taylorAllowed;
+  const [taylorOpen, setTaylorOpen] = useState(false);
+  useEffect(() => {
+    if (!taylorDrawerAvailable) setTaylorOpen(false);
+  }, [taylorDrawerAvailable]);
   const welcome = useWelcomeParty(phase.kind === "ready" && hydrated);
 
 
@@ -480,6 +487,45 @@ export default function OnboardingIframe({
       )}
       {phase.kind === "ready" && hydrated && taylorVisible && (
         <TaylorPanel pageCtx={`page:${screen}`} />
+      )}
+      {phase.kind === "ready" && hydrated && taylorDrawerAvailable && !taylorOpen && (
+        <button
+          type="button"
+          onClick={() => setTaylorOpen(true)}
+          aria-label="Open TAYLOR, your onboarding guide"
+          style={{
+            position: "fixed",
+            right: 0,
+            bottom: 24,
+            zIndex: 39,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "12px 16px",
+            borderRadius: "8px 0 0 8px",
+            border: "1px solid hsl(var(--dossier-brass))",
+            borderRight: 0,
+            background: "hsl(var(--dossier-ink-deep))",
+            color: "hsl(var(--dossier-brass))",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 11,
+            letterSpacing: "0.2em",
+            textTransform: "uppercase",
+            fontWeight: 700,
+            boxShadow: "0 4px 8px rgba(4,44,83,0.18)",
+          }}
+        >
+          taylor
+        </button>
+      )}
+      {phase.kind === "ready" && hydrated && taylorDrawerAvailable && taylorOpen && (
+        <>
+          <div
+            onClick={() => setTaylorOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 38, background: "rgba(4,44,83,0.45)" }}
+          />
+          <TaylorPanel pageCtx={`page:${screen}`} narrow onClose={() => setTaylorOpen(false)} />
+        </>
       )}
       {welcome.show && welcome.state && (
         <WelcomeParty

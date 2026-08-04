@@ -1202,6 +1202,21 @@ export function Hero() {
             <span aria-hidden className="transition-transform duration-220 group-hover:translate-x-[3px]">→</span>
           </a>
           <a
+            href="/signin/new"
+            onClick={() => track("signup_cta_click", "/")}
+            className="dossier-cta-ghost inline-flex items-center gap-2 font-sans text-dossier-ink-deep"
+            style={{
+              fontSize: "14px",
+              fontWeight: 500,
+              letterSpacing: "0.02em",
+              padding: "12px 4px",
+            }}
+          >
+            <span className="border-b border-dossier-brass-deep/40 pb-[2px]">
+              Start with your COB
+            </span>
+          </a>
+          <a
             href="/capability-brief.html"
             className="dossier-cta-ghost inline-flex items-center gap-2 font-sans text-dossier-ink-deep"
             style={{

@@ -378,6 +378,72 @@
       } catch (e) {}
     }
 
+    // UNIT 4 · BUILD MY HQ. The full compiled record goes up in one press, and
+    // the ceremony that follows reads the REAL record stage back, never a timer.
+    function compileRecord() {
+      var st = COB.state || {};
+      var world = null;
+      try { world = typeof COB.world === "function" ? COB.world() : null; } catch (e) {}
+      return {
+        cid: st.cid || null,
+        account: { email: (st.user && st.user.email) || null, first: (st.user && st.user.first) || null, last: (st.user && st.user.last) || null },
+        consent: { signed_at: st.consentAt || null, signed_name: st.consentName || null },
+        gate: st.gate || {},
+        deep_dive: st.dive || null,
+        study: st.study || null,
+        understanding: world || null,
+        briefcase: st.briefcase || [],
+        answers: st.answers || {},
+        skipped: st.skipped || {},
+        fireside: st.fireChat || [],
+        systems_named: st.wishlist || [],
+        connections: st.connectors || {},
+        connections_flagged: st.connFlagged || {},
+        goals: st.goals || st.hq || null,
+        communication_preferences: st.prefs || st.comms || null,
+        seen: st.seen || {},
+        server: st.server || {}
+      };
+    }
+
+    function applyBuildState(d) {
+      if (!d) return false;
+      var prev = COB.state.build || {};
+      var next = {
+        submitted_at: d.build_submitted_at || null,
+        status: d.status || null,
+        stage_index: typeof d.stage_index === "number" ? d.stage_index : null,
+        error: ""
+      };
+      if (prev.submitted_at === next.submitted_at && prev.status === next.status && !prev.error) return false;
+      COB.state.build = next;
+      try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      return true;
+    }
+
+    async function callBuild(action, record) {
+      var r = await sb.functions.invoke("submit-build", { body: record ? { action: action, record: record } : { action: action } });
+      if (r && r.error) throw new Error(r.error.message || "unreachable");
+      if (r && r.data && r.data.error) throw new Error(String(r.data.error));
+      return r && r.data;
+    }
+
+    async function pollBuildState() {
+      if (!TENANT) return;
+      try { if (applyBuildState(await callBuild("state"))) rerender(); } catch (e) {}
+    }
+
+    window.COB_BUILD_HQ = async function () {
+      try {
+        var d = await callBuild("submit", compileRecord());
+        applyBuildState(d);
+      } catch (e) {
+        COB.state.build = Object.assign({}, COB.state.build || {}, { error: String((e && e.message) || e).slice(0, 120) });
+        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e2) {}
+      }
+      rerender();
+    };
+
     async function hydrateFromServer() {
       if (HYDRATED) return;
       HYDRATED = true;
@@ -451,6 +517,8 @@
       subscribeRealtime();
       loadFactsInitial();
       setInterval(pollServerRecord, 20000);
+      pollBuildState();
+      setInterval(pollBuildState, 15000);
 
       // Tell the host the record is hydrated so it can reveal the surface.
       try {

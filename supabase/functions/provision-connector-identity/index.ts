@@ -84,11 +84,20 @@ Deno.serve(async (req) => {
     if (!jwt) return ok({ provisioned: false, error: "unauthenticated" });
 
     const localAnon = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!);
-    const claimsRes = await localAnon.auth.getClaims(jwt);
-    const claims = claimsRes.data?.claims as { sub?: string; email?: string } | undefined;
+    // A non-user JWT (service role, anon, or malformed) makes getClaims throw.
+    // That is a distinct, nameable condition, not a generic exception.
+    let claims: { sub?: string; email?: string } | undefined;
+    try {
+      const claimsRes = await localAnon.auth.getClaims(jwt);
+      claims = claimsRes.data?.claims as { sub?: string; email?: string } | undefined;
+    } catch (e) {
+      console.warn("invalid_token", { message: (e as Error)?.message });
+      return ok({ provisioned: false, error: "invalid_token" });
+    }
     if (!claims?.sub || !claims?.email) {
       return ok({ provisioned: false, error: "invalid_token" });
     }
+
 
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
     const email = String(body.email || "").trim().toLowerCase();

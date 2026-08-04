@@ -222,8 +222,31 @@ Deno.serve(async (req) => {
     }
     const t = turn as Record<string, unknown> | null
     if (!t || t.ok !== true) {
-      return new Response(JSON.stringify({ error: 'record_turn_refused', reason: t?.reason ?? 'unknown' }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      // UNIT 4 punch list (a): every account state gets its OWN error string and
+      // its OWN status. Never one string for two states.
+      const reason = String(t?.reason ?? 'unknown')
+      const statusByReason: Record<string, number> = {
+        UNAUTHENTICATED: 401,
+        CLIENT_REQUEST_ID_REQUIRED: 400,
+        REQUEST_ID_BELONGS_TO_ANOTHER_SUBJECT: 403,
+        NO_ONBOARDING_RECORD_FOR_CID: 404,
+        ONBOARDING_STATE_MISSING: 409,
+        ONBOARDING_PENDING_BINDING: 425,
+        ONBOARDING_QUARANTINED: 423,
+        ONBOARDING_SUPERSEDED: 410,
+        ONBOARDING_STATE_UNRECOGNIZED: 409,
+        QUESTION_NOT_OWNED_BY_THIS_ONBOARDING: 403,
+      }
+      return new Response(
+        JSON.stringify({
+          error: 'record_turn_refused_' + reason.toLowerCase(),
+          reason,
+          identity_state: t?.identity_state ?? null,
+        }),
+        { status: statusByReason[reason] ?? 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
     }
+
 
     return new Response(
       JSON.stringify(t.receipt_id ? { answer, receipt_id: t.receipt_id } : { answer }),
