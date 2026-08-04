@@ -1240,6 +1240,71 @@ const COB={
   ${skipped.length?`<div class="notice"><b>${skipped.length} skipped.</b> Your COB will circle back, or answer now: ${skipped.slice(0,6).map(s=>`<button class="btn-ghost" onclick="COB.go('#/fireside')">${this.esc(s.q.t.slice(0,34))}...</button>`).join(" ")}</div>`:""}
   ${CHAPTERS.map((c,ci)=>`<h3 style="margin-top:32px">${c.n} · ${this.esc(c.title)}</h3><div class="card">${c.qs.map((q,qi)=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/fireside')">Edit</button></div>`).join("")}</div>`).join("")}
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/fireside')">Looks right, keep going</button></div></div>`;},
+ /* ------------------------------------------------------------------
+    DRY-RUN 2R5 · item 1. THE FIRST CONNECTION IS ITS OWN PAGE AGAIN.
+    Step 5 of the journey, between Connections and the Fireside. Plain
+    walkthrough for the custom connector, one tab per app, and a LIVE
+    connected check that reads connector_connected_at from the server.
+    ------------------------------------------------------------------ */
+ CF_APPS:[
+  {id:"cowork",t:"Claude Cowork",open:"https://claude.ai/new#settings/customize-connectors",
+   where:"Open Cowork, then open <b>Settings → Connectors</b> from the sidebar.",
+   chat:"Start a new <b>task</b>."},
+  {id:"claude",t:"Claude.ai",open:"https://claude.ai/new#settings/customize-connectors",
+   where:"Click the button below. Claude's <b>Connectors</b> settings open in a new tab. Sign in if it asks.",
+   chat:"Start a new <b>chat</b>."},
+  {id:"chatgpt",t:"ChatGPT",open:"https://chatgpt.com/#settings/Connectors",
+   where:"Click the button below, then open <b>Settings → Connectors</b> and choose <b>Advanced → Developer mode</b> if the custom option is hidden.",
+   chat:"Start a new <b>chat</b>."},
+ ],
+ cfApp(){return this.CF_APPS.find(a=>a.id===(this._cfApp||"claude"))||this.CF_APPS[1];},
+ cfTab(id){this._cfApp=id;this.save();this.render();},
+ cfStep(n,body){const c=(this.state.checks||{})["conn"+n];
+  return `<div class="stc ${c?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn${n}')"><span class="stn">${c?"✓":n}</span><span>${body}</span></div>`;},
+ vConnectFirst(){const a=this.cfApp();const srv=this.connServer();
+  const tabs=this.CF_APPS.map(x=>`<button class="ftab ${x.id===a.id?"on":""}" role="tab" aria-selected="${x.id===a.id}" onclick="COB.cfTab('${x.id}')">${this.esc(x.t)}</button>`).join("");
+  /* The green state is SERVER truth only. A local click never paints this. */
+  const live=srv?`
+   <div class="card" style="border-left:3px solid var(--ok)">
+    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you</p>
+    <p style="margin:0">The connector itself reported in${this.connWhen()?` on ${this.esc(this.connWhen())}`:""}${srv.client?`, from ${this.esc(srv.client)}`:""}. That is your proof the first connection took.</p>
+    <p class="hintline" style="margin:8px 0 0">haven't met TAYLOR yet? ${a.chat.replace(/<[^>]+>/g,"")} and paste the step 6 message.</p>
+    <div class="q-actions" style="margin-top:12px">
+     <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+     <button class="btn" onclick="COB.go('#/fireside')">On to the fireside chat</button>
+    </div>
+    <div id="conncheck"></div>
+   </div>`:`
+   <div class="card" style="border-left:3px solid var(--brass)">
+    <div class="ftabs" role="tablist" style="margin-bottom:14px">${tabs}</div>
+    <div class="steps-c">
+     ${this.cfStep(1,`<b>Open your connector settings.</b> ${a.where}`)}
+     ${this.cfStep(2,`<b>Find the button that says Add custom connector.</b> Scroll down until you see it. Click it.`)}
+     ${this.cfStep(3,`<b>Fill in two boxes.</b> In the Name box, type <b>COB</b>. In the URL box, paste this address. Leave every other box empty.`)}
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:16px;text-align:center;padding:20px 16px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button><div style="padding-top:6px">https://mcp.chiefofbusiness.ai/</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     ${this.cfStep(4,`<b>Click Add, then Connect.</b> A card appears reading <b>COB · Chief of Business</b> with our gold mark. Click <b>Connect</b> on it.`)}
+     ${this.cfStep(5,`<b>Sign in and press Allow.</b> A COB sign-in page opens. Sign in, then press <b>Allow</b>. That hands ${this.esc(a.t)} the key to YOUR Chief, yours and nobody else's.`)}
+     ${this.cfStep(6,`<b>${a.chat}</b> Copy the message below, paste it, and send. A navy-and-gold welcome card appears in the reply. That is TAYLOR saying hello.`)}
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:15px;padding:18px 16px"><button class="copybtn" onclick="event.stopPropagation();COB.copyWelcomeMsg()">Copy message</button><div style="padding-top:6px">Hello — I've just connected Chief of Business. Please open my COB welcome and show it to me.</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     ${this.cfStep(7,`<b>Press the gold button.</b> On the welcome card, press <b>MEET TAYLOR · BEGIN MY SETUP</b>. TAYLOR takes it from there, one step at a time, and keeps track so nothing gets asked twice.`)}
+    </div>
+    <p class="hintline" style="margin:14px 0 0"><span class="livedot" style="background:var(--ash)"></span> this page turns green on its own the moment the connector reports in. Nothing to press.</p>
+    <div class="q-actions" style="margin-top:14px">
+     <a class="btn" href="${a.open}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Open ${this.esc(a.t)} connectors</a>
+     <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+     <button class="btn-ghost" onclick="COB.go('#/fireside')">Do this later</button>
+    </div>
+    <div id="conncheck"></div>
+   </div>`;
+  return `<div class="q-wrap" style="max-width:760px">${this.backbar("the first connection")}
+  <p class="kicker">${this.stepKicker('#/connect-first')}</p><h1>The <span class="brass-u">first connection</span>.</h1>
+  <p style="margin-top:14px"><b style="color:var(--ink)">Your Chief lives inside the AI you already use. These seven steps introduce you, and TAYLOR picks you up at the end. About five minutes.</b></p>
+  ${live}
+  </div>`;},
  vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
   const PROV_URLS={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
   const ftab=(id,label,num)=>`<a class="ftab ${this._provClicked===label?"on":""}" role="tab" aria-selected="${this._provClicked===label}" href="${PROV_URLS[id]}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" onclick="COB.provPrep('${id}')"><span class="fn">${num}</span>${label}</a>`;
