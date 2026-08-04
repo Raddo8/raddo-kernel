@@ -47,7 +47,7 @@ import { setCobName, taylorConnectorIntro } from "../_shared/cob-name.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "taylor_shared_thread_v1";
+const BUILD_ID = "memory_read_path_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2135,7 +2135,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.04.1";
+const TOOL_MANIFEST_VERSION = "2026.08.04.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2534,7 +2534,26 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+// ── M2 · memory read path ────────────────────────────────────────────────
+const TOOL_MEMORY_SEARCH = {
+  name: "memory_search",
+  title: "Memory Search",
+  description:
+    "Full-text search across this client's governed memory (title and body). CID scoped, binned entries excluded. Read-only.",
+  annotations: { title: "Memory Search", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search words or a quoted phrase." },
+      limit: { type: "number", description: "Max hits (default 20, cap 100)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["query"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -4043,6 +4062,20 @@ Deno.serve(async (req) => {
             });
           } catch { /* best-effort */ }
 
+          // M2 · MEMORY MODULE. Governed belief system, not a transcript.
+          // Service-role projection, CID keyed, superseded and binned excluded.
+          let memoryModule: any = null;
+          const memoryCid = beginCid ?? pctx.legacy_cid ?? null;
+          if (memoryCid) {
+            const { data: memData, error: memErr } = await supabaseAdmin
+              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 40 });
+            if (memErr) { outcome = "partial"; degradedReasons.push("memory_read_failed"); }
+            else memoryModule = memData ?? null;
+          } else {
+            degradedReasons.push("memory_cid_unresolved");
+          }
+          if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
+
           const out = {
             session_id: sessionId,
             tenant,
@@ -4059,6 +4092,7 @@ Deno.serve(async (req) => {
               snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
               created_at: r.created_at,
             })),
+            memory: memoryModule,
             staleness,
             makeup_close_owed,
             registers_empty,
@@ -4086,6 +4120,45 @@ Deno.serve(async (req) => {
           return rpcError(id, -32603, `begin_session_failed:${msg}`);
         }
       }
+
+      // ── M2 · memory_search · CID scoped full text over the belief store ──
+      if (name === "memory_search") {
+        if (!tenant) return rpcError(id, -32001, "invalid_token");
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+        const q = typeof args?.query === "string" ? args.query.trim() : "";
+        if (!q) return rpcError(id, -32602, "query_required");
+        const lim = typeof args?.limit === "number" ? Math.max(1, Math.min(100, Math.floor(args.limit))) : 20;
+        const searchCid = pctx.legacy_cid ?? null;
+        if (!searchCid) return rpcError(id, -32004, "cid_unresolved");
+        const { data, error } = await supabaseAdmin
+          .rpc("memory_search_read", { p_cid: searchCid, p_q: q, p_limit: lim });
+        if (error) return rpcError(id, -32603, `memory_search_failed:${error.message}`);
+        try {
+          await recordMcpUsage(supabaseAdmin, {
+            tenant,
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id,
+            external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
+            tool: "memory_search",
+            agent_id: null,
+            passes: [],
+            routing_log: { query_len: q.length, returned: (data as any)?.returned ?? 0 },
+          });
+        } catch { /* best-effort */ }
+        const out = {
+          query: q,
+          returned: (data as any)?.returned ?? 0,
+          hits: (data as any)?.hits ?? [],
+          ...identityBlock(pctx),
+          ...manifestBlock(args),
+        };
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(out) }],
+          structuredContent: out,
+          isError: false,
+        });
+      }
+
+
 
       // ══════════════════════════════════════════════════════════════════
       // RITUAL WRITES v1 · save_session / sync_session / end_session

@@ -1,0 +1,1 @@
+ALTER TABLE public.memory_entries DROP CONSTRAINT IF EXISTS memory_entries_status_chk;
