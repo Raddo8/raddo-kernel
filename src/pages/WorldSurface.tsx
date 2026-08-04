@@ -344,7 +344,6 @@ export function WorldSurface() {
       for (const id of ids) { if (next[id]) snapshot[id] = next[id]; delete next[id]; }
       return next;
     });
-    setClaims((prev) => prev.map((c) => (ids.includes(c.id) ? { ...c, status: "staged" } : c)));
     setHistory((h) => h.filter((x) => x.ids.join() !== ids.join()));
     try {
       await callWorld("govern", { claim_ids: ids, verdict: "undo", governing_ids: governing });
