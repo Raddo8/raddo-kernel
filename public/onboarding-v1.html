@@ -776,8 +776,13 @@ const COB={
   const chips=(arr,cls)=>arr.length?arr.slice(0,5).map(x=>`<span class="chip ${cls||""}">${this.esc(x)}</span>`).join("")+(arr.length>5?`<span class="chip" style="color:var(--ash)">+${arr.length-5} more</span>`:""):`<span class="w-empty">· · ·</span>`;
   const noTay=(location.hash||"").split("/")[1]==="fireside";
   const tayOn=!noTay&&this._tayOpen;
-  const world=`<aside class="world${tayOn?' tay-open':''}" aria-label="Your world"><div class="wbox">
+  const bfFacts=this.briefcaseFacts();const bfDocs=(this.state.briefcase||[]).length;const bfFiles=(this.state.files||[]).length;
+  const wEmpty=this.worldEmpty(w);
+  const bcCount=wEmpty?"your file starts filling at diving in":`${bfDocs} deliverable${bfDocs===1?"":"s"} \u00b7 ${bfFacts} fact${bfFacts===1?"":"s"} on record${bfFiles?` \u00b7 ${bfFiles} file${bfFiles===1?"":"s"}`:""}`;
+  const world=`<aside class="world${tayOn?' tay-open':''}" aria-label="The briefcase"><div class="wbox">
+   <div class="bp-head"><div class="bp-t">The Briefcase</div><div class="bp-c">${this.esc(bcCount)}</div></div>
    <div class="wbox-body">
+    ${wEmpty?`<p class="w-empty" style="margin:0 0 14px;line-height:1.5">This is the file we are building with you. Nothing is in it yet. Your file starts filling at Diving In, then grows with every answer, connection, and conversation.</p>`:``}
     <div class="w-group"><div class="w-label">entities</div>${chips(w.entities,"navy")}</div>
     <div class="w-group"><div class="w-label">people</div>${chips(w.people)}</div>
     <div class="w-group"><div class="w-label">priorities</div>${chips(w.priorities)}</div>
