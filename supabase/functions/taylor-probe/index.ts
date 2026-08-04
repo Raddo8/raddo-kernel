@@ -20,14 +20,13 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: keyRow } = await admin.from("internal_keys").select("key_value").eq("name", "taylor_probe_token").maybeSingle();
-  const expected = keyRow?.key_value ? new TextDecoder().decode(Uint8Array.from(atob(String(keyRow.key_value).replace(/^\\x/, "") ? "" : ""), (c) => c.charCodeAt(0))) : null;
-  const expectedHex = keyRow?.key_value ? String(keyRow.key_value) : null;
+  const expectedHex = keyRow?.key_value ? String(keyRow.key_value).toLowerCase() : null;
   const presented = req.headers.get("x-probe-token") || "";
   const presentedHex = "\\x" + Array.from(new TextEncoder().encode(presented)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  if (!expectedHex || presentedHex !== expectedHex) {
+  if (!expectedHex || presented.length < 16 || presentedHex !== expectedHex) {
     return new Response(JSON.stringify({ error: "probe_forbidden" }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-  void expected;
+
 
   const body = await req.json().catch(() => ({} as any));
   const cid = String(body?.cid || "").trim();
