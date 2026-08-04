@@ -786,7 +786,7 @@ const COB={
 
   this.mobNav(r);this.dockSync(r);const f=app.querySelector("textarea,input");if(f&&r.p==="ch")f.focus();},
  mobNav(r){const m=document.getElementById('mobNav');
-  const inShell=["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p);
+  const inShell=["consent","gate","reveal","plugin","connect-first","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p);
   if(!inShell){m.classList.add('off');return;}m.classList.remove('off');
   m.innerHTML=`<button class="btn-ghost" style="padding:4px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase" onclick="COB.navOpen()">menu</button><span style="margin-left:auto">${this.pct()}% overall</span>`;},
  shell(inner,chIdx){const w=this.world();
