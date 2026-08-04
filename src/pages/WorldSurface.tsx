@@ -80,7 +80,7 @@ type NotedState = { verdict: string; text: string };
 
 async function callWorld<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.functions.invoke("world-graph", {
-    body: { action, ...body },
+    body: { ...body, action },
   });
   if (error) throw new Error(error.message);
   if (!data?.ok) throw new Error(String(data?.error ?? "world_graph_error"));
@@ -340,6 +340,8 @@ export function WorldSurface() {
         action,
         note: note ?? null,
       });
+      // note: the discriminator is applied last in callWorld, so a body key
+      // named "action" (the verdict) can never shadow it.
       setNoted((prev) => ({
         ...prev,
         [claimId]: {
