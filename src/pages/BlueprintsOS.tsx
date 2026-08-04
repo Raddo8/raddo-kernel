@@ -537,7 +537,7 @@ export function BlueprintsOS() {
           return (
             <div key={day.toISOString()} className={cls}>
               <div className="cal-n">{format(day, "d MMM")}</div>
-              {runs.map((row) => (
+              {runs.slice(0, 6).map((row) => (
                 <button
                   key={row.id}
                   type="button"
@@ -548,7 +548,7 @@ export function BlueprintsOS() {
                   {row.title ?? "Untitled build"}
                 </button>
               ))}
-              {miles.slice(0, 4).map((m) => (
+              {miles.slice(0, 3).map((m) => (
                 <button
                   key={m.id}
                   type="button"
@@ -559,6 +559,13 @@ export function BlueprintsOS() {
                   {m.label}
                 </button>
               ))}
+              {runs.length + miles.length > 9 && (
+                <div className="cal-more">
+                  {runs.length + miles.length - Math.min(runs.length, 6) - Math.min(miles.length, 3)} more
+                  on this day
+                </div>
+              )}
+
             </div>
           );
         })}
