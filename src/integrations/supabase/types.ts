@@ -3960,6 +3960,7 @@ export type Database = {
           tenant_key: string
           updated_at: string
           user_id: string
+          welcome_celebrated_at: string | null
         }
         Insert: {
           bound_at?: string | null
@@ -3982,6 +3983,7 @@ export type Database = {
           tenant_key: string
           updated_at?: string
           user_id: string
+          welcome_celebrated_at?: string | null
         }
         Update: {
           bound_at?: string | null
@@ -4004,6 +4006,7 @@ export type Database = {
           tenant_key?: string
           updated_at?: string
           user_id?: string
+          welcome_celebrated_at?: string | null
         }
         Relationships: [
           {
