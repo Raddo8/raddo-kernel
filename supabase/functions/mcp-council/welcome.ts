@@ -314,8 +314,17 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
     setup_guide: WELCOME_SETUP_POINTER,
     next_steps: WELCOME_STEPS,
     client,
+    rename_offer: {
+      available: true,
+      cob_name: client.cob_name,
+      tool: "set_chief_name",
+      offer: client.cob_name
+        ? `Their COB is called ${client.cob_name}. Offer once, plainly, that they can change the name, and call set_chief_name if they choose a new one.`
+        : "Their COB is not named yet. Invite them to name it and call set_chief_name with the name they choose.",
+    },
   };
 }
+
 
 export interface ProgressRow {
   step_key: string;
