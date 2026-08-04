@@ -656,6 +656,10 @@ const COB={
  go(h){location.hash=h;},
  /* ---- world extraction ---- */
  lines(v){return String(v||"").split(/\n|;/).map(x=>x.trim()).filter(x=>x.length>1).slice(0,10);},
+ /* 2R4 · connector truth comes from the SERVER record, never local clicks. */
+ connServer(){const v=this.state.server||{};return v.connector_connected_at?{at:v.connector_connected_at,client:v.connector_first_client||""}:null;},
+ cobConnected(){return !!this.connServer()||((this.state.connectors||{}).cob==="done");},
+ connWhen(){const c=this.connServer();const t=(c&&c.at)||this.state.connectedAt;if(!t)return "";try{return new Date(t).toLocaleString();}catch(e){return "";}},
  /* ---- 2R4 · the briefcase compiles from EVERY source that has landed ---- */
  diveWorld(){const d=this.state.dive;return (d&&d.brief&&d.brief.world&&typeof d.brief.world==="object")?d.brief.world:{};},
  briefcaseFacts(){return (this.state.briefcase||[]).reduce((n,d)=>n+((d&&d.facts)||0),0);},
@@ -1210,11 +1214,11 @@ const COB={
   return `<div class="q-wrap" style="max-width:760px">${this.backbar("the first connection")}
   <p class="kicker">${this.stepKicker('#/harvest')}</p><h1>The <span class="brass-u">first connection</span>.</h1>
    <p style="margin-top:14px"><b style="color:var(--ink)">Your Chief lives inside Claude. These seven steps introduce you — and TAYLOR picks you up at the end. About five minutes.</b></p>
-   ${(this.state.connectors||{}).cob==="done"?`
+   ${this.cobConnected()?`
    <div class="card" style="border-left:3px solid var(--ok)">
     <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you in claude</p>
     <p style="margin:0">You're connected. Haven't met TAYLOR yet? Start a new chat and paste the step 6 message — TAYLOR takes it from there.</p>
-    <p class="hintline" style="margin:8px 0 0">on your confirmation${this.state.connectedAt?` · ${new Date(this.state.connectedAt).toLocaleString()}`:""} · verify it live below</p>
+    <p class="hintline" style="margin:8px 0 0">${this.connServer()?`confirmed by the connector itself${this.connWhen()?` · ${this.esc(this.connWhen())}`:""}${this.connServer().client?` · ${this.esc(this.connServer().client)}`:""}`:`on your confirmation${this.connWhen()?` · ${this.esc(this.connWhen())}`:""}`} · verify it live below</p>
     <div class="q-actions" style="margin-top:12px">
      <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
      <button class="btn-ghost" onclick="COB.connDisconnect()">Disconnect</button>
