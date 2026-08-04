@@ -273,7 +273,10 @@ async function actionStage(p: Principal, body: any) {
 
 async function actionGovern(p: Principal, body: any) {
   const claimId = str(body?.claim_id);
-  const action = str(body?.action);
+  // The top-level discriminator is also called "action", so a caller sending
+  // { action: "govern" } passes the verdict as "verdict". Both spellings work;
+  // "verdict" wins when the discriminator has already claimed "action".
+  const action = str(body?.verdict) ?? (str(body?.action) === "govern" ? null : str(body?.action));
   const note = str(body?.note);
   if (!claimId) return fail("claim_id_required");
   if (!action || !["confirm", "flag", "explain"].includes(action)) return fail("invalid_action");
