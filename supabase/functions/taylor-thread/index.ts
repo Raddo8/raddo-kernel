@@ -16,6 +16,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   contextDigest,
+  extractCorrection,
   postThreadMessage,
   readSharedContext,
   readThreadMessages,
