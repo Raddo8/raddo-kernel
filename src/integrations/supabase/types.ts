@@ -1252,6 +1252,39 @@ export type Database = {
           },
         ]
       }
+      connection_inventory: {
+        Row: {
+          category: string
+          cid: string
+          created_at: string
+          grant_status: string
+          id: string
+          system_name: string
+          updated_at: string
+          usage_role: string
+        }
+        Insert: {
+          category?: string
+          cid: string
+          created_at?: string
+          grant_status?: string
+          id?: string
+          system_name: string
+          updated_at?: string
+          usage_role?: string
+        }
+        Update: {
+          category?: string
+          cid?: string
+          created_at?: string
+          grant_status?: string
+          id?: string
+          system_name?: string
+          updated_at?: string
+          usage_role?: string
+        }
+        Relationships: []
+      }
       connector_accounts: {
         Row: {
           account_id: string
@@ -4044,8 +4077,11 @@ export type Database = {
           consent_signed_name: string | null
           created_at: string
           current_step: string
+          handoff_complete_at: string | null
+          handoff_message_id: string | null
           id: string
           identity_state: string
+          lane: string | null
           quarantine_reason: string | null
           reconciliation_receipt_id: string | null
           state: Json | null
@@ -4069,8 +4105,11 @@ export type Database = {
           consent_signed_name?: string | null
           created_at?: string
           current_step?: string
+          handoff_complete_at?: string | null
+          handoff_message_id?: string | null
           id?: string
           identity_state?: string
+          lane?: string | null
           quarantine_reason?: string | null
           reconciliation_receipt_id?: string | null
           state?: Json | null
@@ -4094,8 +4133,11 @@ export type Database = {
           consent_signed_name?: string | null
           created_at?: string
           current_step?: string
+          handoff_complete_at?: string | null
+          handoff_message_id?: string | null
           id?: string
           identity_state?: string
+          lane?: string | null
           quarantine_reason?: string | null
           reconciliation_receipt_id?: string | null
           state?: Json | null
@@ -7277,6 +7319,42 @@ export type Database = {
           },
         ]
       }
+      wire_grants: {
+        Row: {
+          cid: string
+          created_at: string
+          grant_status: string
+          granted_at: string | null
+          id: string
+          notes: string | null
+          provider: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          grant_status?: string
+          granted_at?: string | null
+          id?: string
+          notes?: string | null
+          provider?: string
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          grant_status?: string
+          granted_at?: string | null
+          id?: string
+          notes?: string | null
+          provider?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       work_orders: {
         Row: {
           claimed_at: string | null
@@ -7476,6 +7554,54 @@ export type Database = {
             referencedColumns: ["cid"]
           },
         ]
+      }
+      world_items: {
+        Row: {
+          body: string
+          cid: string
+          confidence: number | null
+          created_at: string
+          first_seen: string
+          id: string
+          item_type: string
+          provenance: Json
+          provenance_refs: Json
+          source: string
+          synthetic: boolean
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          cid: string
+          confidence?: number | null
+          created_at?: string
+          first_seen?: string
+          id?: string
+          item_type: string
+          provenance?: Json
+          provenance_refs?: Json
+          source: string
+          synthetic?: boolean
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          cid?: string
+          confidence?: number | null
+          created_at?: string
+          first_seen?: string
+          id?: string
+          item_type?: string
+          provenance?: Json
+          provenance_refs?: Json
+          source?: string
+          synthetic?: boolean
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
     }
     Views: {
