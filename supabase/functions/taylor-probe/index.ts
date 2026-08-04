@@ -70,7 +70,6 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model,
         max_tokens: 200,
-        temperature: 0.7,
         system: `${TAYLOR_SYSTEM}\n\n[shared context, trusted]\n${contextDigest(ctx)}`,
         messages: [{ role: "user", content: String(body?.prompt || "What is my next step?") }],
       }),

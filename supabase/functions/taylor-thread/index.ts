@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model, max_tokens: 400, temperature: 0.7, system, messages: history }),
+      body: JSON.stringify({ model, max_tokens: 400, system, messages: history }),
     });
   } catch (e) {
     return json({ error: "taylor_model_unreachable", detail: String(e instanceof Error ? e.message : e).slice(0, 300), client_message_id: posted.id }, 502);
