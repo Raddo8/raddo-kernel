@@ -163,7 +163,7 @@
   display: block; width: 100%; text-align: left; border: 1px solid var(--line);
   background: var(--paper); border-radius: var(--r-s); padding: 4px 6px; font-family: var(--sans);
   font-size: 10.5px; line-height: 1.35; color: var(--ink); margin-bottom: 4px; cursor: pointer;
-  overflow-wrap: anywhere;
+  overflow-wrap: anywhere; max-height: 4.1em; overflow: hidden;
 }
 
 .hqd .cal-e:hover { border-color: var(--brass); }
