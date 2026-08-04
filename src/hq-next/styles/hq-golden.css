@@ -104,3 +104,6 @@
   .hqg .rail-scrim{display:block;position:fixed;inset:0;background:rgba(4,44,83,.42);z-index:39}
 }
 @media(prefers-reduced-motion:reduce){.hqg .rail{transition:none}}
+.hqg .mark-tile img{width:100%;height:100%;object-fit:cover;border-radius:7px;display:block}
+.hqg .nl .nn{margin-right:2px;flex:none}
+.hqg .nl.off .soon{margin-left:8px}
