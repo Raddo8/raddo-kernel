@@ -532,6 +532,8 @@ Deno.serve(async (req) => {
       case "merge": return await actionMerge(principal, body);
       case "delta": return await actionDelta(principal);
       case "profile": return await actionProfile(principal, body);
+      case "entities": return await actionEntities(principal);
+      case "sources": return await actionSources(principal);
       default: return fail("unknown_action");
     }
   } catch (e) {
