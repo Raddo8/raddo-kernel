@@ -158,25 +158,14 @@ async function actionStage(p: Principal, body: any) {
 
   // upsert source on (cid, kind, label)
   let sourceId: string;
-  const existing = await admin!
+  let lookup = admin!
     .from("world_sources")
     .select("id, last_wave")
     .eq("cid", p.cid)
-    .eq("kind", kind)
-    .is("label", label === null ? null : undefined as any);
-  let found: any = null;
-  if (label === null) {
-    found = (existing.data ?? [])[0] ?? null;
-  } else {
-    const q = await admin!
-      .from("world_sources")
-      .select("id, last_wave")
-      .eq("cid", p.cid)
-      .eq("kind", kind)
-      .eq("label", label)
-      .maybeSingle();
-    found = q.data ?? null;
-  }
+    .eq("kind", kind);
+  lookup = label === null ? lookup.is("label", null) : lookup.eq("label", label);
+  const { data: foundRows } = await lookup.limit(1);
+  const found: any = (foundRows ?? [])[0] ?? null;
 
   const nowIso = new Date().toISOString();
   if (found?.id) {
