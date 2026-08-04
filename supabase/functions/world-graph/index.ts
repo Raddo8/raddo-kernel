@@ -18,7 +18,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
 
-const BUILD_ID = "w1c.1";
+const BUILD_ID = "w1d.1";
 const HIDDEN = ["privileged", "third-party-npi"];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -271,67 +271,113 @@ async function actionStage(p: Principal, body: any) {
   });
 }
 
+/** Receipts must never block the caller. Fire, and let the runtime finish it. */
+function receiptAsync(args: Parameters<typeof writeReceipt>[1]) {
+  const p = writeReceipt(admin, args).catch((e) =>
+    console.error("world_receipt_async_failed", e instanceof Error ? e.message : String(e))
+  );
+  const wu = (globalThis as any).EdgeRuntime?.waitUntil;
+  if (typeof wu === "function") wu.call((globalThis as any).EdgeRuntime, p);
+}
+
+/**
+ * govern · single or batch.
+ *   { claim_id } or { claim_ids: [] }, verdict: confirm | flag | explain | undo
+ * Batch writes one status update and one governing insert for the whole set.
+ * undo returns the claims to staged and voids their governing claims. Nothing
+ * is ever deleted: append-only law holds, status is the only mutated column.
+ */
 async function actionGovern(p: Principal, body: any) {
-  const claimId = str(body?.claim_id);
+  const ids = Array.isArray(body?.claim_ids)
+    ? (body.claim_ids as unknown[]).map((x) => str(x)).filter(Boolean) as string[]
+    : (str(body?.claim_id) ? [str(body.claim_id) as string] : []);
   // The top-level discriminator is also called "action", so a caller sending
   // { action: "govern" } passes the verdict as "verdict". Both spellings work;
   // "verdict" wins when the discriminator has already claimed "action".
   const action = str(body?.verdict) ?? (str(body?.action) === "govern" ? null : str(body?.action));
   const note = str(body?.note);
-  if (!claimId) return fail("claim_id_required");
-  if (!action || !["confirm", "flag", "explain"].includes(action)) return fail("invalid_action");
+  if (ids.length === 0) return fail("claim_id_required");
+  if (ids.length > 500) return fail("too_many_claims");
+  if (!action || !["confirm", "flag", "explain", "undo"].includes(action)) return fail("invalid_action");
 
-  const { data: claim } = await admin!
+  const { data: claims } = await admin!
     .from("world_claims")
-    .select("id, cid, subject_id, sensitivity")
+    .select("id, subject_id")
     .eq("cid", p.cid)
-    .eq("id", claimId)
-    .maybeSingle();
-  if (!claim) return fail("claim_not_found_in_tenant", 404);
+    .in("id", ids);
+  const found = (claims ?? []) as Array<{ id: string; subject_id: string }>;
+  if (found.length === 0) return fail("claim_not_found_in_tenant", 404);
+  const foundIds = found.map((c) => c.id);
 
-  const newStatus = action === "confirm" ? "confirmed" : "flagged";
+  const newStatus = action === "confirm" ? "confirmed" : action === "undo" ? "staged" : "flagged";
+
   const upd = await admin!
     .from("world_claims")
     .update({ status: newStatus })
     .eq("cid", p.cid)
-    .eq("id", claimId);
+    .in("id", foundIds);
   if (upd.error) return fail("status_update_failed", 500, { detail: upd.error.message });
+
+  // undo voids the governing claims that ruled on these claims.
+  let voided: string[] = [];
+  if (action === "undo") {
+    const govIds = Array.isArray(body?.governing_ids)
+      ? (body.governing_ids as unknown[]).map((x) => str(x)).filter(Boolean) as string[]
+      : [];
+    const voidQ = admin!
+      .from("world_claims")
+      .update({ status: "voided" })
+      .eq("cid", p.cid)
+      .eq("predicate", "governs")
+      .neq("status", "voided");
+    const res = govIds.length > 0
+      ? await voidQ.in("id", govIds).select("id")
+      : await voidQ.in("subject_id", found.map((c) => c.subject_id)).select("id");
+    if (!res.error) voided = (res.data ?? []).map((r: any) => r.id);
+  }
 
   const governing = await admin!
     .from("world_claims")
-    .insert({
-      cid: p.cid,
-      subject_id: claim.subject_id,
-      predicate: "governs",
-      value_text: note ? `${action}: ${note}` : action,
-      grade: "client-asserted",
-      status: "confirmed",
-      sensitivity: "operational",
-      supersedes: newStatus === "flagged" ? claimId : null,
-    })
-    .select("id")
-    .single();
+    .insert(
+      found.map((c) => ({
+        cid: p.cid,
+        subject_id: c.subject_id,
+        predicate: "governs",
+        value_text: note ? `${action}: ${note}` : action,
+        grade: "client-asserted",
+        status: "confirmed",
+        sensitivity: "operational",
+        supersedes: newStatus === "flagged" ? c.id : null,
+      })),
+    )
+    .select("id, subject_id");
   if (governing.error) return fail("governing_claim_failed", 500, { detail: governing.error.message });
 
-  const receipt = await writeReceipt(admin, {
+  receiptAsync({
     tenant_id: p.cid,
-    entity_id: claim.subject_id,
+    entity_id: found[0].subject_id,
     change: "world.govern",
     actor: "client",
-    summary: `${action} on claim ${claimId}${note ? ` · ${note}` : ""}`,
+    summary: `${action} on ${foundIds.length} claim${foundIds.length === 1 ? "" : "s"}${note ? ` · ${note}` : ""}`,
   });
 
   return json({
     ok: true,
     action: "govern",
     cid: p.cid,
-    claim_id: claimId,
+    verdict: action,
+    claim_id: foundIds[0],
+    claim_ids: foundIds,
     claim_status: newStatus,
-    governing_claim_id: governing.data.id,
-    receipt,
+    governing_claim_id: (governing.data ?? [])[0]?.id ?? null,
+    governing_claim_ids: (governing.data ?? []).map((r: any) => r.id),
+    voided_governing_ids: voided,
+    count: foundIds.length,
+    receipt: { queued: true },
     build_id: BUILD_ID,
   });
 }
+
 
 async function actionMerge(p: Principal, body: any) {
   const entityId = str(body?.entity_id);
@@ -408,7 +454,7 @@ async function actionEntities(p: Principal) {
   const allowed = readableSensitivities(p);
   const { data, error } = await admin!
     .from("world_entities")
-    .select("id, etype, name, tag, status, sensitivity, merged_into, updated_at")
+    .select("id, etype, name, tag, status, sensitivity, resolution_keys, merged_into, updated_at")
     .eq("cid", p.cid)
     .is("merged_into", null)
     .in("sensitivity", allowed)
@@ -444,6 +490,41 @@ async function actionSources(p: Principal) {
   });
 }
 
+/**
+ * Whole-record read: every claim the caller may see, staged and confirmed.
+ * The surface groups these client-side; the render law is enforced here by
+ * withholding hidden sensitivities and non-visible statuses.
+ */
+async function actionClaims(p: Principal, body: any) {
+  let q = admin!
+    .from("world_claims")
+    .select("id, subject_id, object_id, predicate, value_text, source_id, source_ref, miner, wave, grade, status, sensitivity, synthetic, observed_at")
+    .eq("cid", p.cid)
+    .in("status", ["staged", "confirmed"])
+    .in("sensitivity", readableSensitivities(p));
+  if (body?.include_synthetic !== true) q = q.eq("synthetic", false);
+  const { data, error } = await q.order("observed_at", { ascending: false }).limit(3000);
+  if (error) return fail("claims_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "claims",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+/** All edges for the caller's cid, for the world-area web rows. */
+async function actionEdges(p: Principal) {
+  const { data, error } = await admin!
+    .from("world_edges")
+    .select("id, src_id, dst_id, etype")
+    .eq("cid", p.cid)
+    .limit(3000);
+  if (error) return fail("edges_read_failed", 500, { detail: error.message });
+  return json({ ok: true, action: "edges", cid: p.cid, rows: data ?? [], count: (data ?? []).length, build_id: BUILD_ID });
+}
 
 
 async function actionProfile(p: Principal, body: any) {
@@ -537,6 +618,8 @@ Deno.serve(async (req) => {
       case "profile": return await actionProfile(principal, body);
       case "entities": return await actionEntities(principal);
       case "sources": return await actionSources(principal);
+      case "claims": return await actionClaims(principal, body);
+      case "edges": return await actionEdges(principal);
       default: return fail("unknown_action");
     }
   } catch (e) {

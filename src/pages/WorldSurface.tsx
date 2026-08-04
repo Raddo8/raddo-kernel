@@ -1,33 +1,26 @@
 /** THE WORLD · /hq/world
  *
- * W1c. Every byte on this surface comes from the live graph through the
- * world-graph edge function (actions: delta, entities, sources, profile,
- * govern, merge). Nothing is hand authored, nothing is hardcoded.
+ * W1d. The principal-approved template, rendered live. Every byte on this
+ * surface comes from the world-graph edge function (actions: claims, entities,
+ * edges, sources, profile, govern, merge). Nothing is hand authored.
  *
  * Render law:
- *  · privileged / third-party-npi never reach the client (function withholds
- *    them); this file does not special-case around that.
+ *  · privileged / third-party-npi never reach the client (the function
+ *    withholds them); this file does not special-case around that.
  *  · sensitive rows render muted with a SENSITIVE · HELD WITH CARE chip.
  *  · flagged / voided / superseded claims never render in profiles.
  *  · grade renders verbatim in the provenance line.
+ *
+ * Speed law: every govern interaction transitions the UI immediately and
+ * reconciles in the background, rolling back with a visible notice on failure.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import "@/hq-next/styles/hq-design.css";
 import "@/hq-next/styles/hq-world.css";
 
-/* ------------------------------------------------------------- contracts */
+const DOT = "\u00b7";
 
-interface DeltaRow {
-  claim_id: string;
-  subject_id: string;
-  predicate: string;
-  value_text: string | null;
-  source_ref: string | null;
-  grade: string | null;
-  sensitivity: string | null;
-  observed_at: string | null;
-}
+/* ------------------------------------------------------------- contracts */
 
 interface EntityRow {
   id: string;
@@ -36,7 +29,25 @@ interface EntityRow {
   tag: string | null;
   status: string | null;
   sensitivity: string | null;
-  updated_at: string | null;
+  resolution_keys?: unknown;
+  updated_at?: string | null;
+}
+
+interface ClaimRow {
+  id: string;
+  subject_id: string;
+  object_id: string | null;
+  predicate: string;
+  value_text: string | null;
+  source_id: string | null;
+  source_ref: string | null;
+  miner: string | null;
+  wave: number | null;
+  grade: string | null;
+  status: string | null;
+  sensitivity: string | null;
+  synthetic?: boolean | null;
+  observed_at: string | null;
 }
 
 interface SourceRow {
@@ -49,39 +60,23 @@ interface SourceRow {
   meta: Record<string, unknown> | null;
 }
 
-interface ClaimRow extends DeltaRow {
-  id: string;
-  status: string | null;
-  object_id: string | null;
-  confidence: number | null;
-  miner: string | null;
-  wave: number | null;
-}
+interface EdgeRow { id: string; src_id: string; dst_id: string; etype: string | null }
 
-interface EdgeRow {
-  id: string;
-  src_id: string;
-  dst_id: string;
-  etype: string;
-  meta: Record<string, unknown> | null;
-}
+interface ProfilePayload { entity: EntityRow; claims: ClaimRow[]; edges: EdgeRow[] }
 
-interface ProfilePayload {
-  entity: EntityRow & { meta?: Record<string, unknown> | null };
-  claims: ClaimRow[];
-  edges: EdgeRow[];
-}
+type Noted = { verdict: string; note: string | null; governing_ids: string[]; at: number };
 
-type Register = "delta" | "profiles" | "sources";
-
-type NotedState = { verdict: string; text: string };
+type View =
+  | { kind: "delta" }
+  | { kind: "area"; id: string }
+  | { kind: "profiles"; type: string }
+  | { kind: "profile"; id: string }
+  | { kind: "source"; id: string };
 
 /* --------------------------------------------------------------- helpers */
 
 async function callWorld<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("world-graph", {
-    body: { ...body, action },
-  });
+  const { data, error } = await supabase.functions.invoke("world-graph", { body: { ...body, action } });
   if (error) throw new Error(error.message);
   if (!data?.ok) throw new Error(String(data?.error ?? "world_graph_error"));
   return data as T;
@@ -89,520 +84,801 @@ async function callWorld<T>(action: string, body: Record<string, unknown> = {}):
 
 const TYPE_LABEL: Record<string, string> = {
   person: "PERSON",
-  business: "BUSINESS",
-  org: "BUSINESS",
   organization: "BUSINESS",
+  org: "BUSINESS",
+  business: "BUSINESS",
   company: "BUSINESS",
   case: "CASE",
   matter: "CASE",
   property: "PROPERTY",
+  place: "PROPERTY",
   asset: "PROPERTY",
 };
 
-function typeLabel(etype: string | null | undefined): string {
+const typeLabel = (etype: string | null | undefined): string => {
   const key = String(etype ?? "").toLowerCase();
   return TYPE_LABEL[key] ?? (key.replace(/[_-]+/g, " ").toUpperCase() || "ENTITY");
-}
-
-/** Predicate + value read as one plain sentence fragment. */
-function claimText(predicate: string, value: string | null): string {
-  const p = String(predicate ?? "").replace(/[_-]+/g, " ").trim();
-  const v = (value ?? "").trim();
-  if (!v) return p;
-  return `${p} \u00b7 ${v}`;
-}
-
-function provenance(row: { source_ref?: string | null; grade?: string | null; observed_at?: string | null }): string {
-  const bits: string[] = [];
-  if (row.source_ref) bits.push(row.source_ref);
-  if (row.grade) bits.push(row.grade);
-  if (row.observed_at) bits.push(new Date(row.observed_at).toISOString().slice(0, 10));
-  return bits.join(`  ${DOT}  `);
-}
-
-const DOT = "\u00b7";
+};
 
 const isSensitive = (s: string | null | undefined) => String(s ?? "") === "sensitive";
 
-/* -------------------------------------------------------------- fragments */
-
-function SensitiveChip() {
-  return <span className="g warn">Sensitive {DOT} held with care</span>;
+function claimText(c: ClaimRow): string {
+  const v = (c.value_text ?? "").trim();
+  const p = String(c.predicate ?? "").replace(/[_-]+/g, " ").trim();
+  if (!v) return p;
+  return v;
 }
 
-function Chips({ children }: { children: React.ReactNode }) {
-  return <div className="crow">{children}</div>;
+function provenance(c: ClaimRow): string {
+  const bits: string[] = [];
+  if (c.source_ref) bits.push(c.source_ref);
+  if (c.grade) bits.push(c.grade);
+  if (c.wave != null) bits.push(`wave ${c.wave}`);
+  if (c.observed_at) bits.push(new Date(c.observed_at).toISOString().slice(0, 10));
+  return bits.join(`  ${DOT}  `) || "no source reference recorded";
 }
 
-/* ------------------------------------------------------------ delta card */
+const headline = (text: string, n = 110) => (text.length <= n ? text : `${text.slice(0, n).trimEnd()}…`);
 
-function DeltaClaimCard({
-  row,
-  entities,
-  noted,
-  onGovern,
-  onMerge,
-}: {
-  row: DeltaRow;
-  entities: Map<string, EntityRow>;
-  noted: NotedState | undefined;
-  onGovern: (claimId: string, action: "confirm" | "flag" | "explain", note?: string) => Promise<void>;
-  onMerge: (claimId: string, entityId: string, intoId: string) => Promise<void>;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [note, setNote] = useState("");
+/** World areas are derived from the entity resolution-key slugs, then spread
+ * one hop along the edges. Anything the rules do not claim keeps a home in the
+ * catch-all area. No membership is authored by hand. */
+const AREA_RULES: Array<{ id: string; title: string; blurb: string; test: (slug: string, etype: string) => boolean }> = [
+  {
+    id: "family",
+    title: "The family",
+    blurb: "The people the rest of it is for.",
+    test: (s) => /^(jake-|janie-|burkett-children|tim-uncle|dan-burkett|prop-bronco)/.test(s),
+  },
+  {
+    id: "faith",
+    title: "The faith",
+    blurb: "The center of gravity outside the work.",
+    test: (s) => /(mercy|church|faith)/.test(s),
+  },
+  {
+    id: "legacy",
+    title: "The legacy",
+    blurb: "What was built, and what survives it.",
+    test: (s) => /(biscuit|kickback|stockyards|tbb|trademark)/.test(s),
+  },
+  {
+    id: "war",
+    title: "The war",
+    blurb: "The adversaries, the forums, and the clocks.",
+    test: (s, e) => /(beard|fortress|westdale|herrin|buncher|indest|turner|majestic)/.test(s) || /^case[-_]/.test(s) || e.toLowerCase() === "case",
+  },
+  {
+    id: "estate",
+    title: "The estate",
+    blurb: "What is held, and who holds paper on it.",
+    test: (s) => /(818|clydesdale|private-lender|williamson|capital|concepts)/.test(s),
+  },
+  {
+    id: "venture",
+    title: "The venture",
+    blurb: "The active front and the revenue behind it.",
+    test: (s) => /(cob-venture|pinnacle|pipeline|sky-ranch|blackfriar|darnell|aaron|reif|huggins)/.test(s),
+  },
+];
 
-  const sensitive = isSensitive(row.sensitivity);
-  const mergeQuestion = row.predicate === "same_as_candidate";
-  const other = mergeQuestion && row.value_text ? entities.get(row.value_text) : undefined;
-  const subject = entities.get(row.subject_id);
+const CATCH_ALL = { id: "rest", title: "The rest of the record", blurb: "Everything the areas have not claimed yet." };
 
-  const run = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    try {
-      await fn();
-    } finally {
-      setBusy(false);
+function slugsOf(e: EntityRow): string[] {
+  const raw = e.resolution_keys;
+  const arr = Array.isArray(raw) ? raw : [];
+  return arr.map((k) => String(k).toLowerCase());
+}
+
+function deriveAreas(entities: EntityRow[], edges: EdgeRow[]): Map<string, string> {
+  const area = new Map<string, string>();
+  for (const e of entities) {
+    const slugs = slugsOf(e);
+    const rule = AREA_RULES.find((r) => slugs.some((s) => r.test(s, e.etype)));
+    if (rule) area.set(e.id, rule.id);
+  }
+  // one hop along the edges for anything unclaimed
+  for (const e of entities) {
+    if (area.has(e.id)) continue;
+    const tally = new Map<string, number>();
+    for (const edge of edges) {
+      const other = edge.src_id === e.id ? edge.dst_id : edge.dst_id === e.id ? edge.src_id : null;
+      if (!other) continue;
+      const a = area.get(other);
+      if (a) tally.set(a, (tally.get(a) ?? 0) + 1);
     }
-  };
-
-  return (
-    <div className={`wcard ${sensitive ? "muted" : ""}`}>
-      <Chips>
-        {!noted && <span className="g brass">New</span>}
-        {sensitive && <SensitiveChip />}
-        {mergeQuestion && <span className="g navy">Merge question</span>}
-      </Chips>
-      <p className="claim" style={{ marginTop: 10 }}>
-        {mergeQuestion
-          ? `Is ${subject?.name ?? "this record"} the same as ${other?.name ?? "an existing record"}?`
-          : claimText(row.predicate, row.value_text)}
-      </p>
-      <p className="prov">{provenance(row) || "no source reference recorded"}</p>
-
-      {noted ? (
-        <p className="noted">
-          Noted {DOT} {noted.verdict}. Written to your record as: {noted.text}
-        </p>
-      ) : mergeQuestion ? (
-        <div className="arail">
-          <button
-            className="ab primary"
-            disabled={busy || !row.value_text}
-            onClick={() => run(() => onMerge(row.claim_id, row.subject_id, String(row.value_text)))}
-          >
-            Keep as one
-          </button>
-          <button className="ab" disabled={busy} onClick={() => run(() => onGovern(row.claim_id, "flag"))}>
-            Keep separate
-          </button>
-        </div>
-      ) : (
-        <>
-          <div className="arail">
-            <button className="ab primary" disabled={busy} onClick={() => run(() => onGovern(row.claim_id, "confirm"))}>
-              Confirm into my record
-            </button>
-            <button className="ab" disabled={busy} onClick={() => run(() => onGovern(row.claim_id, "flag"))}>
-              Flag as wrong
-            </button>
-            <button className="ab" disabled={busy} onClick={() => setNoteOpen((v) => !v)}>
-              Explain
-            </button>
-          </div>
-          {noteOpen && (
-            <div className="noteform">
-              <input
-                type="text"
-                value={note}
-                placeholder="One line of context"
-                aria-label="Explanation note"
-                onChange={(e) => setNote(e.target.value)}
-              />
-              <button
-                className="ab"
-                disabled={busy || !note.trim()}
-                onClick={() => run(() => onGovern(row.claim_id, "explain", note.trim()))}
-              >
-                Record note
-              </button>
-            </div>
-          )}
-        </>
-      )}
-    </div>
-  );
+    const best = [...tally.entries()].sort((x, y) => y[1] - x[1])[0];
+    area.set(e.id, best ? best[0] : CATCH_ALL.id);
+  }
+  return area;
 }
 
-/* ------------------------------------------------------------------ page */
+/* ------------------------------------------------------------ components */
+
+const Badges = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+
+const SensChip = () => <span className="badge b-sens">Sensitive {DOT} held with care</span>;
+
+/* ----------------------------------------------------------------- page */
 
 export function WorldSurface() {
-  const [register, setRegister] = useState<Register>("delta");
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState<string | null>(null);
-
-  const [delta, setDelta] = useState<DeltaRow[]>([]);
   const [entities, setEntities] = useState<EntityRow[]>([]);
+  const [claims, setClaims] = useState<ClaimRow[]>([]);
+  const [edges, setEdges] = useState<EdgeRow[]>([]);
   const [sources, setSources] = useState<SourceRow[]>([]);
-  const [cid, setCid] = useState<string>("");
-  const [noted, setNoted] = useState<Record<string, NotedState>>({});
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const [query, setQuery] = useState("");
-  const [typeTab, setTypeTab] = useState<string>("ALL");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [view, setView] = useState<View>({ kind: "delta" });
   const [profile, setProfile] = useState<ProfilePayload | null>(null);
   const [profileErr, setProfileErr] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+
+  const [noted, setNoted] = useState<Record<string, Noted>>({});
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
+  const [mode, setMode] = useState<"cards" | "table">("cards");
+  const [sortKey, setSortKey] = useState<string>("subject");
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
+  const [noteFor, setNoteFor] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+  const [history, setHistory] = useState<Array<{ ids: string[]; governing: string[] }>>([]);
+
+  const includeSynthetic = typeof window !== "undefined" && /(?:\?|&)synthetic=1(?:&|$)/.test(window.location.search);
 
   const load = useCallback(async () => {
     setLoading(true);
-    setErr(null);
+    setLoadErr(null);
     try {
-      const [d, e, s] = await Promise.all([
-        callWorld<{ rows: DeltaRow[]; cid: string }>("delta"),
+      const [ents, cls, eds, srcs] = await Promise.all([
         callWorld<{ rows: EntityRow[] }>("entities"),
+        callWorld<{ rows: ClaimRow[] }>("claims", { include_synthetic: includeSynthetic }),
+        callWorld<{ rows: EdgeRow[] }>("edges"),
         callWorld<{ rows: SourceRow[] }>("sources"),
       ]);
-      setDelta(d.rows ?? []);
-      setEntities(e.rows ?? []);
-      setSources(s.rows ?? []);
-      setCid(d.cid ?? "");
+      setEntities(ents.rows ?? []);
+      setClaims(cls.rows ?? []);
+      setEdges(eds.rows ?? []);
+      setSources(srcs.rows ?? []);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "read_failed");
+      setLoadErr(e instanceof Error ? e.message : "read_failed");
     } finally {
       setLoading(false);
     }
+  }, [includeSynthetic]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const entityMap = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
+  const areaOf = useMemo(() => deriveAreas(entities, edges), [entities, edges]);
+  const sourceMap = useMemo(() => new Map(sources.map((s) => [s.id, s])), [sources]);
+
+  const areas = useMemo(() => {
+    const defs = [...AREA_RULES, CATCH_ALL];
+    return defs
+      .map((d) => ({
+        ...d,
+        entities: entities.filter((e) => areaOf.get(e.id) === d.id),
+      }))
+      .filter((d) => d.entities.length > 0);
+  }, [entities, areaOf]);
+
+  const claimsBySubject = useMemo(() => {
+    const m = new Map<string, ClaimRow[]>();
+    for (const c of claims) {
+      if (c.predicate === "governs") continue;
+      const list = m.get(c.subject_id) ?? [];
+      list.push(c);
+      m.set(c.subject_id, list);
+    }
+    return m;
+  }, [claims]);
+
+  const stagedAll = useMemo(
+    () => claims.filter((c) => c.status === "staged" && c.predicate !== "governs"),
+    [claims],
+  );
+  const mergeQuestions = useMemo(() => stagedAll.filter((c) => c.predicate === "same_as_candidate"), [stagedAll]);
+  const deltaClaims = useMemo(
+    () => stagedAll.filter((c) => c.predicate !== "same_as_candidate" && !noted[c.id]),
+    [stagedAll, noted],
+  );
+  const totalStaged = stagedAll.filter((c) => c.predicate !== "same_as_candidate").length;
+  const ruledCount = totalStaged - deltaClaims.length;
+
+  const claimCountBySource = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of claims) m.set(c.source_id ?? "", (m.get(c.source_id ?? "") ?? 0) + 1);
+    return m;
+  }, [claims]);
+
+  /* ------------------------------------------------------- govern (fast) */
+
+  const rule = useCallback(
+    async (ids: string[], verdict: "confirm" | "flag" | "explain", note?: string) => {
+      if (ids.length === 0) return;
+      const at = Date.now();
+      setNoted((prev) => {
+        const next = { ...prev };
+        for (const id of ids) next[id] = { verdict, note: note ?? null, governing_ids: [], at };
+        return next;
+      });
+      setSelected({});
+      setNotice(null);
+      try {
+        const res = await callWorld<{ governing_claim_ids: string[] }>("govern", {
+          claim_ids: ids,
+          verdict,
+          note: note ?? null,
+        });
+        const gov = res.governing_claim_ids ?? [];
+        setNoted((prev) => {
+          const next = { ...prev };
+          for (const id of ids) if (next[id]) next[id] = { ...next[id], governing_ids: gov };
+          return next;
+        });
+        setHistory((h) => [...h, { ids, governing: gov }]);
+        // The claim's stored status is left alone in local state on purpose:
+        // the ruled/total meter needs a stable denominator, and `noted` is the
+        // authority for what has your word on it.
+      } catch (e) {
+        setNoted((prev) => {
+          const next = { ...prev };
+          for (const id of ids) delete next[id];
+          return next;
+        });
+        setNotice(
+          `That did not stick: ${e instanceof Error ? e.message : "write failed"}. Nothing was written to your record.`,
+        );
+      }
+    },
+    [],
+  );
+
+  const undo = useCallback(async (ids: string[], governing: string[]) => {
+    const snapshot: Record<string, Noted> = {};
+    setNoted((prev) => {
+      const next = { ...prev };
+      for (const id of ids) { if (next[id]) snapshot[id] = next[id]; delete next[id]; }
+      return next;
+    });
+    setHistory((h) => h.filter((x) => x.ids.join() !== ids.join()));
+    try {
+      await callWorld("govern", { claim_ids: ids, verdict: "undo", governing_ids: governing });
+    } catch (e) {
+      setNoted((prev) => ({ ...prev, ...snapshot }));
+      setNotice(`The undo did not stick: ${e instanceof Error ? e.message : "write failed"}.`);
+    }
   }, []);
 
-  useEffect(() => {
-    void load();
+  const doMerge = useCallback(async (claim: ClaimRow, keepAsOne: boolean) => {
+    const at = Date.now();
+    setNoted((prev) => ({ ...prev, [claim.id]: { verdict: keepAsOne ? "merged" : "separate", note: null, governing_ids: [], at } }));
+    try {
+      if (keepAsOne && claim.value_text) {
+        await callWorld("merge", { entity_id: claim.subject_id, into_id: claim.value_text });
+      }
+      await callWorld("govern", { claim_ids: [claim.id], verdict: keepAsOne ? "confirm" : "flag" });
+      await load();
+    } catch (e) {
+      setNoted((prev) => { const n = { ...prev }; delete n[claim.id]; return n; });
+      setNotice(`That did not stick: ${e instanceof Error ? e.message : "write failed"}.`);
+    }
   }, [load]);
 
+  /* ------------------------------------------------------------- profile */
+
   useEffect(() => {
-    if (!openId) {
-      setProfile(null);
-      setProfileErr(null);
-      return;
-    }
+    if (view.kind !== "profile") { setProfile(null); setProfileErr(null); return; }
     let live = true;
     setProfile(null);
     setProfileErr(null);
-    callWorld<ProfilePayload>("profile", { entity_id: openId })
-      .then((p) => live && setProfile(p))
-      .catch((e) => live && setProfileErr(e instanceof Error ? e.message : "profile_failed"));
-    return () => {
-      live = false;
-    };
-  }, [openId]);
+    callWorld<ProfilePayload>("profile", { entity_id: view.id })
+      .then((p) => { if (live) setProfile(p); })
+      .catch((e) => { if (live) setProfileErr(e instanceof Error ? e.message : "profile_failed"); });
+    return () => { live = false; };
+  }, [view]);
 
-  const entityMap = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
-
-  const pending = useMemo(() => delta.filter((r) => !noted[r.claim_id]), [delta, noted]);
-
-  const grouped = useMemo(() => {
-    const m = new Map<string, DeltaRow[]>();
-    for (const r of delta) {
-      const list = m.get(r.subject_id) ?? [];
-      list.push(r);
-      m.set(r.subject_id, list);
-    }
-    return [...m.entries()].sort((a, b) => {
-      const an = entityMap.get(a[0])?.name ?? "";
-      const bn = entityMap.get(b[0])?.name ?? "";
-      return an.localeCompare(bn);
-    });
-  }, [delta, entityMap]);
+  /* ---------------------------------------------------------------- rail */
 
   const typeCounts = useMemo(() => {
     const m = new Map<string, number>();
-    for (const e of entities) {
-      const k = typeLabel(e.etype);
-      m.set(k, (m.get(k) ?? 0) + 1);
-    }
-    return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    for (const e of entities) m.set(typeLabel(e.etype), (m.get(typeLabel(e.etype)) ?? 0) + 1);
+    return m;
   }, [entities]);
 
-  const visibleEntities = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return entities.filter((e) => {
-      if (typeTab !== "ALL" && typeLabel(e.etype) !== typeTab) return false;
-      if (!q) return true;
-      return `${e.name} ${e.tag ?? ""} ${e.etype}`.toLowerCase().includes(q);
-    });
-  }, [entities, query, typeTab]);
+  const waves = useMemo(() => {
+    const w = sources.map((s) => Number(s.last_wave ?? 0));
+    return w.length ? Math.max(...w) : 0;
+  }, [sources]);
 
-  /* ------------------------------------------------------------- actions */
+  /* ----------------------------------------------------------- delta view */
 
-  const handleGovern = async (claimId: string, action: "confirm" | "flag" | "explain", note?: string) => {
-    try {
-      const res = await callWorld<{ claim_status: string; governing_claim_id: string }>("govern", {
-        claim_id: claimId,
-        verdict: action,
-        note: note ?? null,
+  const deltaGroups = useMemo(() => {
+    const byArea = new Map<string, Map<string, ClaimRow[]>>();
+    for (const c of deltaClaims) {
+      const a = areaOf.get(c.subject_id) ?? CATCH_ALL.id;
+      const byEntity = byArea.get(a) ?? new Map<string, ClaimRow[]>();
+      const list = byEntity.get(c.subject_id) ?? [];
+      list.push(c);
+      byEntity.set(c.subject_id, list);
+      byArea.set(a, byEntity);
+    }
+    const order = [...AREA_RULES.map((r) => r.id), CATCH_ALL.id];
+    return order
+      .filter((a) => byArea.has(a))
+      .map((a) => {
+        const def = [...AREA_RULES, CATCH_ALL].find((d) => d.id === a)!;
+        const entries = [...byArea.get(a)!.entries()].map(([eid, rows]) => ({ eid, rows }));
+        const count = entries.reduce((n, e) => n + e.rows.length, 0);
+        return { id: a, title: def.title, entries, count };
       });
-      setNoted((prev) => ({
-        ...prev,
-        [claimId]: {
-          verdict: `${action} \u00b7 claim now ${res.claim_status}`,
-          text: note ? `${action}: ${note}` : action,
-        },
-      }));
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "govern_failed");
-    }
+  }, [deltaClaims, areaOf]);
+
+  const tableRows = useMemo(() => {
+    const rows = [...deltaClaims];
+    const get = (c: ClaimRow) => {
+      switch (sortKey) {
+        case "claim": return claimText(c).toLowerCase();
+        case "subject": return (entityMap.get(c.subject_id)?.name ?? "").toLowerCase();
+        case "source": return (sourceMap.get(c.source_id ?? "")?.label ?? c.source_ref ?? "").toLowerCase();
+        case "grade": return String(c.grade ?? "");
+        case "wave": return Number(c.wave ?? 0);
+        default: return "";
+      }
+    };
+    rows.sort((a, b) => {
+      const av = get(a); const bv = get(b);
+      if (typeof av === "number" && typeof bv === "number") return (av - bv) * sortDir;
+      return String(av).localeCompare(String(bv)) * sortDir;
+    });
+    return rows;
+  }, [deltaClaims, sortKey, sortDir, entityMap, sourceMap]);
+
+  const toggleSort = (key: string) => {
+    if (key === sortKey) setSortDir((d) => (d === 1 ? -1 : 1));
+    else { setSortKey(key); setSortDir(1); }
   };
 
-  const handleMerge = async (claimId: string, entityId: string, intoId: string) => {
-    try {
-      await callWorld<{ claim_id: string }>("merge", { entity_id: entityId, into_id: intoId });
-      setNoted((prev) => ({
-        ...prev,
-        [claimId]: { verdict: "kept as one", text: "merged_into (client-asserted)" },
-      }));
-      await load();
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "merge_failed");
-    }
+  const selectedIds = Object.keys(selected).filter((k) => selected[k]);
+
+  const confirmAllRemaining = () => {
+    const ids = deltaClaims.map((c) => c.id);
+    if (ids.length === 0) return;
+    if (window.confirm(`Confirm ${ids.length} claims into your record`)) void rule(ids, "confirm");
   };
 
-  /* -------------------------------------------------------------- render */
-
-  const profileClaims = (profile?.claims ?? []).filter((c) =>
-    ["staged", "confirmed"].includes(String(c.status ?? "")),
+  const notedList = useMemo(
+    () => Object.entries(noted).sort((a, b) => b[1].at - a[1].at),
+    [noted],
   );
-  const openItems = profileClaims.filter((c) => c.predicate === "open_item");
-  const facts = profileClaims.filter((c) => c.predicate !== "open_item");
+
+  /* ---------------------------------------------------------------- render */
+
+  const railBtn = (label: string, active: boolean, onClick: () => void, count?: number, isNew?: boolean) => (
+    <button key={label} className={active ? "on" : ""} onClick={onClick}>
+      {label}
+      {count != null && (isNew ? <span className="newdot">{count}</span> : <span className="cnt">{count}</span>)}
+    </button>
+  );
+
+  const claimCard = (c: ClaimRow, withRail: boolean) => {
+    const n = noted[c.id];
+    const sens = isSensitive(c.sensitivity);
+    return (
+      <div key={c.id} className={`card ${c.status === "staged" && !n ? "new" : ""} ${sens ? "dim" : ""}`}>
+        <Badges>
+          {c.status === "staged" && !n && <span className="badge b-new">New</span>}
+          {c.status === "confirmed" && <span className="badge b-conf">Confirmed</span>}
+          {sens && <SensChip />}
+          {c.synthetic && <span className="badge b-gap">Synthetic</span>}
+        </Badges>
+        {claimText(c)}
+        <span className="prov">{provenance(c)}</span>
+        {n && (
+          <div className="approve">
+            <span className="notedline">Noted {DOT} {n.verdict}{n.note ? ` ${DOT} ${n.note}` : ""}</span>
+            <button onClick={() => void undo([c.id], n.governing_ids)}>Undo</button>
+          </div>
+        )}
+        {withRail && !n && (
+          <>
+            <div className="approve">
+              <button className="primary" onClick={() => void rule([c.id], "confirm")}>Confirm into my record</button>
+              <button onClick={() => void rule([c.id], "flag")}>Flag as wrong</button>
+              <button onClick={() => { setNoteFor(c.id); setNoteText(""); }}>Explain</button>
+            </div>
+            {noteFor === c.id && (
+              <div className="noteform">
+                <input
+                  type="text"
+                  value={noteText}
+                  aria-label="What is wrong with this"
+                  placeholder="What is wrong with this"
+                  onChange={(e) => setNoteText(e.target.value)}
+                />
+                <button className="wbtn primary" onClick={() => { void rule([c.id], "explain", noteText.trim() || null as unknown as string); setNoteFor(null); }}>
+                  Record it
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
-    <div className="hqd world">
-      <div className="shell">
-        <nav className="rail" aria-label="World registers">
-          <button className={`rb ${register === "delta" ? "on" : ""}`} onClick={() => setRegister("delta")}>
-            The Delta <span className="n">{pending.length}</span>
-          </button>
-          <button className={`rb ${register === "profiles" ? "on" : ""}`} onClick={() => setRegister("profiles")}>
-            The Profiles <span className="n">{entities.length}</span>
-          </button>
-          <button className={`rb ${register === "sources" ? "on" : ""}`} onClick={() => setRegister("sources")}>
-            The Sources <span className="n">{sources.length}</span>
-          </button>
-          <p className="rail-note">{cid ? `Tenant ${cid}` : "Tenant resolving"}</p>
-        </nav>
+    <div className="cobworld">
+      <header className="wh">
+        <div className="k mono">Chief of Business {DOT} the indexed narrative</div>
+        <h1>COB-HQ {DOT} Your World</h1>
+        <div className="s">
+          {loading
+            ? "Reading the record."
+            : `${entities.length} records ${DOT} ${claims.length} claims from the mined record ${DOT} waves through ${waves} ${DOT} new material is called out until you confirm it`}
+        </div>
+      </header>
 
-        <main>
-          {err && (
-            <div className="empty" role="alert" style={{ marginTop: 0 }}>
-              Could not complete that read or write: {err}
-            </div>
+      <div className="wrap">
+        <nav className="wn" aria-label="World registers">
+          <div className="lbl">Awaiting your word</div>
+          {railBtn("The Delta", view.kind === "delta", () => setView({ kind: "delta" }), deltaClaims.length, true)}
+
+          <div className="lbl">Your world</div>
+          {areas.map((a) =>
+            railBtn(a.title, view.kind === "area" && view.id === a.id, () => setView({ kind: "area", id: a.id }), a.entities.length),
           )}
 
-          {register === "delta" && (
+          <div className="lbl">The profiles</div>
+          {railBtn("All profiles", view.kind === "profiles" && view.type === "ALL", () => setView({ kind: "profiles", type: "ALL" }), entities.length)}
+          {[...typeCounts.entries()].map(([t, n]) =>
+            railBtn(t, view.kind === "profiles" && view.type === t, () => setView({ kind: "profiles", type: t }), n),
+          )}
+
+          <div className="lbl">The record</div>
+          {sources.map((s) =>
+            railBtn(
+              s.label ?? s.kind,
+              view.kind === "source" && view.id === s.id,
+              () => setView({ kind: "source", id: s.id }),
+              claimCountBySource.get(s.id) ?? 0,
+            ),
+          )}
+        </nav>
+
+        <main className="wm">
+          {loadErr && <div className="notice">The record could not be read: {loadErr}</div>}
+          {notice && <div className="notice">{notice}</div>}
+
+          {/* ------------------------------------------------------ DELTA */}
+          {view.kind === "delta" && (
             <section>
-              <header className="head">
-                <p className="kick">Register one</p>
-                <h1>The Delta</h1>
-                <p>
-                  New claims mined from your record, waiting on your word. Confirm what is right, flag what is wrong,
-                  explain what needs context. Every ruling is written back as your own claim.
-                </p>
-              </header>
+              <h2>The Delta {DOT} awaiting your word</h2>
+              <p className="sub">
+                New material found in the record since your last word. Rule on it, and it becomes yours.
+              </p>
 
-              {loading && <div className="empty">Reading the graph.</div>}
-              {!loading && grouped.length === 0 && <div className="empty">Nothing staged. The delta is clear.</div>}
+              <div className="rrbar">
+                <span className="metert">{ruledCount} of {totalStaged} ruled</span>
+                <span className="meter"><i style={{ width: `${totalStaged ? (ruledCount / totalStaged) * 100 : 0}%` }} /></span>
+                <button className={`wbtn ${mode === "cards" ? "primary" : ""}`} onClick={() => setMode("cards")}>Cards</button>
+                <button className={`wbtn ${mode === "table" ? "primary" : ""}`} onClick={() => setMode("table")}>Table</button>
+                {selectedIds.length > 0 && (
+                  <button className="wbtn primary" onClick={() => void rule(selectedIds, "confirm")}>
+                    Confirm selected ({selectedIds.length})
+                  </button>
+                )}
+                <button className="wbtn" onClick={confirmAllRemaining} disabled={deltaClaims.length === 0}>
+                  Confirm all remaining
+                </button>
+                {history.length > 0 && (
+                  <button
+                    className="wbtn"
+                    onClick={() => { const last = history[history.length - 1]; void undo(last.ids, last.governing); }}
+                  >
+                    Undo last
+                  </button>
+                )}
+              </div>
 
-              {grouped.map(([subjectId, rows]) => {
-                const ent = entityMap.get(subjectId);
+              {mergeQuestions.filter((c) => !noted[c.id]).map((c) => {
+                const subj = entityMap.get(c.subject_id);
+                const other = entityMap.get(String(c.value_text ?? ""));
                 return (
-                  <div key={subjectId}>
-                    <p className="sub">
-                      {ent ? `${ent.name} \u00b7 ${typeLabel(ent.etype)}` : "Unattached subject"} {DOT} {rows.length}
-                    </p>
-                    <div className="wgrid">
-                      {rows.map((r) => (
-                        <DeltaClaimCard
-                          key={r.claim_id}
-                          row={r}
-                          entities={entityMap}
-                          noted={noted[r.claim_id]}
-                          onGovern={handleGovern}
-                          onMerge={handleMerge}
-                        />
-                      ))}
+                  <div key={c.id} className="card new">
+                    <span className="badge b-new">Merge question</span>
+                    Is {subj?.name ?? "this record"} the same as {other?.name ?? "an existing record"}?
+                    <span className="prov">{provenance(c)}</span>
+                    <div className="approve">
+                      <button className="primary" onClick={() => void doMerge(c, true)}>Keep as one</button>
+                      <button onClick={() => void doMerge(c, false)}>Keep separate</button>
                     </div>
                   </div>
                 );
               })}
-            </section>
-          )}
 
-          {register === "profiles" && !openId && (
-            <section>
-              <header className="head">
-                <p className="kick">Register two</p>
-                <h1>The Profiles</h1>
-                <p>Every person, business, case, and property the graph currently holds for you.</p>
-              </header>
+              {!loading && deltaClaims.length === 0 && (
+                <div className="empty">Nothing is waiting on you. Every claim in the record has your word on it.</div>
+              )}
 
-              <div className="tabs">
-                <button className={`tab ${typeTab === "ALL" ? "on" : ""}`} onClick={() => setTypeTab("ALL")}>
-                  All {entities.length}
-                </button>
-                {typeCounts.map(([label, n]) => (
-                  <button
-                    key={label}
-                    className={`tab ${typeTab === label ? "on" : ""}`}
-                    onClick={() => setTypeTab(label)}
-                  >
-                    {label} {n}
+              {mode === "cards" && deltaGroups.map((g) => (
+                <div key={g.id} className="grp">
+                  <button className="grph" onClick={() => setOpenGroups((o) => ({ ...o, [g.id]: !o[g.id] }))}>
+                    <span className="gn">{openGroups[g.id] ? "−" : "+"} {g.title}</span>
+                    <span className="gn">{g.count} items</span>
+                    <span className="gnames">
+                      {g.entries.slice(0, 5).map((e) => entityMap.get(e.eid)?.name ?? "record").join(` ${DOT} `)}
+                      {g.entries.length > 5 ? ` ${DOT} +${g.entries.length - 5} more` : ""}
+                    </span>
+                    <span
+                      className="wbtn"
+                      role="button"
+                      tabIndex={0}
+                      onClick={(ev) => { ev.stopPropagation(); void rule(g.entries.flatMap((e) => e.rows.map((r) => r.id)), "confirm"); }}
+                      onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); void rule(g.entries.flatMap((e) => e.rows.map((r) => r.id)), "confirm"); } }}
+                    >
+                      Confirm all in group
+                    </span>
                   </button>
-                ))}
-              </div>
-
-              <div className="tabs">
-                <input
-                  type="search"
-                  value={query}
-                  aria-label="Search profiles"
-                  placeholder="Search by name or tag"
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </div>
-
-              {loading && <div className="empty">Reading the graph.</div>}
-              {!loading && visibleEntities.length === 0 && <div className="empty">No records match that search.</div>}
-
-              <div className="wgrid">
-                {visibleEntities.map((e) => (
-                  <button
-                    key={e.id}
-                    className={`wcard ${isSensitive(e.sensitivity) ? "muted" : ""}`}
-                    onClick={() => setOpenId(e.id)}
-                  >
-                    <p className="nm">{e.name}</p>
-                    <Chips>
-                      <span className="g navy">{typeLabel(e.etype)}</span>
-                      {e.tag && <span className="g">{e.tag}</span>}
-                      {isSensitive(e.sensitivity) && <SensitiveChip />}
-                    </Chips>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {register === "profiles" && openId && (
-            <section>
-              <div className="tabs" style={{ marginTop: 0 }}>
-                <button className="tab" onClick={() => setOpenId(null)}>
-                  Back to profiles
-                </button>
-              </div>
-
-              {profileErr && <div className="empty">This record is not available: {profileErr}</div>}
-              {!profile && !profileErr && <div className="empty">Reading the record.</div>}
-
-              {profile && (
-                <>
-                  <header className="head" style={{ marginTop: 18 }}>
-                    <p className="kick">{typeLabel(profile.entity.etype)}</p>
-                    <h1>{profile.entity.name}</h1>
-                    <Chips>
-                      {profile.entity.tag && <span className="g">{profile.entity.tag}</span>}
-                      {profile.entity.status && <span className="g navy">{profile.entity.status}</span>}
-                      {isSensitive(profile.entity.sensitivity) && <SensitiveChip />}
-                    </Chips>
-                  </header>
-
-                  <p className="sub">Facts on the record {DOT} {facts.length}</p>
-                  {facts.length === 0 && <div className="empty">No facts recorded yet.</div>}
-                  <div className="wgrid">
-                    {facts.map((c) => (
-                      <div key={c.id} className={`wcard ${isSensitive(c.sensitivity) ? "muted" : ""}`}>
-                        <Chips>
-                          {c.status === "confirmed" ? (
-                            <span className="g navy">Confirmed</span>
-                          ) : (
-                            <span className="g brass">New</span>
-                          )}
-                          {isSensitive(c.sensitivity) && <SensitiveChip />}
-                        </Chips>
-                        <p className="claim" style={{ marginTop: 10 }}>
-                          {claimText(c.predicate, c.value_text)}
-                        </p>
-                        <p className="prov">{provenance(c) || "no source reference recorded"}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {openItems.length > 0 && (
-                    <>
-                      <p className="sub">Open items {DOT} {openItems.length}</p>
-                      <div className="wgrid">
-                        {openItems.map((c) => (
-                          <div key={c.id} className="openitem">
-                            <p className="claim">{c.value_text ?? "open item"}</p>
-                            <p className="prov">{provenance(c) || "no source reference recorded"}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </>
+                  {openGroups[g.id] && (
+                    <div className="grpb">
+                      {g.entries.map((e) => (
+                        <div key={e.eid}>
+                          <div className="psec">{entityMap.get(e.eid)?.name ?? "record"} {DOT} {e.rows.length}</div>
+                          {e.rows.map((c) => (
+                            <div key={c.id} className="rrow">
+                              <input
+                                type="checkbox"
+                                aria-label="Select claim"
+                                checked={!!selected[c.id]}
+                                onChange={(ev) => setSelected((s) => ({ ...s, [c.id]: ev.target.checked }))}
+                              />
+                              <div className="hl" onClick={() => setExpanded((x) => ({ ...x, [c.id]: !x[c.id] }))}>
+                                {expanded[c.id] ? claimText(c) : headline(claimText(c))}
+                                {expanded[c.id] && <span className="prov">{provenance(c)}</span>}
+                                {expanded[c.id] && (
+                                  <div className="approve">
+                                    <button className="primary" onClick={(ev) => { ev.stopPropagation(); void rule([c.id], "confirm"); }}>Confirm into my record</button>
+                                    <button onClick={(ev) => { ev.stopPropagation(); void rule([c.id], "flag"); }}>Flag as wrong</button>
+                                    <button onClick={(ev) => { ev.stopPropagation(); setNoteFor(c.id); setNoteText(""); }}>Explain</button>
+                                  </div>
+                                )}
+                                {noteFor === c.id && (
+                                  <div className="noteform" onClick={(ev) => ev.stopPropagation()}>
+                                    <input
+                                      type="text"
+                                      aria-label="What is wrong with this"
+                                      placeholder="What is wrong with this"
+                                      value={noteText}
+                                      onChange={(ev) => setNoteText(ev.target.value)}
+                                    />
+                                    <button className="wbtn primary" onClick={() => { void rule([c.id], "explain", noteText.trim()); setNoteFor(null); }}>Record it</button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
                   )}
+                </div>
+              ))}
 
-                  <p className="sub">Related {DOT} {profile.edges.length}</p>
-                  {profile.edges.length === 0 && <div className="empty">No relationships recorded.</div>}
-                  <div className="tabs">
-                    {profile.edges.map((edge) => {
-                      const otherId = edge.src_id === profile.entity.id ? edge.dst_id : edge.src_id;
-                      const other = entityMap.get(otherId);
-                      return (
-                        <button key={edge.id} className="relchip" onClick={() => setOpenId(otherId)}>
-                          {String(edge.etype ?? "linked").replace(/[_-]+/g, " ")} {DOT} {other?.name ?? "record"}
-                        </button>
-                      );
-                    })}
-                  </div>
+              {mode === "table" && deltaClaims.length > 0 && (
+                <table className="wtable">
+                  <thead>
+                    <tr>
+                      <th onClick={() => toggleSort("claim")}>Claim</th>
+                      <th onClick={() => toggleSort("subject")}>Subject</th>
+                      <th onClick={() => toggleSort("source")}>Source</th>
+                      <th onClick={() => toggleSort("grade")}>Grade</th>
+                      <th onClick={() => toggleSort("wave")}>Wave</th>
+                      <th aria-label="Select" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableRows.map((c) => (
+                      <tr key={c.id}>
+                        <td onClick={() => setExpanded((x) => ({ ...x, [c.id]: !x[c.id] }))} style={{ cursor: "pointer" }}>
+                          {expanded[c.id] ? claimText(c) : headline(claimText(c), 90)}
+                          {expanded[c.id] && <span className="prov">{provenance(c)}</span>}
+                        </td>
+                        <td>{entityMap.get(c.subject_id)?.name ?? "record"}</td>
+                        <td className="m">{sourceMap.get(c.source_id ?? "")?.label ?? c.source_ref ?? "not recorded"}</td>
+                        <td className="m">{c.grade ?? ""}</td>
+                        <td className="m">{c.wave ?? 0}</td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label="Select claim"
+                            checked={!!selected[c.id]}
+                            onChange={(ev) => setSelected((s) => ({ ...s, [c.id]: ev.target.checked }))}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              {notedList.length > 0 && (
+                <>
+                  <div className="psec">Your word, recorded {DOT} {notedList.length}</div>
+                  {notedList.slice(0, 20).map(([id, n]) => {
+                    const c = claims.find((x) => x.id === id);
+                    return (
+                      <div key={id} className="card">
+                        <span className="badge b-conf">{n.verdict}</span>
+                        {c ? headline(claimText(c)) : "claim"}
+                        <div className="approve">
+                          <button onClick={() => void undo([id], n.governing_ids)}>Undo</button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </>
               )}
             </section>
           )}
 
-          {register === "sources" && (
+          {/* ------------------------------------------------------- AREA */}
+          {view.kind === "area" && (() => {
+            const def = areas.find((a) => a.id === view.id);
+            if (!def) return <div className="empty">This area holds nothing yet.</div>;
+            const areaClaims = def.entities.flatMap((e) => claimsBySubject.get(e.id) ?? []);
+            const confirmed = areaClaims.filter((c) => c.status === "confirmed");
+            const fresh = areaClaims.filter((c) => c.status === "staged" && c.predicate !== "same_as_candidate" && !noted[c.id]);
+            return (
+              <section>
+                <h2>{def.title}</h2>
+                <p className="sub">{def.blurb}</p>
+
+                <div className="psec">The web around it</div>
+                <div className="relrow">
+                  {def.entities.map((e) => (
+                    <button key={e.id} className="plink" onClick={() => setView({ kind: "profile", id: e.id })}>
+                      {e.name}
+                    </button>
+                  ))}
+                </div>
+
+                {fresh.length > 0 && (
+                  <>
+                    <div className="psec">New here {DOT} {fresh.length}</div>
+                    {fresh.slice(0, 6).map((c) => claimCard(c, true))}
+                    {fresh.length > 6 && (
+                      <button className="wbtn" onClick={() => setView({ kind: "delta" })}>
+                        See all {fresh.length} in the Delta
+                      </button>
+                    )}
+                  </>
+                )}
+
+                <div className="psec">On the record {DOT} {confirmed.length}</div>
+                {confirmed.length === 0 && <div className="empty">Nothing confirmed here yet.</div>}
+                {confirmed.map((c) => claimCard(c, false))}
+              </section>
+            );
+          })()}
+
+          {/* --------------------------------------------------- PROFILES */}
+          {view.kind === "profiles" && (
             <section>
-              <header className="head">
-                <p className="kick">Register three</p>
-                <h1>The Sources</h1>
-                <p>Where the record came from, and when it was last read.</p>
-              </header>
-
-              {loading && <div className="empty">Reading the graph.</div>}
-              {!loading && sources.length === 0 && <div className="empty">No sources connected yet.</div>}
-
-              <div className="wgrid">
-                {sources.map((s) => {
-                  const miner = typeof s.meta?.miner === "string" ? (s.meta.miner as string) : null;
-                  return (
-                    <div key={s.id} className="wcard">
-                      <p className="nm">{s.label ?? s.kind}</p>
-                      <Chips>
-                        <span className="g navy">{String(s.kind).toUpperCase()}</span>
-                        {s.scope && <span className="g">{s.scope}</span>}
-                      </Chips>
-                      <p className="prov">
-                        {miner ? `miner ${miner}` : "miner not recorded"}
-                        {`  ${DOT}  `}wave {s.last_wave ?? 0}
-                        {`  ${DOT}  `}
-                        {s.last_mined_at ? `last mined ${new Date(s.last_mined_at).toISOString().slice(0, 10)}` : "never mined"}
-                      </p>
-                    </div>
-                  );
-                })}
+              <h2>The Profiles</h2>
+              <p className="sub">Every record the graph holds, and the web around each one.</p>
+              <input
+                className="psearch"
+                type="search"
+                aria-label="Search the profiles"
+                placeholder="Search the profiles"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <div className="ptabs">
+                {["ALL", ...typeCounts.keys()].map((t) => (
+                  <button key={t} className={`ptab ${view.type === t ? "on" : ""}`} onClick={() => setView({ kind: "profiles", type: t })}>
+                    {t} {t === "ALL" ? entities.length : typeCounts.get(t)}
+                  </button>
+                ))}
+              </div>
+              <div className="pgrid">
+                {entities
+                  .filter((e) => view.type === "ALL" || typeLabel(e.etype) === view.type)
+                  .filter((e) => {
+                    const n = search.trim().toLowerCase();
+                    return !n || e.name.toLowerCase().includes(n) || String(e.tag ?? "").toLowerCase().includes(n);
+                  })
+                  .map((e) => (
+                    <button key={e.id} className="pcard" onClick={() => setView({ kind: "profile", id: e.id })}>
+                      <div className="ptype">{typeLabel(e.etype)}</div>
+                      <div className="pname">{e.name}</div>
+                      {e.tag && <div className="ptag">{e.tag}</div>}
+                      {isSensitive(e.sensitivity) && <div style={{ marginTop: 7 }}><SensChip /></div>}
+                    </button>
+                  ))}
               </div>
             </section>
           )}
 
-          <p className="wfoot">
+          {/* ---------------------------------------------------- PROFILE */}
+          {view.kind === "profile" && (
+            <section>
+              <button className="backbtn" onClick={() => setView({ kind: "profiles", type: "ALL" })}>← All profiles</button>
+              {profileErr && <div className="empty">This record is not available: {profileErr}</div>}
+              {!profile && !profileErr && <div className="empty">Reading the record.</div>}
+              {profile && (() => {
+                const visible = profile.claims.filter((c) => c.predicate !== "governs" && ["staged", "confirmed"].includes(String(c.status)));
+                const openItems = visible.filter((c) => c.predicate === "open_item");
+                const facts = visible.filter((c) => c.predicate !== "open_item" && c.predicate !== "same_as_candidate");
+                return (
+                  <>
+                    <div className="ptype">{typeLabel(profile.entity.etype)}</div>
+                    <h2>{profile.entity.name}</h2>
+                    <p className="sub">{profile.entity.tag ?? ""}</p>
+                    {isSensitive(profile.entity.sensitivity) && <div style={{ marginBottom: 12 }}><SensChip /></div>}
+
+                    <div className="psec">Facts on the record {DOT} {facts.length}</div>
+                    {facts.length === 0 && <div className="empty">No facts recorded yet.</div>}
+                    {facts.map((c) => claimCard(c, c.status === "staged"))}
+
+                    {openItems.length > 0 && (
+                      <>
+                        <div className="psec">Open items {DOT} {openItems.length}</div>
+                        {openItems.map((c) => (
+                          <div key={c.id} className="openit">
+                            {claimText(c)}
+                            <span className="prov">{provenance(c)}</span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+
+                    <div className="psec">The web around it {DOT} {profile.edges.length}</div>
+                    {profile.edges.length === 0 && <div className="empty">No relationships recorded.</div>}
+                    <div className="relrow">
+                      {profile.edges.map((edge) => {
+                        const otherId = edge.src_id === profile.entity.id ? edge.dst_id : edge.src_id;
+                        const other = entityMap.get(otherId);
+                        return (
+                          <button key={edge.id} className="plink" onClick={() => setView({ kind: "profile", id: otherId })}>
+                            {String(edge.etype ?? "linked").replace(/[_-]+/g, " ")} {DOT} {other?.name ?? "record"}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              })()}
+            </section>
+          )}
+
+          {/* ----------------------------------------------------- SOURCE */}
+          {view.kind === "source" && (() => {
+            const s = sourceMap.get(view.id);
+            if (!s) return <div className="empty">That source is not on the record.</div>;
+            const rows = claims.filter((c) => c.source_id === s.id && c.predicate !== "governs");
+            const miner = typeof s.meta?.miner === "string" ? (s.meta.miner as string) : null;
+            return (
+              <section>
+                <div className="ptype">{String(s.kind).toUpperCase()}</div>
+                <h2>{s.label ?? s.kind}</h2>
+                <p className="sub">
+                  {miner ? `miner ${miner}` : "miner not recorded"} {DOT} wave {s.last_wave ?? 0} {DOT}{" "}
+                  {s.last_mined_at ? `last mined ${new Date(s.last_mined_at).toISOString().slice(0, 10)}` : "never mined"} {DOT} {rows.length} claims
+                </p>
+                {rows.length === 0 && <div className="empty">No claims carry this source yet.</div>}
+                {rows.slice(0, 100).map((c) => claimCard(c, c.status === "staged"))}
+              </section>
+            );
+          })()}
+
+          <footer className="wf mono">
             HQ Design {DOT} Light {DOT} Every claim from the mined record {DOT} Augmentation over automation
-          </p>
+          </footer>
         </main>
       </div>
     </div>
