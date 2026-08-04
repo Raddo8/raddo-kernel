@@ -135,6 +135,7 @@ const App = () => (
             {/* Client zone */}
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
 
             {/* Operator zone · index is the full-viewport panel surface */}
