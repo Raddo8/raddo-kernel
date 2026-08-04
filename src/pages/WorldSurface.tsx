@@ -415,7 +415,7 @@ export function WorldSurface() {
                 return (
                   <div key={subjectId}>
                     <p className="sub">
-                      {ent ? `${ent.name} \u00b7 ${typeLabel(ent.etype)}` : "Unattached subject"} \u00b7 {rows.length}
+                      {ent ? `${ent.name} \u00b7 ${typeLabel(ent.etype)}` : "Unattached subject"} {DOT} {rows.length}
                     </p>
                     <div className="wgrid">
                       {rows.map((r) => (
