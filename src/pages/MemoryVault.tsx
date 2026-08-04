@@ -10,7 +10,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import { HqShell } from "@/components/hq/HqShell";
 
 interface MemoryRow {
   id: string;
@@ -140,44 +140,6 @@ function useResolvedViewer(): Resolution {
 
 const VIEWS = ["Beliefs", "Supersessions", "Search"] as const;
 type View = (typeof VIEWS)[number];
-
-/** Golden rail · logo tile, numbered nav links. */
-function Rail({ cid }: { cid: string | null }) {
-  return (
-    <aside className="rail">
-      <div className="rail-brand">
-        <div className="mark">
-          <div className="mark-tile">
-            <img src={cobMark.url} alt="COB" />
-          </div>
-          <div>
-            <div className="mark-name">COB &middot; HQ</div>
-            <div className="mark-sub">{cid ?? "resolving\u2026"}</div>
-          </div>
-        </div>
-      </div>
-      <nav className="rail-nav">
-        <div className="nav-k">Plan</div>
-        <a className="nl" href="/hq/blueprints">
-          <span className="nn">01</span>
-          <span>Blueprints</span>
-        </a>
-        <a className="nl" href="/hq">
-          <span className="nn">02</span>
-          <span>HQ</span>
-        </a>
-        <a className="nl on" href="/hq/memories">
-          <span className="nn">03</span>
-          <span>Memory</span>
-        </a>
-      </nav>
-      <div className="rail-foot">
-        <span className="dot" />
-        read live &middot; read only
-      </div>
-    </aside>
-  );
-}
 
 function FileHead({ total, cells }: { total: number; cells: { label: string; value: number }[] }) {
   return (
@@ -345,9 +307,8 @@ export function MemoryVault() {
 
   if (resolution.kind === "loading") {
     return (
-      <div className="hqg">
-        <Rail cid={null} />
-        <div className="main">
+      <HqShell>
+      <div className="main-inner">
           <div className="page on">
             <div className="sec">
               <div className="sec-h">
@@ -362,9 +323,8 @@ export function MemoryVault() {
 
   if (resolution.kind === "unauthorized") {
     return (
-      <div className="hqg">
-        <Rail cid={null} />
-        <div className="main">
+      <HqShell>
+      <div className="main-inner">
           <div className="page on">
             <div className="sec">
               <div className="sec-h">
@@ -496,9 +456,8 @@ export function MemoryVault() {
   }
 
   return (
-    <div className="hqg">
-      <Rail cid={resolution.viewer.cid} />
-      <div className="main">
+    <HqShell>
+      <div className="main-inner">
         <FileHead
           total={counts.total}
           cells={[
