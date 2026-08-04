@@ -44,6 +44,17 @@ import {
   resolveThread as taylorResolveThread,
 } from "../_shared/taylor-shared.ts";
 import { postConnectorIntroVerified, setCobName, taylorConnectorIntro } from "../_shared/cob-name.ts";
+import {
+  boundariesRecord,
+  consentRecord,
+  deepdiveCommit,
+  harvestRecord,
+  kernelInputsCheck,
+  laneRecord,
+  recordConnections,
+  taylorHandoff,
+  wireGrantsRecord,
+} from "./taylor-tools.ts";
 
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
