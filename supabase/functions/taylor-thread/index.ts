@@ -66,7 +66,67 @@ Deno.serve(async (req) => {
     return json({ thread_id: threadId, cid, messages, context, model: taylorModelId(Deno.env) });
   }
 
+  // UNIT 3 · the Welcome Party reads server truth only. CID is derived above.
+  const readOnboardingRow = async () => {
+    const { data, error } = await admin
+      .from("onboarding_tenants")
+      .select("id, connector_connected_at, connector_first_client, welcome_celebrated_at")
+      .eq("cid", cid)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    return data as any;
+  };
+
+  if (action === "welcome_state" || action === "welcome_celebrated" || action === "set_cob_name") {
+    if (action === "set_cob_name") {
+      const result = await setCobName(admin, cid, (body as any)?.name);
+      if (!result.ok) return json({ error: "taylor_name_" + result.reason.replace(/-/g, "_") }, 400);
+      await admin
+        .from("onboarding_progress")
+        .upsert(
+          {
+            cid,
+            step_key: "chief-name",
+            status: "done",
+            source: "start_panel",
+            detail: "named on the welcome party",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "cid,step_key" },
+        );
+    }
+
+    if (action === "welcome_celebrated") {
+      const row = await readOnboardingRow();
+      if (row?.id && !row.welcome_celebrated_at) {
+        const { error: markErr } = await admin
+          .from("onboarding_tenants")
+          .update({ welcome_celebrated_at: new Date().toISOString() })
+          .eq("id", row.id)
+          .is("welcome_celebrated_at", null);
+        if (markErr) return json({ error: "taylor_welcome_marker_not_recorded", detail: markErr.message }, 500);
+      }
+    }
+
+    const [row, biz] = await Promise.all([
+      readOnboardingRow(),
+      admin.from("tenants").select("display_name, cob_name, principal").eq("cid", cid).maybeSingle().then((r: any) => r?.data ?? null),
+    ]);
+    return json({
+      cid,
+      cob_name: biz?.cob_name ?? null,
+      display_name: biz?.display_name ?? null,
+      principal: biz?.principal ?? null,
+      connector_connected_at: row?.connector_connected_at ?? null,
+      connector_first_client: row?.connector_first_client ?? null,
+      welcome_celebrated_at: row?.welcome_celebrated_at ?? null,
+    });
+  }
+
   if (action !== "post") return json({ error: "taylor_unknown_action" }, 400);
+
 
   const message = String((body as any)?.message || "").trim().slice(0, 4000);
   const pageCtx = String((body as any)?.page_ctx || "").slice(0, 200);
