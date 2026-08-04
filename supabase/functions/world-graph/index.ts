@@ -490,6 +490,41 @@ async function actionSources(p: Principal) {
   });
 }
 
+/**
+ * Whole-record read: every claim the caller may see, staged and confirmed.
+ * The surface groups these client-side; the render law is enforced here by
+ * withholding hidden sensitivities and non-visible statuses.
+ */
+async function actionClaims(p: Principal, body: any) {
+  let q = admin!
+    .from("world_claims")
+    .select("id, subject_id, object_id, predicate, value_text, source_id, source_ref, miner, wave, grade, status, sensitivity, synthetic, observed_at")
+    .eq("cid", p.cid)
+    .in("status", ["staged", "confirmed"])
+    .in("sensitivity", readableSensitivities(p));
+  if (body?.include_synthetic !== true) q = q.eq("synthetic", false);
+  const { data, error } = await q.order("observed_at", { ascending: false }).limit(3000);
+  if (error) return fail("claims_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "claims",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+/** All edges for the caller's cid, for the world-area web rows. */
+async function actionEdges(p: Principal) {
+  const { data, error } = await admin!
+    .from("world_edges")
+    .select("id, src_id, dst_id, etype")
+    .eq("cid", p.cid)
+    .limit(3000);
+  if (error) return fail("edges_read_failed", 500, { detail: error.message });
+  return json({ ok: true, action: "edges", cid: p.cid, rows: data ?? [], count: (data ?? []).length, build_id: BUILD_ID });
+}
 
 
 async function actionProfile(p: Principal, body: any) {
