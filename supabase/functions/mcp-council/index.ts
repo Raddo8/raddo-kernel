@@ -3544,6 +3544,8 @@ Deno.serve(async (req) => {
           await recordProgress(resolvedCid, "welcome", "done", "connector", "welcome card served");
           // UNIT 3 · on the FIRST connector session TAYLOR introduces himself
           // into the shared thread, so the /start panel carries the same words.
+          // DRY-RUN 2R5 · item 4 · the write is now VERIFIED: post, read back,
+          // retry once, and record a distinct failure row rather than going dark.
           try {
             if (supabaseAdmin && resolvedCid) {
               const threadId = await taylorResolveThread(supabaseAdmin, resolvedCid);
@@ -3556,19 +3558,25 @@ Deno.serve(async (req) => {
                   .eq("surface", "connector")
                   .limit(1);
                 if (!Array.isArray(priorIntro) || priorIntro.length === 0) {
-                  await taylorPostMessage(supabaseAdmin, {
-                    threadId,
+                  const receipt = await postConnectorIntroVerified(supabaseAdmin, {
                     cid: resolvedCid,
-                    role: "taylor",
-                    surface: "connector",
+                    threadId,
                     content: taylorConnectorIntro(client.cob_name, client.first_name),
+                    clientId: identity?.clientId ?? null,
                   });
+                  console.log(
+                    "connector_intro_receipt",
+                    JSON.stringify({ cid: resolvedCid, ...receipt }),
+                  );
                 }
               }
             }
           } catch (e) {
-            console.error("welcome_intro_thread_post_failed", e instanceof Error ? e.message : String(e));
+            // The helper above already recorded its own failure row. This only
+            // catches a thread-resolution fault, which is a separate cause.
+            console.error("welcome_intro_thread_unresolved", e instanceof Error ? e.message : String(e));
           }
+
           const payload = buildWelcomePayload(client);
 
           return rpcResult(id, {
