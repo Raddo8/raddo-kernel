@@ -4062,6 +4062,20 @@ Deno.serve(async (req) => {
             });
           } catch { /* best-effort */ }
 
+          // M2 · MEMORY MODULE. Governed belief system, not a transcript.
+          // Service-role projection, CID keyed, superseded and binned excluded.
+          let memoryModule: any = null;
+          const memoryCid = beginCid ?? pctx.legacy_cid ?? null;
+          if (memoryCid) {
+            const { data: memData, error: memErr } = await supabaseAdmin
+              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 40 });
+            if (memErr) { outcome = "partial"; degradedReasons.push("memory_read_failed"); }
+            else memoryModule = memData ?? null;
+          } else {
+            degradedReasons.push("memory_cid_unresolved");
+          }
+          if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
+
           const out = {
             session_id: sessionId,
             tenant,
