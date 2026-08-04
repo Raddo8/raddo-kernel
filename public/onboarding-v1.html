@@ -527,19 +527,23 @@ const COB={
  state:{user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false},
  KEY:(function(){try{var c=new URLSearchParams(location.search).get("cid");return "cob_onboarding_v1"+(c?"::"+c:"");}catch(e){return "cob_onboarding_v1";}})(),
  totalQ:CHAPTERS.reduce((a,c)=>a+c.qs.length,0),
- RES:["#/consent","#/gate","#/reveal","#/plugin","#/fireside","#/connect","#/world","#/dashboard"],
- J:[["Diving in","#/reveal"],["Connections","#/plugin"],["Fireside chat","#/fireside"],["Wire together","#/connect"],["Your world","#/world"],["Your build","#/dashboard"]],
+ RES:["#/consent","#/gate","#/reveal","#/plugin","#/connect-first","#/fireside","#/connect","#/world","#/dashboard"],
+ J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/connect-first"],["Fireside chat","#/fireside"],["Wire together","#/connect"],["Your world","#/world"],["Your build","#/dashboard"]],
+ /* DRY-RUN 2R5 · item 2. stepDone is the ONE definition of a completed gate, and
+    for consent and the first connection it reads SERVER truth, never a pointer. */
+ consentServer(){const v=this.state.server||{};return v.consent_signed_at||this.state.consentAt||null;},
  stepDone(hash){const s=this.state;const seen=s.seen||{};const qs=CHAPTERS[0].qs;
   switch(hash){
-   case "#/consent":return !!s.consentAt;
+   case "#/consent":return !!this.consentServer();
    case "#/gate":return GATE.every(q=>s.gate[q.k]);
    case "#/reveal":return !!seen.reveal;
    case "#/plugin":return !!seen.plugin;
+   case "#/connect-first":return !!this.connServer();
    case "#/world":return !!seen.world;
    case "#/fireside":return qs.length>0&&qs.every(q=>String(s.answers[q.k]||"").trim()||s.skipped[q.k])&&this.answered()>0;
    case "#/review":return !!seen.review;
    case "#/claude":return s.claude==="yes";
-   case "#/connect":return s.connectors&&s.connectors.cob==="done";
+   case "#/connect":return this.cobConnected();
    default:return false;}},
  navItems(){const cur=location.hash||"#/welcome";
   return this.J.map((s,i)=>{const on=cur.split("/")[1]===s[1].split("/")[1];
