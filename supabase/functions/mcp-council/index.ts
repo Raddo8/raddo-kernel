@@ -4121,6 +4121,45 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── M2 · memory_search · CID scoped full text over the belief store ──
+      if (name === "memory_search") {
+        if (!tenant) return rpcError(id, -32001, "invalid_token");
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+        const q = typeof args?.query === "string" ? args.query.trim() : "";
+        if (!q) return rpcError(id, -32602, "query_required");
+        const lim = typeof args?.limit === "number" ? Math.max(1, Math.min(100, Math.floor(args.limit))) : 20;
+        const searchCid = pctx.legacy_cid ?? null;
+        if (!searchCid) return rpcError(id, -32004, "cid_unresolved");
+        const { data, error } = await supabaseAdmin
+          .rpc("memory_search_read", { p_cid: searchCid, p_q: q, p_limit: lim });
+        if (error) return rpcError(id, -32603, `memory_search_failed:${error.message}`);
+        try {
+          await recordMcpUsage(supabaseAdmin, {
+            tenant,
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id,
+            external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
+            tool: "memory_search",
+            agent_id: null,
+            passes: [],
+            routing_log: { query_len: q.length, returned: (data as any)?.returned ?? 0 },
+          });
+        } catch { /* best-effort */ }
+        const out = {
+          query: q,
+          returned: (data as any)?.returned ?? 0,
+          hits: (data as any)?.hits ?? [],
+          ...identityBlock(pctx),
+          ...manifestBlock(args),
+        };
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(out) }],
+          structuredContent: out,
+          isError: false,
+        });
+      }
+
+
+
       // ══════════════════════════════════════════════════════════════════
       // RITUAL WRITES v1 · save_session / sync_session / end_session
       // Shared helpers close over tenant + supabaseAdmin (both resolved
