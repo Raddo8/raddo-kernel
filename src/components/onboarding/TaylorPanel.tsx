@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import cobMarkAsset from "@/assets/cob-square-dark.png.asset.json";
+
+const cobMark = cobMarkAsset.url;
 
 /**
  * UNIT 2 · TAYLOR panel. One thread, two surfaces.
@@ -178,7 +181,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
         )}
       </div>
 
-      <div className="border-t border-dossier-paper-edge p-4">
+      <div className="p-4" style={{ background: "hsl(var(--dossier-ink-deep))", borderTop: "2px solid hsl(var(--dossier-brass))" }}>
         <label htmlFor="taylor-draft" className="sr-only">
           Message TAYLOR
         </label>
@@ -195,8 +198,8 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
           }}
           rows={3}
           placeholder="Ask TAYLOR about this step"
-          className="w-full resize-none rounded bg-white border border-dossier-paper-edge px-3 py-2 text-sm text-dossier-ink-deep focus:outline-none focus:ring-2 focus:ring-dossier-brass"
-          style={{ borderRadius: 4 }}
+          className="w-full resize-none px-3 py-2 text-sm text-dossier-ink-deep focus:outline-none focus:ring-2 focus:ring-dossier-brass"
+          style={{ borderRadius: 4, background: "hsl(var(--dossier-paper))", border: "1px solid hsl(var(--dossier-brass-deep))" }}
         />
         <button
           type="button"
