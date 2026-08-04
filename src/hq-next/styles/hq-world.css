@@ -1,47 +1,63 @@
-/* THE WORLD · /hq/world · W1d.
- * Faithful port of the principal-approved COB_HQ_WORLD_v1_TEMPLATE.
- * Every rule scoped under .cobworld so no other surface can be reached. */
+/* THE WORLD · /hq/world.
+ * H-SHELL: re-skinned to the Golden Structure tokens of the pinned HQ
+ * document (hq v29-r28). Structure and behaviour are unchanged from W1d;
+ * only the token layer moved. Every rule scoped under .cobworld. */
 
 .cobworld {
   --cream: #FAF8F4;
   --paper: #FFFFFF;
-  --edge: #E5DFD3;
+  --edge: #E5E3DE;
+  --edge2: #ECE8DF;
   --navy: #042C53;
-  --brass: #EF9B25;
-  --brass-deep: #B87A1E;
-  --ash: #6B6257;
-  --new: #FBF1E2;
+  --navy-soft: #2A4E78;
+  --brass: #EF9F27;
+  --brass-deep: #854F0B;
+  --ash: #5F5E5A;
+  --new: #FBF1DD;
+  --sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --serif: 'Aeonik', 'Figtree', system-ui, sans-serif;
+  --mono: 'Spline Sans Mono', ui-monospace, monospace;
   background: var(--cream);
-  font-family: Georgia, serif;
-  color: var(--navy);
+  font-family: var(--sans);
+  color: #2C2C2A;
+  font-size: 13px;
   min-height: 100vh;
 }
 .cobworld * { box-sizing: border-box; }
-.cobworld .mono { font-family: 'Courier New', monospace; letter-spacing: .18em; text-transform: uppercase; }
+.cobworld .mono { font-family: var(--mono); letter-spacing: .12em; text-transform: uppercase; }
 
 .cobworld header.wh {
-  text-align: center; padding: 24px 16px 16px; border-bottom: 1px solid var(--edge);
+  text-align: left; padding: 14px 28px 13px; border-bottom: 1px solid var(--edge);
   background: var(--paper); position: sticky; top: 0; z-index: 9;
 }
-.cobworld header.wh .k { font-size: 11px; color: var(--brass-deep); font-weight: 700; }
-.cobworld header.wh h1 { font-size: 25px; margin: 7px 0 0; font-weight: 700; }
-.cobworld header.wh .s { font-size: 12.5px; color: var(--ash); margin-top: 4px; }
+.cobworld header.wh .k { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--brass-deep); }
+.cobworld header.wh h1 { font-family: var(--serif); font-size: 25px; margin: 5px 0 0; font-weight: 700; color: var(--navy); letter-spacing: -.01em; line-height: 1.1; }
+.cobworld header.wh .s { font-size: 12px; color: var(--ash); margin-top: 4px; }
 
-.cobworld .wrap { display: flex; max-width: 1180px; margin: 0 auto; }
+.cobworld .wrap { display: flex; max-width: 1280px; margin: 0; }
 .cobworld nav.wn {
-  width: 262px; flex: none; border-right: 1px solid var(--edge); padding: 14px 0 30px;
-  background: var(--paper); height: calc(100vh - 96px); position: sticky; top: 96px; overflow-y: auto;
+  width: 236px; flex: none; border-right: 1px solid var(--edge); padding: 10px 0 30px;
+  background: var(--paper); height: calc(100vh - 92px); position: sticky; top: 92px; overflow-y: auto;
 }
 .cobworld nav.wn .lbl {
-  font-size: 10px; color: var(--brass-deep); font-weight: 700; padding: 12px 18px 5px;
-  font-family: 'Courier New', monospace; letter-spacing: .18em; text-transform: uppercase;
+  font-size: 9px; color: var(--brass-deep); font-weight: 500; padding: 12px 14px 4px;
+  font-family: var(--mono); letter-spacing: .14em; text-transform: uppercase;
+  border-bottom: 1px solid var(--edge2); margin-bottom: 4px;
 }
 .cobworld nav.wn button {
-  display: block; width: 100%; text-align: left; background: none; border: none;
-  border-left: 3px solid transparent; padding: 9px 18px; font-family: Georgia, serif;
-  font-size: 13.5px; color: var(--navy); cursor: pointer; line-height: 1.35;
+  display: flex; align-items: center; gap: 8px; width: calc(100% - 12px); margin: 0 6px; text-align: left;
+  background: none; border: 1px solid transparent; border-radius: 7px; padding: 5.5px 10px;
+  font-family: var(--sans); font-size: 12px; font-weight: 500; color: #2C2C2A; cursor: pointer; line-height: 1.35;
 }
 .cobworld nav.wn button:hover { background: var(--cream); }
+.cobworld nav.wn button.on { background: #FBF1DD; border-color: rgba(239,159,39,.45); color: var(--navy); font-weight: 600; }
+.cobworld nav.wn button:disabled { color: var(--ash); cursor: default; }
+.cobworld nav.wn .cnt { font-family: var(--mono); font-size: 9px; color: var(--ash); margin-left: auto; }
+.cobworld .newdot {
+  display: inline-block; background: var(--brass); color: #3A2503; font-family: var(--mono);
+  font-size: 9px; border-radius: 3px; padding: 1px 6px; margin-left: auto; letter-spacing: .08em;
+}
+
 .cobworld nav.wn button.on { border-left-color: var(--brass); background: var(--cream); font-weight: bold; }
 .cobworld nav.wn button:disabled { color: var(--ash); cursor: default; }
 .cobworld nav.wn .cnt { font-family: 'Courier New', monospace; font-size: 10px; color: var(--ash); margin-left: 5px; }
