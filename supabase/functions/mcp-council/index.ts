@@ -4092,6 +4092,7 @@ Deno.serve(async (req) => {
               snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
               created_at: r.created_at,
             })),
+            memory: memoryModule,
             staleness,
             makeup_close_owed,
             registers_empty,
