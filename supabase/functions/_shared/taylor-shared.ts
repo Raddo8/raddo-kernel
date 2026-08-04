@@ -35,11 +35,56 @@ export type TaylorSharedContext = {
   business: { display_name: string | null; cob_name: string | null; principal: string | null; enterprise: string | null };
   connections: unknown[];
   intake_answers: Array<{ chapter: number | null; question_key: string; answer: string; updated_at: string | null }>;
-  intake_recorded: Array<{ topic: string; content_md: string; source: string; recorded_at: string }>;
-  fireside_answers: Array<{ section: string | null; fact: string; source: string | null; created_at: string }>;
+  intake_recorded: Array<{ topic: string; content_md: string; source: string; recorded_at: string; corrected?: boolean }>;
+  fireside_answers: Array<{ section: string | null; fact: string; source: string | null; created_at: string; corrected?: boolean }>;
   material_index: Array<{ kind: string | null; file_name: string; size_bytes: number | null; uploaded_at: string }>;
   progress: Array<{ step_key: string; status: string; source: string | null }>;
+  /** DRY-RUN 2R5 · item 5. Standing corrections. These beat every raw fact. */
+  corrections: Correction[];
 };
+
+/** A factual correction the client made in conversation, cited to its message. */
+export type Correction = {
+  id: string;
+  claim: string;
+  corrected_to: string;
+  source_message_id: string | null;
+  source_surface: string | null;
+  created_at: string;
+};
+
+const significantTokens = (s: string): string[] =>
+  Array.from(
+    new Set(
+      String(s || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]+/g, " ")
+        .split(/\s+/)
+        .filter((w) => w.length > 3),
+    ),
+  );
+
+/**
+ * DRY-RUN 2R5 · item 5. A corrected fact is NEVER re-served raw. Any stored
+ * fact that substantially restates a corrected claim is replaced by the
+ * client's own correction before it reaches a model or a compile.
+ */
+export function applyCorrection(
+  text: string,
+  corrections: Correction[],
+): { text: string; corrected: boolean; correction_id: string | null } {
+  const have = new Set(significantTokens(text));
+  for (const c of corrections) {
+    const claim = significantTokens(c.claim);
+    if (claim.length < 2) continue;
+    const hits = claim.filter((w) => have.has(w)).length;
+    if (hits / claim.length >= 0.6) {
+      return { text: c.corrected_to, corrected: true, correction_id: c.id };
+    }
+  }
+  return { text, corrected: false, correction_id: null };
+}
+
 
 /** The single model config value. Lift the model without touching the build. */
 export const TAYLOR_MODEL_ID = "claude-opus-5";
