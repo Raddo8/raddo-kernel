@@ -7555,6 +7555,209 @@ export type Database = {
           },
         ]
       }
+      world_claims: {
+        Row: {
+          cid: string
+          confidence: number | null
+          created_at: string
+          grade: string
+          id: string
+          miner: string | null
+          object_id: string | null
+          observed_at: string
+          predicate: string
+          sensitivity: string
+          source_id: string | null
+          source_ref: string | null
+          status: string
+          subject_id: string
+          supersedes: string | null
+          synthetic: boolean
+          valid_from: string | null
+          valid_to: string | null
+          value_text: string | null
+          wave: number | null
+        }
+        Insert: {
+          cid: string
+          confidence?: number | null
+          created_at?: string
+          grade?: string
+          id?: string
+          miner?: string | null
+          object_id?: string | null
+          observed_at?: string
+          predicate: string
+          sensitivity?: string
+          source_id?: string | null
+          source_ref?: string | null
+          status?: string
+          subject_id: string
+          supersedes?: string | null
+          synthetic?: boolean
+          valid_from?: string | null
+          valid_to?: string | null
+          value_text?: string | null
+          wave?: number | null
+        }
+        Update: {
+          cid?: string
+          confidence?: number | null
+          created_at?: string
+          grade?: string
+          id?: string
+          miner?: string | null
+          object_id?: string | null
+          observed_at?: string
+          predicate?: string
+          sensitivity?: string
+          source_id?: string | null
+          source_ref?: string | null
+          status?: string
+          subject_id?: string
+          supersedes?: string | null
+          synthetic?: boolean
+          valid_from?: string | null
+          valid_to?: string | null
+          value_text?: string | null
+          wave?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_claims_object_id_fkey"
+            columns: ["object_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "world_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_supersedes_fkey"
+            columns: ["supersedes"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_supersedes_fkey"
+            columns: ["supersedes"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+        ]
+      }
+      world_edges: {
+        Row: {
+          cid: string
+          created_at: string
+          dst_id: string
+          etype: string
+          id: string
+          meta: Json
+          src_id: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          dst_id: string
+          etype: string
+          id?: string
+          meta?: Json
+          src_id: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          dst_id?: string
+          etype?: string
+          id?: string
+          meta?: Json
+          src_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_edges_dst_id_fkey"
+            columns: ["dst_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_edges_src_id_fkey"
+            columns: ["src_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_entities: {
+        Row: {
+          cid: string
+          created_at: string
+          etype: string
+          id: string
+          merged_into: string | null
+          meta: Json
+          name: string
+          resolution_keys: Json
+          sensitivity: string
+          status: string
+          tag: string | null
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          etype: string
+          id?: string
+          merged_into?: string | null
+          meta?: Json
+          name: string
+          resolution_keys?: Json
+          sensitivity?: string
+          status?: string
+          tag?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          etype?: string
+          id?: string
+          merged_into?: string | null
+          meta?: Json
+          name?: string
+          resolution_keys?: Json
+          sensitivity?: string
+          status?: string
+          tag?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_entities_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       world_items: {
         Row: {
           body: string
@@ -7600,6 +7803,45 @@ export type Database = {
           synthetic?: boolean
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      world_sources: {
+        Row: {
+          cid: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          kind: string
+          label: string | null
+          last_mined_at: string | null
+          last_wave: number
+          meta: Json
+          scope: string | null
+        }
+        Insert: {
+          cid: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          label?: string | null
+          last_mined_at?: string | null
+          last_wave?: number
+          meta?: Json
+          scope?: string | null
+        }
+        Update: {
+          cid?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string | null
+          last_mined_at?: string | null
+          last_wave?: number
+          meta?: Json
+          scope?: string | null
         }
         Relationships: []
       }
@@ -7802,6 +8044,91 @@ export type Database = {
           tools: number | null
         }
         Relationships: []
+      }
+      world_delta_v: {
+        Row: {
+          cid: string | null
+          claim_id: string | null
+          grade: string | null
+          observed_at: string | null
+          predicate: string | null
+          sensitivity: string | null
+          source_ref: string | null
+          subject_id: string | null
+          value_text: string | null
+        }
+        Insert: {
+          cid?: string | null
+          claim_id?: string | null
+          grade?: string | null
+          observed_at?: string | null
+          predicate?: string | null
+          sensitivity?: string | null
+          source_ref?: string | null
+          subject_id?: string | null
+          value_text?: string | null
+        }
+        Update: {
+          cid?: string | null
+          claim_id?: string | null
+          grade?: string | null
+          observed_at?: string | null
+          predicate?: string | null
+          sensitivity?: string | null
+          source_ref?: string | null
+          subject_id?: string | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      world_timeline_v: {
+        Row: {
+          cid: string | null
+          grade: string | null
+          predicate: string | null
+          status: string | null
+          subject_id: string | null
+          valid_from: string | null
+          valid_to: string | null
+          value_text: string | null
+        }
+        Insert: {
+          cid?: string | null
+          grade?: string | null
+          predicate?: string | null
+          status?: string | null
+          subject_id?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          value_text?: string | null
+        }
+        Update: {
+          cid?: string | null
+          grade?: string | null
+          predicate?: string | null
+          status?: string | null
+          subject_id?: string | null
+          valid_from?: string | null
+          valid_to?: string | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -8369,6 +8696,8 @@ export type Database = {
         }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       stamp_save_attempt: {
         Args: {
           p_cid?: string
@@ -8387,6 +8716,10 @@ export type Database = {
       verify_load_test_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
+      }
+      world_resolve_entity_v1: {
+        Args: { p_cid: string; p_etype: string; p_keys?: Json; p_name: string }
+        Returns: Json
       }
     }
     Enums: {
