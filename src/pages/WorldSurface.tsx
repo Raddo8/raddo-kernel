@@ -117,7 +117,7 @@ function provenance(row: { source_ref?: string | null; grade?: string | null; ob
   if (row.source_ref) bits.push(row.source_ref);
   if (row.grade) bits.push(row.grade);
   if (row.observed_at) bits.push(new Date(row.observed_at).toISOString().slice(0, 10));
-  return bits.join("  {DOT}  ");
+  return bits.join(`  ${DOT}  `);
 }
 
 const DOT = "\u00b7";
@@ -589,8 +589,8 @@ export function WorldSurface() {
                       </Chips>
                       <p className="prov">
                         {miner ? `miner ${miner}` : "miner not recorded"}
-                        {"  {DOT}  "}wave {s.last_wave ?? 0}
-                        {"  {DOT}  "}
+                        {`  ${DOT}  `}wave {s.last_wave ?? 0}
+                        {`  ${DOT}  `}
                         {s.last_mined_at ? `last mined ${new Date(s.last_mined_at).toISOString().slice(0, 10)}` : "never mined"}
                       </p>
                     </div>
