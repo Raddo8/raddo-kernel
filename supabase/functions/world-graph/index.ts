@@ -618,6 +618,8 @@ Deno.serve(async (req) => {
       case "profile": return await actionProfile(principal, body);
       case "entities": return await actionEntities(principal);
       case "sources": return await actionSources(principal);
+      case "claims": return await actionClaims(principal, body);
+      case "edges": return await actionEdges(principal);
       default: return fail("unknown_action");
     }
   } catch (e) {
