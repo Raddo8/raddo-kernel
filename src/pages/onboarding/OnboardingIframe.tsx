@@ -218,6 +218,8 @@ export default function OnboardingIframe({
   const wideEnough = useTaylorPanelVisible();
   const screen = useIframeScreen(ref, phase.kind === "ready" && hydrated);
   const taylorVisible = wideEnough && !TAYLOR_HIDDEN_SCREENS.has(screen);
+  const welcome = useWelcomeParty(phase.kind === "ready" && hydrated);
+
 
 
 
