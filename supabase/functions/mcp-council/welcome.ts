@@ -17,12 +17,22 @@ export interface WelcomeStep {
   done_when: string;
 }
 
+export interface WelcomeRenameOffer {
+  available: true;
+  cob_name: string | null;
+  tool: "set_chief_name";
+  offer: string;
+}
+
 export interface WelcomePayload {
   instructions: string;
   setup_guide: string;
   next_steps: WelcomeStep[];
   client: WelcomeClient;
+  /** UNIT 3 · the party always carries the name and the offer to change it. */
+  rename_offer: WelcomeRenameOffer;
 }
+
 
 export const WELCOME_INSTRUCTIONS =
   "Greet the client in one composed line with no exclamation points. If client.first_name is present: 'Welcome, [first name]. Your headquarters is being prepared. Would you like TAYLOR to walk you through setup?' If it is absent, use the same line without a name — do not remark on the missing name or deliberate about identity. Do not create any artifact and do not reproduce or describe the welcome card; the visual card is handled by the platform. If the client accepts the walkthrough in their own words, call taylor_setup and follow its instructions. If they ask for a different name for their Chief, call set_chief_name with the name they choose.";
@@ -304,8 +314,17 @@ export function buildWelcomePayload(client: WelcomeClient): WelcomePayload {
     setup_guide: WELCOME_SETUP_POINTER,
     next_steps: WELCOME_STEPS,
     client,
+    rename_offer: {
+      available: true,
+      cob_name: client.cob_name,
+      tool: "set_chief_name",
+      offer: client.cob_name
+        ? `Their COB is called ${client.cob_name}. Offer once, plainly, that they can change the name, and call set_chief_name if they choose a new one.`
+        : "Their COB is not named yet. Invite them to name it and call set_chief_name with the name they choose.",
+    },
   };
 }
+
 
 export interface ProgressRow {
   step_key: string;

@@ -2,6 +2,82 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { TaylorPanel } from "@/components/onboarding/TaylorPanel";
+import { WelcomeParty } from "@/components/onboarding/WelcomeParty";
+
+/** UNIT 3 · how often the surface asks the server for the connection signal. */
+const WELCOME_POLL_MS = 10000;
+
+type WelcomeState = {
+  cob_name: string | null;
+  display_name: string | null;
+  principal: string | null;
+  connector_connected_at: string | null;
+  welcome_celebrated_at: string | null;
+};
+
+function firstNameOf(principal: string | null): string | null {
+  if (!principal) return null;
+  const base = principal.includes("@") ? principal.split("@")[0].replace(/[._-]+/g, " ") : principal;
+  const word = base.trim().split(/\s+/)[0] ?? "";
+  if (word.length < 2) return null;
+  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+}
+
+/**
+ * UNIT 3 · the Welcome Party runs off SERVER truth only, polled here.
+ * It fires once per tenant: the celebrated marker lives on the record, so a
+ * reload or another poll never replays it.
+ */
+function useWelcomeParty(active: boolean) {
+  const [state, setState] = useState<WelcomeState | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  const call = useCallback(async (action: string, extra?: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("taylor-thread", {
+      body: { action, ...(extra || {}) },
+    });
+    if (error || (data as any)?.error) return null;
+    return data as WelcomeState;
+  }, []);
+
+  useEffect(() => {
+    if (!active) return;
+    let cancelled = false;
+    const read = async () => {
+      const next = await call("welcome_state");
+      if (!cancelled && next) setState(next);
+    };
+    void read();
+    const t = window.setInterval(() => void read(), WELCOME_POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(t);
+    };
+  }, [active, call]);
+
+  const show = Boolean(
+    active && state && state.connector_connected_at && !state.welcome_celebrated_at && !dismissed,
+  );
+
+  const rename = useCallback(
+    async (name: string) => {
+      const next = await call("set_cob_name", { name });
+      if (!next) return { ok: false, message: "That name did not save. Try another one." };
+      setState(next);
+      return { ok: true, cobName: next.cob_name ?? undefined };
+    },
+    [call],
+  );
+
+  const dismiss = useCallback(async () => {
+    setDismissed(true);
+    const next = await call("welcome_celebrated");
+    if (next) setState(next);
+  }, [call]);
+
+  return { state, show, rename, dismiss };
+}
+
 
 /** UNIT 2 · width reserved for the TAYLOR panel on desks wide enough for it. */
 const TAYLOR_PANEL_WIDTH = 360;
@@ -142,6 +218,8 @@ export default function OnboardingIframe({
   const wideEnough = useTaylorPanelVisible();
   const screen = useIframeScreen(ref, phase.kind === "ready" && hydrated);
   const taylorVisible = wideEnough && !TAYLOR_HIDDEN_SCREENS.has(screen);
+  const welcome = useWelcomeParty(phase.kind === "ready" && hydrated);
+
 
 
 
@@ -403,6 +481,16 @@ export default function OnboardingIframe({
       {phase.kind === "ready" && hydrated && taylorVisible && (
         <TaylorPanel pageCtx={`page:${screen}`} />
       )}
+      {welcome.show && welcome.state && (
+        <WelcomeParty
+          cobName={welcome.state.cob_name}
+          displayName={welcome.state.display_name}
+          firstName={firstNameOf(welcome.state.principal)}
+          onRename={welcome.rename}
+          onDismiss={() => void welcome.dismiss()}
+        />
+      )}
+
     </>
 
   );

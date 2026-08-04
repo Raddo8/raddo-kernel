@@ -1,9 +1,13 @@
 /**
  * UNIT 2 · TAYLOR panel backend (app surface of the shared thread).
+ * UNIT 3 · plus the Welcome Party's server truth.
  *
  * Actions:
- *   read  -> thread messages (both surfaces) + shared context
- *   post  -> append the client's message, call the model, append TAYLOR's reply
+ *   read               -> thread messages (both surfaces) + shared context
+ *   post               -> append the client's message, call the model, append TAYLOR's reply
+ *   welcome_state      -> connector-success signal, the COB's name, the celebrated marker
+ *   welcome_celebrated -> stamp the once-per-tenant celebration marker
+ *   set_cob_name       -> rename the COB through the SAME path the connector uses
  *
  * Every failure state has its OWN error string. Nothing is ever a generic
  * exception, and no two different failures share a code.
@@ -20,6 +24,8 @@ import {
   taylorModelId,
   TAYLOR_SYSTEM,
 } from "../_shared/taylor-shared.ts";
+import { setCobName } from "../_shared/cob-name.ts";
+
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -60,7 +66,67 @@ Deno.serve(async (req) => {
     return json({ thread_id: threadId, cid, messages, context, model: taylorModelId(Deno.env) });
   }
 
+  // UNIT 3 · the Welcome Party reads server truth only. CID is derived above.
+  const readOnboardingRow = async () => {
+    const { data, error } = await admin
+      .from("onboarding_tenants")
+      .select("id, connector_connected_at, connector_first_client, welcome_celebrated_at")
+      .eq("cid", cid)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return null;
+    return data as any;
+  };
+
+  if (action === "welcome_state" || action === "welcome_celebrated" || action === "set_cob_name") {
+    if (action === "set_cob_name") {
+      const result = await setCobName(admin, cid, (body as any)?.name);
+      if (!result.ok) return json({ error: "taylor_name_" + result.reason.replace(/-/g, "_") }, 400);
+      await admin
+        .from("onboarding_progress")
+        .upsert(
+          {
+            cid,
+            step_key: "chief-name",
+            status: "done",
+            source: "start_panel",
+            detail: "named on the welcome party",
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "cid,step_key" },
+        );
+    }
+
+    if (action === "welcome_celebrated") {
+      const row = await readOnboardingRow();
+      if (row?.id && !row.welcome_celebrated_at) {
+        const { error: markErr } = await admin
+          .from("onboarding_tenants")
+          .update({ welcome_celebrated_at: new Date().toISOString() })
+          .eq("id", row.id)
+          .is("welcome_celebrated_at", null);
+        if (markErr) return json({ error: "taylor_welcome_marker_not_recorded", detail: markErr.message }, 500);
+      }
+    }
+
+    const [row, biz] = await Promise.all([
+      readOnboardingRow(),
+      admin.from("tenants").select("display_name, cob_name, principal").eq("cid", cid).maybeSingle().then((r: any) => r?.data ?? null),
+    ]);
+    return json({
+      cid,
+      cob_name: biz?.cob_name ?? null,
+      display_name: biz?.display_name ?? null,
+      principal: biz?.principal ?? null,
+      connector_connected_at: row?.connector_connected_at ?? null,
+      connector_first_client: row?.connector_first_client ?? null,
+      welcome_celebrated_at: row?.welcome_celebrated_at ?? null,
+    });
+  }
+
   if (action !== "post") return json({ error: "taylor_unknown_action" }, 400);
+
 
   const message = String((body as any)?.message || "").trim().slice(0, 4000);
   const pageCtx = String((body as any)?.page_ctx || "").slice(0, 200);
