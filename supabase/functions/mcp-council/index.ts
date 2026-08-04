@@ -47,7 +47,7 @@ import { setCobName, taylorConnectorIntro } from "../_shared/cob-name.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "taylor_shared_thread_v1";
+const BUILD_ID = "memory_read_path_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2135,7 +2135,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.04.1";
+const TOOL_MANIFEST_VERSION = "2026.08.04.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
