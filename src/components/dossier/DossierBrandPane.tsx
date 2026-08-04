@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import cobMark from "@/assets/cob-square-dark.png";
+import cobMarkAsset from "@/assets/cob-square-dark.png.asset.json";
+const cobMark = cobMarkAsset.url;
 
 
 /**
