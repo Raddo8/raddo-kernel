@@ -210,6 +210,22 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
     "taylor_corrections_read_failed",
   );
 
+  // T1 · standing boundaries. Read on every turn so nothing out of bounds
+  // is ever pursued and the no store rule is never violated.
+  ctx.boundaries = await safe<Array<{ id: string; text: string; rank: number | null }>>(
+    admin
+      .from("directives")
+      .select("id, text, rank")
+      .eq("cid", cid)
+      .eq("scope", "SITUATIONAL")
+      .eq("status", "active")
+      .order("rank", { ascending: true })
+      .limit(80)
+      .then((r: any) => (r?.data ?? []) as Array<{ id: string; text: string; rank: number | null }>),
+    [],
+    "taylor_boundaries_read_failed",
+  );
+
 
   const rec = await safe<any>(
     admin
