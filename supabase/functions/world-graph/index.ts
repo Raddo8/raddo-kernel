@@ -333,9 +333,11 @@ async function actionGovern(p: Principal, body: any) {
       .eq("cid", p.cid)
       .eq("predicate", "governs")
       .neq("status", "voided");
+    // Precision law: an undo may only void the governing claims it can name,
+    // or those that explicitly supersede the ruled claims. Never a whole subject.
     const res = govIds.length > 0
       ? await voidQ.in("id", govIds).select("id")
-      : await voidQ.in("subject_id", found.map((c) => c.subject_id)).select("id");
+      : await voidQ.in("supersedes", foundIds).select("id");
     if (!res.error) voided = (res.data ?? []).map((r: any) => r.id);
   }
 
