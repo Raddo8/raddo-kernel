@@ -13,15 +13,24 @@ export type ReceiptArgs = {
 
 export type Receipt = { ok: boolean; change_log_id: string | null; attempts: number };
 
+// change_log carries CHECK vocabularies on entity and change. World receipts
+// map onto that vocabulary rather than widening it: the world change name is
+// kept verbatim at the head of the summary so the receipt stays legible.
+const CHANGE_MAP: Record<string, string> = {
+  "world.stage": "created",
+  "world.govern": "status",
+  "world.merge": "status",
+};
+
 async function attempt(admin: any, a: ReceiptArgs): Promise<string | null> {
   const { data, error } = await admin
     .from("change_log")
     .insert({
       tenant_id: a.tenant_id,
-      entity: "world",
+      entity: "knowledge",
       entity_id: a.entity_id,
-      change: a.change,
-      summary: a.summary,
+      change: CHANGE_MAP[a.change] ?? "edited",
+      summary: `${a.change.toUpperCase()} \u00b7 ${a.summary}`,
       actor: a.actor,
     })
     .select("id")

@@ -18,7 +18,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
 
-const BUILD_ID = "w1b.1";
+const BUILD_ID = "w1c.1";
 const HIDDEN = ["privileged", "third-party-npi"];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -273,7 +273,10 @@ async function actionStage(p: Principal, body: any) {
 
 async function actionGovern(p: Principal, body: any) {
   const claimId = str(body?.claim_id);
-  const action = str(body?.action);
+  // The top-level discriminator is also called "action", so a caller sending
+  // { action: "govern" } passes the verdict as "verdict". Both spellings work;
+  // "verdict" wins when the discriminator has already claimed "action".
+  const action = str(body?.verdict) ?? (str(body?.action) === "govern" ? null : str(body?.action));
   const note = str(body?.note);
   if (!claimId) return fail("claim_id_required");
   if (!action || !["confirm", "flag", "explain"].includes(action)) return fail("invalid_action");
@@ -399,6 +402,50 @@ async function actionDelta(p: Principal) {
   return json({ ok: true, action: "delta", cid: p.cid, rows: data ?? [], count: (data ?? []).length, build_id: BUILD_ID });
 }
 
+/** Read-only roster of entities for the caller's cid. Merged entities are
+ * withheld (reads follow merged_into one hop, so the survivor stands in). */
+async function actionEntities(p: Principal) {
+  const allowed = readableSensitivities(p);
+  const { data, error } = await admin!
+    .from("world_entities")
+    .select("id, etype, name, tag, status, sensitivity, merged_into, updated_at")
+    .eq("cid", p.cid)
+    .is("merged_into", null)
+    .in("sensitivity", allowed)
+    .order("name", { ascending: true })
+    .limit(1000);
+  if (error) return fail("entities_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "entities",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+/** Read-only roster of mined sources for the caller's cid. */
+async function actionSources(p: Principal) {
+  const { data, error } = await admin!
+    .from("world_sources")
+    .select("id, kind, label, scope, connected_at, last_wave, last_mined_at, meta")
+    .eq("cid", p.cid)
+    .order("last_mined_at", { ascending: false, nullsFirst: false })
+    .limit(500);
+  if (error) return fail("sources_read_failed", 500, { detail: error.message });
+  return json({
+    ok: true,
+    action: "sources",
+    cid: p.cid,
+    rows: data ?? [],
+    count: (data ?? []).length,
+    build_id: BUILD_ID,
+  });
+}
+
+
+
 async function actionProfile(p: Principal, body: any) {
   const entityId = str(body?.entity_id);
   if (!entityId) return fail("entity_id_required");
@@ -488,6 +535,8 @@ Deno.serve(async (req) => {
       case "merge": return await actionMerge(principal, body);
       case "delta": return await actionDelta(principal);
       case "profile": return await actionProfile(principal, body);
+      case "entities": return await actionEntities(principal);
+      case "sources": return await actionSources(principal);
       default: return fail("unknown_action");
     }
   } catch (e) {

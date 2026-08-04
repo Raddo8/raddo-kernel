@@ -1,0 +1,133 @@
+/* THE WORLD · /hq/world · HQ DESIGN light language.
+ * Tokens inherited from hq-design.css. Everything scoped under .hqd.world so
+ * no other surface can be reached by these rules. */
+
+.hqd.world {
+  --serif: Georgia, 'Times New Roman', serif;
+  --sans: Georgia, 'Times New Roman', serif;
+  --mono: 'Courier New', Courier, monospace;
+  font-family: var(--sans);
+}
+
+.hqd.world .shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 30px 22px 80px;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 26px;
+  align-items: start;
+}
+
+/* left rail */
+.hqd.world .rail { position: sticky; top: 22px; display: flex; flex-direction: column; gap: 6px; }
+.hqd.world .rb {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-s);
+  padding: 11px 12px; cursor: pointer; color: var(--ash);
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase;
+  transition: border-color 120ms var(--curve), color 120ms var(--curve);
+}
+.hqd.world .rb:hover { border-color: var(--brass); color: var(--navy); }
+.hqd.world .rb.on { background: var(--navy); border-color: var(--navy); color: var(--paper); }
+.hqd.world .rb .n {
+  margin-left: auto; font-size: 9.5px; letter-spacing: 0.08em;
+  background: var(--brass); color: #2C2C2A; border-radius: 999px; padding: 1px 7px; font-weight: 700;
+}
+.hqd.world .rb.on .n { background: var(--brass); }
+.hqd.world .rail-note {
+  margin-top: 12px; font-family: var(--mono); font-size: 9px; line-height: 1.7;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--ash);
+}
+
+/* header */
+.hqd.world .head { border-bottom: 2px solid var(--navy); padding-bottom: 12px; }
+.hqd.world .head h1 { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--navy); margin: 6px 0 0; }
+.hqd.world .head p { color: var(--ash); font-size: 14px; line-height: 1.6; margin: 8px 0 0; max-width: 66ch; }
+
+/* claim / entity cards */
+.hqd.world .wgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 12px; margin-top: 14px; }
+.hqd.world .wcard {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l);
+  padding: 14px 15px; box-shadow: var(--shadow); text-align: left;
+}
+.hqd.world button.wcard { cursor: pointer; width: 100%; transition: border-color 120ms var(--curve), transform 120ms var(--curve); }
+.hqd.world button.wcard:hover { border-color: var(--brass); transform: translateY(-1px); }
+.hqd.world .wcard.soft { background: var(--paper-2); }
+.hqd.world .wcard .claim { font-size: 14px; line-height: 1.55; color: var(--ink); }
+.hqd.world .wcard .nm { font-family: var(--serif); font-size: 15px; font-weight: 700; color: var(--navy); line-height: 1.3; }
+.hqd.world .prov {
+  margin-top: 10px; font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.06em;
+  color: var(--ash); line-height: 1.7; word-break: break-word;
+}
+.hqd.world .openitem {
+  border: 1px dashed var(--brass); background: var(--brass-wash); border-radius: var(--r-s); padding: 12px 13px;
+}
+
+/* approval rail */
+.hqd.world .arail { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.hqd.world .ab {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.13em; text-transform: uppercase;
+  border: 1px solid var(--line); background: var(--paper); color: var(--navy);
+  border-radius: var(--r-s); padding: 7px 10px; cursor: pointer;
+  transition: background 120ms var(--curve), border-color 120ms var(--curve);
+}
+.hqd.world .ab:hover:not(:disabled) { border-color: var(--brass); background: var(--brass-wash); }
+.hqd.world .ab.primary { background: var(--brass); border-color: var(--brass); color: #2C2C2A; font-weight: 700; }
+.hqd.world .ab.primary:hover:not(:disabled) { background: var(--brass-deep); border-color: var(--brass-deep); color: var(--paper); }
+.hqd.world .ab:disabled { opacity: 0.45; cursor: not-allowed; }
+.hqd.world .noted {
+  margin-top: 12px; border-left: 3px solid var(--ok); background: var(--ok-wash);
+  border-radius: var(--r-s); padding: 10px 12px; font-size: 13px; color: var(--ok); line-height: 1.55;
+}
+.hqd.world .noteform { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.hqd.world input[type="text"], .hqd.world input[type="search"] {
+  flex: 1 1 160px; min-width: 0; background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--r-s); padding: 8px 10px; font-family: var(--sans); font-size: 13px; color: var(--ink);
+}
+.hqd.world input:focus-visible, .hqd.world .rb:focus-visible, .hqd.world .ab:focus-visible,
+.hqd.world button.wcard:focus-visible, .hqd.world .tab:focus-visible, .hqd.world .relchip:focus-visible {
+  outline: 2px solid var(--brass); outline-offset: 2px;
+}
+
+/* filter tabs */
+.hqd.world .tabs { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 16px; }
+.hqd.world .tab {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  border: 1px solid var(--line); background: var(--card); color: var(--ash);
+  border-radius: var(--r-s); padding: 7px 11px; cursor: pointer;
+}
+.hqd.world .tab.on { background: var(--navy); border-color: var(--navy); color: var(--paper); }
+
+.hqd.world .relchip {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  border: 1px solid var(--line); background: var(--paper-2); color: var(--navy);
+  border-radius: 999px; padding: 5px 11px; cursor: pointer;
+}
+.hqd.world .relchip:hover { border-color: var(--brass); background: var(--brass-wash); }
+
+.hqd.world .sub {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--brass-deep); margin: 26px 0 0;
+}
+.hqd.world .empty {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l);
+  padding: 26px 22px; color: var(--ash); font-size: 13.5px; margin-top: 14px; line-height: 1.6;
+}
+.hqd.world .wfoot {
+  margin-top: 44px; padding-top: 14px; border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ash);
+}
+.hqd.world .muted { opacity: 0.82; }
+
+@media (max-width: 860px) {
+  .hqd.world .shell { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 22px 16px 70px; }
+  .hqd.world .rail { position: static; flex-direction: row; flex-wrap: wrap; }
+  .hqd.world .rb { width: auto; flex: 1 1 auto; }
+  .hqd.world .head h1 { font-size: 24px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hqd.world * { transition: none !important; }
+  .hqd.world button.wcard:hover { transform: none; }
+}
