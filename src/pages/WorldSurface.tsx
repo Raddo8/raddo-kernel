@@ -16,6 +16,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { HqShell } from "@/components/hq/HqShell";
 import "@/hq-next/styles/hq-world.css";
 
 const DOT = "\u00b7";
@@ -511,6 +512,7 @@ export function WorldSurface() {
   };
 
   return (
+    <HqShell>
     <div className="cobworld">
       <header className="wh">
         <div className="k mono">Chief of Business {DOT} the indexed narrative</div>
@@ -882,6 +884,7 @@ export function WorldSurface() {
         </main>
       </div>
     </div>
+    </HqShell>
   );
 }
 
