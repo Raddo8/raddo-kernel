@@ -7,7 +7,6 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { setCobName, taylorConnectorIntro } from "../_shared/cob-name.ts";
 import { postThreadMessage, resolveThread, readThreadMessages } from "../_shared/taylor-shared.ts";
-import { buildWelcomePayload, normalizeClient, firstNameOf } from "../mcp-council/welcome.ts";
 
 const SYNTHETIC = new Set(["CID-100011", "CID-100012"]);
 const json = (b: unknown, s = 200) =>
@@ -44,30 +43,21 @@ Deno.serve(async (req) => {
 
   if (step === "intro") {
     const { data: biz } = await admin.from("tenants").select("display_name, cob_name, principal").eq("cid", cid).maybeSingle();
-    const client = normalizeClient({
-      display_name: (biz as any)?.display_name,
-      cob_name: (biz as any)?.cob_name,
-      principal: (biz as any)?.principal,
-    });
+    const cobName = ((biz as any)?.cob_name ?? null) as string | null;
+    const principal = String((biz as any)?.principal ?? "");
+    const base = principal.includes("@") ? principal.split("@")[0].replace(/[._-]+/g, " ") : principal;
+    const w = base.trim().split(/\s+/)[0] ?? "";
+    const first = w.length >= 2 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : null;
     const threadId = await resolveThread(admin, cid);
     const existing = await admin.from("taylor_messages").select("id")
       .eq("thread_id", threadId).eq("role", "taylor").eq("surface", "connector").limit(1);
     if (threadId && (!existing.data || existing.data.length === 0)) {
       out.posted = await postThreadMessage(admin, {
         threadId, cid, role: "taylor", surface: "connector",
-        content: taylorConnectorIntro(client.cob_name, client.first_name ?? firstNameOf((biz as any)?.principal)),
+        content: taylorConnectorIntro(cobName, first),
       });
     } else out.posted = "already-present";
     out.thread_id = threadId;
-  }
-
-  if (step === "welcome_payload") {
-    const { data: biz } = await admin.from("tenants").select("display_name, cob_name, principal").eq("cid", cid).maybeSingle();
-    out.payload = buildWelcomePayload(normalizeClient({
-      display_name: (biz as any)?.display_name,
-      cob_name: (biz as any)?.cob_name,
-      principal: (biz as any)?.principal,
-    }));
   }
 
   const { data: row } = await admin
