@@ -527,19 +527,23 @@ const COB={
  state:{user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false},
  KEY:(function(){try{var c=new URLSearchParams(location.search).get("cid");return "cob_onboarding_v1"+(c?"::"+c:"");}catch(e){return "cob_onboarding_v1";}})(),
  totalQ:CHAPTERS.reduce((a,c)=>a+c.qs.length,0),
- RES:["#/consent","#/gate","#/reveal","#/plugin","#/fireside","#/connect","#/world","#/dashboard"],
- J:[["Diving in","#/reveal"],["Connections","#/plugin"],["Fireside chat","#/fireside"],["Wire together","#/connect"],["Your world","#/world"],["Your build","#/dashboard"]],
+ RES:["#/consent","#/gate","#/reveal","#/plugin","#/connect-first","#/fireside","#/connect","#/world","#/dashboard"],
+ J:[["Diving in","#/reveal"],["Connections","#/plugin"],["First connection","#/connect-first"],["Fireside chat","#/fireside"],["Wire together","#/connect"],["Your world","#/world"],["Your build","#/dashboard"]],
+ /* DRY-RUN 2R5 · item 2. stepDone is the ONE definition of a completed gate, and
+    for consent and the first connection it reads SERVER truth, never a pointer. */
+ consentServer(){const v=this.state.server||{};return v.consent_signed_at||this.state.consentAt||null;},
  stepDone(hash){const s=this.state;const seen=s.seen||{};const qs=CHAPTERS[0].qs;
   switch(hash){
-   case "#/consent":return !!s.consentAt;
+   case "#/consent":return !!this.consentServer();
    case "#/gate":return GATE.every(q=>s.gate[q.k]);
    case "#/reveal":return !!seen.reveal;
    case "#/plugin":return !!seen.plugin;
+   case "#/connect-first":return !!this.connServer();
    case "#/world":return !!seen.world;
    case "#/fireside":return qs.length>0&&qs.every(q=>String(s.answers[q.k]||"").trim()||s.skipped[q.k])&&this.answered()>0;
    case "#/review":return !!seen.review;
    case "#/claude":return s.claude==="yes";
-   case "#/connect":return s.connectors&&s.connectors.cob==="done";
+   case "#/connect":return this.cobConnected();
    default:return false;}},
  navItems(){const cur=location.hash||"#/welcome";
   return this.J.map((s,i)=>{const on=cur.split("/")[1]===s[1].split("/")[1];
@@ -638,9 +642,21 @@ const COB={
   this.state={user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false};
   this.closeDrawer();this.go("#/welcome");this.render();/* LOVABLE: also insert deletion_request + purge tenant rows/bucket on confirm */
   this.toast("Erased. This device holds nothing of yours.");},
+ /* DRY-RUN 2R5 · item 2. RESUME LANDS ON OUTCOMES, NOT POINTERS.
+    A stored pointer that runs ahead of proven gate completion is corrected
+    DOWNWARD to the earliest incomplete gate, and the discrepancy is logged. */
+ earliestIncomplete(){for(let i=0;i<this.RES.length;i++){if(!this.stepDone(this.RES[i]))return i;}
+  return this.RES.length-1;},
  resume(){if(!this.state.user){this.go("#/account");return;}
-  if(!this.state.consentAt){this.go("#/consent");return;}
-  const i=Math.max(this.state.reached||0,2);this.go(this.RES[Math.min(i,this.RES.length-1)]);},
+  const first=this.earliestIncomplete();
+  const ptr=Math.min(Math.max(this.state.reached||0,0),this.RES.length-1);
+  if(ptr>first){
+   const d={pointer:ptr,pointer_step:this.RES[ptr],landed:first,landed_step:this.RES[first]};
+   try{console.warn("resume_pointer_ahead_of_outcomes",JSON.stringify(d));}catch(e){}
+   try{if(typeof this._onResumeDiscrepancy==="function")this._onResumeDiscrepancy(d);}catch(e){}
+   this.state.reached=first;this.save();
+  }
+  this.go(this.RES[first]);},
  save(){try{localStorage.setItem(this.KEY,JSON.stringify(this.state));}catch(e){}
    const s=document.getElementById('saveState');document.getElementById('saveTxt').textContent="saved";s.classList.add('ok');
    clearTimeout(this._st);this._st=setTimeout(()=>{s.classList.remove('ok');document.getElementById('saveTxt').textContent="autosave on";},1600);},
@@ -732,38 +748,45 @@ const COB={
  route(){const h=(location.hash||"#/welcome").slice(2).split("/");return{p:h[0]||"welcome",a:h[1],b:h[2]};},
  render(){const r=this.route();const app=document.getElementById('app');if(this._lastHash!==location.hash){window.scrollTo(0,0);this._lastHash=location.hash;}
   document.getElementById('progBar').style.width=this.pct()+"%";
-  const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
-  let crumb=crumbs[r.p]??r.p;
-  if(r.p==="ch"){crumb="fireside chat";}
-  document.getElementById('crumb').textContent=crumb;
-  this.acctRender();
-  const _ri=this.RES.findIndex(h=>h.split("/")[1]===r.p);
-  if(_ri>-1&&_ri>(this.state.reached||0)){this.state.reached=_ri;this.save();}
-  if(["reveal","plugin","world","review"].includes(r.p)){this.state.seen=this.state.seen||{};
-   if(!this.state.seen[r.p]){this.state.seen[r.p]=1;this.save();}}
-  const needsUser=["consent","gate","reveal","plugin","world","fireside","ch","review","harvest","claude","connect","done","dashboard"];
-  if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
-  const _rp=(location.hash||"#/welcome").split("/")[1]||"welcome";document.documentElement.classList.toggle('rsame',this._lastR===_rp);this._lastR=_rp;
-  document.body.classList.toggle('withrail',["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p));
-  if(r.p==="welcome")app.innerHTML=this.vWelcome();
-  else if(r.p==="account")app.innerHTML=this.vAccount();
-  else if(r.p==="consent")app.innerHTML=this.shell(this.vConsent(),null);
-  else if(r.p==="gate")app.innerHTML=this.shell(this.vGate(),null);
-  else if(r.p==="reveal")app.innerHTML=this.shell(this.vReveal(),null);
-  else if(r.p==="plugin")app.innerHTML=this.shell(this.vPlugin(),null);
-  else if(r.p==="world")app.innerHTML=this.shell(this.vUnderstanding(),null);
-  else if(r.p==="fireside")app.innerHTML=this.shell(this.vFireside(),null);
-  else if(r.p==="ch"){this.go("#/fireside");return;}
-  else if(r.p==="review")app.innerHTML=this.shell(this.vReview(),null);
-  else if(r.p==="harvest"){this.go("#/world");return;}
-  else if(r.p==="claude")app.innerHTML=this.shell(this.vClaude(),null);
-  else if(r.p==="connect")app.innerHTML=this.shell(this.vConnect(),null);
-  else if(r.p==="done")app.innerHTML=this.shell(this.vDone(),null);
-  else if(r.p==="dashboard")app.innerHTML=this.vDashboard();
-  else app.innerHTML=this.shell(`<div class="q-wrap"><p class="kicker">lost page · 404</p><h1>That room isn't in this building.</h1><p>Your work is safe. Head back to where you left off.</p><button class="btn" onclick="COB.go('#/dashboard')">Back to your build</button></div>`,null);
+   const crumbs={welcome:"welcome",account:"create your account",consent:"consent · scope",gate:"three quick questions",reveal:"we come prepared",plugin:"build your corner","connect-first":"the first connection",world:"your world",fireside:"fireside chat",ch:"",review:"review everything",claude:"your COB lives in claude",connect:"connect your world",done:"all set",dashboard:"your build"};
+   let crumb=crumbs[r.p]??r.p;
+   if(r.p==="ch"){crumb="fireside chat";}
+   document.getElementById('crumb').textContent=crumb;
+   this.acctRender();
+   /* DRY-RUN 2R5 · item 2. The pointer may never run ahead of proven outcomes:
+      visiting a screen no longer certifies the gate behind it. */
+   const _ri=this.RES.findIndex(h=>h.split("/")[1]===r.p);
+   const _cap=this.earliestIncomplete();
+   const _next=Math.min(_ri,_cap);
+   if(_ri>-1&&_next>(this.state.reached||0)){this.state.reached=_next;this.save();}
+   if(["reveal","plugin","world","review"].includes(r.p)){this.state.seen=this.state.seen||{};
+    if(!this.state.seen[r.p]){this.state.seen[r.p]=1;this.save();}}
+   const needsUser=["consent","gate","reveal","plugin","connect-first","world","fireside","ch","review","harvest","claude","connect","done","dashboard"];
+   if(needsUser.includes(r.p)&&!this.state.user){this.go("#/account");return;}
+   const _rp=(location.hash||"#/welcome").split("/")[1]||"welcome";document.documentElement.classList.toggle('rsame',this._lastR===_rp);this._lastR=_rp;
+   document.body.classList.toggle('withrail',["consent","gate","reveal","plugin","connect-first","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p));
+   if(r.p==="welcome")app.innerHTML=this.vWelcome();
+   else if(r.p==="account")app.innerHTML=this.vAccount();
+   else if(r.p==="consent")app.innerHTML=this.shell(this.vConsent(),null);
+   else if(r.p==="gate")app.innerHTML=this.shell(this.vGate(),null);
+   else if(r.p==="reveal")app.innerHTML=this.shell(this.vReveal(),null);
+   else if(r.p==="plugin")app.innerHTML=this.shell(this.vPlugin(),null);
+   else if(r.p==="connect-first")app.innerHTML=this.shell(this.vConnectFirst(),null);
+   else if(r.p==="world")app.innerHTML=this.shell(this.vUnderstanding(),null);
+   else if(r.p==="fireside")app.innerHTML=this.shell(this.vFireside(),null);
+   else if(r.p==="ch"){this.go("#/fireside");return;}
+   else if(r.p==="review")app.innerHTML=this.shell(this.vReview(),null);
+   /* Old links to the deleted harvest screen land on the restored page. */
+   else if(r.p==="harvest"){this.go("#/connect-first");return;}
+   else if(r.p==="claude")app.innerHTML=this.shell(this.vClaude(),null);
+   else if(r.p==="connect")app.innerHTML=this.shell(this.vConnect(),null);
+   else if(r.p==="done")app.innerHTML=this.shell(this.vDone(),null);
+   else if(r.p==="dashboard")app.innerHTML=this.vDashboard();
+   else app.innerHTML=this.shell(`<div class="q-wrap"><p class="kicker">lost page · 404</p><h1>That room isn't in this building.</h1><p>Your work is safe. Head back to where you left off.</p><button class="btn" onclick="COB.go('#/dashboard')">Back to your build</button></div>`,null);
+
   this.mobNav(r);this.dockSync(r);const f=app.querySelector("textarea,input");if(f&&r.p==="ch")f.focus();},
  mobNav(r){const m=document.getElementById('mobNav');
-  const inShell=["consent","gate","reveal","plugin","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p);
+  const inShell=["consent","gate","reveal","plugin","connect-first","harvest","world","fireside","ch","review","claude","connect","done","dashboard"].includes(r.p);
   if(!inShell){m.classList.add('off');return;}m.classList.remove('off');
   m.innerHTML=`<button class="btn-ghost" style="padding:4px 6px;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase" onclick="COB.navOpen()">menu</button><span style="margin-left:auto">${this.pct()}% overall</span>`;},
  shell(inner,chIdx){const w=this.world();
@@ -880,7 +903,14 @@ const COB={
  consTab(k){this._consTab=k;this.render();},
  stepCheck(k){this.state.checks=this.state.checks||{};this.state.checks[k]=!this.state.checks[k];this.save();this.render();},
  consent(){const v=document.getElementById('c-name').value.trim();if(v.length<4){this.toast("Type your full name to sign.");return;}
-  this.state.consentName=v;this.state.consentAt=new Date().toISOString();this.save();this.go("#/gate");},
+  const at=new Date().toISOString();
+  this.state.consentName=v;this.state.consentAt=at;this.save();
+  /* DRY-RUN 2R5 · item 3. CONSENT HAS ONE HOME. The signature is written to the
+     authoritative server columns; the local copy is only a mirror of it. */
+  this.state.server=this.state.server||{};
+  this.state.server.consent_signed_at=at;this.state.server.consent_signed_name=v;
+  try{if(typeof this._onConsent==="function")this._onConsent({at:at,name:v});}catch(e){}
+  this.go("#/gate");},
  vGate(){const g=this.state.gate;
   return `<div class="q-wrap">${this.backbar()}
   <p class="kicker">three quick questions</p><h1>Three questions before <span class="brass-u">we start</span>.</h1>
@@ -1210,6 +1240,71 @@ const COB={
   ${skipped.length?`<div class="notice"><b>${skipped.length} skipped.</b> Your COB will circle back, or answer now: ${skipped.slice(0,6).map(s=>`<button class="btn-ghost" onclick="COB.go('#/fireside')">${this.esc(s.q.t.slice(0,34))}...</button>`).join(" ")}</div>`:""}
   ${CHAPTERS.map((c,ci)=>`<h3 style="margin-top:32px">${c.n} · ${this.esc(c.title)}</h3><div class="card">${c.qs.map((q,qi)=>`<div class="review-q"><div><div class="rq-t">${this.esc(q.t)}</div><div class="rq-a ${this.state.answers[q.k]?"":"skip"}">${this.esc(this.state.answers[q.k]||"skipped")}</div></div><button class="btn-ghost" onclick="COB.go('#/fireside')">Edit</button></div>`).join("")}</div>`).join("")}
   <div class="q-actions" style="margin-top:24px"><button class="btn" onclick="COB.go('#/fireside')">Looks right, keep going</button></div></div>`;},
+ /* ------------------------------------------------------------------
+    DRY-RUN 2R5 · item 1. THE FIRST CONNECTION IS ITS OWN PAGE AGAIN.
+    Step 5 of the journey, between Connections and the Fireside. Plain
+    walkthrough for the custom connector, one tab per app, and a LIVE
+    connected check that reads connector_connected_at from the server.
+    ------------------------------------------------------------------ */
+ CF_APPS:[
+  {id:"cowork",t:"Claude Cowork",open:"https://claude.ai/new#settings/customize-connectors",
+   where:"Open Cowork, then open <b>Settings → Connectors</b> from the sidebar.",
+   chat:"Start a new <b>task</b>."},
+  {id:"claude",t:"Claude.ai",open:"https://claude.ai/new#settings/customize-connectors",
+   where:"Click the button below. Claude's <b>Connectors</b> settings open in a new tab. Sign in if it asks.",
+   chat:"Start a new <b>chat</b>."},
+  {id:"chatgpt",t:"ChatGPT",open:"https://chatgpt.com/#settings/Connectors",
+   where:"Click the button below, then open <b>Settings → Connectors</b> and choose <b>Advanced → Developer mode</b> if the custom option is hidden.",
+   chat:"Start a new <b>chat</b>."},
+ ],
+ cfApp(){return this.CF_APPS.find(a=>a.id===(this._cfApp||"claude"))||this.CF_APPS[1];},
+ cfTab(id){this._cfApp=id;this.save();this.render();},
+ cfStep(n,body){const c=(this.state.checks||{})["conn"+n];
+  return `<div class="stc ${c?"done":""}" style="cursor:pointer" onclick="COB.stepCheck('conn${n}')"><span class="stn">${c?"✓":n}</span><span>${body}</span></div>`;},
+ vConnectFirst(){const a=this.cfApp();const srv=this.connServer();
+  const tabs=this.CF_APPS.map(x=>`<button class="ftab ${x.id===a.id?"on":""}" role="tab" aria-selected="${x.id===a.id}" onclick="COB.cfTab('${x.id}')">${this.esc(x.t)}</button>`).join("");
+  /* The green state is SERVER truth only. A local click never paints this. */
+  const live=srv?`
+   <div class="card" style="border-left:3px solid var(--ok)">
+    <p class="kicker" style="margin-bottom:6px;color:var(--ok)"><span class="livedot"></span> connected · taylor is with you</p>
+    <p style="margin:0">The connector itself reported in${this.connWhen()?` on ${this.esc(this.connWhen())}`:""}${srv.client?`, from ${this.esc(srv.client)}`:""}. That is your proof the first connection took.</p>
+    <p class="hintline" style="margin:8px 0 0">haven't met TAYLOR yet? ${a.chat.replace(/<[^>]+>/g,"")} and paste the step 6 message.</p>
+    <div class="q-actions" style="margin-top:12px">
+     <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+     <button class="btn" onclick="COB.go('#/fireside')">On to the fireside chat</button>
+    </div>
+    <div id="conncheck"></div>
+   </div>`:`
+   <div class="card" style="border-left:3px solid var(--brass)">
+    <div class="ftabs" role="tablist" style="margin-bottom:14px">${tabs}</div>
+    <div class="steps-c">
+     ${this.cfStep(1,`<b>Open your connector settings.</b> ${a.where}`)}
+     ${this.cfStep(2,`<b>Find the button that says Add custom connector.</b> Scroll down until you see it. Click it.`)}
+     ${this.cfStep(3,`<b>Fill in two boxes.</b> In the Name box, type <b>COB</b>. In the URL box, paste this address. Leave every other box empty.`)}
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:16px;text-align:center;padding:20px 16px;word-break:break-all"><button class="copybtn" onclick="COB.copyConnUrl()">Copy address</button><div style="padding-top:6px">https://mcp.chiefofbusiness.ai/</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     ${this.cfStep(4,`<b>Click Add, then Connect.</b> A card appears reading <b>COB · Chief of Business</b> with our gold mark. Click <b>Connect</b> on it.`)}
+     ${this.cfStep(5,`<b>Sign in and press Allow.</b> A COB sign-in page opens. Sign in, then press <b>Allow</b>. That hands ${this.esc(a.t)} the key to YOUR Chief, yours and nobody else's.`)}
+     ${this.cfStep(6,`<b>${a.chat}</b> Copy the message below, paste it, and send. A navy-and-gold welcome card appears in the reply. That is TAYLOR saying hello.`)}
+    </div>
+    <div class="copybox" style="margin-top:10px;font-size:15px;padding:18px 16px"><button class="copybtn" onclick="event.stopPropagation();COB.copyWelcomeMsg()">Copy message</button><div style="padding-top:6px">Hello — I've just connected Chief of Business. Please open my COB welcome and show it to me.</div></div>
+    <div class="steps-c" style="margin-top:10px">
+     ${this.cfStep(7,`<b>Press the gold button.</b> On the welcome card, press <b>MEET TAYLOR · BEGIN MY SETUP</b>. TAYLOR takes it from there, one step at a time, and keeps track so nothing gets asked twice.`)}
+    </div>
+    <p class="hintline" style="margin:14px 0 0"><span class="livedot" style="background:var(--ash)"></span> this page turns green on its own the moment the connector reports in. Nothing to press.</p>
+    <div class="q-actions" style="margin-top:14px">
+     <a class="btn" href="${a.open}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">Open ${this.esc(a.t)} connectors</a>
+     <button class="btn2" onclick="COB.connCheck()">Check the connection</button>
+     <button class="btn-ghost" onclick="COB.go('#/fireside')">Do this later</button>
+    </div>
+    <div id="conncheck"></div>
+   </div>`;
+  return `<div class="q-wrap" style="max-width:760px">${this.backbar("the first connection")}
+  <p class="kicker">${this.stepKicker('#/connect-first')}</p><h1>The <span class="brass-u">first connection</span>.</h1>
+  <p style="margin-top:14px"><b style="color:var(--ink)">Your Chief lives inside the AI you already use. These seven steps introduce you, and TAYLOR picks you up at the end. About five minutes.</b></p>
+  ${live}
+  </div>`;},
  vHarvest(){const bf=this.state.briefcase||[];const facts=bf.reduce((n,d)=>n+d.facts,0);
   const PROV_URLS={chatgpt:"https://chatgpt.com/",claude:"https://claude.ai/new",perplexity:"https://www.perplexity.ai/"};
   const ftab=(id,label,num)=>`<a class="ftab ${this._provClicked===label?"on":""}" role="tab" aria-selected="${this._provClicked===label}" href="${PROV_URLS[id]}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" onclick="COB.provPrep('${id}')"><span class="fn">${num}</span>${label}</a>`;

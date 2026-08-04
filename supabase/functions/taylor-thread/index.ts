@@ -16,6 +16,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import {
   contextDigest,
+  extractCorrection,
   postThreadMessage,
   readSharedContext,
   readThreadMessages,
@@ -161,16 +162,42 @@ Deno.serve(async (req) => {
   }
 
   const payload = await res.json().catch(() => null);
-  const answer = String(
+  const raw = String(
     (Array.isArray(payload?.content) ? payload.content : [])
       .filter((p: any) => p?.type === "text" && typeof p.text === "string")
       .map((p: any) => p.text)
       .join(""),
   ).trim();
-  if (!answer) return json({ error: "taylor_model_returned_nothing", model, client_message_id: posted.id }, 502);
+  if (!raw) return json({ error: "taylor_model_returned_nothing", model, client_message_id: posted.id }, 502);
+
+  // DRY-RUN 2R5 · item 5. The correction marker never reaches the client.
+  const { clean, correction } = extractCorrection(raw);
+  const answer = clean || raw;
 
   const reply = await postThreadMessage(admin, { threadId, cid, role: "taylor", surface: "start_panel", content: answer });
   if (!reply) return json({ error: "taylor_reply_not_recorded", answer, model }, 500);
 
-  return json({ thread_id: threadId, model, client_message_id: posted.id, reply_id: reply.id, answer });
+  // The correction is cited to the exact reply that acknowledged it, so the
+  // claim is always traceable back to the moment the client made it.
+  let correction_id: string | null = null;
+  if (correction) {
+    const { data: cRow, error: cErr } = await admin
+      .from("intake_corrections")
+      .insert({
+        cid,
+        tenant_id: context.onboarding.tenant_id,
+        claim: correction.claim,
+        corrected_to: correction.corrected_to,
+        source_message_id: reply.id,
+        source_surface: "start_panel",
+        declared_by: "client",
+      })
+      .select("id")
+      .maybeSingle();
+    if (cErr) console.error("taylor_correction_not_recorded", cErr.message);
+    else correction_id = cRow?.id ? String(cRow.id) : null;
+  }
+
+  return json({ thread_id: threadId, model, client_message_id: posted.id, reply_id: reply.id, answer, correction_id });
 });
+

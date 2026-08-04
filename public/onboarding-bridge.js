@@ -354,11 +354,19 @@
         connector_connected_at: t.connector_connected_at || null,
         connector_first_client: t.connector_first_client || null,
         status: t.status || null,
+        // DRY-RUN 2R5 · item 3. Consent has ONE home: this column.
+        consent_signed_at: t.consent_signed_at || null,
+        consent_signed_name: t.consent_signed_name || null,
       };
       if (prev.connector_connected_at === next.connector_connected_at &&
           prev.connector_first_client === next.connector_first_client &&
+          prev.consent_signed_at === next.consent_signed_at &&
           prev.status === next.status) return false;
       COB.state.server = next;
+      if (next.consent_signed_at) {
+        COB.state.consentAt = next.consent_signed_at;
+        if (next.consent_signed_name) COB.state.consentName = next.consent_signed_name;
+      }
       if (next.connector_connected_at) {
         COB.state.connectors = COB.state.connectors || {};
         COB.state.connectors.cob = "done";
@@ -368,15 +376,56 @@
       return true;
     }
 
+    var SERVER_COLS = "status,connector_connected_at,connector_first_client,consent_signed_at,consent_signed_name";
+
     async function pollServerRecord() {
       if (!TENANT) return;
       try {
         var r = await sb.from("onboarding_tenants")
-          .select("status,connector_connected_at,connector_first_client")
+          .select(SERVER_COLS)
           .eq("id", TENANT.id).maybeSingle();
         if (r && r.data && applyServerRecord(r.data)) rerender();
       } catch (e) {}
     }
+
+    /**
+     * DRY-RUN 2R5 · item 3. The signature is written to the authoritative
+     * columns the moment it is given, and read straight back. A signature that
+     * only ever lived in the state blob is what stranded CID-100007.
+     */
+    COB._onConsent = async function (sig) {
+      if (!TENANT || !sig || !sig.at) return;
+      try {
+        var up = await sb.from("onboarding_tenants")
+          .update({ consent_signed_at: sig.at, consent_signed_name: sig.name })
+          .eq("id", TENANT.id)
+          .select("consent_signed_at,consent_signed_name")
+          .maybeSingle();
+        if (up && up.error) { console.error("consent_column_write_failed", up.error.message); return; }
+        if (!up || !up.data || !up.data.consent_signed_at) {
+          console.error("consent_column_write_unverified");
+          return;
+        }
+        COB.state.server = COB.state.server || {};
+        COB.state.server.consent_signed_at = up.data.consent_signed_at;
+        COB.state.server.consent_signed_name = up.data.consent_signed_name;
+        try { localStorage.setItem(COB.KEY, JSON.stringify(COB.state)); } catch (e) {}
+      } catch (e) {
+        console.error("consent_column_write_threw", e && e.message ? e.message : String(e));
+      }
+    };
+
+    /** DRY-RUN 2R5 · item 2. A pointer running ahead of outcomes is recorded. */
+    COB._onResumeDiscrepancy = function (d) {
+      if (!TENANT) return;
+      try {
+        sb.from("onboarding_escalations").insert({
+          tenant_id: TENANT.id,
+          reason: "resume pointer ahead of outcomes: pointer " + d.pointer_step + ", landed " + d.landed_step,
+        });
+      } catch (e) {}
+    };
+
 
     // UNIT 4 · BUILD MY HQ. The full compiled record goes up in one press, and
     // the ceremony that follows reads the REAL record stage back, never a timer.
