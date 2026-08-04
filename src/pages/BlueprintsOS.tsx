@@ -1,28 +1,34 @@
-/** BLUEPRINTS OS · client plane, LIVE reads, strictly READ-ONLY.
- * Reproduces the golden master /hq surface (surface_version hq v29-r28):
- * navy .rail, white .filehead + .fh-strip, numbered .sec sections, flat .reg
- * register tables, .g badges. Styles come from hq-golden.css, scoped under .hqg.
- * No DB writes · every change routes through the COB Connector. */
+/** BOB · Blueprints Orchestrating Builds · /hq/blueprints
+ *
+ * HQ DESIGN light theme, tokens only (src/hq-next/styles/hq-design.css, scoped .hqd).
+ * Strictly READ-ONLY: every read goes through the CID-scoped service-role
+ * projections hq_blueprints_read / hq_scheduled_read. No direct table access.
+ *
+ * Density law: card faces carry short title, state chips, owner, date. All
+ * verbose detail (intent, current state, next action, milestones) lives in the
+ * right-side drawer.
+ */
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   format,
   addDays,
+  addMonths,
   startOfMonth,
   endOfMonth,
   startOfWeek,
   endOfWeek,
-  addMonths,
   isSameDay,
   isSameMonth,
 } from "date-fns";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import "@/hq-next/styles/hq-golden.css";
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import "@/hq-next/styles/hq-design.css";
 
-/** Shapes mirror the read-only RPC contracts; the page never writes. */
+/* ---------------------------------------------------------------- contracts */
+
 interface BlueprintRow {
   id: string;
   title: string;
@@ -56,90 +62,174 @@ interface ScheduledRow {
 }
 
 type Selection =
-  | { kind: "scheduled"; row: ScheduledRow }
   | { kind: "blueprint"; row: BlueprintRow }
+  | { kind: "scheduled"; row: ScheduledRow }
   | null;
 
 const READ_ONLY_NOTE =
   "Builds are created, scheduled, and moved through your COB Connector \u00b7 just ask your COB.";
 
-function notifyReadOnly() {
-  toast(READ_ONLY_NOTE);
+/* ------------------------------------------------------------------- shapes */
+
+/** Marching-order states, in board order. */
+const ORDERS = ["BANKED", "ACTIVE FRONT", "GATED", "TABLED"] as const;
+type OrderState = (typeof ORDERS)[number];
+
+const ORDER_CHIP: Record<OrderState, string> = {
+  BANKED: "ok",
+  "ACTIVE FRONT": "brass",
+  GATED: "navy",
+  TABLED: "warn",
+};
+
+interface OrderEntry {
+  state: OrderState;
+  tag: string;
+  text: string;
+  owner: string | null;
 }
+
+const CATEGORIES = [
+  "Command",
+  "Onboarding & TAYLOR",
+  "World Engine & Deep Gather",
+  "Memory",
+  "HQ Pages & Design",
+  "Authority & Security",
+  "Platform & Programs",
+] as const;
+type Category = (typeof CATEGORIES)[number];
+
+function categoryOf(title: string): Category {
+  const t = (title ?? "").toUpperCase();
+  if (t.includes("\u2605") || t.includes("MARCHING ORDER") || t.startsWith("P0 ")) return "Command";
+  if (t.includes("ONBOARDING") || t.includes("TAYLOR")) return "Onboarding & TAYLOR";
+  if (t.startsWith("WORLD ENGINE") || t.startsWith("DG ") || t.includes("DEEP GATHER"))
+    return "World Engine & Deep Gather";
+  if (t.startsWith("MEMORY") || t.includes(" MEMORY")) return "Memory";
+  if (t.includes("AUTHORITY") || t.includes("SECURITY") || t.includes("LEGAL") || t.includes("ENTITLEMENTS"))
+    return "Authority & Security";
+  if (t.startsWith("HQ ")) return "HQ Pages & Design";
+  return "Platform & Programs";
+}
+
+/** Card faces stay terse: no parentheticals, no long trailing clauses. */
+function shortTitle(title: string): string {
+  let t = (title ?? "").replace(/\u2605/g, "").trim();
+  t = t.replace(/\s*\([^)]*\)\s*$/, "");
+  t = t.split(/\s+\u2014\s+/)[0];
+  t = t.replace(/^HQ\s*\u00b7\s*/, "");
+  return t.trim() || "Untitled";
+}
+
+function statusChip(status: string | null): string {
+  const s = (status ?? "").toLowerCase();
+  if (s === "active" || s.includes("done") || s.includes("complete")) return "ok";
+  if (s.includes("block") || s.includes("fail")) return "stop";
+  if (s.includes("draft") || s.includes("pend") || s.includes("propos")) return "warn";
+  return "";
+}
+
+function stageOf(row: ScheduledRow): string {
+  const status = (row.status ?? "").toLowerCase();
+  const spec = (row.spec_status ?? "").toUpperCase();
+  if (status === "completed") return "done";
+  if (row.gates_total != null && (row.gates_passed ?? 0) < row.gates_total) return "in audit";
+  if (status === "running") return "in motion";
+  if (spec === "READY" || spec === "PROPOSED") return "awaiting GO";
+  if (status === "scheduled") return "scheduled";
+  return "queued";
+}
+
+const STAGE_CHIP: Record<string, string> = {
+  done: "ok",
+  "in audit": "warn",
+  "in motion": "brass",
+  "awaiting GO": "warn",
+  scheduled: "navy",
+  queued: "",
+};
 
 function milestonesOf(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((m) => (typeof m === "string" ? m : JSON.stringify(m)));
   return [];
 }
 
-/** Board stage derivation · order matters, first match wins. */
-function stageOf(row: ScheduledRow): string {
-  const status = (row.status ?? "").toLowerCase();
-  const spec = (row.spec_status ?? "").toUpperCase();
-  if (status === "completed") return "Done";
-  if (row.gates_total != null && (row.gates_passed ?? 0) < row.gates_total) return "In Audit";
-  if (status === "running") return "In Motion";
-  if (spec === "READY" || spec === "PROPOSED") return "Awaiting GO";
-  if (status === "scheduled") return "Scheduled";
-  if (status === "parked" || spec === "DRAFT") return "Queued";
-  return "Queued";
+/** Derive the marching order straight from the command register. Never typed. */
+function parseOrders(blueprints: BlueprintRow[]): OrderEntry[] {
+  const command = blueprints.find((b) => (b.title ?? "").includes("\u2605"));
+  if (!command) return [];
+  const out: OrderEntry[] = [];
+  let state: OrderState | null = null;
+  for (const line of milestonesOf(command.milestones)) {
+    const header = line.match(/^=+\s*(.+?)\s*=+$/);
+    if (header) {
+      const label = header[1].toUpperCase();
+      state =
+        ORDERS.find((o) => label.startsWith(o)) ??
+        (label.includes("GATED") ? "GATED" : label.includes("TABLED") ? "TABLED" : null);
+      continue;
+    }
+    if (!state) continue;
+    const tagged = line.match(/^\[([^\]]+)\]\s*(.*)$/);
+    const tag = tagged ? tagged[1] : state;
+    let text = tagged ? tagged[2] : line;
+    let owner: string | null = null;
+    const ownerMatch = text.match(/\[owner:\s*([^\]]+)\]\s*$/i);
+    if (ownerMatch) {
+      owner = ownerMatch[1].trim();
+      text = text.slice(0, ownerMatch.index).trim();
+    }
+    out.push({ state, tag, text, owner });
+  }
+  return out;
 }
 
-const STAGES = ["Queued", "Scheduled", "Awaiting GO", "In Motion", "In Audit", "Done"] as const;
+const STOP_WORDS = new Set(["THE", "AND", "FOR", "WITH", "PROGRAM", "PROGRAMME", "OWNER"]);
 
-/** Golden `.g` badge modifiers only · no new palette. */
-const STAGE_KIND: Record<string, string> = {
-  Queued: "dorm",
-  Scheduled: "sealed",
-  "Awaiting GO": "pend",
-  "In Motion": "live",
-  "In Audit": "owed",
-  Done: "act",
-};
-
-/** Project grouping derived from the blueprint title prefix. */
-function projectOf(title: string): string {
-  const t = title ?? "";
-  if (t.includes("\u2605")) return "Command";
-  if (t.startsWith("AUTHORITY & CID")) return "Authority & CID";
-  if (t.startsWith("BUDDY")) return "BUDDY & Load";
-  if (t.startsWith("HQ \u00b7 BLUEPRINTS-OS")) return "Blueprints OS";
-  if (/^HQ \u00b7 \d\d /.test(t)) return "HQ Pages";
-  if (t.startsWith("HQ \u00b7")) return "HQ Program";
-  if (/^P\d/.test(t)) return "Platform Programs";
-  if (t.startsWith("ENTITLEMENTS")) return "Entitlements";
-  return "Other";
+function tokens(value: string): string[] {
+  return (value ?? "")
+    .toUpperCase()
+    .split(/[^A-Z0-9.]+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
 }
 
-function gatesLabel(row: ScheduledRow): string {
-  if (row.gates_total == null) return "\u2014";
-  return `${row.gates_passed ?? 0}/${row.gates_total}`;
+/** Attach each order entry to the blueprint its owner label names. */
+function ordersByBlueprint(orders: OrderEntry[], blueprints: BlueprintRow[]) {
+  const map = new Map<string, OrderEntry[]>();
+  for (const entry of orders) {
+    if (!entry.owner) continue;
+    const want = tokens(entry.owner);
+    if (want.length === 0) continue;
+    let best: { id: string; score: number } | null = null;
+    for (const bp of blueprints) {
+      const have = new Set(tokens(bp.title ?? ""));
+      const score = want.filter((w) => have.has(w)).length / want.length;
+      if (!best || score > best.score) best = { id: bp.id, score };
+    }
+    if (best && best.score >= 0.5) map.set(best.id, [...(map.get(best.id) ?? []), entry]);
+  }
+  return map;
 }
 
-function statusKind(status: string | null): string {
-  const s = (status ?? "").toLowerCase();
-  if (s.includes("done") || s.includes("complete") || s === "active") return "act";
-  if (s.includes("draft") || s.includes("propos") || s.includes("pending")) return "pend";
-  if (s.includes("block") || s.includes("fail")) return "owed";
-  if (s.includes("sealed") || s.includes("ready")) return "sealed";
-  return "dorm";
+/** Primary marching state for a blueprint · active front outranks the rest. */
+function orderStateOf(entries: OrderEntry[] | undefined): OrderState | null {
+  if (!entries || entries.length === 0) return null;
+  for (const state of ["ACTIVE FRONT", "GATED", "TABLED", "BANKED"] as OrderState[]) {
+    if (entries.some((e) => e.state === state)) return state;
+  }
+  return null;
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
+/* ------------------------------------------------------------------- viewer */
 
-/** Server-derived viewer · same resolution path as the rest of the client plane. */
 interface Viewer {
   isOperator: boolean;
   cid: string;
   displayName: string | null;
 }
 
-type Resolution =
-  | { kind: "loading" }
-  | { kind: "ready"; viewer: Viewer }
-  | { kind: "unauthorized" };
+type Resolution = { kind: "loading" } | { kind: "ready"; viewer: Viewer } | { kind: "unauthorized" };
 
 function useResolvedViewer(): Resolution {
   const [state, setState] = useState<Resolution>({ kind: "loading" });
@@ -149,11 +239,7 @@ function useResolvedViewer(): Resolution {
       const cidRes = await supabase.rpc("current_cid");
       const cid = cidRes.error ? null : (cidRes.data as string | null);
       if (!cid) return { kind: "unauthorized" };
-      const tenantRes = await supabase
-        .from("tenants")
-        .select("cid, cob_name")
-        .eq("cid", cid)
-        .maybeSingle();
+      const tenantRes = await supabase.from("tenants").select("cid, cob_name").eq("cid", cid).maybeSingle();
       if (tenantRes.error || !tenantRes.data) return { kind: "unauthorized" };
       const opRes = await supabase.rpc("is_fleet_operator");
       return {
@@ -175,101 +261,38 @@ function useResolvedViewer(): Resolution {
   return state;
 }
 
-const VIEWS = ["Board", "Today", "Month", "Portfolio"] as const;
-type View = (typeof VIEWS)[number];
-
-/** Golden rail · logo tile, PLAN group, numbered nav links. */
-function Rail({ cid }: { cid: string | null }) {
-  return (
-    <aside className="rail">
-      <div className="rail-brand">
-        <div className="mark">
-          <div className="mark-tile">
-            <img src={cobMark.url} alt="COB" />
-          </div>
-          <div>
-            <div className="mark-name">COB &middot; HQ</div>
-            <div className="mark-sub">{cid ?? "resolving\u2026"}</div>
-          </div>
-        </div>
-      </div>
-      <nav className="rail-nav">
-        <div className="nav-k">Plan</div>
-        <a className="nl on" href="/hq/blueprints">
-          <span className="nn">01</span>
-          <span>Blueprints</span>
-        </a>
-        <a className="nl" href="/hq">
-          <span className="nn">02</span>
-          <span>HQ</span>
-        </a>
-      </nav>
-      <div className="rail-foot">
-        <span className="dot" />
-        read live &middot; read only
-      </div>
-    </aside>
-  );
-}
-
-/** Golden document header · white filehead with the four-cell stat strip. */
-function FileHead({
-  total,
-  cells,
-}: {
-  total: number;
-  cells: { label: string; value: number }[];
-}) {
-  return (
-    <div className="filehead">
-      <div className="fh-top">
-        <div>
-          <div className="fh-sub">Blueprints</div>
-          <div className="fh-name">Your build plan</div>
-        </div>
-        <div className="fh-meta">
-          read live &middot; tenant projection
-          <br />
-          {total} records
-        </div>
-      </div>
-      <div className="fh-strip">
-        {cells.map((c) => (
-          <div className="fh-cell" key={c.label}>
-            <b>{c.value}</b>
-            <span>{c.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* --------------------------------------------------------------- primitives */
 
 function Sec({
   n,
   title,
   count,
-  badge,
+  chip,
   children,
 }: {
   n: number;
   title: string;
   count?: string;
-  badge?: { kind: string; text: string };
+  chip?: { kind: string; text: string };
   children: React.ReactNode;
 }) {
   return (
-    <div className="sec">
+    <section className="sec">
       <div className="sec-h">
-        <span className="n">{pad2(n)}</span>
-        <h2>{title}</h2>
-        {badge && <span className={`g ${badge.kind}`}>{badge.text}</span>}
+        <span className="chipn">{String(n).padStart(2, "0")}</span>
+        <h3>{title}</h3>
+        {chip && <span className={`g ${chip.kind}`}>{chip.text}</span>}
         {count && <span className="cnt">{count}</span>}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
+
+/* -------------------------------------------------------------------- page  */
+
+const VIEWS = ["Board", "Roadmap", "Calendar"] as const;
+type View = (typeof VIEWS)[number];
 
 export function BlueprintsOS() {
   const resolution = useResolvedViewer();
@@ -298,37 +321,46 @@ export function BlueprintsOS() {
   const blueprints = useMemo(() => blueprintsQuery.data ?? [], [blueprintsQuery.data]);
   const scheduled = useMemo(() => scheduledQuery.data ?? [], [scheduledQuery.data]);
 
-  const byStage = useMemo(() => {
-    const map: Record<string, ScheduledRow[]> = Object.fromEntries(
-      STAGES.map((s) => [s, [] as ScheduledRow[]])
-    );
-    for (const row of scheduled) map[stageOf(row)].push(row);
-    return map;
-  }, [scheduled]);
+  const orders = useMemo(() => parseOrders(blueprints), [blueprints]);
+  const orderMap = useMemo(() => ordersByBlueprint(orders, blueprints), [orders, blueprints]);
 
-  const portfolio = useMemo(() => {
-    const map = new Map<string, BlueprintRow[]>();
+  const grouped = useMemo(() => {
+    const map = new Map<Category, BlueprintRow[]>();
     for (const bp of blueprints) {
-      const key = projectOf(bp.title ?? "");
+      const key = categoryOf(bp.title ?? "");
       map.set(key, [...(map.get(key) ?? []), bp]);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [blueprints]);
+    for (const [, rows] of map) {
+      rows.sort((a, b) => {
+        const rank = (r: BlueprintRow) => {
+          const s = orderStateOf(orderMap.get(r.id));
+          return s ? ORDERS.indexOf(s === "BANKED" ? "TABLED" : s) : 2;
+        };
+        return rank(a) - rank(b) || shortTitle(a.title).localeCompare(shortTitle(b.title));
+      });
+    }
+    return CATEGORIES.filter((c) => map.has(c)).map((c) => [c, map.get(c) as BlueprintRow[]] as const);
+  }, [blueprints, orderMap]);
 
-  const today = useMemo(() => {
-    const now = new Date();
-    const soonLimit = addDays(now, 7);
-    return {
-      attention: scheduled.filter((r) => {
-        const spec = (r.spec_status ?? "").toUpperCase();
-        return spec === "DRAFT" || stageOf(r) === "Awaiting GO";
-      }),
-      soon: scheduled.filter(
-        (r) => r.run_at && new Date(r.run_at) >= now && new Date(r.run_at) <= soonLimit
-      ),
-      done: scheduled.filter((r) => (r.status ?? "").toLowerCase() === "completed").slice(0, 12),
-    };
-  }, [scheduled]);
+  const orderCounts = useMemo(() => {
+    const counts: Record<OrderState, number> = { BANKED: 0, "ACTIVE FRONT": 0, GATED: 0, TABLED: 0 };
+    for (const o of orders) counts[o.state] += 1;
+    return counts;
+  }, [orders]);
+
+  /** Dated milestones across the register, for the calendar. */
+  const datedMilestones = useMemo(() => {
+    const out: { id: string; date: Date; label: string; row: BlueprintRow }[] = [];
+    for (const bp of blueprints) {
+      milestonesOf(bp.milestones).forEach((m, i) => {
+        const hit = m.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (!hit) return;
+        const date = new Date(Number(hit[1]), Number(hit[2]) - 1, Number(hit[3]));
+        out.push({ id: `${bp.id}-${i}`, date, label: shortTitle(bp.title), row: bp });
+      });
+    }
+    return out;
+  }, [blueprints]);
 
   const monthDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(monthCursor), { weekStartsOn: 1 });
@@ -338,10 +370,9 @@ export function BlueprintsOS() {
     return days;
   }, [monthCursor]);
 
-  const total = blueprints.length + scheduled.length;
+  const total = blueprints.length;
   const isLoading = blueprintsQuery.isLoading || scheduledQuery.isLoading;
   const isError = blueprintsQuery.isError || scheduledQuery.isError;
-  const isEmpty = !isLoading && !isError && total === 0;
 
   const linkedBlueprint =
     selection?.kind === "scheduled" && selection.row.blueprint_id
@@ -350,347 +381,350 @@ export function BlueprintsOS() {
         ? selection.row
         : null;
 
-  /** Flat golden register · scheduled builds. */
-  const ScheduledTable = ({ rows }: { rows: ScheduledRow[] }) => (
-    <table className="reg">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Program</th>
-          <th>Stage</th>
-          <th>Run at</th>
-          <th>Gates</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>
-              <button
-                type="button"
-                className="rt"
-                style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", font: "inherit", color: "inherit" }}
-                onClick={() => setSelection({ kind: "scheduled", row: r })}
-              >
-                {r.title ?? "Untitled"}
-              </button>
-              {r.detail && <div className="rd">{r.detail}</div>}
-            </td>
-            <td>
-              <span className="g private">{r.program ?? "\u2014"}</span>
-            </td>
-            <td>
-              <span className={`g ${STAGE_KIND[stageOf(r)]}`}>{stageOf(r)}</span>
-            </td>
-            <td className="rk">
-              {r.run_at ? format(new Date(r.run_at), "dd MMM yyyy \u00b7 HH:mm") : "\u2014"}
-            </td>
-            <td className="rk">{gatesLabel(r)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
-  /** Flat golden register · blueprints. */
-  const BlueprintTable = ({ rows }: { rows: BlueprintRow[] }) => (
-    <table className="reg">
-      <thead>
-        <tr>
-          <th>Title</th>
-          <th>Owner</th>
-          <th>Status</th>
-          <th>Cadence</th>
-          <th>Updated</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>
-              <button
-                type="button"
-                className="rt"
-                style={{ background: "none", border: 0, padding: 0, cursor: "pointer", textAlign: "left", font: "inherit", color: "inherit" }}
-                onClick={() => setSelection({ kind: "blueprint", row: r })}
-              >
-                {r.title}
-              </button>
-              {r.intent && <div className="rd">{r.intent}</div>}
-            </td>
-            <td className="rd">{r.owner ?? "\u2014"}</td>
-            <td>
-              <span className={`g ${statusKind(r.status)}`}>{r.status ?? "unknown"}</span>
-            </td>
-            <td className="rk">{r.loop_cadence ?? "\u2014"}</td>
-            <td className="rk">
-              {r.updated_at ? format(new Date(r.updated_at), "dd MMM yyyy") : "\u2014"}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-
-  const body = (() => {
-    if (isLoading)
-      return (
-        <Sec n={1} title="Plan">
-          <div className="bpempty">reading live &middot; one moment</div>
-        </Sec>
-      );
-    if (isError)
-      return (
-        <Sec n={1} title="Plan" badge={{ kind: "owed", text: "degraded" }}>
-          <div className="note">
-            <b>The read did not complete.</b> Nothing was changed. Reload the page to read again.
-          </div>
-        </Sec>
-      );
-    if (isEmpty)
-      return (
-        <Sec n={1} title="Plan" badge={{ kind: "dorm", text: "empty" }}>
-          <div className="note">
-            <b>No plans yet.</b> Ask your COB to start one.
-          </div>
-        </Sec>
-      );
-
-    if (view === "Board")
-      return (
-        <>
-          {STAGES.map((stage, i) => (
-            <Sec
-              key={stage}
-              n={i + 1}
-              title={stage}
-              count={`${byStage[stage].length} records`}
-              badge={{ kind: STAGE_KIND[stage], text: stage }}
-            >
-              {byStage[stage].length === 0 ? (
-                <div className="bpempty">none in this stage</div>
-              ) : (
-                <ScheduledTable rows={byStage[stage]} />
-              )}
-            </Sec>
-          ))}
-        </>
-      );
-
-    if (view === "Today")
-      return (
-        <>
-          {[
-            { label: "Needs attention", rows: today.attention, kind: "pend" },
-            { label: "Scheduled soon", rows: today.soon, kind: "sealed" },
-            { label: "Recently done", rows: today.done, kind: "act" },
-          ].map((col, i) => (
-            <Sec
-              key={col.label}
-              n={i + 1}
-              title={col.label}
-              count={`${col.rows.length} records`}
-              badge={{ kind: col.kind, text: col.label }}
-            >
-              {col.rows.length === 0 ? (
-                <div className="bpempty">nothing here</div>
-              ) : (
-                <ScheduledTable rows={col.rows} />
-              )}
-            </Sec>
-          ))}
-        </>
-      );
-
-    if (view === "Month")
-      return (
-        <Sec
-          n={1}
-          title={format(monthCursor, "MMMM yyyy")}
-          count={`${scheduled.filter((r) => r.run_at && isSameMonth(new Date(r.run_at), monthCursor)).length} scheduled`}
-        >
-          <div className="bpvs">
-            <button type="button" className="bpb" onClick={() => setMonthCursor(addMonths(monthCursor, -1))}>
-              &lsaquo; prev
-            </button>
-            <button type="button" className="bpb" onClick={() => setMonthCursor(new Date())}>
-              today
-            </button>
-            <button type="button" className="bpb" onClick={() => setMonthCursor(addMonths(monthCursor, 1))}>
-              next &rsaquo;
-            </button>
-          </div>
-          <div className="bpcal" style={{ marginTop: 10 }}>
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
-              <div key={d} className="bpday" style={{ minHeight: 0 }}>
-                <div className="bpdn">{d}</div>
-              </div>
-            ))}
-            {monthDays.map((day) => {
-              const events = scheduled.filter((r) => r.run_at && isSameDay(new Date(r.run_at), day));
-              const cls = [
-                "bpday",
-                isSameDay(day, new Date()) ? "bptoday" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-              return (
-                <div
-                  key={day.toISOString()}
-                  className={cls}
-                  style={isSameMonth(day, monthCursor) ? undefined : { opacity: 0.45 }}
-                >
-                  <div className="bpdn">{format(day, "d")}</div>
-                  {events.map((row) => (
-                    <button
-                      key={row.id}
-                      type="button"
-                      className="bpev"
-                      style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", font: "inherit" }}
-                      onClick={() => setSelection({ kind: "scheduled", row })}
-                    >
-                      <b>{format(new Date(row.run_at as string), "HH:mm")}</b>
-                      {row.title ?? "Untitled"}
-                    </button>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </Sec>
-      );
-
+  const Card = ({ bp }: { bp: BlueprintRow }) => {
+    const entries = orderMap.get(bp.id);
+    const state = orderStateOf(entries);
     return (
-      <>
-        {portfolio.map(([project, rows], i) => (
-          <Sec key={project} n={i + 1} title={project} count={`${rows.length} records`}>
-            <BlueprintTable rows={rows} />
-          </Sec>
-        ))}
-      </>
+      <button type="button" className="card" onClick={() => setSelection({ kind: "blueprint", row: bp })}>
+        <div className="ct">{shortTitle(bp.title)}</div>
+        <div className="crow">
+          {state && <span className={`g ${ORDER_CHIP[state]}`}>{state}</span>}
+          <span className={`g ${statusChip(bp.status)}`}>{bp.status ?? "unknown"}</span>
+        </div>
+        <div className="cmeta">
+          <span>{bp.owner ?? "unassigned"}</span>
+          <span className="dt">{bp.updated_at ? format(new Date(bp.updated_at), "dd MMM") : ""}</span>
+        </div>
+      </button>
     );
-  })();
+  };
+
+  const board = (
+    <>
+      {grouped.map(([category, rows], i) => (
+        <Sec key={category} n={i + 1} title={category} count={`${rows.length} records`}>
+          <div className="grid">
+            {rows.map((bp) => (
+              <Card key={bp.id} bp={bp} />
+            ))}
+          </div>
+        </Sec>
+      ))}
+    </>
+  );
+
+  const roadmapLanes: { key: string; label: string; states: OrderState[]; tone: string }[] = [
+    { key: "behind", label: "Banked \u00b7 behind us", states: ["BANKED"], tone: "done" },
+    { key: "now", label: "Active front \u00b7 now", states: ["ACTIVE FRONT"], tone: "now" },
+    { key: "ahead", label: "Gated and tabled \u00b7 ahead", states: ["GATED", "TABLED"], tone: "next" },
+  ];
+
+  const roadmap = (
+    <>
+      {roadmapLanes.map((lane) => {
+        const items = orders.filter((o) => lane.states.includes(o.state));
+        return (
+          <div key={lane.key}>
+            <div className="lane-h">
+              <span className="lt">{lane.label}</span>
+              <span className="ln" />
+              <span className="g">{items.length}</span>
+            </div>
+            {items.length === 0 ? (
+              <div className="note">Nothing in this lane right now.</div>
+            ) : (
+              <div className="rail-tl">
+                {items.map((entry, i) => {
+                  const target = blueprints.find(
+                    (b) => (orderMap.get(b.id) ?? []).includes(entry)
+                  );
+                  return (
+                    <div key={`${lane.key}-${i}`} className={`tl-item ${lane.tone}`}>
+                      <div className={`tl-card ${lane.tone === "now" ? "now" : ""}`}>
+                        <div className="tt">{entry.text}</div>
+                        <div className="tm">
+                          <span className={`g ${ORDER_CHIP[entry.state]}`}>{entry.tag}</span>
+                          {entry.owner && (
+                            <button
+                              type="button"
+                              className="g"
+                              style={{ cursor: target ? "pointer" : "default" }}
+                              onClick={() => target && setSelection({ kind: "blueprint", row: target })}
+                            >
+                              {entry.owner}
+                            </button>
+                          )}
+                          {lane.tone === "next" && <span>depends on the active front clearing</span>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {scheduled.length > 0 && (
+        <Sec n={1} title="Scheduled ahead" count={`${scheduled.length} builds`}>
+          <div className="rail-tl">
+            {[...scheduled]
+              .sort((a, b) => (a.run_at ?? "").localeCompare(b.run_at ?? ""))
+              .map((row) => (
+                <div key={row.id} className="tl-item next">
+                  <div className="tl-card">
+                    <div className="tt">{row.title ?? "Untitled build"}</div>
+                    <div className="tm">
+                      <span className={`g ${STAGE_CHIP[stageOf(row)]}`}>{stageOf(row)}</span>
+                      <span>{row.program ?? "no program"}</span>
+                      <span>
+                        {row.run_at ? format(new Date(row.run_at), "dd MMM yyyy \u00b7 HH:mm") : "undated"}
+                      </span>
+                      <button
+                        type="button"
+                        className="g"
+                        onClick={() => setSelection({ kind: "scheduled", row })}
+                      >
+                        open
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </Sec>
+      )}
+    </>
+  );
+
+  const calendar = (
+    <Sec
+      n={1}
+      title={format(monthCursor, "MMMM yyyy")}
+      count={`${
+        scheduled.filter((r) => r.run_at && isSameMonth(new Date(r.run_at), monthCursor)).length +
+        datedMilestones.filter((m) => isSameMonth(m.date, monthCursor)).length
+      } dated entries`}
+    >
+      <div className="views">
+        <button type="button" className="vb" onClick={() => setMonthCursor(addMonths(monthCursor, -1))}>
+          prev
+        </button>
+        <button type="button" className="vb" onClick={() => setMonthCursor(new Date())}>
+          today
+        </button>
+        <button type="button" className="vb" onClick={() => setMonthCursor(addMonths(monthCursor, 1))}>
+          next
+        </button>
+      </div>
+      <div className="cal">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => (
+          <div key={d} className="cal-h">
+            {d}
+          </div>
+        ))}
+        {monthDays.map((day) => {
+          const runs = scheduled.filter((r) => r.run_at && isSameDay(new Date(r.run_at), day));
+          const miles = datedMilestones.filter((m) => isSameDay(m.date, day));
+          const cls = [
+            "cal-d",
+            isSameMonth(day, monthCursor) ? "" : "out",
+            isSameDay(day, new Date()) ? "now" : "",
+            runs.length + miles.length === 0 ? "empty" : "",
+          ]
+            .filter(Boolean)
+            .join(" ");
+          return (
+            <div key={day.toISOString()} className={cls}>
+              <div className="cal-n">{format(day, "d MMM")}</div>
+              {runs.map((row) => (
+                <button
+                  key={row.id}
+                  type="button"
+                  className="cal-e"
+                  onClick={() => setSelection({ kind: "scheduled", row })}
+                >
+                  <b>{format(new Date(row.run_at as string), "HH:mm")}</b>
+                  {row.title ?? "Untitled build"}
+                </button>
+              ))}
+              {miles.slice(0, 4).map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className="cal-e mile"
+                  onClick={() => setSelection({ kind: "blueprint", row: m.row })}
+                >
+                  <b>MS</b>
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </Sec>
+  );
 
   if (resolution.kind !== "ready") {
     return (
-      <div className="hqg">
-        <Rail cid={null} />
-        <div className="main">
-          <FileHead total={0} cells={[]} />
-          <div className="page on">
-            <Sec
-              n={1}
-              title={resolution.kind === "loading" ? "Identity" : "Access"}
-              badge={
-                resolution.kind === "loading"
-                  ? { kind: "dorm", text: "resolving" }
-                  : { kind: "owed", text: "unauthorized" }
-              }
-            >
-              {resolution.kind === "loading" ? (
-                <div className="bpempty">resolving viewer from server context</div>
-              ) : (
-                <div className="note">
-                  <b>This plan is not available to you.</b> Your session did not resolve a tenant.
-                </div>
-              )}
-            </Sec>
-          </div>
+      <div className="hqd">
+        <div className="wrap">
+          <div className="kick">Blueprints orchestrating builds</div>
+          <h1>BOB</h1>
+          {resolution.kind === "loading" ? (
+            <div className="note">Resolving your session.</div>
+          ) : (
+            <div className="note">
+              <b>This board is not available to you.</b> Your session did not resolve a tenant.
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="hqg">
-      <Rail cid={resolution.viewer.cid} />
-      <div className="main">
-        <FileHead
-          total={total}
-          cells={[
-            { label: "Blueprints", value: blueprints.length },
-            { label: "Scheduled", value: scheduled.length },
-            { label: "Awaiting GO", value: byStage["Awaiting GO"].length },
-            { label: "Done", value: byStage["Done"].length },
-          ]}
-        />
-        <div className="page on">
-          <div className="bpvs">
-            {VIEWS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`bpb ${view === v ? "bppri" : ""}`}
-                onClick={() => setView(v)}
-              >
-                {v}
-              </button>
-            ))}
-            <button type="button" className="bpb" onClick={notifyReadOnly}>
-              Kick it off
-            </button>
-          </div>
+    <div className="hqd">
+      <main className="wrap">
+        <header>
+          <div className="kick">Blueprints orchestrating builds</div>
+          <h1>BOB</h1>
+          <p className="lede">
+            The single ordered board of everything in front of us. Banked behind, active front now, gated and
+            tabled ahead. Read live from your register, read only.
+          </p>
+        </header>
 
-          {body}
+        <div className="strip">
+          <div className="strip-top">
+            <div className="kick">Current marching order</div>
+            <h2>
+              {orderCounts["ACTIVE FRONT"]} on the active front &middot; {total} records in the register
+            </h2>
+          </div>
+          <div className="strip-cells">
+            {ORDERS.map((state) => (
+              <div key={state} className={`cell ${state === "ACTIVE FRONT" ? "on" : ""}`}>
+                <b>{orderCounts[state]}</b>
+                <span>{state}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+
+        <div className="views">
+          {VIEWS.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className={`vb ${view === v ? "on" : ""}`}
+              onClick={() => setView(v)}
+            >
+              {v}
+            </button>
+          ))}
+          <button type="button" className="vb brass spacer" onClick={() => toast(READ_ONLY_NOTE)}>
+            Kick it off
+          </button>
+        </div>
+
+        {isLoading && (
+          <div className="grid" style={{ marginTop: 20 }} aria-busy="true">
+            <div className="skel" />
+            <div className="skel" />
+            <div className="skel" />
+          </div>
+        )}
+
+        {isError && (
+          <div className="note">
+            <b>The read did not complete.</b> Nothing was changed. Reload the page to read again.
+          </div>
+        )}
+
+        {!isLoading && !isError && total === 0 && (
+          <div className="note">
+            <b>No plans yet.</b> Ask your COB to start one.
+          </div>
+        )}
+
+        {!isLoading && !isError && total > 0 && (
+          <>
+            {view === "Board" && board}
+            {view === "Roadmap" && roadmap}
+            {view === "Calendar" && calendar}
+          </>
+        )}
+
+        <div className="foot">
+          {resolution.viewer.cid} &middot; read live via tenant projections &middot; read only
+        </div>
+      </main>
 
       {selection && (
         <>
-          <div className="bpdrw-scrim" onClick={() => setSelection(null)} />
-          <aside className="bpdrw" role="dialog" aria-label="Build packet">
-            <div className="bpdrw-h">
+          <button
+            type="button"
+            className="scrim"
+            aria-label="Close detail"
+            onClick={() => setSelection(null)}
+          />
+          <aside className="drw" role="dialog" aria-label="Program detail">
+            <div className="drw-h">
               <div>
-                <h2>{selection.kind === "scheduled" ? selection.row.title ?? "Untitled" : selection.row.title}</h2>
-                <div className="rk">Build packet &middot; read only</div>
+                <div className="kick">
+                  {selection.kind === "blueprint" ? "Program packet" : "Build packet"}
+                </div>
+                <h2>
+                  {selection.kind === "blueprint"
+                    ? shortTitle(selection.row.title)
+                    : selection.row.title ?? "Untitled build"}
+                </h2>
               </div>
-              <button type="button" className="bpb" onClick={() => setSelection(null)}>
-                close
+              <button
+                type="button"
+                className="icon-b"
+                style={{ marginLeft: "auto" }}
+                aria-label="Close"
+                onClick={() => setSelection(null)}
+              >
+                <X size={15} />
               </button>
             </div>
-            <div className="bpdrw-b">
+            <div className="drw-b">
               {selection.kind === "scheduled" && (
                 <>
-                  <div className="bpdrw-f">
-                    <div className="k">Program</div>
-                    <div className="v">{selection.row.program ?? "\u2014"}</div>
-                  </div>
-                  <div className="bpdrw-f">
+                  <div className="fld">
                     <div className="k">Stage</div>
-                    <div className="v">
-                      <span className={`g ${STAGE_KIND[stageOf(selection.row)]}`}>{stageOf(selection.row)}</span>
+                    <div className="chiprow">
+                      <span className={`g ${STAGE_CHIP[stageOf(selection.row)]}`}>
+                        {stageOf(selection.row)}
+                      </span>
+                      <span className="g">{selection.row.program ?? "no program"}</span>
+                      <span className="g">
+                        gates {selection.row.gates_passed ?? 0}/{selection.row.gates_total ?? 0}
+                      </span>
                     </div>
                   </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Gates</div>
-                    <div className="v">{gatesLabel(selection.row)}</div>
-                  </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Spec status</div>
-                    <div className="v">{selection.row.spec_status ?? "\u2014"}</div>
-                  </div>
-                  <div className="bpdrw-f">
+                  <div className="fld">
                     <div className="k">Run at</div>
                     <div className="v">
                       {selection.row.run_at
                         ? format(new Date(selection.row.run_at), "dd MMM yyyy \u00b7 HH:mm")
-                        : "\u2014"}
+                        : "Undated"}
                     </div>
                   </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Cadence</div>
-                    <div className="v">{selection.row.cadence ?? "\u2014"}</div>
-                  </div>
                   {selection.row.detail && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Detail</div>
                       <div className="v">{selection.row.detail}</div>
                     </div>
                   )}
                   {selection.row.build_spec != null && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Build spec</div>
-                      <pre className="bpdrw-pre">
+                      <pre>
                         {typeof selection.row.build_spec === "string"
                           ? selection.row.build_spec
                           : JSON.stringify(selection.row.build_spec, null, 2)}
@@ -701,60 +735,81 @@ export function BlueprintsOS() {
               )}
 
               {linkedBlueprint && (
-                <div className="sec">
-                  <div className="sec-h">
-                    <span className="n">{pad2(1)}</span>
-                    <h2>Blueprint</h2>
-                  </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Title</div>
-                    <div className="v">{linkedBlueprint.title}</div>
-                  </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Status</div>
-                    <div className="v">
-                      <span className={`g ${statusKind(linkedBlueprint.status)}`}>
+                <>
+                  <div className="fld">
+                    <div className="k">Register</div>
+                    <div className="chiprow">
+                      {(() => {
+                        const state = orderStateOf(orderMap.get(linkedBlueprint.id));
+                        return state ? <span className={`g ${ORDER_CHIP[state]}`}>{state}</span> : null;
+                      })()}
+                      <span className={`g ${statusChip(linkedBlueprint.status)}`}>
                         {linkedBlueprint.status ?? "unknown"}
                       </span>
+                      <span className="g">{linkedBlueprint.owner ?? "unassigned"}</span>
+                      <span className="g">{categoryOf(linkedBlueprint.title)}</span>
+                      {linkedBlueprint.loop_cadence && (
+                        <span className="g">{linkedBlueprint.loop_cadence}</span>
+                      )}
                     </div>
                   </div>
-                  <div className="bpdrw-f">
-                    <div className="k">Owner</div>
-                    <div className="v">{linkedBlueprint.owner ?? "\u2014"}</div>
+                  <div className="fld">
+                    <div className="k">Full title</div>
+                    <div className="v">{linkedBlueprint.title}</div>
                   </div>
                   {linkedBlueprint.intent && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Intent</div>
                       <div className="v">{linkedBlueprint.intent}</div>
                     </div>
                   )}
                   {linkedBlueprint.current_state && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Current state</div>
                       <div className="v">{linkedBlueprint.current_state}</div>
                     </div>
                   )}
                   {linkedBlueprint.next_action && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Next action</div>
                       <div className="v">{linkedBlueprint.next_action}</div>
                     </div>
                   )}
+                  {(orderMap.get(linkedBlueprint.id) ?? []).length > 0 && (
+                    <div className="fld">
+                      <div className="k">Marching order</div>
+                      <ul>
+                        {(orderMap.get(linkedBlueprint.id) ?? []).map((e, i) => (
+                          <li key={i}>
+                            <span className={`g ${ORDER_CHIP[e.state]}`}>{e.tag}</span> {e.text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                   {milestonesOf(linkedBlueprint.milestones).length > 0 && (
-                    <div className="bpdrw-f">
+                    <div className="fld">
                       <div className="k">Milestones</div>
-                      <ul className="bpdrw-ul">
+                      <ul>
                         {milestonesOf(linkedBlueprint.milestones).map((m, i) => (
                           <li key={i}>{m}</li>
                         ))}
                       </ul>
                     </div>
                   )}
-                </div>
+                  <div className="fld">
+                    <div className="k">Last written</div>
+                    <div className="v">
+                      {linkedBlueprint.updated_at
+                        ? format(new Date(linkedBlueprint.updated_at), "dd MMM yyyy \u00b7 HH:mm")
+                        : "Unknown"}
+                    </div>
+                  </div>
+                </>
               )}
 
-              <div style={{ marginTop: 14 }}>
-                <button type="button" className="bpb bppri" onClick={notifyReadOnly}>
+              <div style={{ marginTop: 24 }}>
+                <button type="button" className="vb brass" onClick={() => toast(READ_ONLY_NOTE)}>
                   Kick it off
                 </button>
               </div>

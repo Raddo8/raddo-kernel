@@ -7749,6 +7749,14 @@ export type Database = {
         }
         Relationships: []
       }
+      risky_grants_report: {
+        Row: {
+          grantee: unknown
+          privs: string | null
+          table_name: unknown
+        }
+        Relationships: []
+      }
       surface_pin_unrestorable: {
         Row: {
           cid: string | null
