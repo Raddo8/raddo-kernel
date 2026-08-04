@@ -302,7 +302,25 @@ export async function readSharedContext(admin: any, cid: string): Promise<Taylor
     );
   }
 
+  // DRY-RUN 2R5 · item 5. The overlay runs over EVERY fact surface before the
+  // context leaves this function, so no read path can serve a corrected fact raw.
+  if (ctx.corrections.length) {
+    ctx.intake_recorded = ctx.intake_recorded.map((r) => {
+      const a = applyCorrection(r.content_md, ctx.corrections);
+      return a.corrected ? { ...r, content_md: a.text, corrected: true } : r;
+    });
+    ctx.fireside_answers = ctx.fireside_answers.map((f) => {
+      const a = applyCorrection(f.fact, ctx.corrections);
+      return a.corrected ? { ...f, fact: a.text, corrected: true } : f;
+    });
+    ctx.intake_answers = ctx.intake_answers.map((q) => {
+      const a = applyCorrection(q.answer, ctx.corrections);
+      return a.corrected ? { ...q, answer: a.text } : q;
+    });
+  }
+
   return ctx;
+
 }
 
 /** Compact, model-ready rendering of the shared context. */
