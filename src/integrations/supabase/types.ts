@@ -8696,6 +8696,8 @@ export type Database = {
         }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       stamp_save_attempt: {
         Args: {
           p_cid?: string
@@ -8714,6 +8716,10 @@ export type Database = {
       verify_load_test_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
+      }
+      world_resolve_entity_v1: {
+        Args: { p_cid: string; p_etype: string; p_keys?: Json; p_name: string }
+        Returns: Json
       }
     }
     Enums: {
