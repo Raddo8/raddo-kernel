@@ -351,7 +351,7 @@ export function MemoryVault() {
           <div className="page on">
             <div className="sec">
               <div className="sec-h">
-                <h2>Opening the vault\u2026</h2>
+                <h2>Opening the vault{"\u2026"}</h2>
               </div>
             </div>
           </div>
