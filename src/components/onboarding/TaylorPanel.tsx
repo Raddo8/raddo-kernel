@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTaylorSpeech } from "@/hooks/use-taylor-speech";
 import cobMarkAsset from "@/assets/cob-square-dark.png.asset.json";
 
 const cobMark = cobMarkAsset.url;
@@ -8,14 +9,14 @@ const cobMark = cobMarkAsset.url;
  * UNIT 2 · TAYLOR panel. One thread, two surfaces.
  *
  * Renders the FULL shared thread, including anything the client said to TAYLOR
- * inside their Claude chat through the COB Connector. Polls every 6 seconds so
- * connector traffic is visible well inside 10 seconds.
+ * inside their Claude chat through the COB Connector, and anything said in the
+ * fireside. Polls every 6 seconds so other surfaces show up inside 10 seconds.
  */
 
 type Msg = {
   id: string;
   role: "client" | "taylor";
-  surface: "start_panel" | "connector";
+  surface: "start_panel" | "connector" | "fireside";
   content: string;
   created_at: string;
 };
@@ -23,7 +24,7 @@ type Msg = {
 const POLL_MS = 6000;
 
 const ERROR_COPY: Record<string, string> = {
-  taylor_model_key_unresolvable: "TAYLOR cannot reach her model right now. Nothing you typed was lost.",
+  taylor_model_key_unresolvable: "TAYLOR cannot reach his model right now. Nothing you typed was lost.",
   taylor_model_call_rejected: "The model refused that request. Try again in a moment.",
   taylor_model_unreachable: "TAYLOR could not reach the model. Try again in a moment.",
   taylor_model_returned_nothing: "TAYLOR had nothing to say back. Try rephrasing.",
@@ -37,6 +38,11 @@ const ERROR_COPY: Record<string, string> = {
   taylor_runtime_supabase_config_missing: "TAYLOR is not fully configured on our side.",
 };
 
+const SURFACE_LABEL: Record<string, string> = {
+  connector: " · from your Claude chat",
+  fireside: " · from the fireside",
+};
+
 export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -45,6 +51,16 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
   const [ready, setReady] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const sendRef = useRef<() => void>(() => {});
+  const spokenRef = useRef<string | null>(null);
+
+  const speech = useTaylorSpeech({
+    onTranscript: (t) => setDraft(t),
+    onUtteranceEnd: (t) => {
+      setDraft(t);
+      window.setTimeout(() => sendRef.current(), 0);
+    },
+  });
 
   const load = useCallback(async () => {
     const { data, error: err } = await supabase.functions.invoke("taylor-thread", { body: { action: "read" } });
@@ -72,6 +88,16 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
     inputRef.current?.focus();
   }, [ready]);
 
+  // Speech OUT is policy-gated: nothing is spoken unless the client turned
+  // voice on, and only the newest TAYLOR line is ever spoken.
+  useEffect(() => {
+    if (!speech.voiceOn) return;
+    const last = [...messages].reverse().find((m) => m.role === "taylor");
+    if (!last || spokenRef.current === last.id) return;
+    spokenRef.current = last.id;
+    void speech.speak(last.content);
+  }, [messages, speech]);
+
   const send = async () => {
     const text = draft.trim();
     if (!text || sending) return;
@@ -87,6 +113,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
     setSending(false);
     inputRef.current?.focus();
   };
+  sendRef.current = () => void send();
 
   return (
     <aside
@@ -129,13 +156,10 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
             taylor · your guide
           </p>
           <p className="mt-1 text-sm" style={{ color: "hsl(var(--dossier-paper))" }}>
-            She sets up your COB with you. Same conversation here and in your Claude chat.
+            He sets up your COB with you. Same conversation here and in your Claude chat.
           </p>
         </div>
       </header>
-
-
-
 
       <div ref={scroller} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
         {!ready && (
@@ -145,7 +169,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
         )}
         {ready && messages.length === 0 && (
           <p className="text-sm text-dossier-ash">
-            Ask TAYLOR anything about this step. She already knows what you have given so far.
+            Ask TAYLOR anything about this step. He already knows what you have given so far.
           </p>
         )}
         {messages.map((m) => (
@@ -155,7 +179,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
               style={{ fontSize: 9, letterSpacing: "0.18em" }}
             >
               {m.role === "taylor" ? "taylor" : "you"}
-              {m.surface === "connector" ? " · from your Claude chat" : ""}
+              {SURFACE_LABEL[m.surface] ?? ""}
             </p>
             <p
               className="text-sm whitespace-pre-wrap"
@@ -201,23 +225,70 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
           className="w-full resize-none px-3 py-2 text-sm text-dossier-ink-deep focus:outline-none focus:ring-2 focus:ring-dossier-brass"
           style={{ borderRadius: 4, background: "hsl(var(--dossier-paper))", border: "1px solid hsl(var(--dossier-brass-deep))" }}
         />
-        <button
-          type="button"
-          onClick={() => void send()}
-          disabled={sending || !draft.trim()}
-          className="mt-2 w-full font-mono uppercase disabled:opacity-40"
-          style={{
-            fontSize: 10,
-            letterSpacing: "0.18em",
-            borderRadius: 4,
-            padding: "10px 12px",
-            background: "hsl(var(--dossier-brass))",
-            color: "hsl(var(--dossier-ink-deep))",
-            fontWeight: 700,
-          }}
-        >
-          Send
-        </button>
+
+        <div className="mt-2 flex gap-2">
+          <button
+            type="button"
+            onClick={speech.toggleMic}
+            aria-pressed={speech.listening}
+            className="font-mono uppercase"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              borderRadius: 4,
+              padding: "10px 12px",
+              flex: "0 0 auto",
+              background: speech.listening ? "hsl(var(--dossier-brass))" : "transparent",
+              color: speech.listening ? "hsl(var(--dossier-ink-deep))" : "hsl(var(--dossier-brass))",
+              border: "1px solid hsl(var(--dossier-brass))",
+              fontWeight: 700,
+            }}
+          >
+            {speech.listening ? "Mic on" : "Speak"}
+          </button>
+          <button
+            type="button"
+            onClick={speech.toggleVoice}
+            aria-pressed={speech.voiceOn}
+            className="font-mono uppercase"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              borderRadius: 4,
+              padding: "10px 12px",
+              flex: "0 0 auto",
+              background: "transparent",
+              color: "hsl(var(--dossier-brass))",
+              border: "1px solid hsl(var(--dossier-brass))",
+              fontWeight: 700,
+            }}
+          >
+            {speech.voiceOn ? "Voice on" : "Voice off"}
+          </button>
+          <button
+            type="button"
+            onClick={() => void send()}
+            disabled={sending || !draft.trim()}
+            className="font-mono uppercase disabled:opacity-40"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              borderRadius: 4,
+              padding: "10px 12px",
+              flex: 1,
+              background: "hsl(var(--dossier-brass))",
+              color: "hsl(var(--dossier-ink-deep))",
+              fontWeight: 700,
+            }}
+          >
+            Send
+          </button>
+        </div>
+        {speech.micStatus && (
+          <p className="mt-2 font-mono" style={{ fontSize: 9, letterSpacing: "0.16em", color: "hsl(var(--dossier-paper))" }}>
+            {speech.micStatus}
+          </p>
+        )}
       </div>
     </aside>
   );

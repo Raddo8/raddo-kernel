@@ -6,6 +6,32 @@ import { TaylorPanel } from "@/components/onboarding/TaylorPanel";
 /** UNIT 2 · width reserved for the TAYLOR panel on desks wide enough for it. */
 const TAYLOR_PANEL_WIDTH = 360;
 
+/**
+ * REFINEMENT 2R3 · panel visibility matrix.
+ * The guide panel is absent on the entry and authorization screens (nobody
+ * authorizing or resuming should see it) and absent in the fireside, which
+ * runs its own conversation surface. It appears from consent onward.
+ */
+const TAYLOR_HIDDEN_SCREENS = new Set([
+  "",
+  "welcome",
+  "signin",
+  "sign-in",
+  "login",
+  "resume",
+  "select",
+  "select-workspace",
+  "workspace",
+  "auth",
+  "start",
+  "fireside",
+  "ch",
+]);
+
+function screenFromHash(hash: string): string {
+  return (hash || "#/welcome").replace(/^#\/?/, "").split("/")[0] || "welcome";
+}
+
 function useTaylorPanelVisible() {
   const [visible, setVisible] = useState(
     typeof window !== "undefined" ? window.matchMedia("(min-width: 1100px)").matches : false,
@@ -17,6 +43,26 @@ function useTaylorPanelVisible() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
   return visible;
+}
+
+/** Reads the legacy surface's internal route (same-origin iframe). */
+function useIframeScreen(ref: React.RefObject<HTMLIFrameElement>, active: boolean) {
+  const [screen, setScreen] = useState("welcome");
+  useEffect(() => {
+    if (!active) return;
+    const read = () => {
+      try {
+        const h = ref.current?.contentWindow?.location.hash ?? "";
+        setScreen(screenFromHash(h));
+      } catch {
+        /* frame not ready yet */
+      }
+    };
+    read();
+    const t = window.setInterval(read, 300);
+    return () => window.clearInterval(t);
+  }, [ref, active]);
+  return screen;
 }
 
 
@@ -93,7 +139,10 @@ export default function OnboardingIframe({
   const [phase, setPhase] = useState<Phase>({ kind: "resolving" });
   const [hydrated, setHydrated] = useState(false);
   const [hydrationFailed, setHydrationFailed] = useState(false);
-  const taylorVisible = useTaylorPanelVisible();
+  const wideEnough = useTaylorPanelVisible();
+  const screen = useIframeScreen(ref, phase.kind === "ready" && hydrated);
+  const taylorVisible = wideEnough && !TAYLOR_HIDDEN_SCREENS.has(screen);
+
 
 
   useEffect(() => {
@@ -352,7 +401,7 @@ export default function OnboardingIframe({
         />
       )}
       {phase.kind === "ready" && hydrated && taylorVisible && (
-        <TaylorPanel pageCtx={initialHash ? `page:${initialHash}` : "page:start"} />
+        <TaylorPanel pageCtx={`page:${screen}`} />
       )}
     </>
 

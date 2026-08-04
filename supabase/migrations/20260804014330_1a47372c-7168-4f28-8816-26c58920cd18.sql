@@ -1,0 +1,2 @@
+ALTER TABLE public.taylor_messages DROP CONSTRAINT IF EXISTS taylor_messages_surface_check;
+ALTER TABLE public.taylor_messages ADD CONSTRAINT taylor_messages_surface_check CHECK (surface = ANY (ARRAY['start_panel'::text, 'connector'::text, 'fireside'::text]));
