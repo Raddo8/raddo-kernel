@@ -17,6 +17,8 @@ export type TaylorMessage = {
   surface: TaylorSurface;
   content: string;
   created_at: string;
+  /** UNIT 4 · probe rows stay in the raw thread but never reach a compile path. */
+  is_synthetic?: boolean;
 };
 
 export type TaylorSharedContext = {
@@ -80,7 +82,7 @@ export async function readThreadMessages(admin: any, threadId: string, limit = 1
   const rows = await safe<any[]>(
     admin
       .from("taylor_messages")
-      .select("id, role, surface, content, created_at")
+      .select("id, role, surface, content, created_at, is_synthetic")
       .eq("thread_id", threadId)
       .order("created_at", { ascending: true })
       .limit(limit)
@@ -90,6 +92,16 @@ export async function readThreadMessages(admin: any, threadId: string, limit = 1
   );
   return Array.isArray(rows) ? (rows as TaylorMessage[]) : [];
 }
+
+/**
+ * UNIT 4 · the single compile filter. Any path that feeds the model, the
+ * fireside, or the HQ build submission reads through this. The raw thread read
+ * above stays complete so the panel still shows every row that was said.
+ */
+export function compileEligible(messages: TaylorMessage[]): TaylorMessage[] {
+  return messages.filter((m) => m.is_synthetic !== true);
+}
+
 
 export async function postThreadMessage(
   admin: any,
@@ -265,7 +277,7 @@ export function contextDigest(ctx: TaylorSharedContext): string {
 }
 
 export function renderThreadForModel(messages: TaylorMessage[]): Array<{ role: "user" | "assistant"; content: string }> {
-  return messages.map((m) => ({
+  return compileEligible(messages).map((m) => ({
     role: m.role === "client" ? ("user" as const) : ("assistant" as const),
     content:
       m.role === "client" && m.surface === "connector"

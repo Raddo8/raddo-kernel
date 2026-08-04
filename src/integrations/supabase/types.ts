@@ -3610,8 +3610,10 @@ export type Database = {
         Row: {
           body_md: string
           category: string | null
+          cid: string | null
           confidence: number
           created_at: string
+          created_by: string | null
           id: string
           notion_block_ref: string | null
           session_id: string | null
@@ -3619,12 +3621,15 @@ export type Database = {
           superseded_by: string | null
           tenant: string
           title: string
+          updated_at: string
         }
         Insert: {
           body_md: string
           category?: string | null
+          cid?: string | null
           confidence?: number
           created_at?: string
+          created_by?: string | null
           id?: string
           notion_block_ref?: string | null
           session_id?: string | null
@@ -3632,12 +3637,15 @@ export type Database = {
           superseded_by?: string | null
           tenant: string
           title: string
+          updated_at?: string
         }
         Update: {
           body_md?: string
           category?: string | null
+          cid?: string | null
           confidence?: number
           created_at?: string
+          created_by?: string | null
           id?: string
           notion_block_ref?: string | null
           session_id?: string | null
@@ -3645,6 +3653,7 @@ export type Database = {
           superseded_by?: string | null
           tenant?: string
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {
@@ -3942,6 +3951,8 @@ export type Database = {
         Row: {
           bound_at: string | null
           bound_by: string | null
+          build_submission: Json | null
+          build_submitted_at: string | null
           cid: string | null
           connector_connected_at: string | null
           connector_first_client: string | null
@@ -3965,6 +3976,8 @@ export type Database = {
         Insert: {
           bound_at?: string | null
           bound_by?: string | null
+          build_submission?: Json | null
+          build_submitted_at?: string | null
           cid?: string | null
           connector_connected_at?: string | null
           connector_first_client?: string | null
@@ -3988,6 +4001,8 @@ export type Database = {
         Update: {
           bound_at?: string | null
           bound_by?: string | null
+          build_submission?: Json | null
+          build_submitted_at?: string | null
           cid?: string | null
           connector_connected_at?: string | null
           connector_first_client?: string | null
@@ -6359,6 +6374,7 @@ export type Database = {
           content: string
           created_at: string
           id: string
+          is_synthetic: boolean
           role: string
           surface: string
           thread_id: string
@@ -6368,6 +6384,7 @@ export type Database = {
           content: string
           created_at?: string
           id?: string
+          is_synthetic?: boolean
           role: string
           surface: string
           thread_id: string
@@ -6377,6 +6394,7 @@ export type Database = {
           content?: string
           created_at?: string
           id?: string
+          is_synthetic?: boolean
           role?: string
           surface?: string
           thread_id?: string

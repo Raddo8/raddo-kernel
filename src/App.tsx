@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { WorkspaceProvider } from "@/lib/workspace-context";
 import AppLayout from "@/components/AppLayout";
 import SignIn from "@/pages/SignIn";
+import { SignUp } from "./pages/SignUp";
 import SignInLanding from "@/pages/SignInLanding";
 import { LegacyAppRedirect, PrefixRedirect } from "@/components/LegacyRedirect";
 import AccountsList from "@/pages/AccountsList";
@@ -122,6 +123,8 @@ const App = () => (
 
             {/* Front door */}
             <Route path="/signin" element={<SignIn />} />
+            <Route path="/signin/new" element={<SignUp />} />
+            <Route path="/signup" element={<Navigate to="/signin/new" replace />} />
             <Route path="/signin/landing" element={<SignInLanding />} />
             <Route path="/signin/reset" element={<ResetPassword />} />
             <Route path="/reset-password" element={<Navigate to="/signin/reset" replace />} />
