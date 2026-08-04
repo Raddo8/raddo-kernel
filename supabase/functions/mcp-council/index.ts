@@ -3389,35 +3389,18 @@ Deno.serve(async (req) => {
           : undefined;
 
       if (name === "set_chief_name") {
-        const raw = typeof args?.name === "string" ? args.name : "";
+        // UNIT 3 · one shared server path, also used by the Welcome Party.
         const cid = pctx.legacy_cid;
-        if (!cid) {
-          const out = { ok: false, reason: "not-enrolled" };
-          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
-        }
-        const cobName = raw
-          .replace(/[^\p{L}\p{N} '\u2019-]/gu, "")
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 40)
-          .toUpperCase();
-        if (cobName.length < 2) {
-          const out = { ok: false, reason: "name-too-short" };
-          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
-        }
-        const { error: nameErr } = await supabaseAdmin!
-          .from("tenants")
-          .update({ cob_name: cobName })
-          .eq("cid", cid);
-        if (nameErr) {
-          console.error("set_chief_name_failed", nameErr.message);
-          const out = { ok: false, reason: "save-failed" };
+        const result = await setCobName(supabaseAdmin, cid, args?.name);
+        if (!result.ok) {
+          const out = { ok: false, reason: result.reason };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
         }
         await recordProgress(cid, "chief-name", "done", "connector", "named on the welcome card");
-        const out = { ok: true, cob_name: cobName };
+        const out = { ok: true, cob_name: result.cob_name };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
+
 
       if (name === "taylor_thread_read" || name === "taylor_thread_post") {
         const cid = pctx.legacy_cid;
