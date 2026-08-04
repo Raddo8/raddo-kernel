@@ -1605,67 +1605,90 @@ export type Database = {
       }
       council_minutes: {
         Row: {
-          cid: string
+          advisor: string | null
+          chairs: Json | null
+          cid: string | null
+          completed_at: string | null
           convened_at: string
+          cost_usd: number | null
           curn: string | null
           dissent_md: string | null
           eps: number | null
+          error: string | null
+          horizon: Json | null
           id: string
           lenses: Json | null
-          question: string
+          minute: Json | null
+          mode: string | null
+          question: string | null
+          question_hash: string | null
           rho: number | null
+          run_id: string | null
           session_id: string | null
+          started_at: string
+          status: string
+          tenant_label: string | null
+          tool: string | null
+          updated_at: string
           verdict_md: string | null
         }
         Insert: {
-          cid: string
+          advisor?: string | null
+          chairs?: Json | null
+          cid?: string | null
+          completed_at?: string | null
           convened_at?: string
+          cost_usd?: number | null
           curn?: string | null
           dissent_md?: string | null
           eps?: number | null
+          error?: string | null
+          horizon?: Json | null
           id?: string
           lenses?: Json | null
-          question: string
+          minute?: Json | null
+          mode?: string | null
+          question?: string | null
+          question_hash?: string | null
           rho?: number | null
+          run_id?: string | null
           session_id?: string | null
+          started_at?: string
+          status?: string
+          tenant_label?: string | null
+          tool?: string | null
+          updated_at?: string
           verdict_md?: string | null
         }
         Update: {
-          cid?: string
+          advisor?: string | null
+          chairs?: Json | null
+          cid?: string | null
+          completed_at?: string | null
           convened_at?: string
+          cost_usd?: number | null
           curn?: string | null
           dissent_md?: string | null
           eps?: number | null
+          error?: string | null
+          horizon?: Json | null
           id?: string
           lenses?: Json | null
-          question?: string
+          minute?: Json | null
+          mode?: string | null
+          question?: string | null
+          question_hash?: string | null
           rho?: number | null
+          run_id?: string | null
           session_id?: string | null
+          started_at?: string
+          status?: string
+          tenant_label?: string | null
+          tool?: string | null
+          updated_at?: string
           verdict_md?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "council_minutes_cid_fkey"
-            columns: ["cid"]
-            isOneToOne: false
-            referencedRelation: "hq_readiness"
-            referencedColumns: ["cid"]
-          },
-          {
-            foreignKeyName: "council_minutes_cid_fkey"
-            columns: ["cid"]
-            isOneToOne: false
-            referencedRelation: "identity_census"
-            referencedColumns: ["cid"]
-          },
-          {
-            foreignKeyName: "council_minutes_cid_fkey"
-            columns: ["cid"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["cid"]
-          },
-        ]
+        Relationships: []
       }
       cutover_lease: {
         Row: {

@@ -25,8 +25,9 @@
 
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { readUsage, recordMcpUsage, type Pass } from "./usage.ts";
+import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
+import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { writeMinuteToNotion } from "./notion.ts";
@@ -2222,6 +2223,23 @@ const TOOL_ABE_WEIGHING_IN = {
   },
 };
 
+const TOOL_COUNCIL_MINUTE_FETCH = {
+  name: "council_minute_fetch",
+  title: "Fetch a Council minute",
+  description:
+    "Fetch a persisted Council minute for the caller. Pass {run_id} for a specific run, or {latest: true} for the most recent one, optionally narrowed by {question_hash}. Returns the full minute when the deliberation is complete, a still_running status while it is in progress, a failed status with the reason, or not_found. Use this when a deliberation outran the client timeout.",
+  annotations: { title: "Fetch a Council minute", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      run_id: { type: "string", description: "The run id returned by convene_council or abe_weighing_in." },
+      latest: { type: "boolean", description: "Set true to fetch the most recent run for the caller." },
+      question_hash: { type: "string", description: "Optional. Narrow the lookup to a specific question fingerprint." },
+    },
+    additionalProperties: false,
+  },
+};
+
 const TOOL_BOOT_KERNEL = {
   name: "boot_kernel",
   title: "Boot Kernel",
@@ -2553,7 +2571,7 @@ const TOOL_MEMORY_SEARCH = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -5241,7 +5259,21 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        const produce = async (notify: ProgressFn) => {
+        // Minute persistence · open the run row BEFORE deliberating so a
+        // fetch mid-run reports still_running honestly, and the finished
+        // minute survives a client that hung up at its 60s cap.
+        const runId = crypto.randomUUID();
+        const runQhash = await hashQuestion(question);
+        await openMinuteRun(supabaseAdmin, {
+          run_id: runId,
+          cid: pctx.legacy_cid ?? null,
+          tenant_label: tenant,
+          tool: "convene_council",
+          question,
+          question_hash: runQhash,
+          session_id: councilSessionId,
+        });
+        const produceInner = async (notify: ProgressFn) => {
           // Stage B · Convene Routing
           // Fast Haiku-class triage chooses the LIGHTEST mode that fits the
           // stakes. ≤6 hard cap. Failure → fall back to full standing 6.
@@ -5436,11 +5468,34 @@ Deno.serve(async (req) => {
               });
             }
           } catch { /* best-effort — a telemetry failure must never fail the council */ }
+          (out as any).run_id = runId;
+          await completeMinuteRun(supabaseAdmin, {
+            run_id: runId,
+            minute: out,
+            verdict_md: typeof out?.recommendation === "string" ? out.recommendation : null,
+            dissent_md: typeof out?.dissent === "string" ? out.dissent : null,
+            horizon: out?.anticipatory_horizon ?? null,
+            chairs: out?.participating_chairs ?? decision.chairs ?? null,
+            lenses: Array.isArray(passes) ? { pass_count: passes.length, models: passes.map((p) => p.model) } : null,
+            mode: runMode,
+            advisor: null,
+            eps: epsilon ?? null,
+            rho: rho ?? null,
+            cost_usd: aggregate(passes ?? []).total_cost_usd,
+          });
           return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
           };
+        };
+        const produce = async (notify: ProgressFn) => {
+          try {
+            return await produceInner(notify);
+          } catch (e) {
+            await failMinuteRun(supabaseAdmin, runId, e);
+            throw e;
+          }
         };
         if (progressToken !== undefined) {
           return rpcStreamingResult(id, progressToken, produce, toRpcParts);
@@ -5468,6 +5523,17 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000 || minute.length > 16000) {
           return rpcError(id, -32602, "invalid_params");
         }
+        const abeRunId = crypto.randomUUID();
+        const abeQhash = await hashQuestion(question);
+        await openMinuteRun(supabaseAdmin, {
+          run_id: abeRunId,
+          cid: pctx.legacy_cid ?? null,
+          tenant_label: tenant,
+          tool: "abe_weighing_in",
+          question,
+          question_hash: abeQhash,
+          session_id: typeof args?.session_id === "string" ? args.session_id : null,
+        });
         const dissentSystem = `${GLOBAL_PREAMBLE_MD}\n\n${ABE_DISSENT_MD}`;
         const ctxBlock = context ? `\n\n## Situational context\n${context}` : "";
         const dissentUser = `## Principal's question\n${question}${ctxBlock}\n\n## Council's finished minute\n${minute}\n\n## Your task\nFile the loyal-dissent block per your doctrine · prose only · attack the comfortable answer hardest · close with the tagged confidence line.`;
@@ -5509,6 +5575,7 @@ Deno.serve(async (req) => {
             model = r.model;
             passes.push({ model: r.model, usage: r.usage });
           } catch (e2) {
+            await failMinuteRun(supabaseAdmin, abeRunId, e2);
             return toRpc(e2);
           }
         }
@@ -5523,8 +5590,19 @@ Deno.serve(async (req) => {
           provider,
           model,
           degraded,
+          run_id: abeRunId,
           attribution: "Abe · loyal dissent (deferred pass)",
         } as any);
+        await completeMinuteRun(supabaseAdmin, {
+          run_id: abeRunId,
+          minute: out,
+          verdict_md: text,
+          dissent_md: text,
+          mode: "dissent",
+          advisor: "abe",
+          lenses: { provider, model, degraded },
+          cost_usd: aggregate(passes).total_cost_usd,
+        });
         return rpcResult(id, {
           content: [{ type: "text", text }],
           structuredContent: out,
@@ -5547,6 +5625,17 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
+        const summonRunId = crypto.randomUUID();
+        const summonQhash = await hashQuestion(question);
+        await openMinuteRun(supabaseAdmin, {
+          run_id: summonRunId,
+          cid: pctx.legacy_cid ?? null,
+          tenant_label: tenant,
+          tool: "summon_best_advisor",
+          question,
+          question_hash: summonQhash,
+          session_id: typeof args?.session_id === "string" ? args.session_id : null,
+        });
         try {
           const summoned = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored,
@@ -5632,14 +5721,54 @@ Deno.serve(async (req) => {
               gap_reason: tWire.gap_reason ?? null,
             },
           };
+          {
+            const rm: any = result.minute ?? {};
+            await completeMinuteRun(supabaseAdmin, {
+              run_id: summonRunId,
+              minute: result,
+              verdict_md: typeof rm.recommendation === "string" ? rm.recommendation : null,
+              dissent_md: typeof rm.dissent === "string" ? rm.dissent : (typeof rm.steelman === "string" ? rm.steelman : null),
+              horizon: rm.anticipatory_horizon ?? rm.risk_flags ?? null,
+              chairs: rm.participating_chairs ?? null,
+              lenses: { pass_count: passes.length, models: passes.map((pp) => pp.model) },
+              mode: result.mode ?? null,
+              advisor: result.selected_advisor ?? null,
+              eps: result.epsilon ?? null,
+              rho: result.rho ?? null,
+              cost_usd: aggregate(passes).total_cost_usd,
+            });
+          }
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
             structuredContent: stampBuildId(result as any),
             isError: false,
           });
         } catch (e) {
+          await failMinuteRun(supabaseAdmin, summonRunId, e);
           return toRpc(e);
         }
+      }
+
+      // ── council_minute_fetch · read back a persisted minute ───────────
+      // Safety net for clients that cannot hold a 2-3 minute connection.
+      // running / complete / failed / not_found are four distinct states.
+      if (name === "council_minute_fetch") {
+        const runIdArg = typeof args?.run_id === "string" && args.run_id.trim() ? args.run_id.trim() : null;
+        const latest = args?.latest === true;
+        const qh = typeof args?.question_hash === "string" && args.question_hash.trim() ? args.question_hash.trim() : null;
+        if (!runIdArg && !latest && !qh) return rpcError(id, -32602, "invalid_params");
+        const fetched = await fetchMinute(supabaseAdmin, {
+          cid: pctx.legacy_cid ?? null,
+          run_id: runIdArg,
+          latest,
+          question_hash: qh,
+        });
+        const outF = stampBuildId(fetched as any);
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(outF) }],
+          structuredContent: outF,
+          isError: false,
+        });
       }
 
       if (name === "file_to_office") {
