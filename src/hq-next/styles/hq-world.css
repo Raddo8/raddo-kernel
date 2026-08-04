@@ -57,7 +57,7 @@
   background: var(--paper); border: 1px solid var(--edge); padding: 13px 16px;
   margin-bottom: 10px; font-size: 14px; line-height: 1.55;
 }
-.cobworld .card .prov {
+.cobworld .card .prov, .cobworld .openit .prov, .cobworld .rrow .prov, .cobworld .wtable .prov {
   font-family: 'Courier New', monospace; font-size: 10px; color: var(--ash);
   display: block; margin-top: 6px; letter-spacing: .05em;
 }
