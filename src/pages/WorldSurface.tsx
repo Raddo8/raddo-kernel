@@ -101,7 +101,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 function typeLabel(etype: string | null | undefined): string {
   const key = String(etype ?? "").toLowerCase();
-  return TYPE_LABEL[key] ?? key.replace(/[_-]+/g, " ").toUpperCase() || "ENTITY";
+  return TYPE_LABEL[key] ?? (key.replace(/[_-]+/g, " ").toUpperCase() || "ENTITY");
 }
 
 /** Predicate + value read as one plain sentence fragment. */
@@ -117,15 +117,17 @@ function provenance(row: { source_ref?: string | null; grade?: string | null; ob
   if (row.source_ref) bits.push(row.source_ref);
   if (row.grade) bits.push(row.grade);
   if (row.observed_at) bits.push(new Date(row.observed_at).toISOString().slice(0, 10));
-  return bits.join("  \u00b7  ");
+  return bits.join("  {DOT}  ");
 }
+
+const DOT = "\u00b7";
 
 const isSensitive = (s: string | null | undefined) => String(s ?? "") === "sensitive";
 
 /* -------------------------------------------------------------- fragments */
 
 function SensitiveChip() {
-  return <span className="g warn">Sensitive \u00b7 held with care</span>;
+  return <span className="g warn">Sensitive {DOT} held with care</span>;
 }
 
 function Chips({ children }: { children: React.ReactNode }) {
@@ -181,7 +183,7 @@ function DeltaClaimCard({
 
       {noted ? (
         <p className="noted">
-          Noted \u00b7 {noted.verdict}. Written to your record as: {noted.text}
+          Noted {DOT} {noted.verdict}. Written to your record as: {noted.text}
         </p>
       ) : mergeQuestion ? (
         <div className="arail">
@@ -511,7 +513,7 @@ export function WorldSurface() {
                     </Chips>
                   </header>
 
-                  <p className="sub">Facts on the record \u00b7 {facts.length}</p>
+                  <p className="sub">Facts on the record {DOT} {facts.length}</p>
                   {facts.length === 0 && <div className="empty">No facts recorded yet.</div>}
                   <div className="wgrid">
                     {facts.map((c) => (
@@ -534,7 +536,7 @@ export function WorldSurface() {
 
                   {openItems.length > 0 && (
                     <>
-                      <p className="sub">Open items \u00b7 {openItems.length}</p>
+                      <p className="sub">Open items {DOT} {openItems.length}</p>
                       <div className="wgrid">
                         {openItems.map((c) => (
                           <div key={c.id} className="openitem">
@@ -546,7 +548,7 @@ export function WorldSurface() {
                     </>
                   )}
 
-                  <p className="sub">Related \u00b7 {profile.edges.length}</p>
+                  <p className="sub">Related {DOT} {profile.edges.length}</p>
                   {profile.edges.length === 0 && <div className="empty">No relationships recorded.</div>}
                   <div className="tabs">
                     {profile.edges.map((edge) => {
@@ -554,7 +556,7 @@ export function WorldSurface() {
                       const other = entityMap.get(otherId);
                       return (
                         <button key={edge.id} className="relchip" onClick={() => setOpenId(otherId)}>
-                          {String(edge.etype ?? "linked").replace(/[_-]+/g, " ")} \u00b7 {other?.name ?? "record"}
+                          {String(edge.etype ?? "linked").replace(/[_-]+/g, " ")} {DOT} {other?.name ?? "record"}
                         </button>
                       );
                     })}
@@ -587,8 +589,8 @@ export function WorldSurface() {
                       </Chips>
                       <p className="prov">
                         {miner ? `miner ${miner}` : "miner not recorded"}
-                        {"  \u00b7  "}wave {s.last_wave ?? 0}
-                        {"  \u00b7  "}
+                        {"  {DOT}  "}wave {s.last_wave ?? 0}
+                        {"  {DOT}  "}
                         {s.last_mined_at ? `last mined ${new Date(s.last_mined_at).toISOString().slice(0, 10)}` : "never mined"}
                       </p>
                     </div>
@@ -599,7 +601,7 @@ export function WorldSurface() {
           )}
 
           <p className="wfoot">
-            HQ Design \u00b7 Light \u00b7 Every claim from the mined record \u00b7 Augmentation over automation
+            HQ Design {DOT} Light {DOT} Every claim from the mined record {DOT} Augmentation over automation
           </p>
         </main>
       </div>
