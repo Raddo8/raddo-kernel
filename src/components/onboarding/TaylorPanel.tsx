@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import cobMarkAsset from "@/assets/cob-square-dark.png.asset.json";
+
+const cobMark = cobMarkAsset.url;
 
 /**
  * UNIT 2 · TAYLOR panel. One thread, two surfaces.
@@ -88,20 +91,50 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
   return (
     <aside
       aria-label="TAYLOR, your onboarding guide"
-      className="flex flex-col bg-dossier-paper border-l border-dossier-paper-edge"
-      style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: 360, zIndex: 3, boxSizing: "border-box" }}
+      className="flex flex-col bg-dossier-paper border-l"
+      style={{
+        position: "fixed",
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 360,
+        zIndex: 3,
+        boxSizing: "border-box",
+        borderColor: "hsl(var(--dossier-ink-deep))",
+      }}
     >
-      <header className="px-5 py-4 border-b border-dossier-paper-edge">
-        <p
-          className="font-mono uppercase"
-          style={{ fontSize: 10, letterSpacing: "0.22em", color: "hsl(var(--dossier-brass-deep))", fontWeight: 700 }}
-        >
-          taylor · your guide
-        </p>
-        <p className="mt-1 text-sm text-dossier-ash">
-          She sets up your COB with you. Same conversation here and in your Claude chat.
-        </p>
+      <header
+        className="px-5 py-4 flex items-center gap-3"
+        style={{
+          background: "hsl(var(--dossier-ink-deep))",
+          borderBottom: "2px solid hsl(var(--dossier-brass))",
+        }}
+      >
+        <img
+          src={cobMark}
+          alt=""
+          aria-hidden="true"
+          style={{ width: 30, height: 30, borderRadius: 4, flex: "none" }}
+        />
+        <div className="min-w-0">
+          <p
+            className="font-mono uppercase"
+            style={{
+              fontSize: 10,
+              letterSpacing: "0.22em",
+              color: "hsl(var(--dossier-brass))",
+              fontWeight: 700,
+            }}
+          >
+            taylor · your guide
+          </p>
+          <p className="mt-1 text-sm" style={{ color: "hsl(var(--dossier-paper))" }}>
+            She sets up your COB with you. Same conversation here and in your Claude chat.
+          </p>
+        </div>
       </header>
+
+
 
 
       <div ref={scroller} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
@@ -148,7 +181,7 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
         )}
       </div>
 
-      <div className="border-t border-dossier-paper-edge p-4">
+      <div className="p-4" style={{ background: "hsl(var(--dossier-ink-deep))", borderTop: "2px solid hsl(var(--dossier-brass))" }}>
         <label htmlFor="taylor-draft" className="sr-only">
           Message TAYLOR
         </label>
@@ -165,8 +198,8 @@ export function TaylorPanel({ pageCtx }: { pageCtx?: string }) {
           }}
           rows={3}
           placeholder="Ask TAYLOR about this step"
-          className="w-full resize-none rounded bg-white border border-dossier-paper-edge px-3 py-2 text-sm text-dossier-ink-deep focus:outline-none focus:ring-2 focus:ring-dossier-brass"
-          style={{ borderRadius: 4 }}
+          className="w-full resize-none px-3 py-2 text-sm text-dossier-ink-deep focus:outline-none focus:ring-2 focus:ring-dossier-brass"
+          style={{ borderRadius: 4, background: "hsl(var(--dossier-paper))", border: "1px solid hsl(var(--dossier-brass-deep))" }}
         />
         <button
           type="button"
