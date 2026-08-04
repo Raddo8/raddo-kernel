@@ -320,9 +320,9 @@ export function WorldSurface() {
           return next;
         });
         setHistory((h) => [...h, { ids, governing: gov }]);
-        setClaims((prev) =>
-          prev.map((c) => (ids.includes(c.id) ? { ...c, status: verdict === "confirm" ? "confirmed" : "flagged" } : c)),
-        );
+        // The claim's stored status is left alone in local state on purpose:
+        // the ruled/total meter needs a stable denominator, and `noted` is the
+        // authority for what has your word on it.
       } catch (e) {
         setNoted((prev) => {
           const next = { ...prev };
