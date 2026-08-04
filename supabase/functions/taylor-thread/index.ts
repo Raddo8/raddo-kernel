@@ -1,9 +1,13 @@
 /**
  * UNIT 2 · TAYLOR panel backend (app surface of the shared thread).
+ * UNIT 3 · plus the Welcome Party's server truth.
  *
  * Actions:
- *   read  -> thread messages (both surfaces) + shared context
- *   post  -> append the client's message, call the model, append TAYLOR's reply
+ *   read               -> thread messages (both surfaces) + shared context
+ *   post               -> append the client's message, call the model, append TAYLOR's reply
+ *   welcome_state      -> connector-success signal, the COB's name, the celebrated marker
+ *   welcome_celebrated -> stamp the once-per-tenant celebration marker
+ *   set_cob_name       -> rename the COB through the SAME path the connector uses
  *
  * Every failure state has its OWN error string. Nothing is ever a generic
  * exception, and no two different failures share a code.
@@ -20,6 +24,8 @@ import {
   taylorModelId,
   TAYLOR_SYSTEM,
 } from "../_shared/taylor-shared.ts";
+import { setCobName } from "../_shared/cob-name.ts";
+
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
