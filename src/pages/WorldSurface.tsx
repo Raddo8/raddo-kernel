@@ -174,7 +174,7 @@ function deriveAreas(entities: EntityRow[], edges: EdgeRow[]): Map<string, strin
   const area = new Map<string, string>();
   for (const e of entities) {
     const slugs = slugsOf(e);
-    const rule = AREA_RULES.find((r) => slugs.some((s) => r.test(s, e.etype)) || r.test(String(e.name).toLowerCase(), e.etype));
+    const rule = AREA_RULES.find((r) => slugs.some((s) => r.test(s, e.etype)));
     if (rule) area.set(e.id, rule.id);
   }
   // one hop along the edges for anything unclaimed
