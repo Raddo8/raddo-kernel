@@ -642,9 +642,21 @@ const COB={
   this.state={user:null,consentName:"",consentAt:null,gate:{},answers:{},skipped:{},files:[],connectors:{},stage:"intake",claude:null,escalated:false};
   this.closeDrawer();this.go("#/welcome");this.render();/* LOVABLE: also insert deletion_request + purge tenant rows/bucket on confirm */
   this.toast("Erased. This device holds nothing of yours.");},
+ /* DRY-RUN 2R5 · item 2. RESUME LANDS ON OUTCOMES, NOT POINTERS.
+    A stored pointer that runs ahead of proven gate completion is corrected
+    DOWNWARD to the earliest incomplete gate, and the discrepancy is logged. */
+ earliestIncomplete(){for(let i=0;i<this.RES.length;i++){if(!this.stepDone(this.RES[i]))return i;}
+  return this.RES.length-1;},
  resume(){if(!this.state.user){this.go("#/account");return;}
-  if(!this.state.consentAt){this.go("#/consent");return;}
-  const i=Math.max(this.state.reached||0,2);this.go(this.RES[Math.min(i,this.RES.length-1)]);},
+  const first=this.earliestIncomplete();
+  const ptr=Math.min(Math.max(this.state.reached||0,0),this.RES.length-1);
+  if(ptr>first){
+   const d={pointer:ptr,pointer_step:this.RES[ptr],landed:first,landed_step:this.RES[first]};
+   try{console.warn("resume_pointer_ahead_of_outcomes",JSON.stringify(d));}catch(e){}
+   try{if(typeof this._onResumeDiscrepancy==="function")this._onResumeDiscrepancy(d);}catch(e){}
+   this.state.reached=first;this.save();
+  }
+  this.go(this.RES[first]);},
  save(){try{localStorage.setItem(this.KEY,JSON.stringify(this.state));}catch(e){}
    const s=document.getElementById('saveState');document.getElementById('saveTxt').textContent="saved";s.classList.add('ok');
    clearTimeout(this._st);this._st=setTimeout(()=>{s.classList.remove('ok');document.getElementById('saveTxt').textContent="autosave on";},1600);},
