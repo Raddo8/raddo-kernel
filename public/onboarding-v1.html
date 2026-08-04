@@ -656,12 +656,29 @@ const COB={
  go(h){location.hash=h;},
  /* ---- world extraction ---- */
  lines(v){return String(v||"").split(/\n|;/).map(x=>x.trim()).filter(x=>x.length>1).slice(0,10);},
- world(){const a=this.state.answers;const U=window.UNDERSTANDING||this.state.understanding||{};const w={entities:[],people:[],systems:[],priorities:[]};
-  w.entities=(U.entities||[]).map(e=>e.n);w.people=(U.people||[]).map(e=>e.n);w.systems=(U.systems||[]).slice(0,9);
-  if(!w.entities.length&&this.state.user){const st=this.state.study||{};w.entities.push(st.prof?this.state.user.name+" · "+st.prof.slice(0,22):this.state.user.name+" · principal");}
-  (this.state.wishlist||[]).forEach(s=>{if(!w.systems.includes(s))w.systems.push(s);});
-  this.lines(a.hq2).forEach(x=>w.priorities.push(x.replace(/^\d+[\.\)]\s*/,"").slice(0,34)));
-  w.priorities=w.priorities.slice(0,5);return w;},
+ /* ---- 2R4 · the briefcase compiles from EVERY source that has landed ---- */
+ diveWorld(){const d=this.state.dive;return (d&&d.brief&&d.brief.world&&typeof d.brief.world==="object")?d.brief.world:{};},
+ briefcaseFacts(){return (this.state.briefcase||[]).reduce((n,d)=>n+((d&&d.facts)||0),0);},
+ world(){const a=this.state.answers||{};const U=window.UNDERSTANDING||this.state.understanding||{};const D=this.diveWorld();
+  const w={entities:[],people:[],systems:[],priorities:[]};
+  const add=(k,v)=>{if(v==null)return;v=String(v&&v.n!=null?v.n:v).trim().replace(/^[\-\u00b7\*\d\.\)\s]+/,"");if(v.length<2)return;v=v.slice(0,44);if(w[k].length<24&&w[k].indexOf(v)<0)w[k].push(v);};
+  const pull=(src)=>{if(!src||typeof src!=="object")return;["entities","people","systems","priorities"].forEach(k=>(Array.isArray(src[k])?src[k]:[]).forEach(x=>add(k,x)));};
+  pull(U);pull(D);
+  if(!w.entities.length&&this.state.user){const st=this.state.study||{};add("entities",st.prof?this.state.user.name+" \u00b7 "+st.prof.slice(0,22):this.state.user.name+" \u00b7 principal");}
+  (this.state.wishlist||[]).forEach(s=>add("systems",s));
+  const CL={cob:"COB Connector",gmail:"Email",gcal:"Calendar",drive:"Files",books:"Accounting"};
+  const cn=this.state.connectors||{};Object.keys(cn).forEach(k=>{if(cn[k]==="done")add("systems",CL[k]||k);});
+  if(this.connServer())add("systems","COB Connector");
+  this.lines(a.hq2).forEach(x=>add("priorities",x));
+  (this.state.briefcase||[]).forEach(d=>{if(!d||!Array.isArray(d.sections))return;d.sections.forEach(sec=>{
+    const nm=String((sec&&(sec.name||sec.h))||"").toLowerCase();const items=(sec&&sec.items)||[];
+    const bucket=/entit|compan|business|org|legal/.test(nm)?"entities"
+      :/people|team|who|stakeholder|contact|report|hire/.test(nm)?"people"
+      :/system|tool|stack|software|email|inbox|calendar|schedule|platform/.test(nm)?"systems"
+      :/priorit|risk|decision|opportunit|goal|action|deadline/.test(nm)?"priorities":null;
+    if(bucket)items.slice(0,4).forEach(x=>add(bucket,x));});});
+  return w;},
+ worldEmpty(w){return !(w.entities.length||w.people.length||w.priorities.length||w.systems.length);},
  chapterDone(c){return c.qs.every(q=>String(this.state.answers[q.k]||"").trim()||this.state.skipped[q.k]);},
  /* ---- drawer ---- */
  openDrawer(html){document.getElementById('drawer').innerHTML=html;document.getElementById('drawer').classList.add('open');document.getElementById('drawerBg').classList.add('open');},
