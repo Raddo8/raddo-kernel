@@ -18,7 +18,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
 
-const BUILD_ID = "w1d.1";
+const BUILD_ID = "hshell.1";
 const HIDDEN = ["privileged", "third-party-npi"];
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -221,6 +221,8 @@ async function actionStage(p: Principal, body: any) {
       confidence: Number.isFinite(Number(c?.confidence)) ? Number(c.confidence) : null,
       valid_from: str(c?.valid_from),
       valid_to: str(c?.valid_to),
+      // H-SHELL: authorship is recorded on every write. Staged claims carry the miner.
+      created_by: miner ?? "miner:unnamed",
     });
   }
 
@@ -232,6 +234,7 @@ async function actionStage(p: Principal, body: any) {
       wave,
       status: "staged",
       sensitivity: "operational",
+      created_by: miner ?? "miner:unnamed",
       ...x,
     });
   }
@@ -330,9 +333,11 @@ async function actionGovern(p: Principal, body: any) {
       .eq("cid", p.cid)
       .eq("predicate", "governs")
       .neq("status", "voided");
+    // Precision law: an undo may only void the governing claims it can name,
+    // or those that explicitly supersede the ruled claims. Never a whole subject.
     const res = govIds.length > 0
       ? await voidQ.in("id", govIds).select("id")
-      : await voidQ.in("subject_id", found.map((c) => c.subject_id)).select("id");
+      : await voidQ.in("supersedes", foundIds).select("id");
     if (!res.error) voided = (res.data ?? []).map((r: any) => r.id);
   }
 
@@ -347,6 +352,8 @@ async function actionGovern(p: Principal, body: any) {
         grade: "client-asserted",
         status: "confirmed",
         sensitivity: "operational",
+        // Governing claims carry the resolved principal identity, never a name.
+        created_by: `${p.mode}:${p.subject ?? p.cid}`,
         supersedes: newStatus === "flagged" ? c.id : null,
       })),
     )
@@ -411,6 +418,7 @@ async function actionMerge(p: Principal, body: any) {
       grade: "client-asserted",
       status: "confirmed",
       sensitivity: "operational",
+      created_by: `${p.mode}:${p.subject ?? p.cid}`,
     })
     .select("id")
     .single();

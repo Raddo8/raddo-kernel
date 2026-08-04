@@ -25,6 +25,7 @@ import { X } from "lucide-react";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { HqShell } from "@/components/hq/HqShell";
 import "@/hq-next/styles/hq-design.css";
 
 /* ---------------------------------------------------------------- contracts */
@@ -575,6 +576,7 @@ export function BlueprintsOS() {
 
   if (resolution.kind !== "ready") {
     return (
+      <HqShell>
       <div className="hqd">
         <div className="wrap">
           <div className="kick">Blueprints orchestrating builds</div>
@@ -588,10 +590,12 @@ export function BlueprintsOS() {
           )}
         </div>
       </div>
+      </HqShell>
     );
   }
 
   return (
+    <HqShell>
     <div className="hqd">
       <main className="wrap">
         <header>
@@ -825,6 +829,7 @@ export function BlueprintsOS() {
         </>
       )}
     </div>
+    </HqShell>
   );
 }
 
