@@ -6350,6 +6350,44 @@ export type Database = {
         }
         Relationships: []
       }
+      taylor_messages: {
+        Row: {
+          cid: string
+          content: string
+          created_at: string
+          id: string
+          role: string
+          surface: string
+          thread_id: string
+        }
+        Insert: {
+          cid: string
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          surface: string
+          thread_id: string
+        }
+        Update: {
+          cid?: string
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          surface?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "taylor_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "taylor_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       taylor_questions: {
         Row: {
           answer: string | null
@@ -6390,6 +6428,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      taylor_threads: {
+        Row: {
+          cid: string
+          created_at: string
+          id: string
+          status: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
       }
       taylor_turn_receipts: {
         Row: {

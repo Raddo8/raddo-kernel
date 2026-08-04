@@ -35,10 +35,17 @@ import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } 
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
 import { scrubPii } from "./pii-scrub.ts";
 import { scrubRitualArgs } from "./ritual-scrub.ts";
+import {
+  contextDigest as taylorContextDigest,
+  postThreadMessage as taylorPostMessage,
+  readSharedContext as taylorReadSharedContext,
+  readThreadMessages as taylorReadMessages,
+  resolveThread as taylorResolveThread,
+} from "../_shared/taylor-shared.ts";
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "connector_backbone_v1";
+const BUILD_ID = "taylor_shared_thread_v1";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -2126,7 +2133,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.07.31.3";
+const TOOL_MANIFEST_VERSION = "2026.08.04.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2490,6 +2497,32 @@ const TOOL_RECORD_INTAKE = {
   },
 };
 
+const TOOL_TAYLOR_THREAD_READ = {
+  name: "taylor_thread_read",
+  title: "TAYLOR Thread Read",
+  description:
+    "Read the client's ONE onboarding conversation with TAYLOR (both this chat and the onboarding panel on the website) plus everything already collected during setup. Call before answering any setup question so you never re-ask for something already given.",
+  annotations: { title: "TAYLOR Thread Read", readOnlyHint: true },
+  inputSchema: { type: "object", properties: {}, additionalProperties: false },
+};
+
+const TOOL_TAYLOR_THREAD_POST = {
+  name: "taylor_thread_post",
+  title: "TAYLOR Thread Post",
+  description:
+    "Append a message to the client's shared onboarding conversation so it appears in their onboarding panel on the website. Use role 'client' for what they said and 'taylor' for what you told them.",
+  annotations: { title: "TAYLOR Thread Post" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      role: { type: "string", enum: ["client", "taylor"] },
+      content: { type: "string", minLength: 1, maxLength: 4000 },
+    },
+    required: ["role", "content"],
+    additionalProperties: false,
+  },
+};
+
 const UI_RESOURCES = [
   {
     uri: WELCOME_WIDGET_URI,
@@ -2499,7 +2532,7 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
@@ -3384,6 +3417,38 @@ Deno.serve(async (req) => {
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
       }
 
+      if (name === "taylor_thread_read" || name === "taylor_thread_post") {
+        const cid = pctx.legacy_cid;
+        if (!cid || !supabaseAdmin) {
+          const out = { ok: false, reason: "not-enrolled" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const threadId = await taylorResolveThread(supabaseAdmin, cid);
+        if (!threadId) {
+          const out = { ok: false, reason: "thread-unavailable" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        if (name === "taylor_thread_post") {
+          const role = args?.role === "taylor" ? "taylor" : args?.role === "client" ? "client" : null;
+          const content = typeof args?.content === "string" ? args.content.trim() : "";
+          if (!role || content.length < 1 || content.length > 4000) {
+            const bad = { ok: false, reason: "invalid-input" };
+            return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(bad) }], structuredContent: bad, isError: false });
+          }
+          const posted = await taylorPostMessage(supabaseAdmin, { threadId, cid, role, surface: "connector", content });
+          const out = posted
+            ? { ok: true, thread_id: threadId, message_id: posted.id }
+            : { ok: false, reason: "save-failed" };
+          return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        const [messages, shared] = await Promise.all([
+          taylorReadMessages(supabaseAdmin, threadId),
+          taylorReadSharedContext(supabaseAdmin, cid),
+        ]);
+        const out = { ok: true, thread_id: threadId, messages, context: shared, digest: taylorContextDigest(shared) };
+        return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+      }
+
       if (name === "record_intake") {
         const topic = typeof args?.topic === "string" ? args.topic : "";
         const content = typeof args?.content === "string" ? args.content.trim() : "";
@@ -3404,6 +3469,21 @@ Deno.serve(async (req) => {
           console.error("record_intake_failed", intakeErr.message);
           const out = { ok: false, reason: "save-failed" };
           return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
+        }
+        // Shared thread mirror · the panel must see what the connector collected.
+        try {
+          const threadId = await taylorResolveThread(supabaseAdmin, cid);
+          if (threadId) {
+            await taylorPostMessage(supabaseAdmin, {
+              threadId,
+              cid,
+              role: "client",
+              surface: "connector",
+              content: `[${topic}] ${content}`,
+            });
+          }
+        } catch (e) {
+          console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
         }
         const out = { ok: true, recorded: topic };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
