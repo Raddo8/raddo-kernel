@@ -49,6 +49,15 @@ export const TOOL_EFFECTS: Readonly<Record<string, readonly Effect[]>> = Object.
   record_intake: ["onboarding_write", "telemetry_write"],
   set_chief_name: ["config_write", "onboarding_write", "telemetry_write"],
   setup_progress: ["onboarding_write", "telemetry_write"],
+  consent_record: ["onboarding_read", "onboarding_write", "telemetry_write"],
+  lane_record: ["onboarding_read", "onboarding_write", "config_write", "telemetry_write"],
+  boundaries_record: ["onboarding_read", "config_write", "canonical_write", "telemetry_write"],
+  deepdive_commit: ["onboarding_read", "onboarding_write", "canonical_write", "telemetry_write"],
+  harvest_record: ["canonical_write", "telemetry_write"],
+  wire_grants_record: ["config_write", "onboarding_read", "telemetry_write"],
+  kernel_inputs_check: ["onboarding_read", "canonical_read", "config_read"],
+  taylor_handoff: ["onboarding_read", "onboarding_write", "canonical_write", "telemetry_write"],
+  council_minute_fetch: ["canonical_read"],
 });
 
 export function declaredEffects(tool: string): readonly Effect[] {
