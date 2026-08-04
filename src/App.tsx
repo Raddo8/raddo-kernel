@@ -1,4 +1,3 @@
-import WelcomePartyProbe from "@/pages/__WelcomePartyProbe";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -200,7 +199,6 @@ const App = () => (
             <Route path="/style-guide" element={<Navigate to="/control/brand/style" replace />} />
 
             {/* Onboarding */}
-            <Route path="/__wp-probe" element={<WelcomePartyProbe />} />
             <Route path="/start" element={<AuthGate><StartGate><OnboardingIframe /></StartGate></AuthGate>} />
             <Route path="/start/select-workspace" element={<AuthGate><SelectWorkspace /></AuthGate>} />
             <Route path="/start/progress" element={<AuthGate><StartGate><OnboardingIframe initialHash="dashboard" requireRecord /></StartGate></AuthGate>} />
