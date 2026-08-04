@@ -626,7 +626,7 @@ const COB={
  navClose(){document.getElementById('snav').classList.remove('open');document.getElementById('snavBg').classList.remove('open');},
  clearFlow(){this.navClose();this.openDrawer(`<p class="kicker">clear my data</p>
   <h3 style="margin-bottom:8px">You are about to erase everything.</h3>
-  <p style="font-size:14px">This permanently removes from this device: every answer you've given, your briefcase and its deliverables, your uploaded file record, your progress, and your session. You would start again from the very beginning.</p>
+  <p style="font-size:14px">This permanently removes from this device: every answer you've given, your uploaded file record, your progress, and your session. You would start again from the very beginning.</p>
   <p style="font-size:14px">At integration this also files a deletion request against your account record, executed completely and confirmed when done. Erasure is your right; we just want you certain.</p>
   <div class="notice"><b>This cannot be undone.</b> If you only want a break, just close the tab: everything saves itself and waits for you.</div>
   <div class="field" style="margin-top:14px"><label for="clr-in">Type ERASE to confirm</label><input type="text" id="clr-in" placeholder="ERASE" autocomplete="off"></div>
@@ -918,7 +918,7 @@ const COB={
   </div>
   <div class="q-actions" style="margin-top:18px"><button class="btn" onclick="COB.proceedDive()">Proceed</button>
   <button class="btn-ghost" onclick="COB.go('#/plugin')">Skip for now</button></div>`;},
- DIVE_STAT:["Reading the open web...","Studying your work and ventures...","Scanning your public and social footprint...","Pulling news and the public record...","Reading reviews and reputation...","Mapping the people around you...","Building your timeline...","Assembling the dossier...","Filing it to your briefcase..."],
+ DIVE_STAT:["Reading the open web...","Studying your work and ventures...","Scanning your public and social footprint...","Pulling news and the public record...","Reading reviews and reputation...","Mapping the people around you...","Building your timeline...","Assembling the dossier...","Filing it to your record..."],
  proceedDive(){if(this._diveT)return;const st=this.state.study||{};const u=this.state.user||{};
   const domain=(u.email||"").split("@")[1]||"";const genericDom=/gmail|outlook|yahoo|hotmail|icloud|proton|live\.com|aol/i.test(domain);const customDom=(domain&&!genericDom)?domain:"";const website=customDom?("https://"+customDom):"";const company=st.company||"";const industry=st.industry||st.prof||"";const city=st.workarea||st.homecity||"";const payload={first:u.first||(u.name||"").split(" ")[0]||"",last:u.last||"",name:u.name||"",email:u.email||"",email_domain:customDom,company:company,business:company||(customDom||industry),city:city,home_city:st.homecity||"",work_area:st.workarea||"",industry:industry,what_you_do:st.prof||"",extra:st.notes||"",website:website,linkedin:""};
   this.state.dive={status:"running",pct:8};this.save();this.render();
@@ -946,7 +946,7 @@ const COB={
   <p style="margin-top:16px"><b style="color:var(--ink)">If your business runs on it, your COB can reach it.</b></p>
   <p>Big platforms connect direct. 7,000+ more through the bridge. Custom systems, we build.</p>
   <div class="card" style="margin-top:16px"><p class="kicker" style="margin-bottom:8px">what does your world run on?</p>
-   <p style="font-size:14px;color:var(--ash);margin-bottom:10px">Pick from the list or name anything, common or obscure. The software your business runs on, the app your life is organized in, the tool your ops manager swears by, the old database nobody else can touch. Everything you name goes straight into your briefcase, and we will begin wiring what matters.</p>
+   <p style="font-size:14px;color:var(--ash);margin-bottom:10px">Pick from the list or name anything, common or obscure. The software your business runs on, the app your life is organized in, the tool your ops manager swears by, the old database nobody else can touch. Everything you name goes straight onto your record, and we will begin wiring what matters.</p>
    <div style="display:flex;gap:10px;flex-wrap:wrap"><div class="syswrap"><input type="text" id="syswish" autocomplete="off" placeholder="Search the list or type your own..." oninput="COB.sysFilter()" onfocus="COB.sysFilter()" onblur="COB.sysBlur()" onkeydown="COB.sysKey(event)"><div id="sysdd" class="sysdd" style="display:none"></div></div><button class="btn2" onclick="COB.sysAdd()">Add</button></div>
    <div style="margin-top:10px">${(this.state.wishlist||[]).map((s,wi)=>`<span class="chip navy chip-rm">${this.esc(s)}<button class="cx" onclick="COB.sysRemove(${wi})" aria-label="Remove ${this.esc(s)}">×</button></span>`).join("")}</div></div>
   <div class="grid2" style="margin-top:16px">
