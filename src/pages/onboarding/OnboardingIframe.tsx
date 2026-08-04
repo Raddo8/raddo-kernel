@@ -401,7 +401,7 @@ export default function OnboardingIframe({
         />
       )}
       {phase.kind === "ready" && hydrated && taylorVisible && (
-        <TaylorPanel pageCtx={initialHash ? `page:${initialHash}` : "page:start"} />
+        <TaylorPanel pageCtx={`page:${screen}`} />
       )}
     </>
 
