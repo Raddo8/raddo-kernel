@@ -3,27 +3,30 @@
  * block under .hqd[data-theme="dark"] without touching a single rule below. */
 
 .hqd {
+  /* Tokens lifted verbatim from the pinned HQ document (hq v29-r28) so BOB,
+     THE WORLD, MEMORIES and HQ read as one family. */
   --paper: #FAF8F4;
-  --paper-2: #F4F1EA;
+  --paper-2: #F6F3EE;
   --card: #FFFFFF;
-  --line: #E5DFD3;
-  --line-soft: #EFEAE0;
+  --line: #E5E3DE;
+  --line-soft: #ECE8DF;
   --navy: #042C53;
   --navy-soft: #2A4E78;
   --ink: #2C2C2A;
-  --ash: #6B675F;
-  --brass: #EF9B25;
-  --brass-deep: #8A5A0B;
-  --brass-wash: #FBF1DF;
+  --ash: #5F5E5A;
+  --brass: #EF9F27;
+  --brass-deep: #854F0B;
+  --brass-wash: #FBF1DD;
   --ok: #2E6B4F;
-  --ok-wash: #EDF5F0;
+  --ok-wash: #EEF6F1;
   --warn: #8A5A00;
-  --warn-wash: #FBF3E2;
+  --warn-wash: #FAF3E4;
   --stop: #8C2F2F;
-  --stop-wash: #F8EDED;
-  --serif: 'Fraunces', Georgia, serif;
-  --sans: 'Inter', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --stop-wash: #FBEFEF;
+  --serif: 'Aeonik', 'Figtree', system-ui, sans-serif;
+  --sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --mono: 'Spline Sans Mono', ui-monospace, monospace;
+
   --r-s: 4px;
   --r-l: 8px;
   --shadow: 0 1px 3px rgba(44, 44, 42, 0.05);
