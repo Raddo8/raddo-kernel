@@ -2534,7 +2534,26 @@ const UI_RESOURCES = [
   },
 ];
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+// ── M2 · memory read path ────────────────────────────────────────────────
+const TOOL_MEMORY_SEARCH = {
+  name: "memory_search",
+  title: "Memory Search",
+  description:
+    "Full-text search across this client's governed memory (title and body). CID scoped, binned entries excluded. Read-only.",
+  annotations: { title: "Memory Search", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      query: { type: "string", description: "Search words or a quoted phrase." },
+      limit: { type: "number", description: "Max hits (default 20, cap 100)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["query"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
