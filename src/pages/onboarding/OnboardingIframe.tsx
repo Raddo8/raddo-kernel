@@ -183,6 +183,28 @@ export default function OnboardingIframe({
     };
   }, [initialHash, requireRecord]);
 
+  /**
+   * CORRECTIVE 2R · one TAYLOR chat.
+   * When the shared-thread panel is on screen, suppress the legacy dock's chat
+   * UI inside the iframe with a stylesheet only. The dock stays in the DOM so
+   * every collection path that other screens call keeps working.
+   */
+  useEffect(() => {
+    const doc = ref.current?.contentDocument;
+    if (!doc || phase.kind !== "ready" || !hydrated) return;
+    const ID = "cob-suppress-legacy-dock";
+    const existing = doc.getElementById(ID);
+    if (!taylorVisible) {
+      existing?.remove();
+      return;
+    }
+    if (existing) return;
+    const style = doc.createElement("style");
+    style.id = ID;
+    style.textContent = "#tdock,.tdock,#tside,.tside{display:none !important;}";
+    doc.head.appendChild(style);
+  }, [phase.kind, hydrated, taylorVisible]);
+
   // Hydration watchdog: transitions ONLY to a blocked state. Never reveals.
   useEffect(() => {
     if (phase.kind !== "ready" || hydrated) return;
