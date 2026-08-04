@@ -7741,6 +7741,49 @@ export type Database = {
               version: number
             }[]
           }
+      hq_memory_counts: { Args: never; Returns: Json }
+      hq_memory_lineage: {
+        Args: { p_limit?: number }
+        Returns: {
+          new_id: string
+          new_title: string
+          old_category: string
+          old_created_at: string
+          old_id: string
+          old_title: string
+          superseded_at: string
+        }[]
+      }
+      hq_memory_read: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          body_md: string
+          category: string
+          confidence: number
+          created_at: string
+          created_by: string
+          id: string
+          notion_block_ref: string
+          session_id: string
+          status: string
+          supersedes: string
+          title: string
+          updated_at: string
+        }[]
+      }
+      hq_memory_search: {
+        Args: { p_limit?: number; p_q: string }
+        Returns: {
+          body_md: string
+          category: string
+          confidence: number
+          created_at: string
+          id: string
+          rank: number
+          status: string
+          title: string
+        }[]
+      }
       hq_scheduled_read:
         | {
             Args: never
@@ -7849,6 +7892,73 @@ export type Database = {
           p_token_version?: string
         }
         Returns: string
+      }
+      memory_edit_v1: {
+        Args: {
+          p_actor?: string
+          p_body_md?: string
+          p_category?: string
+          p_cid: string
+          p_confidence?: number
+          p_id: string
+          p_title?: string
+        }
+        Returns: Json
+      }
+      memory_module_read: {
+        Args: { p_cid: string; p_limit?: number }
+        Returns: Json
+      }
+      memory_search_read: {
+        Args: { p_cid: string; p_limit?: number; p_q: string }
+        Returns: Json
+      }
+      memory_set_status_v1: {
+        Args: {
+          p_actor?: string
+          p_cid: string
+          p_id: string
+          p_reason?: string
+          p_status: string
+        }
+        Returns: Json
+      }
+      memory_signal: {
+        Args: {
+          p_actor: string
+          p_change: string
+          p_entity_id: string
+          p_summary: string
+          p_tenant: string
+        }
+        Returns: string
+      }
+      memory_supersede_v1: {
+        Args: {
+          p_actor?: string
+          p_body_md: string
+          p_category?: string
+          p_cid: string
+          p_confidence?: number
+          p_old_id: string
+          p_session_id?: string
+          p_title: string
+        }
+        Returns: Json
+      }
+      memory_write_v1: {
+        Args: {
+          p_actor?: string
+          p_body_md: string
+          p_category?: string
+          p_cid: string
+          p_confidence?: number
+          p_notion_block_ref?: string
+          p_session_id?: string
+          p_status?: string
+          p_title: string
+        }
+        Returns: Json
       }
       mint_tenant: {
         Args: {
