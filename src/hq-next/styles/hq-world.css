@@ -190,3 +190,32 @@
 @media (prefers-reduced-motion: reduce) {
   .cobworld * { transition: none !important; }
 }
+
+/* H-SHELL token pass · card, table, badge and button treatments matched to the
+   pinned HQ document (rounded white registers, brass pill actions). */
+.cobworld h2 { font-family: var(--serif); color: var(--navy); font-size: 19px; }
+.cobworld .card { border-radius: 9px; box-shadow: 0 1px 2px rgba(44,44,42,.04); }
+.cobworld .card.new { background: #FFFDF8; border-color: rgba(239,159,39,.55); }
+.cobworld .badge { border-radius: 3px; font-weight: 500; font-size: 8.5px; }
+.cobworld .b-new { color: #3A2503; }
+.cobworld .b-conf { background: var(--navy); color: #FAF8F4; }
+.cobworld .approve button, .cobworld .wbtn, .cobworld .plink, .cobworld .ptab, .cobworld .backbtn {
+  border-radius: 18px; font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  box-shadow: 0 1px 2px rgba(44,44,42,.04);
+}
+.cobworld .approve button.primary, .cobworld .wbtn.primary { color: #3A2503; font-weight: 600; }
+.cobworld .ptab.on { background: var(--navy); color: #FAF8F4; border-color: var(--navy); }
+.cobworld .pcard, .cobworld .grp, .cobworld .empty, .cobworld .openit, .cobworld .notice, .cobworld .psearch {
+  border-radius: 9px;
+}
+.cobworld .pname { font-family: var(--serif); color: var(--navy); font-size: 15px; }
+.cobworld .wtable { background: var(--paper); border: 1px solid var(--edge); border-radius: 9px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+.cobworld .wtable th { background: #F6F3EE; font-weight: 500; padding: 9px 13px; border-bottom: 1px solid var(--edge); }
+.cobworld .wtable td { padding: 9px 13px; border-bottom: 1px solid var(--edge2); }
+.cobworld .wtable tbody tr:last-child td { border-bottom: none; }
+.cobworld .wtable tbody tr:hover { background: #FDFCFA; }
+.cobworld .meter { border-radius: 3px; overflow: hidden; }
+@media (max-width: 940px) {
+  .cobworld header.wh { position: static; padding: 12px 14px; }
+  .cobworld nav.wn { width: 100%; height: auto; position: static; }
+}
