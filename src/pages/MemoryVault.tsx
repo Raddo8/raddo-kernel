@@ -9,7 +9,7 @@
  * (hq_memory_read / hq_memory_counts). This page never writes: changing a
  * memory is a conversation with the COB.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { HqShell } from "@/components/hq/HqShell";
 import { useToast } from "@/hooks/use-toast";
@@ -416,8 +416,8 @@ export function MemoryVault() {
                     {filtered.map((m) => {
                       const isOpen = openRows.includes(m.id);
                       return (
-                        <>
-                          <tr key={m.id} className={isOpen ? "open" : undefined}>
+                        <Fragment key={m.id}>
+                          <tr className={isOpen ? "open" : undefined}>
                             <td className="d">{shortDate(m.created_at)}</td>
                             <td className="d">{m.lane ?? "\u2014"}</td>
                             <td className="d">{m.category ?? "\u2014"}</td>
@@ -436,7 +436,7 @@ export function MemoryVault() {
                             </td>
                           </tr>
                           {isOpen && (
-                            <tr key={`${m.id}-body`} className="open">
+                            <tr className="open">
                               <td className="body" colSpan={5}>
                                 <p>{linkify(m.body_md ?? "Nothing written down yet.", targets, Ilink)}</p>
                                 <div className="chips">
@@ -459,7 +459,7 @@ export function MemoryVault() {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </Fragment>
                       );
                     })}
                   </tbody>
