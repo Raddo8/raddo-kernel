@@ -184,9 +184,9 @@ export function HqShell({ children }: { children: ReactNode }) {
         </nav>
 
 
-        <div className="rail-foot">
+        <div className="rail-foot" title="These pages show live information. To change anything, ask your COB.">
           <span className="dot" />
-          read live &middot; read only
+          always up to date &middot; you can read, not change
         </div>
       </aside>
 
