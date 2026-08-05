@@ -123,3 +123,8 @@
 .wld .pop .pwhere .loc { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); display: block; }
 .wld .popclose { float: right; background: none; border: none; cursor: pointer; font-family: var(--mono); font-size: 11px; color: var(--ash); }
 @media (max-width: 880px) { .wld .article { grid-template-columns: 1fr; } .wld .infobox { position: static; } }
+
+/* Clear control inside the World search bar. */
+.wld .wsbar .wsclear { flex: none; border: 1px solid var(--edge); background: none; color: var(--ash); border-radius: 4px; width: 20px; height: 20px; line-height: 1; font-size: 14px; cursor: pointer; display: grid; place-items: center; }
+.wld .wsbar .wsclear:hover { color: var(--ink); border-color: var(--brass); }
+.wld .wsbar .wsclear:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
