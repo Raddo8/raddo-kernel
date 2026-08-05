@@ -842,11 +842,6 @@ export function WorldCabinet() {
           </>
         )}
 
-        <p className="foot">
-          Read-only surface {DOT} lanes derived from your own registers {DOT} narrative from your storyline register{" "}
-          {DOT} entries from your memory register {DOT} threads matched by lane name {DOT} dates read from the
-          material, never invented {DOT} your COB is the only pen
-        </p>
       </div>
     </HqShell>
   );
