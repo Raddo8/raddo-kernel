@@ -31,6 +31,7 @@ import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
+import { classifyOnboardingEntry, returningWelcomePayload } from "../_shared/onboarding-routing.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
