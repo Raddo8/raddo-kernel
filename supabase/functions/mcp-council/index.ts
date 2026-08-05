@@ -3940,7 +3940,7 @@ Deno.serve(async (req) => {
       if (name === "boot_kernel") {
         try {
           // PKT-0A · request context, built at branch entry so duration is real
-          const pkt0aIdentity = await resolveEffectiveIdentity(supabaseAdmin, tenant);
+          const pkt0aIdentity = await cidResolution();
           const pkt0aCtx = newRequestContext({
             req,
             tenant,
