@@ -593,23 +593,37 @@ export function WorldCabinet() {
       <div className="wld">
         <div className="crumb">HQ {DOT} 02 {DOT} the world</div>
         <h1>The World</h1>
-        <p className="psub">
-          One folder per lane, filed exactly like the cabinet on the front page. Tap a tab to pull its folder; the
-          folder opens on its table of contents; every line expands into the full record. New lanes file themselves
-          the moment your world grows one. Anything here changes by telling your COB.
-        </p>
 
         <div className="wsearch">
           <div className="wsbar">
             <span className="gl" aria-hidden="true">&#8981;</span>
             <input
+              ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  clearSearch();
+                }
+              }}
               placeholder="Ask your world a question, or name anyone in it"
               aria-label="Search the world"
             />
+            {q.length > 0 && (
+              <button
+                type="button"
+                className="wsclear"
+                onClick={clearSearch}
+                title="Clear search (Esc)"
+                aria-label="Clear search"
+              >
+                &times;
+              </button>
+            )}
             <span className="tagline">{searching ? "SEARCHING" : "SEARCH THE WORLD"}</span>
           </div>
+
           {hits !== null && (
             <div className="wsres">
               {hits.length === 0 && !searching && (
