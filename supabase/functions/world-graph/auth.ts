@@ -81,6 +81,9 @@ export type ResolvedIdentity = {
   iss?: string | null;
   /** Raw tenant string the token carried, before any resolution. */
   tenantClaim?: string | null;
+  /** AUTH v2 · verified OAuth identity, used for identity-keyed resolution. */
+  email?: string | null;
+  emailVerified?: boolean;
 };
 
 export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity> {
@@ -151,13 +154,27 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
   const tenant = typeof appMeta.tenant === "string" && appMeta.tenant.trim()
     ? appMeta.tenant.trim()
     : "";
-  if (!tenant) throw new Error("invalid_token");
+  // AUTH v2: a missing tenant claim is NO LONGER fatal. The caller resolves the
+  // tenant from the verified identity (email / provider subject) and falls back
+  // to this claim only when identity-keyed resolution finds nothing.
 
   const sub = typeof payload?.sub === "string" ? payload.sub : "";
   const clientId = typeof payload?.client_id === "string" ? payload.client_id : null;
   const iss = typeof payload?.iss === "string" ? payload.iss : null;
   const rawTenantClaim = typeof appMeta.tenant === "string" ? appMeta.tenant : null;
-  return { tenant, sub, scope: scopeStr, clientId, iss, tenantClaim: rawTenantClaim };
+  const email = typeof payload?.email === "string" ? payload.email : null;
+  const emailVerified = payload?.email_verified === true ||
+    (payload?.user_metadata && payload.user_metadata.email_verified === true);
+  return {
+    tenant,
+    sub,
+    scope: scopeStr,
+    clientId,
+    iss,
+    tenantClaim: rawTenantClaim,
+    email,
+    emailVerified: emailVerified === true,
+  };
 }
 
 export const RESOURCE_METADATA_URL =

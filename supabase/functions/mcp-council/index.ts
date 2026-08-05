@@ -30,6 +30,7 @@ import { newRequestContext } from "./request-context.ts";
 import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
+import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
@@ -3142,13 +3143,45 @@ Deno.serve(async (req) => {
   // ES256-verified JWT (see auth.ts). It is NEVER read from the JSON-RPC
   // body, tool arguments, query string, or any client-controlled header.
   // The legal-seat and tenant-context lookups below depend on this.
-  const tenant = identity.tenant;
+  //
+  // AUTH v2 · identity-keyed authorization. The tenant is resolved from the
+  // VERIFIED OAuth identity first (verified email -> principal_email_alias ->
+  // tenant_memberships_v2, else google provider subject -> principal_binding).
+  // The app_metadata.tenant claim remains as a backward-compatible fallback so
+  // existing live connector tokens keep resolving exactly as before.
+  const keyedIdentity = authMode === "oauth"
+    ? await resolveIdentityKeyed(supabaseAdmin, {
+      email: identity.email,
+      emailVerified: identity.emailVerified,
+      sub: identity.sub,
+    })
+    : ({ status: "UNRESOLVED", reason: "not_oauth" } as KeyedResolution);
+
+  let tenant = identity.tenant;
+  if (!tenant && keyedIdentity.status === "RESOLVED" && supabaseAdmin) {
+    // Claimless token: derive the display name from the resolved CID so the
+    // downstream name-keyed lookups keep working.
+    try {
+      const { data: tRow } = await supabaseAdmin
+        .from("tenants")
+        .select("cob_name")
+        .eq("cid", keyedIdentity.cid)
+        .maybeSingle();
+      tenant = (tRow?.cob_name as string | undefined)?.trim() || keyedIdentity.cid;
+    } catch (_e) {
+      tenant = keyedIdentity.cid;
+    }
+  }
 
   // Lane 1 · ITEM 1/2 · server-verified CID. Resolved once per request from
-  // the same verified claim that produced `tenant`. NEVER from the body.
+  // the verified identity (or the legacy claim). NEVER from the body.
   let _cidResolution: IdentityResolution | null = null;
   const cidResolution = async (): Promise<IdentityResolution> => {
-    if (!_cidResolution) _cidResolution = await resolveEffectiveIdentity(supabaseAdmin, tenant);
+    if (!_cidResolution) {
+      _cidResolution = keyedIdentity.status === "RESOLVED"
+        ? { status: "RESOLVED", cid: keyedIdentity.cid, matched_name: tenant || keyedIdentity.cid }
+        : await resolveEffectiveIdentity(supabaseAdmin, tenant);
+    }
     return _cidResolution;
   };
   const resolvedCid = async (): Promise<string | null> => cidOrNull(await cidResolution());
@@ -3907,7 +3940,7 @@ Deno.serve(async (req) => {
       if (name === "boot_kernel") {
         try {
           // PKT-0A · request context, built at branch entry so duration is real
-          const pkt0aIdentity = await resolveEffectiveIdentity(supabaseAdmin, tenant);
+          const pkt0aIdentity = await cidResolution();
           const pkt0aCtx = newRequestContext({
             req,
             tenant,
