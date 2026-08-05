@@ -8800,6 +8800,17 @@ export type Database = {
         Args: { p_cid: string; p_etype: string; p_keys?: Json; p_name: string }
         Returns: Json
       }
+      world_search_v1: {
+        Args: { _cid: string; _limit?: number; _q: string }
+        Returns: {
+          lane: string
+          rank: number
+          register: string
+          rid: string
+          snippet: string
+          title: string
+        }[]
+      }
     }
     Enums: {
       action_status:
