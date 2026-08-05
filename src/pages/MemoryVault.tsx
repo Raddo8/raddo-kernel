@@ -1,20 +1,37 @@
-/** THE VAULT · governed belief system, client plane, strictly READ-ONLY.
- * Golden master /hq treatment (surface_version hq v29-r28): navy .rail,
- * white .filehead + .fh-strip, numbered .sec sections, flat .reg registers.
- * Every read routes through a service-role projection (hq_memory_*), never a
- * direct client table read. Propose / correct / confirm / supersede is a later
- * stage (MEMORY-P5) and is deliberately absent here. */
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { format, formatDistanceToNowStrict } from "date-fns";
+/** MEMORIES · /hq/memories
+ *
+ * Same family as The World: a lead line, a wikipedia-style infobox on the
+ * right, a table of contents grouped by lane, and one long debriefing table
+ * of every memory. The table of contents and the table both run as long as
+ * the data does: never clamped, never paginated.
+ *
+ * Every read goes through the tenant-keyed, service-role projection
+ * (hq_memory_read / hq_memory_counts). This page never writes: changing a
+ * memory is a conversation with the COB.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { supabase } from "@/integrations/supabase/client";
-import "@/hq-next/styles/hq-golden.css";
 import { HqShell } from "@/components/hq/HqShell";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  callWorld,
+  sectionForRegister,
+  type EntityCard,
+  type LaneEntity,
+  type SearchHit,
+} from "@/lib/world-lanes";
+import { datedLines, daysAway, linkify, loudestClock, type LinkTarget } from "@/lib/world-wiki";
+import "@/hq-next/styles/hq-lanes.css";
+
+const DOT = "\u00b7";
+const INFOBOX_CEILING = 8;
+const SEEN_GRADES = ["seen", "own-probe", "document", "system-of-record", "verified"];
 
 interface MemoryRow {
   id: string;
   category: string | null;
+  lane: string | null;
   title: string;
   body_md: string | null;
   confidence: number | null;
@@ -27,27 +44,6 @@ interface MemoryRow {
   supersedes: string | null;
 }
 
-interface LineageRow {
-  old_id: string;
-  old_title: string | null;
-  old_category: string | null;
-  old_created_at: string | null;
-  superseded_at: string | null;
-  new_id: string;
-  new_title: string | null;
-}
-
-interface SearchRow {
-  id: string;
-  category: string | null;
-  title: string;
-  body_md: string | null;
-  confidence: number | null;
-  status: string | null;
-  created_at: string | null;
-  rank: number | null;
-}
-
 interface Counts {
   active: number;
   review: number;
@@ -58,501 +54,471 @@ interface Counts {
 
 const EMPTY_COUNTS: Counts = { active: 0, review: 0, superseded: 0, binned: 0, total: 0 };
 
-const READ_ONLY_NOTE =
-  "Beliefs are proposed, corrected, and retired through your COB Connector \u00b7 just ask your COB.";
+const shortId = (id: string) => id.slice(0, 8);
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
+function shortDate(iso: string | null): string {
+  if (!iso) return "no date";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "no date";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-function ageOf(iso: string | null): string {
-  if (!iso) return "\u2014";
-  try {
-    return `${formatDistanceToNowStrict(new Date(iso))} old`;
-  } catch {
-    return "\u2014";
-  }
+function lastUpdated(iso: string | null): string {
+  if (!iso) return "nothing dated yet";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "nothing dated yet";
+  if (d.toDateString() === new Date().toDateString()) return "today";
+  return shortDate(iso);
 }
 
-function confidenceLabel(value: number | null): string {
-  if (value == null) return "\u2014";
-  return `${Math.round(Number(value) * 100)}%`;
-}
-
-function confidenceKind(value: number | null): string {
-  const v = value == null ? 0 : Number(value);
-  if (v >= 0.85) return "act";
-  if (v >= 0.6) return "live";
-  if (v >= 0.35) return "pend";
-  return "dorm";
-}
-
-function statusKind(status: string | null): string {
+function statusWord(status: string | null): string {
   switch ((status ?? "").toLowerCase()) {
     case "active":
-      return "act";
+      return "in use";
     case "review":
-      return "pend";
+      return "being checked";
     case "superseded":
-      return "owed";
+      return "replaced";
     case "binned":
-      return "dorm";
+      return "thrown out";
     default:
-      return "private";
+      return status ?? "unknown";
   }
 }
 
-interface Viewer {
-  cid: string;
-  displayName: string | null;
-}
-
-type Resolution =
-  | { kind: "loading" }
-  | { kind: "ready"; viewer: Viewer }
-  | { kind: "unauthorized" };
-
-function useResolvedViewer(): Resolution {
-  const [state, setState] = useState<Resolution>({ kind: "loading" });
-  useEffect(() => {
-    let cancelled = false;
-    const resolve = async (): Promise<Resolution> => {
-      const cidRes = await supabase.rpc("current_cid");
-      const cid = cidRes.error ? null : (cidRes.data as string | null);
-      if (!cid) return { kind: "unauthorized" };
-      const tenantRes = await supabase
-        .from("tenants")
-        .select("cid, cob_name")
-        .eq("cid", cid)
-        .maybeSingle();
-      if (tenantRes.error || !tenantRes.data) return { kind: "unauthorized" };
-      return { kind: "ready", viewer: { cid, displayName: tenantRes.data.cob_name ?? null } };
-    };
-    void resolve().then((r) => {
-      if (!cancelled) setState(r);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return state;
-}
-
-const VIEWS = ["Beliefs", "Supersessions", "Search"] as const;
-type View = (typeof VIEWS)[number];
-
-function FileHead({ total, cells }: { total: number; cells: { label: string; value: number }[] }) {
+function SourceChip({ row }: { row: MemoryRow }) {
+  const by = (row.created_by ?? "").toLowerCase();
+  const seen = SEEN_GRADES.some((g) => by.includes(g));
   return (
-    <div className="filehead">
-      <div className="fh-top">
-        <div>
-          <div className="fh-sub">Memory</div>
-          <div className="fh-name">What your COB believes</div>
-        </div>
-        <div className="fh-meta">
-          read live &middot; tenant projection
-          <br />
-          {total} records
-        </div>
-      </div>
-      <div className="fh-strip">
-        {cells.map((c) => (
-          <div className="fh-cell" key={c.label}>
-            <b>{c.value}</b>
-            <span>{c.label}</span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <span
+      className={`chip ${seen ? "seen" : "told"}`}
+      title={seen ? "Your COB checked this itself." : "Someone told your COB this."}
+    >
+      {seen ? "SEEN" : "TOLD"}
+      {row.created_by ? ` ${DOT} ${row.created_by}` : ""}
+    </span>
   );
 }
 
-function Sec({
-  n,
-  title,
-  count,
-  children,
-}: {
-  n: number;
-  title: string;
-  count?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="sec">
-      <div className="sec-h">
-        <span className="n">{pad2(n)}</span>
-        <h2>{title}</h2>
-        {count && <span className="cnt">{count}</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
+type SortKey = "date" | "lane" | "category";
 
 export function MemoryVault() {
-  const resolution = useResolvedViewer();
-  const [view, setView] = useState<View>("Beliefs");
-  const [term, setTerm] = useState("");
-  const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState<MemoryRow | null>(null);
+  const { toast } = useToast();
 
-  const beliefsQuery = useQuery({
-    queryKey: ["hq-memory-read"],
-    queryFn: async (): Promise<MemoryRow[]> => {
-      const { data, error } = await (supabase as never as {
-        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc("hq_memory_read", { p_limit: 500, p_offset: 0 });
-      if (error) throw error;
-      return (data ?? []) as MemoryRow[];
-    },
-  });
+  const [rows, setRows] = useState<MemoryRow[] | null>(null);
+  const [counts, setCounts] = useState<Counts>(EMPTY_COUNTS);
+  const [err, setErr] = useState<string | null>(null);
+  const [entities, setEntities] = useState<LaneEntity[]>([]);
 
-  const countsQuery = useQuery({
-    queryKey: ["hq-memory-counts"],
-    queryFn: async (): Promise<Counts> => {
-      const { data, error } = await (supabase as never as {
-        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc("hq_memory_counts");
-      if (error) throw error;
-      return { ...EMPTY_COUNTS, ...((data ?? {}) as Partial<Counts>) };
-    },
-  });
+  const [filter, setFilter] = useState("");
+  const [sort, setSort] = useState<SortKey>("date");
+  const [openRows, setOpenRows] = useState<string[]>([]);
+  const [openLane, setOpenLane] = useState<string | null>(null);
 
-  const lineageQuery = useQuery({
-    queryKey: ["hq-memory-lineage"],
-    queryFn: async (): Promise<LineageRow[]> => {
-      const { data, error } = await (supabase as never as {
-        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc("hq_memory_lineage", { p_limit: 200 });
-      if (error) throw error;
-      return (data ?? []) as LineageRow[];
-    },
-  });
+  const [pop, setPop] = useState<{
+    target: LinkTarget;
+    card: EntityCard | null;
+    where: SearchHit[] | null;
+    loading: boolean;
+    error: string | null;
+  } | null>(null);
+  const cardCache = useRef<Map<string, EntityCard>>(new Map());
 
-  const searchQuery = useQuery({
-    queryKey: ["hq-memory-search", query],
-    enabled: query.trim().length > 0,
-    queryFn: async (): Promise<SearchRow[]> => {
-      const { data, error } = await (supabase as never as {
-        rpc: (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
-      }).rpc("hq_memory_search", { p_q: query, p_limit: 100 });
-      if (error) throw error;
-      return (data ?? []) as SearchRow[];
-    },
-  });
+  useEffect(() => {
+    let live = true;
+    const rpc = (fn: string, args?: Record<string, unknown>) =>
+      (
+        supabase as never as {
+          rpc: (f: string, a?: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>;
+        }
+      ).rpc(fn, args);
 
-  const beliefs = useMemo(() => beliefsQuery.data ?? [], [beliefsQuery.data]);
-  const counts = countsQuery.data ?? EMPTY_COUNTS;
-  const lineage = useMemo(() => lineageQuery.data ?? [], [lineageQuery.data]);
+    void Promise.all([rpc("hq_memory_read", { p_limit: 1000, p_offset: 0 }), rpc("hq_memory_counts")])
+      .then(([list, c]) => {
+        if (!live) return;
+        if (list.error) throw new Error("memories_read_failed");
+        setRows((list.data ?? []) as MemoryRow[]);
+        setCounts({ ...EMPTY_COUNTS, ...((c.data ?? {}) as Partial<Counts>) });
+      })
+      .catch(() => live && setErr("We could not open your memories just now."));
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, MemoryRow[]>();
-    for (const row of beliefs) {
-      const key = row.category ?? "uncategorised";
-      map.set(key, [...(map.get(key) ?? []), row]);
-    }
-    return [...map.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
-  }, [beliefs]);
+    callWorld<{ rows: LaneEntity[] }>("entities")
+      .then((d) => live && setEntities(d.rows ?? []))
+      .catch(() => undefined);
 
-  const isLoading = beliefsQuery.isLoading || countsQuery.isLoading;
-  const isError = beliefsQuery.isError || countsQuery.isError;
+    return () => {
+      live = false;
+    };
+  }, []);
 
-  const BeliefTable = ({ rows }: { rows: MemoryRow[] }) => (
-    <table className="reg">
-      <thead>
-        <tr>
-          <th>Belief</th>
-          <th>Confidence</th>
-          <th>State</th>
-          <th>Age</th>
-          <th>Source</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.id}>
-            <td>
-              <button
-                type="button"
-                className="rt"
-                style={{
-                  background: "none",
-                  border: 0,
-                  padding: 0,
-                  cursor: "pointer",
-                  textAlign: "left",
-                  font: "inherit",
-                  color: "inherit",
-                }}
-                onClick={() => setSelected(r)}
-              >
-                {r.title}
-              </button>
-              {r.body_md && <div className="rd">{r.body_md.slice(0, 160)}</div>}
-            </td>
-            <td>
-              <span className={`g ${confidenceKind(r.confidence)}`}>{confidenceLabel(r.confidence)}</span>
-            </td>
-            <td>
-              <span className={`g ${statusKind(r.status)}`}>{r.status ?? "unknown"}</span>
-            </td>
-            <td className="rk">{ageOf(r.created_at)}</td>
-            <td className="rk">{r.created_by ?? (r.notion_block_ref ? "notion" : "\u2014")}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+  const targets = useMemo<LinkTarget[]>(
+    () => entities.map((e) => ({ id: e.id, name: e.name })),
+    [entities],
   );
 
-  if (resolution.kind === "loading") {
-    return (
-      <HqShell>
-      <div className="main-inner">
-          <div className="page on">
-            <div className="sec">
-              <div className="sec-h">
-                <h2>Opening the vault{"\u2026"}</h2>
-              </div>
-            </div>
-          </div>
-        </div>
-      </HqShell>
-    );
-  }
+  const prefetch = useCallback((t: LinkTarget) => {
+    if (cardCache.current.has(t.id)) return;
+    callWorld<EntityCard>("entity_card", { entity_id: t.id })
+      .then((d) => cardCache.current.set(t.id, d))
+      .catch(() => undefined);
+  }, []);
 
-  if (resolution.kind === "unauthorized") {
-    return (
-      <HqShell>
-      <div className="main-inner">
-          <div className="page on">
-            <div className="sec">
-              <div className="sec-h">
-                <h2>No client record resolved for this sign in</h2>
-              </div>
-              <p className="rd">Ask your COB to confirm your access, then reload this page.</p>
-            </div>
-          </div>
-        </div>
-      </HqShell>
-    );
-  }
-
-  let body: React.ReactNode;
-  if (isLoading) {
-    body = (
-      <Sec n={1} title="Reading the vault">
-        <p className="rd">Fetching your active beliefs.</p>
-      </Sec>
-    );
-  } else if (isError) {
-    body = (
-      <Sec n={1} title="The vault could not be read">
-        <p className="rd">The projection refused this read. Ask your COB to check the memory register.</p>
-      </Sec>
-    );
-  } else if (view === "Beliefs") {
-    body =
-      grouped.length === 0 ? (
-        <Sec n={1} title="Nothing believed yet">
-          <p className="rd">
-            Your COB has recorded no beliefs for this record. Beliefs accrue as your COB works with you.
-          </p>
-        </Sec>
-      ) : (
-        <>
-          {grouped.map(([category, rows], i) => (
-            <Sec key={category} n={i + 1} title={category} count={`${rows.length}`}>
-              <BeliefTable rows={rows} />
-            </Sec>
-          ))}
-        </>
+  const openPop = useCallback((t: LinkTarget) => {
+    const cached = cardCache.current.get(t.id);
+    setPop({ target: t, card: cached ?? null, where: null, loading: !cached, error: null });
+    if (cached) return;
+    callWorld<EntityCard>("entity_card", { entity_id: t.id })
+      .then((d) => {
+        cardCache.current.set(t.id, d);
+        setPop((p) => (p && p.target.id === t.id ? { ...p, card: d, loading: false } : p));
+      })
+      .catch(() =>
+        setPop((p) =>
+          p && p.target.id === t.id
+            ? { ...p, loading: false, error: "We could not open that record." }
+            : p,
+        ),
       );
-  } else if (view === "Supersessions") {
-    body = (
-      <Sec n={1} title="What replaced what" count={`${lineage.length}`}>
-        {lineage.length === 0 ? (
-          <p className="rd">No belief has been superseded yet.</p>
-        ) : (
-          <table className="reg">
-            <thead>
-              <tr>
-                <th>Retired belief</th>
-                <th>Replaced by</th>
-                <th>Category</th>
-                <th>When</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lineage.map((r) => (
-                <tr key={r.old_id}>
-                  <td>
-                    <span className="rt">{r.old_title ?? "Untitled"}</span>
-                    <div className="rd">held from {r.old_created_at ? format(new Date(r.old_created_at), "dd MMM yyyy") : "\u2014"}</div>
-                  </td>
-                  <td>
-                    <span className="rt">{r.new_title ?? "Untitled"}</span>
-                  </td>
-                  <td>
-                    <span className="g private">{r.old_category ?? "uncategorised"}</span>
-                  </td>
-                  <td className="rk">
-                    {r.superseded_at ? format(new Date(r.superseded_at), "dd MMM yyyy \u00b7 HH:mm") : "\u2014"}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Sec>
-    );
-  } else {
-    const hits = searchQuery.data ?? [];
-    body = (
-      <Sec n={1} title="Search the vault" count={query ? `${hits.length}` : undefined}>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setQuery(term.trim());
-          }}
-          style={{ display: "flex", gap: 8, marginBottom: 12 }}
-        >
-          <input
-            className="bpb"
-            style={{ flex: 1, textAlign: "left" }}
-            value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="Search titles and bodies"
-            aria-label="Search memory"
-          />
-          <button type="submit" className="bpb bppri">
-            Search
-          </button>
-        </form>
-        {query && searchQuery.isLoading && <p className="rd">Searching.</p>}
-        {query && !searchQuery.isLoading && hits.length === 0 && (
-          <p className="rd">No belief matches that wording.</p>
-        )}
-        {hits.length > 0 && (
-          <BeliefTable
-            rows={hits.map((h) => ({
-              id: h.id,
-              category: h.category,
-              title: h.title,
-              body_md: h.body_md,
-              confidence: h.confidence,
-              status: h.status,
-              created_at: h.created_at,
-              updated_at: null,
-              created_by: null,
-              session_id: null,
-              notion_block_ref: null,
-              supersedes: null,
-            }))}
-          />
-        )}
-      </Sec>
-    );
-  }
+  }, []);
+
+  const loadWhere = useCallback((t: LinkTarget) => {
+    callWorld<{ rows: SearchHit[] }>("entity_where", { entity_id: t.id })
+      .then((d) =>
+        setPop((p) => (p && p.target.id === t.id ? { ...p, where: d.rows ?? [] } : p)),
+      )
+      .catch(() => undefined);
+  }, []);
+
+  const Ilink = useCallback(
+    (t: LinkTarget, key: string) => (
+      <button
+        key={key}
+        className="ilink"
+        onMouseEnter={() => prefetch(t)}
+        onTouchStart={() => prefetch(t)}
+        onClick={() => openPop(t)}
+      >
+        {t.name}
+      </button>
+    ),
+    [openPop, prefetch],
+  );
+
+  const ask = useCallback(
+    async (row: MemoryRow) => {
+      const message = [
+        `Change request for a memory.`,
+        `Lane: ${row.lane ?? "not filed to a lane"}.`,
+        `Memory: ${row.title} (${row.id}).`,
+        "What should change:",
+      ].join("\n");
+      try {
+        await navigator.clipboard.writeText(message);
+        toast({
+          title: "Copied for your COB",
+          description: "Paste this into your chat and say what should change.",
+        });
+      } catch {
+        toast({ title: "Copy this to your COB", description: message });
+      }
+    },
+    [toast],
+  );
+
+  const list = rows ?? [];
+
+  const lanes = useMemo(() => {
+    const map = new Map<string, MemoryRow[]>();
+    for (const r of list) {
+      const key = r.lane ?? "Not filed to a lane";
+      map.set(key, [...(map.get(key) ?? []), r]);
+    }
+    return [...map.entries()].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+  }, [list]);
+
+  const categories = useMemo(
+    () => new Set(list.map((r) => r.category).filter(Boolean) as string[]),
+    [list],
+  );
+
+  const freshest = useMemo(() => {
+    const times = list
+      .map((r) => r.updated_at ?? r.created_at)
+      .filter(Boolean)
+      .map((t) => new Date(t as string).getTime())
+      .filter((t) => !Number.isNaN(t));
+    return times.length ? new Date(Math.max(...times)).toISOString() : null;
+  }, [list]);
+
+  const clock = useMemo(
+    () => loudestClock(list.flatMap((r) => datedLines(`${r.title}. ${r.body_md ?? ""}`))),
+    [list],
+  );
+
+  const infobox = useMemo(() => {
+    const out: Array<{ k: string; v: string; alert?: boolean }> = [];
+    out.push({ k: "Memories", v: `${list.length} you can read now` });
+    if (clock) {
+      const away = daysAway(clock.date);
+      out.push({
+        k: "Coming up",
+        v: `${clock.label}${away !== null ? ` ${DOT} ${away} ${away === 1 ? "day" : "days"} away` : ""}`,
+        alert: true,
+      });
+    }
+    out.push({ k: "Last updated", v: lastUpdated(freshest) });
+    out.push({ k: "Groups", v: `${lanes.length} ${lanes.length === 1 ? "group" : "groups"}` });
+    out.push({ k: "Kinds", v: categories.size ? `${categories.size} kinds of memory` : "none yet" });
+    if (counts.review) out.push({ k: "Being checked", v: `${counts.review} waiting` });
+    if (counts.superseded) out.push({ k: "Replaced", v: `${counts.superseded} older ones` });
+    out.push({ k: "Where from", v: "your own COB" });
+    return out.slice(0, INFOBOX_CEILING);
+  }, [categories.size, clock, counts.review, counts.superseded, freshest, lanes.length, list.length]);
+
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    const base = q
+      ? list.filter((r) =>
+          `${r.title} ${r.body_md ?? ""} ${r.lane ?? ""} ${r.category ?? ""}`
+            .toLowerCase()
+            .includes(q),
+        )
+      : list;
+    const sorted = [...base];
+    if (sort === "date") {
+      sorted.sort(
+        (a, b) =>
+          new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime(),
+      );
+    } else if (sort === "lane") {
+      sorted.sort((a, b) => (a.lane ?? "~").localeCompare(b.lane ?? "~"));
+    } else {
+      sorted.sort((a, b) => (a.category ?? "~").localeCompare(b.category ?? "~"));
+    }
+    return sorted;
+  }, [filter, list, sort]);
+
+  const toggleRow = (id: string) =>
+    setOpenRows((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+
+  const Sortable = ({ label, k }: { label: string; k: SortKey }) => (
+    <th>
+      <button type="button" onClick={() => setSort(k)} title={`Sort by ${label.toLowerCase()}`}>
+        {label}
+        {sort === k ? " \u25BE" : ""}
+      </button>
+    </th>
+  );
 
   return (
     <HqShell>
-      <div className="main-inner">
-        <FileHead
-          total={counts.total}
-          cells={[
-            { label: "Active", value: counts.active },
-            { label: "In review", value: counts.review },
-            { label: "Superseded", value: counts.superseded },
-            { label: "Total", value: counts.total },
-          ]}
-        />
-        <div className="page on">
-          <div className="bpvs">
-            {VIEWS.map((v) => (
-              <button
-                key={v}
-                type="button"
-                className={`bpb ${view === v ? "bppri" : ""}`}
-                onClick={() => setView(v)}
-              >
-                {v}
-              </button>
-            ))}
-          </div>
-          {body}
-          <p className="rd" style={{ marginTop: 16 }}>
-            {READ_ONLY_NOTE}
-          </p>
-        </div>
-      </div>
+      <div className="wld">
+        <div className="crumb">HQ {DOT} 03 {DOT} memories</div>
+        <h1>Memories</h1>
 
-      {selected && (
-        <>
-          <div className="bpdrw-scrim" onClick={() => setSelected(null)} />
-          <aside className="bpdrw" role="dialog" aria-label="Belief record">
-            <div className="bpdrw-h">
-              <div>
-                <h2>{selected.title}</h2>
-                <div className="rk">Belief record &middot; read only</div>
-              </div>
-              <button type="button" className="bpb" onClick={() => setSelected(null)}>
-                close
-              </button>
-            </div>
-            <div className="bpdrw-b">
-              <div className="bpdrw-f">
-                <div className="k">Category</div>
-                <div className="v">{selected.category ?? "uncategorised"}</div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Confidence</div>
-                <div className="v">
-                  <span className={`g ${confidenceKind(selected.confidence)}`}>
-                    {confidenceLabel(selected.confidence)}
+        <div className="article">
+          <div>
+            <p className="lead">
+              <b>These are the things your COB remembers about you.</b> {DOT} Each one is a short
+              note. They are grouped below. Open any line to read the whole thing. If something is
+              wrong, tell your COB and it will fix it.
+            </p>
+
+            {err && <p className="plain">{err}</p>}
+            {!err && rows === null && <p className="plain">Opening your memories.</p>}
+            {!err && rows !== null && list.length === 0 && (
+              <p className="plain">
+                Nothing here yet. Your COB adds memories as you work together.
+              </p>
+            )}
+
+            {list.length > 0 && (
+              <>
+                <div className="tock" title="Every group your memories are filed under.">
+                  Table of contents {DOT} tap any line to open it in full
+                </div>
+                <div className="toc">
+                  {lanes.map(([lane, items], i) => {
+                    const isOpen = openLane === lane;
+                    return (
+                      <div key={lane}>
+                        <button
+                          className={`tline${isOpen ? " exp" : ""}`}
+                          onClick={() => setOpenLane(isOpen ? null : lane)}
+                          aria-expanded={isOpen}
+                        >
+                          <span className="tn">{String(i + 1).padStart(2, "0")}</span>
+                          <span className="tt">{lane}</span>
+                          <span className="dots" />
+                          <span className="tm">
+                            {isOpen ? "open \u25BE" : `${items.length} ${items.length === 1 ? "memory" : "memories"}`}
+                          </span>
+                        </button>
+                        {isOpen && (
+                          <div className="expand">
+                            {items.map((m) => (
+                              <div key={m.id}>
+                                <h4>{m.title}</h4>
+                                <p>{linkify(m.body_md ?? "", targets, Ilink)}</p>
+                                <div className="chips">
+                                  {m.category && <span className="chip">{m.category}</span>}
+                                  <span className="chip" title="How this memory stands right now.">
+                                    {statusWord(m.status)}
+                                  </span>
+                                  <SourceChip row={m} />
+                                  <span className="chip" title="Where this came from.">
+                                    memory {DOT} {shortId(m.id)}
+                                  </span>
+                                </div>
+                                <button className="ask" onClick={() => ask(m)}>
+                                  Tell your COB to change something here &rarr;
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="secname">Everything your COB remembers</div>
+                <div className="mtools">
+                  <input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Type a word to find a memory"
+                    aria-label="Find a memory"
+                  />
+                  <span className="cnt">
+                    {filtered.length} of {list.length} shown
                   </span>
                 </div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">State</div>
-                <div className="v">
-                  <span className={`g ${statusKind(selected.status)}`}>{selected.status ?? "unknown"}</span>
+
+                <table className="dtab">
+                  <thead>
+                    <tr>
+                      <Sortable label="Date" k="date" />
+                      <Sortable label="Group" k="lane" />
+                      <Sortable label="Kind" k="category" />
+                      <th>Memory</th>
+                      <th>Where from</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 && (
+                      <tr>
+                        <td className="empty" colSpan={5}>
+                          No memory has those words in it.
+                        </td>
+                      </tr>
+                    )}
+                    {filtered.map((m) => {
+                      const isOpen = openRows.includes(m.id);
+                      return (
+                        <>
+                          <tr key={m.id} className={isOpen ? "open" : undefined}>
+                            <td className="d">{shortDate(m.created_at)}</td>
+                            <td className="d">{m.lane ?? "\u2014"}</td>
+                            <td className="d">{m.category ?? "\u2014"}</td>
+                            <td>
+                              <button
+                                className="rowbtn"
+                                onClick={() => toggleRow(m.id)}
+                                aria-expanded={isOpen}
+                                title="Open to read the whole memory"
+                              >
+                                {m.title}
+                              </button>
+                            </td>
+                            <td>
+                              <SourceChip row={m} />
+                            </td>
+                          </tr>
+                          {isOpen && (
+                            <tr key={`${m.id}-body`} className="open">
+                              <td className="body" colSpan={5}>
+                                <p>{linkify(m.body_md ?? "Nothing written down yet.", targets, Ilink)}</p>
+                                <div className="chips">
+                                  <span className="chip" title="How this memory stands right now.">
+                                    {statusWord(m.status)}
+                                  </span>
+                                  {m.confidence != null && (
+                                    <span className="chip" title="How sure your COB is about this.">
+                                      {Math.round(Number(m.confidence) * 100)}% sure
+                                    </span>
+                                  )}
+                                  <SourceChip row={m} />
+                                  <span className="chip" title="Where this came from.">
+                                    memory {DOT} {shortId(m.id)}
+                                  </span>
+                                </div>
+                                <button className="ask" onClick={() => ask(m)}>
+                                  Tell your COB to change something here &rarr;
+                                </button>
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+
+          <div>
+            <div className="infobox">
+              <div className="ih">Memories</div>
+              {infobox.map((r, i) => (
+                <div className={`irow${r.alert ? " alert" : ""}`} key={i}>
+                  <span className="k">{r.k}</span>
+                  <span className="v">{r.v}</span>
                 </div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Held since</div>
-                <div className="v">
-                  {selected.created_at
-                    ? `${format(new Date(selected.created_at), "dd MMM yyyy \u00b7 HH:mm")} \u00b7 ${ageOf(selected.created_at)}`
-                    : "\u2014"}
-                </div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Recorded by</div>
-                <div className="v">{selected.created_by ?? "\u2014"}</div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Session</div>
-                <div className="v">{selected.session_id ?? "\u2014"}</div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Notion block</div>
-                <div className="v">{selected.notion_block_ref ?? "\u2014"}</div>
-              </div>
-              <div className="bpdrw-f">
-                <div className="k">Replaces</div>
-                <div className="v">{selected.supersedes ?? "nothing"}</div>
-              </div>
-              {selected.body_md && (
-                <div className="bpdrw-f">
-                  <div className="k">Belief</div>
-                  <pre className="bpdrw-pre">{selected.body_md}</pre>
-                </div>
-              )}
+              ))}
             </div>
-          </aside>
-        </>
-      )}
+
+            {pop && (
+              <div className="pop">
+                <button className="popclose" onClick={() => setPop(null)} aria-label="Close">
+                  &times;
+                </button>
+                <div className="pk">{pop.target.name}</div>
+                {pop.loading && <div className="pv">Opening the record.</div>}
+                {pop.error && <div className="pv">{pop.error}</div>}
+                {pop.card && (
+                  <div className="pv">
+                    {pop.card.entity.etype}
+                    {pop.card.entity.tag ? ` ${DOT} ${pop.card.entity.tag}` : ""} {DOT}{" "}
+                    {pop.card.claim_count} {pop.card.claim_count === 1 ? "note" : "notes"} on file.
+                    {pop.card.lead ? ` ${pop.card.lead}` : " Nothing written down yet."}
+                  </div>
+                )}
+                {pop.card && pop.where === null && (
+                  <button className="ask" onClick={() => loadWhere(pop.target)}>
+                    Everywhere they show up &rarr;
+                  </button>
+                )}
+                {pop.where !== null && (
+                  <div className="pwhere">
+                    {pop.where.length === 0 && <span className="loc">Only here so far.</span>}
+                    {pop.where.map((h, i) => (
+                      <a
+                        key={`${h.rid}-${i}`}
+                        href={`/hq/world#${h.slug ?? ""}/${sectionForRegister(h.register)}`}
+                      >
+                        <span className="loc">{h.lane ?? h.register}</span>
+                        {h.title ?? h.rid}
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </HqShell>
   );
 }
