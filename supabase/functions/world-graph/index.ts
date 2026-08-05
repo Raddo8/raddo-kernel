@@ -18,6 +18,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
 import { actionLanes, actionLane } from "./lanes.ts";
+import { actionSearch, actionEntityCard, actionEntityWhere } from "./search.ts";
 
 
 const BUILD_ID = "hshell.1";
