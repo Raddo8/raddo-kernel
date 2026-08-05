@@ -127,3 +127,24 @@
 .wld .wsbar .wsclear { flex: none; border: 1px solid var(--edge); background: none; color: var(--ash); border-radius: 4px; width: 20px; height: 20px; line-height: 1; font-size: 14px; cursor: pointer; display: grid; place-items: center; }
 .wld .wsbar .wsclear:hover { color: var(--ink); border-color: var(--brass); }
 .wld .wsbar .wsclear:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+/* ===== FULL-LENGTH RULING · the TOC and evidence tables never clamp ===== */
+.wld .toc, .wld .wtab { max-height: none; overflow: visible; }
+
+/* ===== THE DEBRIEFING TABLE · /hq/memories ===== */
+.wld .mtools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 14px; }
+.wld .mtools input { flex: 1 1 260px; min-width: 0; border: 1px solid var(--edge); border-radius: 8px; background: var(--white); padding: 9px 13px; font-family: var(--sans); font-size: 13.5px; color: var(--ink); }
+.wld .mtools input:focus { outline: 2px solid var(--brass); outline-offset: 1px; }
+.wld .mtools .cnt { font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); margin-left: auto; }
+.wld .dtab { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--edge); font-size: 13px; margin-top: 12px; table-layout: auto; }
+.wld .dtab th { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); text-align: left; padding: 8px 11px; border-bottom: 1px solid var(--edge); background: var(--strip); white-space: nowrap; }
+.wld .dtab th button { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; letter-spacing: inherit; text-transform: inherit; }
+.wld .dtab th button:hover { color: var(--brass-deep); }
+.wld .dtab td { padding: 9px 11px; border-bottom: 1px solid var(--edge2); vertical-align: top; }
+.wld .dtab td.d { font-family: var(--mono); font-size: 10.5px; color: var(--brass-deep); white-space: nowrap; }
+.wld .dtab tr.open > td { background: rgba(239, 159, 39, .05); }
+.wld .dtab .rowbtn { background: none; border: none; padding: 0; font: inherit; text-align: left; color: var(--ink); font-weight: 600; cursor: pointer; }
+.wld .dtab .rowbtn:hover { color: var(--brass-deep); }
+.wld .dtab .body { background: var(--white); border-left: 3px solid var(--brass); }
+.wld .dtab .body p { font-size: 14px; line-height: 1.75; white-space: pre-wrap; margin-top: 0; }
+.wld .dtab .empty { padding: 16px; font-size: 13px; color: var(--ash); }
