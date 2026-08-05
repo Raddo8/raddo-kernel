@@ -141,6 +141,15 @@ export function WorldCabinet() {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const clearSearch = useCallback(() => {
+    setQ("");
+    setHits(null);
+    setSearching(false);
+    searchRef.current?.focus();
+  }, []);
+
 
   // The pop-out record, right rail.
   const [pop, setPop] = useState<PopState | null>(null);
