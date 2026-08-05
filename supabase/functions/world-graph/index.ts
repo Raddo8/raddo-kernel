@@ -636,6 +636,8 @@ Deno.serve(async (req) => {
         return json(out, out.ok ? 200 : 404);
       }
       default: return fail("unknown_action");
+    }
+
 
   } catch (e) {
     console.error("world_graph_exception", e instanceof Error ? e.message : String(e));
