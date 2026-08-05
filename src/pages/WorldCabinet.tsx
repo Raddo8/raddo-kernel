@@ -655,7 +655,7 @@ export function WorldCabinet() {
                     {chunk.map((row) => (
                       <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                     ))}
-                    {ri === chunks.length - 1 && <Listen />}
+                    
                   </div>
                 ),
               )}
