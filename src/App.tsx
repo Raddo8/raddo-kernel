@@ -53,6 +53,9 @@ import BuildsAdmin from "@/pages/BuildsAdmin";
 import HqSurface from "@/pages/HqSurface";
 import BlueprintsOS from "@/pages/BlueprintsOS";
 import WorldSurface from "@/pages/WorldSurface";
+import WorldCabinet from "@/pages/WorldCabinet";
+import LaneDossier from "@/pages/LaneDossier";
+
 import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
 
