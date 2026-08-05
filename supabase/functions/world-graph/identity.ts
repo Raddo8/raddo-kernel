@@ -39,16 +39,38 @@ export async function derivePrincipal(
   // 1 · connector OAuth JWT (separate authorization server)
   try {
     const id = await verifySupabaseJwt(token);
+
+    // AUTH v2 · identity-keyed resolution is PRIMARY.
+    const keyed = await resolveIdentityKeyed(admin, {
+      email: id.email,
+      emailVerified: id.emailVerified,
+      sub: id.sub,
+    });
+    if (keyed.status === "RESOLVED") {
+      return {
+        cid: keyed.cid,
+        owner: true,
+        mode: "oauth",
+        subject: id.sub ?? null,
+        tenant_claim: id.tenantClaim ?? null,
+      };
+    }
+
+    // Legacy fallback · app_metadata.tenant claim (keeps live tokens working).
     const res = await resolveEffectiveIdentity(admin, id.tenantClaim ?? id.tenant);
-    if (res.status === "AMBIGUOUS") return { error: "identity_ambiguous", status: 409 };
-    if (res.status !== "RESOLVED") return { error: "identity_unresolved", status: 403 };
-    return {
-      cid: res.cid,
-      owner: true,
-      mode: "oauth",
-      subject: id.sub ?? null,
-      tenant_claim: id.tenantClaim ?? null,
-    };
+    if (res.status === "RESOLVED") {
+      return {
+        cid: res.cid,
+        owner: true,
+        mode: "oauth",
+        subject: id.sub ?? null,
+        tenant_claim: id.tenantClaim ?? null,
+      };
+    }
+    if (keyed.status === "AMBIGUOUS" || res.status === "AMBIGUOUS") {
+      return { error: "identity_ambiguous", status: 409 };
+    }
+    return { error: "identity_unresolved", status: 403 };
   } catch (_e) {
     // fall through to the app-user path
   }
