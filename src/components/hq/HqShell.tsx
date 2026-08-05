@@ -26,8 +26,8 @@ interface NavItem {
 const NAV: NavItem[] = [
   { n: "01", label: "HQ", to: "/hq" },
   { n: "02", label: "The World", to: "/hq/world" },
-  { n: "03", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
-  { n: "04", label: "Memories", to: "/hq/memories" },
+  { n: "03", label: "Memories", to: "/hq/memories" },
+  { n: "04", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
   { n: "05", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
 ];
 
