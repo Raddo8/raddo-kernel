@@ -141,6 +141,15 @@ export function WorldCabinet() {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const clearSearch = useCallback(() => {
+    setQ("");
+    setHits(null);
+    setSearching(false);
+    searchRef.current?.focus();
+  }, []);
+
 
   // The pop-out record, right rail.
   const [pop, setPop] = useState<PopState | null>(null);
@@ -577,11 +586,6 @@ export function WorldCabinet() {
     </button>
   );
 
-  const Listen = () => (
-    <button className="tab listen" disabled aria-disabled="true">
-      <span className="no">{DOT}</span>Next lane files itself
-    </button>
-  );
 
   // "in N places" · the same subject reached from more than one register or lane.
   const placeCounts = useMemo(() => {
@@ -598,23 +602,37 @@ export function WorldCabinet() {
       <div className="wld">
         <div className="crumb">HQ {DOT} 02 {DOT} the world</div>
         <h1>The World</h1>
-        <p className="psub">
-          One folder per lane, filed exactly like the cabinet on the front page. Tap a tab to pull its folder; the
-          folder opens on its table of contents; every line expands into the full record. New lanes file themselves
-          the moment your world grows one. Anything here changes by telling your COB.
-        </p>
 
         <div className="wsearch">
           <div className="wsbar">
             <span className="gl" aria-hidden="true">&#8981;</span>
             <input
+              ref={searchRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  clearSearch();
+                }
+              }}
               placeholder="Ask your world a question, or name anyone in it"
               aria-label="Search the world"
             />
+            {q.length > 0 && (
+              <button
+                type="button"
+                className="wsclear"
+                onClick={clearSearch}
+                title="Clear search (Esc)"
+                aria-label="Clear search"
+              >
+                &times;
+              </button>
+            )}
             <span className="tagline">{searching ? "SEARCHING" : "SEARCH THE WORLD"}</span>
           </div>
+
           {hits !== null && (
             <div className="wsres">
               {hits.length === 0 && !searching && (
@@ -655,7 +673,7 @@ export function WorldCabinet() {
                     {chunk.map((row) => (
                       <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                     ))}
-                    {ri === chunks.length - 1 && <Listen />}
+                    
                   </div>
                 ),
               )}
@@ -663,7 +681,7 @@ export function WorldCabinet() {
                 {(chunks[frontRow] ?? []).map((row) => (
                   <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                 ))}
-                {frontRow === chunks.length - 1 && <Listen />}
+                
               </div>
             </div>
 
@@ -842,11 +860,6 @@ export function WorldCabinet() {
           </>
         )}
 
-        <p className="foot">
-          Read-only surface {DOT} lanes derived from your own registers {DOT} narrative from your storyline register{" "}
-          {DOT} entries from your memory register {DOT} threads matched by lane name {DOT} dates read from the
-          material, never invented {DOT} your COB is the only pen
-        </p>
       </div>
     </HqShell>
   );

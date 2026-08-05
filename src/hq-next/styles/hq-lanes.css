@@ -27,7 +27,6 @@
 .wld .trow.back .tab { background: var(--tab-back); box-shadow: inset 0 -6px 8px -6px rgba(4, 44, 83, .08); }
 .wld .tab.on { color: var(--ink); background: var(--paper); border-top: 2px solid var(--brass); border-bottom: 1px solid var(--paper); padding-top: 10px; padding-bottom: 14px; margin-bottom: -1px; }
 .wld .tab .no { opacity: .55; margin-right: 8px; }
-.wld .tab.listen { color: var(--ash); opacity: .6; cursor: default; }
 
 /* ===== THE ONE GIANT FOLDER ===== */
 .wld .stackwrap { position: relative; }
@@ -123,3 +122,8 @@
 .wld .pop .pwhere .loc { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); display: block; }
 .wld .popclose { float: right; background: none; border: none; cursor: pointer; font-family: var(--mono); font-size: 11px; color: var(--ash); }
 @media (max-width: 880px) { .wld .article { grid-template-columns: 1fr; } .wld .infobox { position: static; } }
+
+/* Clear control inside the World search bar. */
+.wld .wsbar .wsclear { flex: none; border: 1px solid var(--edge); background: none; color: var(--ash); border-radius: 4px; width: 20px; height: 20px; line-height: 1; font-size: 14px; cursor: pointer; display: grid; place-items: center; }
+.wld .wsbar .wsclear:hover { color: var(--ink); border-color: var(--brass); }
+.wld .wsbar .wsclear:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
