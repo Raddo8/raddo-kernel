@@ -17,6 +17,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
 import { writeReceipt } from "./receipts.ts";
+import { actionLanes, actionLane } from "./lanes.ts";
+
 
 const BUILD_ID = "hshell.1";
 const HIDDEN = ["privileged", "third-party-npi"];
