@@ -635,8 +635,8 @@ Deno.serve(async (req) => {
         const out = await actionLane(admin, principal.cid, slug, readableSensitivities(principal));
         return json(out, out.ok ? 200 : 404);
       }
+      default: return fail("unknown_action");
 
-    }
   } catch (e) {
     console.error("world_graph_exception", e instanceof Error ? e.message : String(e));
     return fail("internal_error", 500);
