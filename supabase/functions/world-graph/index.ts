@@ -628,7 +628,14 @@ Deno.serve(async (req) => {
       case "sources": return await actionSources(principal);
       case "claims": return await actionClaims(principal, body);
       case "edges": return await actionEdges(principal);
-      default: return fail("unknown_action");
+      case "lanes": return json(await actionLanes(admin, principal.cid));
+      case "lane": {
+        const slug = str(body?.slug);
+        if (!slug) return fail("missing_slug");
+        const out = await actionLane(admin, principal.cid, slug, readableSensitivities(principal));
+        return json(out, out.ok ? 200 : 404);
+      }
+
     }
   } catch (e) {
     console.error("world_graph_exception", e instanceof Error ? e.message : String(e));
