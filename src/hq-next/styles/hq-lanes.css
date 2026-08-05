@@ -149,3 +149,53 @@
 .wld .dtab .body { background: var(--white); border-left: 3px solid var(--brass); }
 .wld .dtab .body p { font-size: 14px; line-height: 1.75; white-space: pre-wrap; margin-top: 0; }
 .wld .dtab .empty { padding: 16px; font-size: 13px; color: var(--ash); }
+
+/* ===== EXECUTIVE LAYER · v4 · in short / concludes / recommends ===== */
+.wld .exsec { margin-top: 26px; }
+.wld .exhead { font-family: var(--mono); font-size: 10px; letter-spacing: .22em; text-transform: uppercase; color: var(--ash); padding-bottom: 6px; border-bottom: 2px solid var(--ink); }
+.wld .inshort { font-size: 15.5px; line-height: 1.75; color: #2C2C2A; margin-top: 12px; max-width: 88ch; }
+.wld .inshort b { color: var(--ink); }
+.wld .kj { border-left: 3px solid var(--brass); padding: 2px 0 2px 16px; margin-top: 18px; }
+.wld .kj .kjn { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--brass-deep); }
+.wld .kj .kjc { font-size: 15.5px; font-weight: 700; color: var(--ink); line-height: 1.45; margin-top: 5px; }
+.wld .kj .kjr { font-size: 14px; line-height: 1.7; color: #2C2C2A; margin-top: 7px; max-width: 88ch; }
+.wld .kjfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin-top: 11px; }
+.wld .pill { font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--edge); background: var(--white); color: var(--ash); }
+.wld .pill.high { color: #2E6B4F; border-color: rgba(46, 107, 79, .45); }
+.wld .pill.medium { color: var(--brass-deep); border-color: rgba(133, 79, 11, .45); }
+.wld .pill.low { color: #8C2F2F; border-color: rgba(140, 47, 47, .4); }
+.wld button.srcchip { font-family: var(--mono); font-size: 8.5px; letter-spacing: .09em; text-transform: uppercase; padding: 3px 9px; border-radius: 20px; border: 1px solid var(--edge); background: var(--paper); color: var(--ink-soft); cursor: pointer; }
+.wld button.srcchip:hover { border-color: var(--brass); color: var(--brass-deep); }
+.wld .recs { border: 1px solid var(--edge); border-top: 2px solid var(--brass); border-radius: 8px; background: var(--white); padding: 16px 20px 18px; margin-top: 14px; }
+.wld .rec { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--edge2); }
+.wld .rec:last-child { border-bottom: none; }
+.wld .rec .rn { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--brass-deep); width: 22px; flex: none; padding-top: 3px; }
+.wld .rec .rt { font-size: 14.5px; line-height: 1.65; color: #2C2C2A; }
+.wld .rec .rb { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: #8C2F2F; margin-top: 5px; }
+.wld .nowrite { font-size: 14px; color: var(--ash); line-height: 1.7; margin-top: 12px; max-width: 80ch; }
+
+/* ===== THE DETAILS · grouped by theme, dates in a fixed left margin ===== */
+.wld .dgroup { margin-top: 30px; }
+.wld .dgroup h3 { font-size: 16.5px; font-weight: 800; color: var(--ink); letter-spacing: -.005em; }
+.wld .dgroup h3 .gn { font-family: var(--mono); font-size: 10px; color: var(--brass-deep); margin-right: 10px; letter-spacing: .12em; }
+.wld .dgroup .gsum { font-size: 13.5px; font-style: italic; color: var(--ash); margin-top: 5px; line-height: 1.6; }
+.wld .fact { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 14px; padding: 11px 0; border-bottom: 1px solid var(--edge2); }
+.wld .fact .fd { font-family: var(--mono); font-size: 10.5px; color: var(--brass-deep); padding-top: 3px; }
+.wld .fact .fs { font-size: 14.5px; line-height: 1.7; color: #2C2C2A; }
+.wld .fact .fsrc { display: block; font-size: 12px; color: var(--ash); margin-top: 5px; }
+.wld .fact.late .fd { color: #8C2F2F; }
+@media (max-width: 640px) { .wld .fact { grid-template-columns: 1fr; gap: 4px; } }
+
+/* ===== THE BRIEF · full page on one subject ===== */
+.wld .bhead { background: var(--ink); color: var(--paper); border-radius: 8px; padding: 22px 26px; margin-top: 18px; }
+.wld .bhead .bk { font-family: var(--mono); font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--brass); }
+.wld .bhead h2 { font-size: 26px; font-weight: 800; margin-top: 8px; letter-spacing: -.01em; }
+.wld .bhead .bsub { font-size: 13px; color: rgba(250, 248, 244, .78); margin-top: 7px; }
+.wld .backbtn { display: inline-flex; align-items: center; gap: 7px; margin-top: 18px; font-size: 12px; font-weight: 600; color: var(--ink); background: none; border: 1px solid var(--edge); border-radius: 7px; padding: 7px 13px; cursor: pointer; font-family: var(--sans); }
+.wld .backbtn:hover { border-color: var(--brass); background: rgba(239, 159, 39, .07); }
+.wld .connbox { border: 1px solid var(--edge); border-radius: 8px; background: var(--white); margin-top: 12px; overflow: hidden; }
+.wld .connbox .ch { font-family: var(--mono); font-size: 9.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ash); padding: 9px 14px; background: var(--strip); border-bottom: 1px solid var(--edge); }
+.wld .connbox button.crow { display: block; width: 100%; text-align: left; background: none; border: none; border-bottom: 1px solid var(--edge2); padding: 9px 14px; cursor: pointer; font-family: var(--sans); font-size: 13px; color: var(--ink-soft); }
+.wld .connbox button.crow:last-child { border-bottom: none; }
+.wld .connbox button.crow:hover { background: rgba(239, 159, 39, .05); }
+.wld .connbox .crel { display: block; font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); }
