@@ -3841,7 +3841,33 @@ Deno.serve(async (req) => {
         // failure degrades to a nameless welcome — never another tenant's name.
         const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
         try {
+          // ONBOARDING GUARD · a verified identity that already holds an ACTIVE
+          // membership is RETURNING. Onboarding never runs inside a provisioned
+          // tenant and never loads an operator/builder kernel here.
+          const entry = await classifyOnboardingEntry(supabaseAdmin, {
+            email: identity.email,
+            emailVerified: identity.emailVerified,
+            sub: identity.sub,
+          });
+          if (entry.classification !== "NEW") {
+            let firstName: string | null = null;
+            try {
+              const { client: known } = await resolveWelcomeClient(entry.cid ?? pctx.legacy_cid);
+              firstName = known.first_name;
+            } catch (_e) { /* nameless welcome-back is acceptable */ }
+            const back = returningWelcomePayload(entry, firstName);
+            console.log("onboarding_returning_identity", JSON.stringify({
+              cid: entry.cid, role: entry.role, route: entry.route,
+              classification: entry.classification, tool: name,
+            }));
+            return rpcResult(id, {
+              content: [{ type: "text", text: back.instructions }],
+              structuredContent: back,
+              isError: false,
+            });
+          }
           const { cid: resolvedCid, client } = await resolveWelcomeClient(pctx.legacy_cid);
+
           if (name === "taylor_setup") {
             await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
             const checklist = await readChecklist(resolvedCid);
