@@ -109,7 +109,9 @@ export function HqShell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="mark-name">COB &middot; HQ</div>
-              <div className="mark-sub">{cid ?? "resolving\u2026"}</div>
+              <div className="mark-sub" title="Your account number with your COB">
+                {cid ?? "loading\u2026"}
+              </div>
             </div>
           </div>
 
