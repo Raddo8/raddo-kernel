@@ -12,6 +12,7 @@
 
 import { verifySupabaseJwt } from "./auth.ts";
 import { resolveEffectiveIdentity } from "./effective-identity.ts";
+import { resolveIdentityKeyed } from "../_shared/identity-keyed.ts";
 
 export type Principal = Readonly<{
   cid: string;
