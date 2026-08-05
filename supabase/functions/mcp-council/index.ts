@@ -4101,6 +4101,21 @@ Deno.serve(async (req) => {
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
           if (!kernel) return notFoundResp();
+          // GUARD · never serve a kernel whose tenant differs from the verified
+          // subject's CID. A mismatch is a routing error, not client data.
+          const subjectCid = await resolvedCid();
+          if (subjectCid && partCid && partCid !== subjectCid) {
+            console.error("kernel_tenant_mismatch", JSON.stringify({
+              subject_cid: subjectCid, kernel_cid: partCid, part,
+            }));
+            const mismatch = { error: "routing_error", reason: "kernel_tenant_mismatch", part, seq };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(mismatch) }],
+              structuredContent: mismatch,
+              isError: false,
+            });
+          }
+
           const { data: partRows } = await supabaseAdmin
             .from("kernel_parts")
             .select("seq, content_md, sha256")
