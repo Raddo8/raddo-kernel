@@ -1,20 +1,21 @@
-/** THE LANE DOSSIER CABINET · /hq/world
+/** THE LANE DOSSIER CABINET · /hq/world · design v4
  *
- * Anatomy (unchanged, artifact v2): lanes are tabs in rows of four, back rows
- * peek, one giant folder is open beneath, the folder face is the table of
- * contents, every line expands in place.
+ * Anatomy: lanes are tabs of a fixed width in rows of four, back rows peek, one
+ * giant folder is open beneath, and the folder face carries, in order:
+ *   · IN SHORT              a short synopsis of the whole folder
+ *   · WHAT YOUR COB CONCLUDES  numbered conclusions, each with its reasoning,
+ *                              how sure your COB is, and the records behind it
+ *   · WHAT YOUR COB RECOMMENDS sequenced next moves
+ *   · TABLE OF CONTENTS     leader dots, one line per group of details
+ *   · THE DETAILS           every fact, grouped by theme, dates in the margin
  *
- * This turn adds, per artifacts v3 and v2.1:
- *  · the WIKI layout inside the folder — lead paragraph with inline entity
- *    links, a sticky right-rail infobox (hard ceiling of eight rows), a
- *    chronology table wherever the material carries dates, dense evidence in
- *    tables below the fold, and a pop-out record on the right for any link.
- *  · WORLD SEARCH above the tabs, served by the same server-side read path.
- *
- * Reads are CID-keyed server-side and read-only. This surface never writes:
- * editing is a chat handoff to the COB.
+ * The read (synopsis, conclusions, recommendations) is written and stored by
+ * the COB, never computed here. When a folder has no read yet, the page says so
+ * plainly. Reads are server-side and keyed to the signed-in principal. This
+ * surface never writes: editing is a chat handoff to the COB.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion, type Transition } from "framer-motion";
 
 import { HqShell } from "@/components/hq/HqShell";
@@ -23,7 +24,8 @@ import {
   callWorld,
   composeChangeRequest,
   sectionForRegister,
-  type EntityCard,
+  sourceLine,
+  type CobRead,
   type LaneDossierPayload,
   type LaneRow,
   type SearchHit,
@@ -31,6 +33,7 @@ import {
 import {
   datedLines,
   daysAway,
+  humanDate,
   leadSentences,
   linkify,
   loudestClock,
@@ -41,7 +44,6 @@ import "@/hq-next/styles/hq-lanes.css";
 
 const DOT = "\u00b7";
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
-const SEEN_GRADES = ["seen", "own-probe", "document", "system-of-record", "verified"];
 const PER_ROW = 4;
 const INFOBOX_CEILING = 8;
 
@@ -49,18 +51,11 @@ const shortId = (id: string) => id.slice(0, 8);
 const num = (n: number) => String(n).padStart(2, "0");
 
 function freshness(iso: string | null): string {
-  if (!iso) return "no dated material yet";
+  if (!iso) return "nothing dated yet";
   const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "no dated material yet";
+  if (Number.isNaN(d.getTime())) return "nothing dated yet";
   if (d.toDateString() === new Date().toDateString()) return "updated today";
-  return `updated ${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function shortDate(iso: string | null): string {
-  if (!iso) return "undated";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "undated";
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return `updated ${humanDate(iso)}`;
 }
 
 /** world_search_v1 marks its hits with **double asterisks**. */
@@ -73,76 +68,40 @@ function Snippet({ text }: { text: string }) {
   );
 }
 
-function GradeChip({ grade }: { grade: string | null | undefined }) {
-  const g = String(grade ?? "").toLowerCase();
-  if (!g) return null;
-  const seen = SEEN_GRADES.includes(g);
-  return (
-    <span
-      className={`chip ${seen ? "seen" : "told"}`}
-      title={seen ? "Your COB checked this itself." : "Someone told your COB this."}
-    >
-      {seen ? "SEEN" : "TOLD"} {DOT} {g}
-    </span>
-  );
-}
-
-function Chronology({ lines, matter }: { lines: DatedLine[]; matter: string }) {
-  if (!lines.length) return null;
-  return (
-    <table className="wtab">
-      <thead>
-        <tr>
-          <th>When</th>
-          <th>What happened</th>
-          <th>Matter or source</th>
-        </tr>
-      </thead>
-      <tbody>
-        {lines.map((l, i) => {
-          const away = daysAway(l.date);
-          const due = away !== null && away >= 0;
-          return (
-            <tr key={i} className={due ? "due" : undefined}>
-              <td className="d">
-                {l.label}
-                {due && ` ${DOT} ${away} ${away === 1 ? "day" : "days"}`}
-              </td>
-              <td>{due ? <b>{l.sentence}</b> : l.sentence}</td>
-              <td className="d">{matter}</td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
-  );
-}
-
-type TocItem = {
-  key: string;
-  n: string;
-  title: string;
-  meta: string;
-  render: () => JSX.Element;
+const CONFIDENCE_COPY: Record<string, string> = {
+  high: "Very sure",
+  medium: "Fairly sure",
+  low: "Not very sure",
 };
 
-type PopState = {
-  target: LinkTarget;
-  card: EntityCard | null;
-  where: SearchHit[] | null;
-  loading: boolean;
-  error: string | null;
+type Fact = {
+  key: string;
+  date: string;
+  late?: boolean;
+  body: React.ReactNode;
+  source: string;
+};
+
+type DetailGroup = {
+  key: string;
+  title: string;
+  summary: string;
+  meta: string;
+  ids: string[];
+  facts: Fact[];
+  table?: React.ReactNode;
+  empty?: string;
 };
 
 export function WorldCabinet() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const reduced = useReducedMotion();
   const [rows, setRows] = useState<LaneRow[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
-  const [doss, setDoss] = useState<LaneDossierPayload | null>(null);
+  const [doss, setDoss] = useState<(LaneDossierPayload & { read?: CobRead | null }) | null>(null);
   const [dossErr, setDossErr] = useState<string | null>(null);
-  const [open, setOpen] = useState<string[]>([]);
 
   // World search.
   const [q, setQ] = useState("");
@@ -157,12 +116,6 @@ export function WorldCabinet() {
     searchRef.current?.focus();
   }, []);
 
-
-  // The pop-out record, right rail.
-  const [pop, setPop] = useState<PopState | null>(null);
-  const cardCache = useRef<Map<string, EntityCard>>(new Map());
-  const whereCache = useRef<Map<string, SearchHit[]>>(new Map());
-
   // The cabinet.
   useEffect(() => {
     let live = true;
@@ -172,10 +125,9 @@ export function WorldCabinet() {
         const list = d.rows ?? [];
         setRows(list);
         const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
-        const [slug, section] = hash.split("/");
+        const [slug] = hash.split("/");
         const found = list.find((r) => r.slug === slug);
         setActive(found?.slug ?? list[0]?.slug ?? null);
-        if (found && section) setOpen([section]);
       })
       .catch((e: Error) => live && setErr(e.message));
     return () => {
@@ -189,8 +141,7 @@ export function WorldCabinet() {
     let live = true;
     setDoss(null);
     setDossErr(null);
-    setPop(null);
-    callWorld<LaneDossierPayload>("lane", { slug: active })
+    callWorld<LaneDossierPayload & { read?: CobRead | null }>("lane", { slug: active })
       .then((d) => live && setDoss(d))
       .catch((e: Error) => live && setDossErr(e.message));
     return () => {
@@ -198,7 +149,7 @@ export function WorldCabinet() {
     };
   }, [active]);
 
-  // Debounced as-you-type search, on the same server-derived read path.
+  // Debounced as-you-type search, on the same server-side read path.
   useEffect(() => {
     const term = q.trim();
     if (term.length < 2) {
@@ -220,40 +171,7 @@ export function WorldCabinet() {
     return () => window.clearTimeout(t);
   }, [q]);
 
-  const prefetchEntity = useCallback((target: LinkTarget) => {
-    if (cardCache.current.has(target.id)) return;
-    callWorld<EntityCard>("entity_card", { entity_id: target.id })
-      .then((d) => cardCache.current.set(target.id, d))
-      .catch(() => undefined);
-  }, []);
-
-  const openPop = useCallback((target: LinkTarget) => {
-    const cached = cardCache.current.get(target.id);
-    setPop({ target, card: cached ?? null, where: whereCache.current.get(target.id) ?? null, loading: !cached, error: null });
-    if (cached) return;
-    callWorld<EntityCard>("entity_card", { entity_id: target.id })
-      .then((d) => {
-        cardCache.current.set(target.id, d);
-        setPop((p) => (p && p.target.id === target.id ? { ...p, card: d, loading: false } : p));
-      })
-      .catch((e: Error) =>
-        setPop((p) => (p && p.target.id === target.id ? { ...p, loading: false, error: e.message } : p)),
-      );
-  }, []);
-
-  const loadWhere = useCallback((target: LinkTarget) => {
-    const cached = whereCache.current.get(target.id);
-    if (cached) {
-      setPop((p) => (p && p.target.id === target.id ? { ...p, where: cached } : p));
-      return;
-    }
-    callWorld<{ rows: SearchHit[] }>("entity_where", { entity_id: target.id })
-      .then((d) => {
-        whereCache.current.set(target.id, d.rows ?? []);
-        setPop((p) => (p && p.target.id === target.id ? { ...p, where: d.rows ?? [] } : p));
-      })
-      .catch(() => undefined);
-  }, []);
+  const openBrief = useCallback((id: string) => navigate(`/hq/world/brief/${id}`), [navigate]);
 
   const ask = useCallback(
     async (section: string, recordIds: string[]) => {
@@ -281,26 +199,14 @@ export function WorldCabinet() {
     [ask],
   );
 
-  const toggle = (key: string) => {
-    setOpen((prev) => {
-      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
-      if (!prev.includes(key) && active) {
-        window.history.replaceState(null, "", `#${active}/${key}`);
-      }
-      return next;
-    });
-  };
-
   const goto = (slug: string | null, section: string) => {
     if (!slug) return;
-    if (slug !== active) {
-      setActive(slug);
-      setOpen([section]);
-    } else {
-      setOpen((prev) => (prev.includes(section) ? prev : [...prev, section]));
-    }
+    if (slug !== active) setActive(slug);
     window.history.replaceState(null, "", `#${slug}/${section}`);
     setHits(null);
+    window.setTimeout(() => {
+      document.getElementById(`g-${section}`)?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+    }, 350);
   };
 
   const lanes = rows ?? [];
@@ -317,20 +223,14 @@ export function WorldCabinet() {
 
   const Ilink = useCallback(
     (target: LinkTarget, key: string) => (
-      <button
-        key={key}
-        className="ilink"
-        onMouseEnter={() => prefetchEntity(target)}
-        onTouchStart={() => prefetchEntity(target)}
-        onClick={() => openPop(target)}
-      >
+      <button key={key} className="ilink" onClick={() => openBrief(target.id)} title={`Open the brief on ${target.name}`}>
         {target.name}
       </button>
     ),
-    [openPop, prefetchEntity],
+    [openBrief],
   );
 
-  /** Every dated sentence across the lane's own material. */
+  /** Every dated sentence across the folder's own material. */
   const laneDates = useMemo<DatedLine[]>(() => {
     if (!doss) return [];
     const blocks = [
@@ -342,23 +242,14 @@ export function WorldCabinet() {
   }, [doss]);
 
   const clock = useMemo(() => loudestClock(laneDates), [laneDates]);
-
   const activeRow = activeIndex >= 0 ? lanes[activeIndex] : null;
 
-  /** Infobox facts, derived only. Hard ceiling of eight rows; the rest live in
-   *  the tables below the fold. */
+  /** Infobox facts, read from the folder only. Hard ceiling of eight rows. */
   const infobox = useMemo(() => {
     if (!doss || !activeRow) return [] as Array<{ k: string; v: JSX.Element | string; alert?: boolean }>;
     const out: Array<{ k: string; v: JSX.Element | string; alert?: boolean }> = [];
 
-    out.push({
-      k: "Notes on file",
-      v: (
-        <>
-          <b>{activeRow.entry_count}</b> written down
-        </>
-      ),
-    });
+    out.push({ k: "Notes on file", v: <><b>{activeRow.entry_count}</b> written down</> });
 
     if (clock) {
       const away = daysAway(clock.date);
@@ -369,7 +260,6 @@ export function WorldCabinet() {
       });
     }
 
-    // Densest subject: the entity named most often in this lane's material.
     const haystack = [
       doss.narrative?.sections.map((s) => s.body).join(" ") ?? "",
       ...doss.memories.map((m) => `${m.title} ${m.body_md}`),
@@ -381,211 +271,163 @@ export function WorldCabinet() {
       .sort((a, b) => b.n - a.n);
     if (counted[0] && counted[0].n > 0) {
       out.push({
-        k: "Densest",
-        v: `${counted[0].e.name} ${DOT} ${counted[0].n} ${counted[0].n === 1 ? "mention" : "mentions"}`,
+        k: "Comes up most",
+        v: `${counted[0].e.name} ${DOT} ${counted[0].n} ${counted[0].n === 1 ? "time" : "times"}`,
       });
     }
 
     const people = doss.entities.filter((e) => /person|people|human|contact/i.test(e.etype)).slice(0, 3);
-    if (people.length) {
-      out.push({ k: "Key people", v: people.map((p) => p.name).join(` ${DOT} `) });
-    }
+    if (people.length) out.push({ k: "Key people", v: people.map((p) => p.name).join(` ${DOT} `) });
 
     if (activeRow.open_thread_count !== null) {
       out.push({
         k: "Still waiting on",
-        v: activeRow.open_thread_count
-          ? `${activeRow.open_thread_count} open`
-          : "nothing open",
+        v: activeRow.open_thread_count ? `${activeRow.open_thread_count} open` : "nothing open",
       });
     }
 
     out.push({ k: "Last updated", v: freshness(activeRow.updated_at) });
-
-    if (doss.narrative?.grade) out.push({ k: "How we know", v: doss.narrative.grade });
-
+    if (doss.read?.written_at) out.push({ k: "Read written", v: humanDate(doss.read.written_at) });
     out.push({ k: "Where from", v: "your own records" });
 
     return out.slice(0, INFOBOX_CEILING);
   }, [activeRow, clock, doss]);
 
-  const lead = useMemo(() => {
-    const first = doss?.narrative?.sections?.[0]?.body ?? "";
-    return leadSentences(first, 4);
-  }, [doss]);
-
-  const toc = useMemo<TocItem[]>(() => {
+  /** THE DETAILS · every fact, grouped by theme, never a flat list. */
+  const groups = useMemo<DetailGroup[]>(() => {
     if (!doss) return [];
-    const items: TocItem[] = [];
-    const sections = doss.narrative?.sections ?? [];
-    const narrativeIds = doss.narrative ? [doss.narrative.id] : [];
+    const out: DetailGroup[] = [];
 
-    sections.forEach((s, i) => {
-      const key = `s-${i + 1}`;
-      const dates = datedLines(s.body);
-      items.push({
-        key,
-        n: `\u00a7 ${i + 1}`,
+    (doss.narrative?.sections ?? []).forEach((s, i) => {
+      const dated = datedLines(s.body);
+      out.push({
+        key: `s-${i + 1}`,
         title: s.heading,
+        summary: leadSentences(s.body, 1) || "Written up by your COB from the notes in this folder.",
         meta: `${s.body.trim().split(/\s+/).length} words`,
-        render: () => (
-          <>
-            <p>{linkify(s.body, targets, Ilink)}</p>
-            {dates.length > 0 && (
-              <>
-                <div className="secname">Chronology {DOT} read from this section&rsquo;s own material</div>
-                <Chronology lines={dates} matter={doss.lane} />
-              </>
-            )}
-            <div className="chips">
-              <GradeChip grade={doss.narrative?.grade} />
-              {(doss.narrative?.cites ?? []).slice(0, 8).map((c, ci) => (
-                <span className="chip" key={ci}>
-                  source {DOT} {typeof c === "string" ? shortId(c) : JSON.stringify(c).slice(0, 24)}
-                </span>
-              ))}
-            </div>
-            <Ask section={s.heading} ids={narrativeIds} />
-          </>
+        ids: doss.narrative ? [doss.narrative.id] : [],
+        facts: dated.map((l, li) => {
+          const away = daysAway(l.date);
+          return {
+            key: `${i}-${li}`,
+            date: l.label,
+            late: away !== null && away >= 0,
+            body: linkify(l.sentence, targets, Ilink),
+            source: sourceLine(doss.narrative?.grade),
+          };
+        }),
+        table: (
+          <p className="inshort" style={{ marginTop: 12 }}>
+            {linkify(s.body, targets, Ilink)}
+          </p>
         ),
       });
     });
 
-    const base = sections.length;
+    // Notes, grouped by the kind of note they are.
+    const byCategory = new Map<string, typeof doss.memories>();
+    for (const m of doss.memories) {
+      const key = (m.category ?? "General notes").trim() || "General notes";
+      byCategory.set(key, [...(byCategory.get(key) ?? []), m]);
+    }
+    Array.from(byCategory.entries())
+      .sort((a, b) => b[1].length - a[1].length)
+      .forEach(([category, list]) => {
+        out.push({
+          key: `c-${category.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+          title: category,
+          summary: `${list.length} ${list.length === 1 ? "note" : "notes"} of this kind, newest first.`,
+          meta: `${list.length} ${list.length === 1 ? "note" : "notes"}`,
+          ids: list.map((m) => m.id),
+          facts: list.map((m) => ({
+            key: m.id,
+            date: humanDate(m.updated_at ?? m.created_at, true),
+            body: (
+              <>
+                <b>{m.title}</b>. {linkify(m.body_md, targets, Ilink)}
+              </>
+            ),
+            source: sourceLine(null, m.created_by),
+          })),
+        });
+      });
 
-    items.push({
-      key: "entities",
-      n: `\u00a7 ${base + 1}`,
-      title: "People & entities",
-      meta: doss.entities.length
-        ? doss.entities.slice(0, 3).map((e) => e.name).join(` ${DOT} `)
-        : "none on the record yet",
-      render: () =>
-        doss.entities.length === 0 ? (
-          <p>No people or organisations on the record are named in this lane&rsquo;s material yet.</p>
-        ) : (
-          <>
-            <table className="wtab">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Type</th>
-                  <th>Standing</th>
-                  <th>Record</th>
+    if (doss.entities.length) {
+      out.push({
+        key: "people",
+        title: "People and companies",
+        summary: "Everyone and every company named in this folder.",
+        meta: `${doss.entities.length} named`,
+        ids: doss.entities.map((e) => e.id),
+        facts: [],
+        table: (
+          <table className="wtab">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>What they are</th>
+                <th>Where they stand</th>
+              </tr>
+            </thead>
+            <tbody>
+              {doss.entities.map((e) => (
+                <tr key={e.id}>
+                  <td>
+                    <button className="ilink" onClick={() => openBrief(e.id)}>
+                      {e.name}
+                    </button>
+                  </td>
+                  <td className="d">{e.etype}</td>
+                  <td className="d">{[e.status, e.sensitivity].filter(Boolean).join(` ${DOT} `) || "\u2014"}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {doss.entities.map((e) => (
-                  <tr key={e.id}>
-                    <td>{Ilink({ id: e.id, name: e.name }, e.id)}</td>
-                    <td className="d">{e.etype}</td>
-                    <td className="d">{[e.status, e.sensitivity].filter(Boolean).join(` ${DOT} `) || "\u2014"}</td>
-                    <td className="d">{shortId(e.id)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <Ask section="People & entities" ids={doss.entities.map((e) => e.id)} />
-          </>
+              ))}
+            </tbody>
+          </table>
         ),
-    });
+      });
+    }
 
-    items.push({
-      key: "threads",
-      n: `\u00a7 ${base + 2}`,
+    out.push({
+      key: "waiting",
       title: "Still waiting on",
+      summary: "Things that are open and have not come back yet.",
       meta: doss.threads.length ? `${doss.threads.length} open` : "nothing open",
-      render: () =>
-        doss.threads.length === 0 ? (
-          <p>
-            Nothing is waiting on this group right now.
-          </p>
-        ) : (
-          <>
+      ids: doss.threads.map((t) => t.id),
+      facts: [],
+      empty: doss.threads.length ? undefined : "Nothing is waiting on this folder right now.",
+      table: doss.threads.length ? (
+        <table className="wtab">
+          <thead>
+            <tr>
+              <th>Last touched</th>
+              <th>What we are waiting on</th>
+              <th>Whose move</th>
+            </tr>
+          </thead>
+          <tbody>
             {doss.threads.map((t) => (
-              <div key={t.id}>
-                <h4>{t.title}</h4>
-                {t.trigger && <p>{linkify(t.trigger, targets, Ilink)}</p>}
-                <div className="chips">
-                  <span className="chip open" title="Still waiting on this.">open</span>
-                  {t.owner && <span className="chip">{t.owner}</span>}
-                  {t.state && <span className="chip">{t.state}</span>}
-                  <span className="chip" title="Where this came from.">item {DOT} {shortId(t.id)}</span>
-                </div>
-                <Ask section={`Still waiting on: ${t.title}`} ids={[t.id]} />
-              </div>
+              <tr key={t.id}>
+                <td className="d">{humanDate(t.updated_at)}</td>
+                <td>
+                  <b>{t.title}</b>
+                  {t.trigger ? <> {DOT} {linkify(t.trigger, targets, Ilink)}</> : null}
+                </td>
+                <td className="d">{t.owner ?? "not said"}</td>
+              </tr>
             ))}
-          </>
-        ),
+          </tbody>
+        </table>
+      ) : undefined,
     });
 
-    items.push({
-      key: "records",
-      n: `\u00a7 ${base + 3}`,
-      title: "Every note, word for word",
-      meta: doss.memories.length
-        ? `${doss.memories.length} ${doss.memories.length === 1 ? "note" : "notes"}`
-        : "no notes yet",
-      render: () =>
-        doss.memories.length === 0 ? (
-          <p>Nothing has been written down here yet.</p>
-        ) : (
-          <>
-            {doss.memories.map((m) => (
-              <div key={m.id} id={`m-${m.id}`}>
-                <h4>{m.title}</h4>
-                <p>{linkify(m.body_md, targets, Ilink)}</p>
-                <div className="chips">
-                  {m.category && <span className="chip">{m.category}</span>}
-                  {m.status && <span className="chip">{m.status}</span>}
-                  {m.created_by && (
-                    <span className="chip told" title="Someone told your COB this.">
-                      TOLD {DOT} {m.created_by}
-                    </span>
-                  )}
-                  <span className="chip">source {DOT} memory {shortId(m.id)}</span>
-                </div>
-                <Ask section={m.title} ids={[m.id]} />
-              </div>
-            ))}
-          </>
-        ),
-    });
-
-    items.push({
-      key: "storyline",
-      n: `\u00a7 ${base + 4}`,
-      title: "The storyline",
-      meta: doss.narrative ? "how this got here" : "not written yet",
-      render: () =>
-        !doss.narrative ? (
-          <p>
-            Your COB has not written the story of this group yet. The notes above are what it has so far.
-          </p>
-        ) : (
-          <>
-            <h4>{doss.narrative.title}</h4>
-            {(doss.narrative.sections ?? []).map((s, i) => (
-              <p key={i}>{linkify(s.body, targets, Ilink)}</p>
-            ))}
-            <div className="chips">
-              <GradeChip grade={doss.narrative.grade} />
-              <span className="chip" title="Where this came from.">story {DOT} {shortId(doss.narrative.id)}</span>
-            </div>
-            <Ask section="The storyline" ids={narrativeIds} />
-          </>
-        ),
-    });
-
-    return items;
-  }, [doss, Ask, Ilink, targets]);
+    return out;
+  }, [doss, Ilink, openBrief, targets]);
 
   const Tab = ({ row, n }: { row: LaneRow; n: number }) => (
     <button
       className={`tab${row.slug === active ? " on" : ""}`}
       onClick={() => {
         setActive(row.slug);
-        setOpen([]);
         window.history.replaceState(null, "", `#${row.slug}`);
       }}
       title={row.label}
@@ -595,8 +437,7 @@ export function WorldCabinet() {
     </button>
   );
 
-
-  // "in N places" · the same subject reached from more than one register or lane.
+  // "in N places" · the same subject reached from more than one place.
   const placeCounts = useMemo(() => {
     const map = new Map<string, number>();
     for (const h of hits ?? []) {
@@ -605,6 +446,8 @@ export function WorldCabinet() {
     }
     return map;
   }, [hits]);
+
+  const read = doss?.read ?? null;
 
   return (
     <HqShell>
@@ -668,8 +511,7 @@ export function WorldCabinet() {
         {!err && rows === null && <div className="plain">Opening your world.</div>}
         {!err && rows !== null && lanes.length === 0 && (
           <div className="plain">
-            No lanes have taken shape yet. The first one appears here the moment your COB records material against
-            it.
+            No folders have taken shape yet. The first one appears here the moment your COB writes something down.
           </div>
         )}
 
@@ -682,7 +524,6 @@ export function WorldCabinet() {
                     {chunk.map((row) => (
                       <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                     ))}
-                    
                   </div>
                 ),
               )}
@@ -690,7 +531,6 @@ export function WorldCabinet() {
                 {(chunks[frontRow] ?? []).map((row) => (
                   <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                 ))}
-                
               </div>
             </div>
 
@@ -716,11 +556,11 @@ export function WorldCabinet() {
                     {num(activeIndex + 1)} {DOT} {activeRow?.label ?? ""}
                   </div>
                   <div className="rule" />
-                  <div className="dtitle">The {activeRow?.label ?? ""} lane</div>
+                  <div className="dtitle">The {activeRow?.label ?? ""} folder</div>
                   <div className="dsub">
                     {activeRow && (
                       <>
-                        {activeRow.entry_count} {activeRow.entry_count === 1 ? "record" : "records"}
+                        {activeRow.entry_count} {activeRow.entry_count === 1 ? "note" : "notes"}
                         {activeRow.open_thread_count !== null && (
                           <>
                             {" "}
@@ -728,10 +568,7 @@ export function WorldCabinet() {
                             {activeRow.open_thread_count === 1 ? "thing" : "things"}
                           </>
                         )}{" "}
-                        {DOT} {freshness(activeRow.updated_at)} {DOT}{" "}
-                        {activeRow.has_narrative
-                          ? "your COB keeps this story and notes where each part came from"
-                          : "no story written yet"}
+                        {DOT} {freshness(activeRow.updated_at)}
                       </>
                     )}
                   </div>
@@ -742,70 +579,125 @@ export function WorldCabinet() {
                   {doss && (
                     <div className="article">
                       <div>
-                        {lead ? (
-                          <p className="lead">
-                            <b>{doss.lane}</b> {DOT} {linkify(lead, targets, Ilink)}
-                          </p>
-                        ) : (
-                          <p className="lead">
-                            <b>{doss.lane}</b> {DOT} no story has been written yet. Below are the notes
-                            themselves.
-                          </p>
-                        )}
-
-                        <div className="tock">Table of contents {DOT} tap any line to open it in full</div>
-                        <div className="toc">
-                          {toc.map((item) => {
-                            const isOpen = open.includes(item.key);
-                            return (
-                              <div key={item.key}>
-                                <button
-                                  className={`tline${isOpen ? " exp" : ""}`}
-                                  onClick={() => toggle(item.key)}
-                                  aria-expanded={isOpen}
-                                >
-                                  <span className="tn">{item.n}</span>
-                                  <span className="tt">{item.title}</span>
-                                  <span className="dots" />
-                                  <span className="tm">{isOpen ? "expanded \u25BE" : item.meta}</span>
-                                </button>
-                                {isOpen && <div className="expand">{item.render()}</div>}
-                              </div>
-                            );
-                          })}
+                        {/* IN SHORT */}
+                        <div className="exsec">
+                          <div className="exhead">In short</div>
+                          {read?.synopsis ? (
+                            <p className="inshort">{linkify(read.synopsis, targets, Ilink)}</p>
+                          ) : doss.narrative ? (
+                            <p className="inshort">
+                              {linkify(leadSentences(doss.narrative.sections?.[0]?.body ?? "", 3), targets, Ilink)}
+                            </p>
+                          ) : (
+                            <p className="nowrite">
+                              Your COB has not written a short version of this folder yet. The notes below are what it
+                              has so far.
+                            </p>
+                          )}
                         </div>
 
-                        {doss.memories.length > 0 && (
-                          <>
-                            <div className="secname">
-                              Evidence {DOT} every record in this lane, at a glance
-                            </div>
-                            <table className="wtab">
-                              <thead>
-                                <tr>
-                                  <th>Recorded</th>
-                                  <th>Record</th>
-                                  <th>Standing</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {doss.memories.map((m) => (
-                                  <tr key={m.id}>
-                                    <td className="d">{shortDate(m.updated_at ?? m.created_at)}</td>
-                                    <td>
-                                      <button className="ilink" onClick={() => toggle("records")}>
-                                        {m.title}
+                        {/* WHAT YOUR COB CONCLUDES */}
+                        <div className="exsec">
+                          <div className="exhead">What your COB concludes</div>
+                          {read && read.judgments.length > 0 ? (
+                            <>
+                              {read.judgments.map((j, i) => (
+                                <div className="kj" key={i}>
+                                  <div className="kjn">{num(i + 1)} {DOT} conclusion</div>
+                                  <div className="kjc">{linkify(j.claim, targets, Ilink)}</div>
+                                  {j.reasoning && <div className="kjr">{linkify(j.reasoning, targets, Ilink)}</div>}
+                                  <div className="kjfoot">
+                                    {j.confidence && (
+                                      <span
+                                        className={`pill ${j.confidence}`}
+                                        title="How sure your COB is about this."
+                                      >
+                                        {CONFIDENCE_COPY[j.confidence]}
+                                      </span>
+                                    )}
+                                    {j.sources.map((s, si) => (
+                                      <button
+                                        className="srcchip"
+                                        key={si}
+                                        title="Where this came from."
+                                        onClick={() => goto(active, "records")}
+                                      >
+                                        from {DOT} {s.length > 24 ? shortId(s) : s}
                                       </button>
-                                    </td>
-                                    <td className="d">
-                                      {[m.category, m.status].filter(Boolean).join(` ${DOT} `) || "\u2014"}
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </>
-                        )}
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                              <Ask section="What your COB concludes" ids={read.judgments.flatMap((j) => j.sources)} />
+                            </>
+                          ) : (
+                            <p className="nowrite">
+                              Your COB has not written its read on this folder yet. Ask it for one and it will show up
+                              here.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* WHAT YOUR COB RECOMMENDS */}
+                        <div className="exsec">
+                          <div className="exhead">What your COB recommends</div>
+                          {read && read.actions.length > 0 ? (
+                            <div className="recs">
+                              {read.actions.map((a, i) => (
+                                <div className="rec" key={i}>
+                                  <span className="rn">{num(i + 1)}</span>
+                                  <span className="rt">
+                                    {linkify(a.text, targets, Ilink)}
+                                    {a.blocker && <span className="rb">waiting on {a.blocker}</span>}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="nowrite">
+                              Your COB has not written any next moves for this folder yet.
+                            </p>
+                          )}
+                        </div>
+
+                        {/* TABLE OF CONTENTS */}
+                        <div className="tock">Table of contents {DOT} tap any line to jump to it</div>
+                        <div className="toc">
+                          {groups.map((g, i) => (
+                            <button className="tline" key={g.key} onClick={() => goto(active, g.key)}>
+                              <span className="tn">&sect; {i + 1}</span>
+                              <span className="tt">{g.title}</span>
+                              <span className="dots" />
+                              <span className="tm">{g.meta}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* THE DETAILS */}
+                        <div className="exsec">
+                          <div className="exhead">The details</div>
+                          {groups.map((g, i) => (
+                            <div className="dgroup" id={`g-${g.key}`} key={g.key}>
+                              <h3>
+                                <span className="gn">&sect; {i + 1}</span>
+                                {g.title}
+                              </h3>
+                              <div className="gsum">{g.summary}</div>
+                              {g.table}
+                              {g.facts.map((f) => (
+                                <div className={`fact${f.late ? " late" : ""}`} key={f.key}>
+                                  <div className="fd">{f.date}</div>
+                                  <div className="fs">
+                                    {f.body}
+                                    <span className="fsrc">{f.source}</span>
+                                  </div>
+                                </div>
+                              ))}
+                              {g.empty && !g.table && <p className="nowrite">{g.empty}</p>}
+                              <Ask section={g.title} ids={g.ids} />
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
                       <div>
@@ -818,48 +710,6 @@ export function WorldCabinet() {
                             </div>
                           ))}
                         </div>
-
-                        {pop && (
-                          <div className="pop">
-                            <button className="popclose" onClick={() => setPop(null)} aria-label="Close pop-out">
-                              &times;
-                            </button>
-                            <div className="pk">Pop-out {DOT} {pop.target.name}</div>
-                            {pop.loading && <div className="pv">Reading the record.</div>}
-                            {pop.error && <div className="pv">That record could not be read: {pop.error}</div>}
-                            {pop.card && (
-                              <div className="pv">
-                                {pop.card.entity.etype}
-                                {pop.card.entity.tag ? ` ${DOT} ${pop.card.entity.tag}` : ""} {DOT}{" "}
-                                {pop.card.claim_count} {pop.card.claim_count === 1 ? "claim" : "claims"} on record.
-                                {pop.card.lead ? ` ${pop.card.lead}` : " No claim text recorded yet."}
-                              </div>
-                            )}
-                            {pop.card && pop.where === null && (
-                              <button className="ask" onClick={() => loadWhere(pop.target)}>
-                                Everywhere they show up &rarr;
-                              </button>
-                            )}
-                            {pop.where !== null && (
-                              <div className="pwhere">
-                                {pop.where.length === 0 && (
-                                  <span className="loc">Only in this lane so far.</span>
-                                )}
-                                {pop.where.map((h, i) => (
-                                  <button
-                                    key={`${h.rid}-${i}`}
-                                    onClick={() => goto(h.slug, sectionForRegister(h.register))}
-                                  >
-                                    <span className="loc">
-                                      {h.lane ?? h.register} {DOT} {h.register}
-                                    </span>
-                                    {h.title ?? h.rid}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -868,7 +718,6 @@ export function WorldCabinet() {
             </div>
           </>
         )}
-
       </div>
     </HqShell>
   );
