@@ -54,6 +54,8 @@ import HqSurface from "@/pages/HqSurface";
 import BlueprintsOS from "@/pages/BlueprintsOS";
 import WorldSurface from "@/pages/WorldSurface";
 import MemoryVault from "@/pages/MemoryVault";
+import HqRecords from "@/pages/HqRecords";
+
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
 import OnboardingIframe from "@/pages/onboarding/OnboardingIframe";
@@ -137,6 +139,9 @@ const App = () => (
             <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
+            {/* Records is admin-only; the page itself refuses a non-operator and so does its data path */}
+            <Route path="/hq/records" element={<AuthGate><HqRecords /></AuthGate>} />
+
 
             {/* Operator zone · index is the full-viewport panel surface */}
             <Route path="/control" element={<AuthGate><FleetOperatorGate><PanelSurface /></FleetOperatorGate></AuthGate>} />

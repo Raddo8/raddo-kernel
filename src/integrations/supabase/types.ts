@@ -2615,6 +2615,7 @@ export type Database = {
       }
       goals: {
         Row: {
+          cid: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -2630,6 +2631,7 @@ export type Database = {
           why: string | null
         }
         Insert: {
+          cid?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -2645,6 +2647,7 @@ export type Database = {
           why?: string | null
         }
         Update: {
+          cid?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -3726,11 +3729,13 @@ export type Database = {
         Row: {
           body_md: string
           category: string | null
+          category_legacy: string | null
           cid: string | null
           confidence: number
           created_at: string
           created_by: string | null
           id: string
+          lane: string | null
           notion_block_ref: string | null
           session_id: string | null
           status: string
@@ -3742,11 +3747,13 @@ export type Database = {
         Insert: {
           body_md: string
           category?: string | null
+          category_legacy?: string | null
           cid?: string | null
           confidence?: number
           created_at?: string
           created_by?: string | null
           id?: string
+          lane?: string | null
           notion_block_ref?: string | null
           session_id?: string | null
           status?: string
@@ -3758,11 +3765,13 @@ export type Database = {
         Update: {
           body_md?: string
           category?: string | null
+          category_legacy?: string | null
           cid?: string | null
           confidence?: number
           created_at?: string
           created_by?: string | null
           id?: string
+          lane?: string | null
           notion_block_ref?: string | null
           session_id?: string | null
           status?: string
@@ -4233,6 +4242,7 @@ export type Database = {
       open_loops: {
         Row: {
           brief_status: string
+          cid: string | null
           created_at: string
           id: string
           last_surfaced: string | null
@@ -4248,6 +4258,7 @@ export type Database = {
         }
         Insert: {
           brief_status?: string
+          cid?: string | null
           created_at?: string
           id?: string
           last_surfaced?: string | null
@@ -4263,6 +4274,7 @@ export type Database = {
         }
         Update: {
           brief_status?: string
+          cid?: string | null
           created_at?: string
           id?: string
           last_surfaced?: string | null
@@ -5255,6 +5267,30 @@ export type Database = {
           },
         ]
       }
+      register_cadence: {
+        Row: {
+          enabled: boolean
+          max_silence: string
+          note: string | null
+          register_key: string
+          ts_col: string
+        }
+        Insert: {
+          enabled?: boolean
+          max_silence: string
+          note?: string | null
+          register_key: string
+          ts_col: string
+        }
+        Update: {
+          enabled?: boolean
+          max_silence?: string
+          note?: string | null
+          register_key?: string
+          ts_col?: string
+        }
+        Relationships: []
+      }
       register_migration_contract: {
         Row: {
           authority_policy: string
@@ -5477,6 +5513,7 @@ export type Database = {
       }
       ritual_runs: {
         Row: {
+          cid: string | null
           created_at: string
           duration_ms: number | null
           id: string
@@ -5488,6 +5525,7 @@ export type Database = {
           unsaved: Json
         }
         Insert: {
+          cid?: string | null
           created_at?: string
           duration_ms?: number | null
           id?: string
@@ -5499,6 +5537,7 @@ export type Database = {
           unsaved?: Json
         }
         Update: {
+          cid?: string | null
           created_at?: string
           duration_ms?: number | null
           id?: string
@@ -6047,6 +6086,7 @@ export type Database = {
       }
       session_checkpoints: {
         Row: {
+          cid: string | null
           created_at: string
           decisions_pending: Json
           deferrals: Json
@@ -6062,6 +6102,7 @@ export type Database = {
           tenant: string
         }
         Insert: {
+          cid?: string | null
           created_at?: string
           decisions_pending?: Json
           deferrals?: Json
@@ -6077,6 +6118,7 @@ export type Database = {
           tenant: string
         }
         Update: {
+          cid?: string | null
           created_at?: string
           decisions_pending?: Json
           deferrals?: Json
@@ -6103,6 +6145,7 @@ export type Database = {
       }
       sessions: {
         Row: {
+          cid: string | null
           close_kind: string | null
           closed_at: string | null
           id: string
@@ -6113,6 +6156,7 @@ export type Database = {
           tenant: string
         }
         Insert: {
+          cid?: string | null
           close_kind?: string | null
           closed_at?: string | null
           id?: string
@@ -6123,6 +6167,7 @@ export type Database = {
           tenant: string
         }
         Update: {
+          cid?: string | null
           close_kind?: string | null
           closed_at?: string | null
           id?: string
@@ -8226,7 +8271,9 @@ export type Database = {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
       }
+      cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
         Returns: Json
@@ -8331,6 +8378,33 @@ export type Database = {
           title: string
         }[]
       }
+      hq_records_counts_v1: {
+        Args: { _cid: string }
+        Returns: {
+          last_write: string
+          register: string
+          row_count: number
+        }[]
+      }
+      hq_records_fleet_v1: {
+        Args: never
+        Returns: {
+          cid: string
+          cob_name: string
+          decisions_count: number
+          display_name: string
+          last_write: string
+          loops_open: number
+          memory_count: number
+          memory_last: string
+          minutes_count: number
+          principal: string
+          sessions_count: number
+          sessions_last: string
+          status: string
+        }[]
+      }
+      hq_records_keys_v1: { Args: { _cid: string }; Returns: string[] }
       hq_scheduled_read:
         | {
             Args: never
@@ -8658,6 +8732,7 @@ export type Database = {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
       }
+      register_silence_watchdog: { Args: never; Returns: number }
       resolve_cid: { Args: { k: string }; Returns: string }
       resolve_hq_authority_v1: {
         Args: { p_auth_user_id: string; p_session_id?: string }
@@ -8720,6 +8795,7 @@ export type Database = {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
       }
+      watchdog_health: { Args: never; Returns: number }
       world_resolve_entity_v1: {
         Args: { p_cid: string; p_etype: string; p_keys?: Json; p_name: string }
         Returns: Json
