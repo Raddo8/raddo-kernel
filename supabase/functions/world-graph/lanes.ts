@@ -41,7 +41,7 @@ function loopsForLane(loops: any[], lane: string): any[] {
 }
 
 async function readAll(admin: Admin, cid: string) {
-  const [mem, story, loops] = await Promise.all([
+  const [mem, story, judg, loops] = await Promise.all([
     admin
       .from("memory_entries")
       .select("id, title, body_md, lane, category, status, confidence, created_by, created_at, updated_at")
@@ -55,6 +55,12 @@ async function readAll(admin: Admin, cid: string) {
       .eq("kind", "lane-narrative")
       .order("created_at", { ascending: false }),
     admin
+      .from("storyline")
+      .select("id, title, body_md, cites, grade, kind, created_at")
+      .eq("cid", cid)
+      .eq("kind", "lane-judgments")
+      .order("created_at", { ascending: false }),
+    admin
       .from("open_loops")
       .select("id, title, trigger, owner, state, brief_status, updated_at")
       .eq("cid", cid)
@@ -63,6 +69,7 @@ async function readAll(admin: Admin, cid: string) {
   return {
     memories: (mem.data ?? []) as any[],
     narratives: (story.data ?? []) as any[],
+    reads: (judg.data ?? []) as any[],
     loops: (loops.data ?? []) as any[],
   };
 }
@@ -131,7 +138,7 @@ function sections(bodyMd: string): Array<{ heading: string; body: string }> {
 }
 
 export async function actionLane(admin: Admin, cid: string, slug: string, sensitivities: string[]) {
-  const { memories, narratives, loops } = await readAll(admin, cid);
+  const { memories, narratives, reads, loops } = await readAll(admin, cid);
 
   const names = new Set<string>();
   for (const m of memories) if (typeof m.lane === "string" && m.lane.trim()) names.add(m.lane.trim());
@@ -162,9 +169,12 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     (e: any) => typeof e.name === "string" && e.name.length > 2 && haystack.includes(e.name.toLowerCase()),
   );
 
+  const authored = reads.find((r) => String(r.title ?? "").trim() === lane) ?? null;
+
   return {
     ok: true,
     action: "lane",
+    read: parseRead(authored),
     cid,
     lane,
     slug,
@@ -182,5 +192,50 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     threads,
     threads_derived: true,
     entities,
+  };
+}
+
+/** The COB's written read on a folder. Authored and stored, never computed here.
+ *  Anything malformed is treated as absent: the surface then says plainly that
+ *  no read has been written yet. */
+export function parseRead(row: any): any {
+  if (!row) return null;
+  let parsed: any = null;
+  const raw = String(row.body_md ?? "").trim();
+  try {
+    parsed = JSON.parse(raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim());
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const judgments = Array.isArray(parsed.judgments)
+    ? parsed.judgments
+        .map((j: any) => ({
+          claim: String(j?.claim ?? "").trim(),
+          reasoning: String(j?.reasoning ?? "").trim(),
+          confidence: ["high", "medium", "low"].includes(String(j?.confidence ?? "").toLowerCase())
+            ? String(j.confidence).toLowerCase()
+            : null,
+          sources: Array.isArray(j?.sources) ? j.sources.map((s: any) => String(s)).filter(Boolean) : [],
+        }))
+        .filter((j: any) => j.claim)
+    : [];
+  const actions = Array.isArray(parsed.actions)
+    ? parsed.actions
+        .map((a: any) =>
+          typeof a === "string"
+            ? { text: a.trim(), blocker: null }
+            : { text: String(a?.text ?? "").trim(), blocker: a?.blocker ? String(a.blocker) : null },
+        )
+        .filter((a: any) => a.text)
+    : [];
+  const synopsis = String(parsed.synopsis ?? "").trim();
+  if (!synopsis && !judgments.length && !actions.length) return null;
+  return {
+    id: row.id,
+    written_at: row.created_at ?? null,
+    synopsis: synopsis || null,
+    judgments,
+    actions,
   };
 }
