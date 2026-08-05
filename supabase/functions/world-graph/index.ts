@@ -19,6 +19,7 @@ import { derivePrincipal, isFailure, readableSensitivities, type Principal } fro
 import { writeReceipt } from "./receipts.ts";
 import { actionLanes, actionLane } from "./lanes.ts";
 import { actionSearch, actionEntityCard, actionEntityWhere } from "./search.ts";
+import { actionBrief } from "./brief.ts";
 
 
 const BUILD_ID = "hshell.1";
@@ -643,6 +644,12 @@ Deno.serve(async (req) => {
         if (!q) return json({ ok: true, action: "search", cid: principal.cid, q: "", rows: [] });
         const out = await actionSearch(admin, principal.cid, q, Number(body?.limit ?? 20));
         return json(out, out.ok ? 200 : 500);
+      }
+      case "brief": {
+        const id = str(body?.entity_id);
+        if (!id) return fail("missing_entity_id");
+        const out = await actionBrief(admin, principal.cid, id, readableSensitivities(principal));
+        return json(out, out.ok ? 200 : 404);
       }
       case "entity_card": {
         const id = str(body?.entity_id);

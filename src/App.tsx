@@ -54,6 +54,7 @@ import HqSurface from "@/pages/HqSurface";
 import BlueprintsOS from "@/pages/BlueprintsOS";
 import WorldSurface from "@/pages/WorldSurface";
 import WorldCabinet from "@/pages/WorldCabinet";
+import EntityBrief from "@/pages/EntityBrief";
 
 import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
@@ -140,6 +141,7 @@ const App = () => (
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldCabinet /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/world/brief/:id" element={<AuthGate><ClientReadinessGate><EntityBrief /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/world/registers" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
 
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
