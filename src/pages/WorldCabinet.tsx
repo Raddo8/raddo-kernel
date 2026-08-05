@@ -577,11 +577,6 @@ export function WorldCabinet() {
     </button>
   );
 
-  const Listen = () => (
-    <button className="tab listen" disabled aria-disabled="true">
-      <span className="no">{DOT}</span>Next lane files itself
-    </button>
-  );
 
   // "in N places" · the same subject reached from more than one register or lane.
   const placeCounts = useMemo(() => {
