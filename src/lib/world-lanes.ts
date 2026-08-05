@@ -70,12 +70,39 @@ export interface LaneDossierPayload {
   entities: LaneEntity[];
 }
 
+export interface SearchHit {
+  register: string;
+  rid: string;
+  lane: string | null;
+  slug: string | null;
+  title: string | null;
+  snippet: string | null;
+  rank: number | null;
+}
+
+export interface EntityCard {
+  entity: { id: string; etype: string; name: string; tag: string | null; status: string | null; sensitivity: string | null };
+  claim_count: number;
+  lead: string | null;
+}
+
 export async function callWorld<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.functions.invoke("world-graph", { body: { ...body, action } });
   if (error) throw new Error(error.message);
   if (!data?.ok) throw new Error(String(data?.error ?? "world_graph_error"));
   return data as T;
 }
+
+/** Which TOC section a search hit belongs to, so a result can open in place. */
+export function sectionForRegister(register: string): string {
+  const r = register.toLowerCase();
+  if (r.includes("story") || r.includes("narrative")) return "storyline";
+  if (r.includes("memory") || r.includes("record")) return "records";
+  if (r.includes("thread") || r.includes("loop")) return "threads";
+  if (r.includes("claim") || r.includes("entit")) return "entities";
+  return "records";
+}
+
 
 /** Compose the precise message the client hands to their COB. The page never writes. */
 export function composeChangeRequest(args: {
