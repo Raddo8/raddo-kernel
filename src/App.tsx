@@ -53,6 +53,9 @@ import BuildsAdmin from "@/pages/BuildsAdmin";
 import HqSurface from "@/pages/HqSurface";
 import BlueprintsOS from "@/pages/BlueprintsOS";
 import WorldSurface from "@/pages/WorldSurface";
+import WorldCabinet from "@/pages/WorldCabinet";
+import LaneDossier from "@/pages/LaneDossier";
+
 import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
 
@@ -137,7 +140,10 @@ const App = () => (
             {/* Client zone */}
             <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
-            <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldCabinet /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/world/lane/:slug" element={<AuthGate><ClientReadinessGate><LaneDossier /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/world/registers" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
+
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
             {/* Records is admin-only; the page itself refuses a non-operator and so does its data path */}
             <Route path="/hq/records" element={<AuthGate><HqRecords /></AuthGate>} />
