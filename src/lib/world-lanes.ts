@@ -118,3 +118,79 @@ export function composeChangeRequest(args: {
     "What should change:",
   ].join("\n");
 }
+
+/** The COB's written read on a folder or a subject. Authored, never computed. */
+export interface CobRead {
+  id: string;
+  written_at: string | null;
+  synopsis: string | null;
+  judgments: Array<{
+    claim: string;
+    reasoning: string;
+    confidence: "high" | "medium" | "low" | null;
+    sources: string[];
+  }>;
+  actions: Array<{ text: string; blocker: string | null }>;
+}
+
+export interface BriefPayload {
+  entity: {
+    id: string;
+    etype: string;
+    name: string;
+    tag: string | null;
+    status: string | null;
+    sensitivity: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  };
+  read: CobRead | null;
+  claims: Array<{
+    id: string;
+    predicate: string | null;
+    value_text: string | null;
+    grade: string | null;
+    observed_at: string | null;
+    status: string | null;
+  }>;
+  connections: Array<{
+    id: string;
+    relation: string;
+    direction: "in" | "out";
+    entity_id: string;
+    name: string;
+    etype: string;
+  }>;
+  folders: Array<{ lane: string; slug: string; fact_count: number }>;
+  mentions: Array<{
+    id: string;
+    title: string;
+    body_md: string;
+    lane: string | null;
+    category: string | null;
+    created_by: string | null;
+    created_at: string | null;
+    updated_at: string | null;
+  }>;
+  counts: { claims: number; folders: number; facts: number };
+}
+
+/** Plain-English kind for a subject, for the brief kicker. */
+export function subjectKind(etype: string): string {
+  const e = String(etype ?? "").toLowerCase();
+  if (/person|people|contact|human/.test(e)) return "person";
+  if (/org|company|business|vendor|firm/.test(e)) return "company";
+  if (/case|matter|deal|pursuit/.test(e)) return "case";
+  if (/property|asset|site|building/.test(e)) return "property";
+  return e || "subject";
+}
+
+/** Plain-English line for where a fact came from. */
+export function sourceLine(grade: string | null | undefined, who?: string | null): string {
+  const g = String(grade ?? "").toLowerCase();
+  if (["seen", "own-probe", "document", "system-of-record", "verified"].includes(g)) {
+    return "your COB checked this itself";
+  }
+  if (who) return `someone told your COB this \u00b7 ${who}`;
+  return "someone told your COB this";
+}

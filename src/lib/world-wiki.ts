@@ -139,3 +139,18 @@ export function linkify(
   });
   return nodes;
 }
+
+/** Human date for client view: "Jun 22", or "Jun 22 · 1:59am" when a time is
+ *  written down. Never an ISO string. */
+export function humanDate(iso: string | null | undefined, withTime = false): string {
+  if (!iso) return "no date";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "no date";
+  const day = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (!withTime) return day;
+  const time = d
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    .replace(" ", "")
+    .toLowerCase();
+  return `${day} \u00b7 ${time}`;
+}
