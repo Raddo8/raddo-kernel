@@ -47,7 +47,7 @@
 .wld .toc button.tline { width: 100%; display: flex; align-items: baseline; gap: 14px; padding: 11px 6px; border: none; border-bottom: 1px solid var(--edge2); background: none; text-align: left; cursor: pointer; font-family: var(--sans); }
 .wld .toc button.tline:hover { background: rgba(239, 159, 39, .05); }
 .wld .toc .tn { font-family: var(--mono); font-size: 10px; color: var(--brass-deep); font-weight: 700; letter-spacing: .1em; width: 44px; flex: none; }
-.wld .toc .tt { font-size: 15px; font-weight: 700; color: var(--ink); flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wld .toc .tt { font-size: 15px; font-weight: 700; color: var(--ink); flex: 0 1 auto; min-width: 0; overflow: visible; text-overflow: clip; white-space: normal; }
 .wld .toc .dots { flex: 1; border-bottom: 1px dotted var(--edge); transform: translateY(-4px); }
 .wld .toc .tm { font-family: var(--mono); font-size: 9.5px; color: var(--ash); flex: none; }
 .wld .toc button.tline.exp .tt { color: var(--brass-deep); }
