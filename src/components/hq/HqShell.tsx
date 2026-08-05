@@ -26,8 +26,8 @@ interface NavItem {
 const NAV: NavItem[] = [
   { n: "01", label: "HQ", to: "/hq" },
   { n: "02", label: "The World", to: "/hq/world" },
-  { n: "03", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
-  { n: "04", label: "Memories", to: "/hq/memories" },
+  { n: "03", label: "Memories", to: "/hq/memories" },
+  { n: "04", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
   { n: "05", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
 ];
 
@@ -109,7 +109,9 @@ export function HqShell({ children }: { children: ReactNode }) {
             </div>
             <div>
               <div className="mark-name">COB &middot; HQ</div>
-              <div className="mark-sub">{cid ?? "resolving\u2026"}</div>
+              <div className="mark-sub" title="Your account number with your COB">
+                {cid ?? "loading\u2026"}
+              </div>
             </div>
           </div>
 
@@ -182,9 +184,9 @@ export function HqShell({ children }: { children: ReactNode }) {
         </nav>
 
 
-        <div className="rail-foot">
+        <div className="rail-foot" title="These pages show live information. To change anything, ask your COB.">
           <span className="dot" />
-          read live &middot; read only
+          always up to date &middot; you can read, not change
         </div>
       </aside>
 

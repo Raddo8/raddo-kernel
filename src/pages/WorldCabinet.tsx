@@ -77,7 +77,14 @@ function GradeChip({ grade }: { grade: string | null | undefined }) {
   const g = String(grade ?? "").toLowerCase();
   if (!g) return null;
   const seen = SEEN_GRADES.includes(g);
-  return <span className={`chip ${seen ? "seen" : "told"}`}>{seen ? "SEEN" : "TOLD"} {DOT} {g}</span>;
+  return (
+    <span
+      className={`chip ${seen ? "seen" : "told"}`}
+      title={seen ? "Your COB checked this itself." : "Someone told your COB this."}
+    >
+      {seen ? "SEEN" : "TOLD"} {DOT} {g}
+    </span>
+  );
 }
 
 function Chronology({ lines, matter }: { lines: DatedLine[]; matter: string }) {
@@ -345,10 +352,10 @@ export function WorldCabinet() {
     const out: Array<{ k: string; v: JSX.Element | string; alert?: boolean }> = [];
 
     out.push({
-      k: "Records",
+      k: "Notes on file",
       v: (
         <>
-          <b>{activeRow.entry_count}</b> on the record
+          <b>{activeRow.entry_count}</b> written down
         </>
       ),
     });
@@ -386,18 +393,18 @@ export function WorldCabinet() {
 
     if (activeRow.open_thread_count !== null) {
       out.push({
-        k: "Open threads",
+        k: "Still waiting on",
         v: activeRow.open_thread_count
-          ? `${activeRow.open_thread_count} standing`
-          : "none standing",
+          ? `${activeRow.open_thread_count} open`
+          : "nothing open",
       });
     }
 
-    out.push({ k: "Freshest", v: freshness(activeRow.updated_at) });
+    out.push({ k: "Last updated", v: freshness(activeRow.updated_at) });
 
-    if (doss.narrative?.grade) out.push({ k: "Grade", v: doss.narrative.grade });
+    if (doss.narrative?.grade) out.push({ k: "How we know", v: doss.narrative.grade });
 
-    out.push({ k: "Source", v: "your own registers" });
+    out.push({ k: "Where from", v: "your own records" });
 
     return out.slice(0, INFOBOX_CEILING);
   }, [activeRow, clock, doss]);
@@ -486,13 +493,12 @@ export function WorldCabinet() {
     items.push({
       key: "threads",
       n: `\u00a7 ${base + 2}`,
-      title: "Open threads",
-      meta: doss.threads.length ? `${doss.threads.length} standing` : "none standing",
+      title: "Still waiting on",
+      meta: doss.threads.length ? `${doss.threads.length} open` : "nothing open",
       render: () =>
         doss.threads.length === 0 ? (
           <p>
-            No open threads match this lane by name. Threads are matched to lanes by name, so a thread worded
-            differently will not appear here.
+            Nothing is waiting on this group right now.
           </p>
         ) : (
           <>
@@ -501,12 +507,12 @@ export function WorldCabinet() {
                 <h4>{t.title}</h4>
                 {t.trigger && <p>{linkify(t.trigger, targets, Ilink)}</p>}
                 <div className="chips">
-                  <span className="chip open">open</span>
+                  <span className="chip open" title="Still waiting on this.">open</span>
                   {t.owner && <span className="chip">{t.owner}</span>}
                   {t.state && <span className="chip">{t.state}</span>}
-                  <span className="chip">thread {DOT} {shortId(t.id)}</span>
+                  <span className="chip" title="Where this came from.">item {DOT} {shortId(t.id)}</span>
                 </div>
-                <Ask section={`Open thread: ${t.title}`} ids={[t.id]} />
+                <Ask section={`Still waiting on: ${t.title}`} ids={[t.id]} />
               </div>
             ))}
           </>
@@ -516,13 +522,13 @@ export function WorldCabinet() {
     items.push({
       key: "records",
       n: `\u00a7 ${base + 3}`,
-      title: "Every record, in full",
+      title: "Every note, word for word",
       meta: doss.memories.length
-        ? `${doss.memories.length} ${doss.memories.length === 1 ? "entry" : "entries"} verbatim`
-        : "no entries yet",
+        ? `${doss.memories.length} ${doss.memories.length === 1 ? "note" : "notes"}`
+        : "no notes yet",
       render: () =>
         doss.memories.length === 0 ? (
-          <p>No entries are recorded against this lane yet.</p>
+          <p>Nothing has been written down here yet.</p>
         ) : (
           <>
             {doss.memories.map((m) => (
@@ -532,7 +538,11 @@ export function WorldCabinet() {
                 <div className="chips">
                   {m.category && <span className="chip">{m.category}</span>}
                   {m.status && <span className="chip">{m.status}</span>}
-                  {m.created_by && <span className="chip told">TOLD {DOT} {m.created_by}</span>}
+                  {m.created_by && (
+                    <span className="chip told" title="Someone told your COB this.">
+                      TOLD {DOT} {m.created_by}
+                    </span>
+                  )}
                   <span className="chip">source {DOT} memory {shortId(m.id)}</span>
                 </div>
                 <Ask section={m.title} ids={[m.id]} />
@@ -546,12 +556,11 @@ export function WorldCabinet() {
       key: "storyline",
       n: `\u00a7 ${base + 4}`,
       title: "The storyline",
-      meta: doss.narrative ? "how this lane got here" : "not written yet",
+      meta: doss.narrative ? "how this got here" : "not written yet",
       render: () =>
         !doss.narrative ? (
           <p>
-            No narrative has been written for this lane yet. The record entries above are what your COB holds so
-            far.
+            Your COB has not written the story of this group yet. The notes above are what it has so far.
           </p>
         ) : (
           <>
@@ -561,7 +570,7 @@ export function WorldCabinet() {
             ))}
             <div className="chips">
               <GradeChip grade={doss.narrative.grade} />
-              <span className="chip">narrative {DOT} {shortId(doss.narrative.id)}</span>
+              <span className="chip" title="Where this came from.">story {DOT} {shortId(doss.narrative.id)}</span>
             </div>
             <Ask section="The storyline" ids={narrativeIds} />
           </>
@@ -655,8 +664,8 @@ export function WorldCabinet() {
           )}
         </div>
 
-        {err && <div className="plain">The cabinet could not be read: {err}</div>}
-        {!err && rows === null && <div className="plain">Reading your lanes.</div>}
+        {err && <div className="plain">We could not open your world just now.</div>}
+        {!err && rows === null && <div className="plain">Opening your world.</div>}
         {!err && rows !== null && lanes.length === 0 && (
           <div className="plain">
             No lanes have taken shape yet. The first one appears here the moment your COB records material against
@@ -715,19 +724,19 @@ export function WorldCabinet() {
                         {activeRow.open_thread_count !== null && (
                           <>
                             {" "}
-                            {DOT} {activeRow.open_thread_count} open{" "}
-                            {activeRow.open_thread_count === 1 ? "thread" : "threads"} matched by lane name
+                            {DOT} waiting on {activeRow.open_thread_count}{" "}
+                            {activeRow.open_thread_count === 1 ? "thing" : "things"}
                           </>
                         )}{" "}
                         {DOT} {freshness(activeRow.updated_at)} {DOT}{" "}
                         {activeRow.has_narrative
-                          ? "narrative maintained by your COB, cited to its sources"
-                          : "no narrative written yet"}
+                          ? "your COB keeps this story and notes where each part came from"
+                          : "no story written yet"}
                       </>
                     )}
                   </div>
 
-                  {dossErr && <p className="plain">This lane dossier could not be read: {dossErr}</p>}
+                  {dossErr && <p className="plain">We could not open this folder just now.</p>}
                   {!dossErr && !doss && <p className="plain">Opening the folder.</p>}
 
                   {doss && (
@@ -739,8 +748,8 @@ export function WorldCabinet() {
                           </p>
                         ) : (
                           <p className="lead">
-                            <b>{doss.lane}</b> {DOT} no narrative has been written for this lane yet. What follows
-                            is the record itself.
+                            <b>{doss.lane}</b> {DOT} no story has been written yet. Below are the notes
+                            themselves.
                           </p>
                         )}
 
@@ -828,7 +837,7 @@ export function WorldCabinet() {
                             )}
                             {pop.card && pop.where === null && (
                               <button className="ask" onClick={() => loadWhere(pop.target)}>
-                                Everywhere they appear &rarr;
+                                Everywhere they show up &rarr;
                               </button>
                             )}
                             {pop.where !== null && (
