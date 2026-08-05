@@ -638,6 +638,24 @@ Deno.serve(async (req) => {
         const out = await actionLane(admin, principal.cid, slug, readableSensitivities(principal));
         return json(out, out.ok ? 200 : 404);
       }
+      case "search": {
+        const q = str(body?.q);
+        if (!q) return json({ ok: true, action: "search", cid: principal.cid, q: "", rows: [] });
+        const out = await actionSearch(admin, principal.cid, q, Number(body?.limit ?? 20));
+        return json(out, out.ok ? 200 : 500);
+      }
+      case "entity_card": {
+        const id = str(body?.entity_id);
+        if (!id) return fail("missing_entity_id");
+        const out = await actionEntityCard(admin, principal.cid, id, readableSensitivities(principal));
+        return json(out, out.ok ? 200 : 404);
+      }
+      case "entity_where": {
+        const id = str(body?.entity_id);
+        if (!id) return fail("missing_entity_id");
+        const out = await actionEntityWhere(admin, principal.cid, id, readableSensitivities(principal));
+        return json(out, out.ok ? 200 : 404);
+      }
       default: return fail("unknown_action");
     }
 
