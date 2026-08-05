@@ -8357,6 +8357,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          lane: string
           notion_block_ref: string
           session_id: string
           status: string
