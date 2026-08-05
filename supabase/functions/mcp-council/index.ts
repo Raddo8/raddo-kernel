@@ -31,6 +31,7 @@ import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
+import { classifyOnboardingEntry, returningWelcomePayload } from "../_shared/onboarding-routing.ts";
 import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
@@ -3841,7 +3842,33 @@ Deno.serve(async (req) => {
         // failure degrades to a nameless welcome — never another tenant's name.
         const nameless: WelcomeClient = { display_name: null, cob_name: null, first_name: null };
         try {
+          // ONBOARDING GUARD · a verified identity that already holds an ACTIVE
+          // membership is RETURNING. Onboarding never runs inside a provisioned
+          // tenant and never loads an operator/builder kernel here.
+          const entry = await classifyOnboardingEntry(supabaseAdmin, {
+            email: identity.email,
+            emailVerified: identity.emailVerified,
+            sub: identity.sub,
+          });
+          if (entry.classification !== "NEW") {
+            let firstName: string | null = null;
+            try {
+              const { client: known } = await resolveWelcomeClient(entry.cid ?? pctx.legacy_cid);
+              firstName = known.first_name;
+            } catch (_e) { /* nameless welcome-back is acceptable */ }
+            const back = returningWelcomePayload(entry, firstName);
+            console.log("onboarding_returning_identity", JSON.stringify({
+              cid: entry.cid, role: entry.role, route: entry.route,
+              classification: entry.classification, tool: name,
+            }));
+            return rpcResult(id, {
+              content: [{ type: "text", text: back.instructions }],
+              structuredContent: back,
+              isError: false,
+            });
+          }
           const { cid: resolvedCid, client } = await resolveWelcomeClient(pctx.legacy_cid);
+
           if (name === "taylor_setup") {
             await recordProgress(resolvedCid, "taylor-setup", "in-progress", "connector", "walkthrough started");
             const checklist = await readChecklist(resolvedCid);
@@ -4074,6 +4101,21 @@ Deno.serve(async (req) => {
           const kernel = partLookup.kernel;
           const partCid = partLookup.cid;
           if (!kernel) return notFoundResp();
+          // GUARD · never serve a kernel whose tenant differs from the verified
+          // subject's CID. A mismatch is a routing error, not client data.
+          const subjectCid = await resolvedCid();
+          if (subjectCid && partCid && partCid !== subjectCid) {
+            console.error("kernel_tenant_mismatch", JSON.stringify({
+              subject_cid: subjectCid, kernel_cid: partCid, part,
+            }));
+            const mismatch = { error: "routing_error", reason: "kernel_tenant_mismatch", part, seq };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(mismatch) }],
+              structuredContent: mismatch,
+              isError: false,
+            });
+          }
+
           const { data: partRows } = await supabaseAdmin
             .from("kernel_parts")
             .select("seq, content_md, sha256")
