@@ -352,10 +352,10 @@ export function WorldCabinet() {
     const out: Array<{ k: string; v: JSX.Element | string; alert?: boolean }> = [];
 
     out.push({
-      k: "Records",
+      k: "Notes on file",
       v: (
         <>
-          <b>{activeRow.entry_count}</b> on the record
+          <b>{activeRow.entry_count}</b> written down
         </>
       ),
     });
@@ -507,12 +507,12 @@ export function WorldCabinet() {
                 <h4>{t.title}</h4>
                 {t.trigger && <p>{linkify(t.trigger, targets, Ilink)}</p>}
                 <div className="chips">
-                  <span className="chip open">open</span>
+                  <span className="chip open" title="Still waiting on this.">open</span>
                   {t.owner && <span className="chip">{t.owner}</span>}
                   {t.state && <span className="chip">{t.state}</span>}
-                  <span className="chip">thread {DOT} {shortId(t.id)}</span>
+                  <span className="chip" title="Where this came from.">item {DOT} {shortId(t.id)}</span>
                 </div>
-                <Ask section={`Open thread: ${t.title}`} ids={[t.id]} />
+                <Ask section={`Still waiting on: ${t.title}`} ids={[t.id]} />
               </div>
             ))}
           </>
@@ -522,13 +522,13 @@ export function WorldCabinet() {
     items.push({
       key: "records",
       n: `\u00a7 ${base + 3}`,
-      title: "Every record, in full",
+      title: "Every note, word for word",
       meta: doss.memories.length
-        ? `${doss.memories.length} ${doss.memories.length === 1 ? "entry" : "entries"} verbatim`
-        : "no entries yet",
+        ? `${doss.memories.length} ${doss.memories.length === 1 ? "note" : "notes"}`
+        : "no notes yet",
       render: () =>
         doss.memories.length === 0 ? (
-          <p>No entries are recorded against this lane yet.</p>
+          <p>Nothing has been written down here yet.</p>
         ) : (
           <>
             {doss.memories.map((m) => (

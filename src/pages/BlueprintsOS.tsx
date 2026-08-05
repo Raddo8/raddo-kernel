@@ -582,10 +582,10 @@ export function BlueprintsOS() {
           <div className="kick">Blueprints orchestrating builds</div>
           <h1>BOB</h1>
           {resolution.kind === "loading" ? (
-            <div className="note">Resolving your session.</div>
+            <div className="note">Signing you in.</div>
           ) : (
             <div className="note">
-              <b>This board is not available to you.</b> Your session did not resolve a tenant.
+              <b>This board is not open to you.</b> Ask your COB to check your account.
             </div>
           )}
         </div>
@@ -602,8 +602,7 @@ export function BlueprintsOS() {
           <div className="kick">Blueprints orchestrating builds</div>
           <h1>BOB</h1>
           <p className="lede">
-            The single ordered board of everything in front of us. Banked behind, active front now, gated and
-            tabled ahead. Read live from your register, read only.
+            One board with everything we are working on, in order.
           </p>
         </header>
 
@@ -611,7 +610,7 @@ export function BlueprintsOS() {
           <div className="strip-top">
             <div className="kick">Current marching order</div>
             <h2>
-              {orderCounts["ACTIVE FRONT"]} on the active front &middot; {total} records in the register
+              {orderCounts["ACTIVE FRONT"]} being worked on now &middot; {total} in total
             </h2>
           </div>
           <div className="strip-cells">
@@ -650,7 +649,7 @@ export function BlueprintsOS() {
 
         {isError && (
           <div className="note">
-            <b>The read did not complete.</b> Nothing was changed. Reload the page to read again.
+            <b>We could not load this.</b> Nothing changed. Reload the page to try again.
           </div>
         )}
 
@@ -669,7 +668,7 @@ export function BlueprintsOS() {
         )}
 
         <div className="foot">
-          {resolution.viewer.cid} &middot; read live via tenant projections &middot; read only
+          {resolution.viewer.cid} &middot; always up to date &middot; you can read, not change
         </div>
       </main>
 
@@ -748,7 +747,7 @@ export function BlueprintsOS() {
               {linkedBlueprint && (
                 <>
                   <div className="fld">
-                    <div className="k">Register</div>
+                    <div className="k">Where it stands</div>
                     <div className="chiprow">
                       {(() => {
                         const state = orderStateOf(orderMap.get(linkedBlueprint.id));
