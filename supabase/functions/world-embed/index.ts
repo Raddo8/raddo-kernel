@@ -1,154 +1,108 @@
 // supabase/functions/world-embed/index.ts
 //
-// MEANING SEARCH · fills the embedding columns so search can match on meaning.
-//
-// Law:
-//  · idempotent: only rows where embedding IS NULL are ever touched
-//  · safe to re-run at any time; a partial run simply resumes next time
-//  · cid-scoped: one tenant per invocation, never a cross-tenant sweep
-//  · nothing else on the row is modified
-//
-// Callers:
-//  · operator: header `x-cob-operator-key` + { cid } in the body
-//  · signed-in principal: the cid is derived from the token, body cid ignored
+// W-EMBED · THE MEANING LAYER · deterministic, certifiable.
+// Fills the vector(1536) `embedding` column so the World answers natural-language
+// questions. Internal-only (service-role Bearer). Idempotent: only reads NULL
+// embeddings. Model: OpenAI text-embedding-3-small · 1536 dims.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { derivePrincipal, isFailure } from "../_shared/world-identity/identity.ts";
-import { embedBatch, embedProvider, toVectorLiteral } from "../_shared/embed.ts";
 
-const BUILD_ID = "world-embed.1";
-const BATCH = 100;
+const BUILD_ID = "wembed.1";
+const EMBED_MODEL = "text-embedding-3-small";
+const EMBED_DIMS = 1536;
+const DEFAULT_BATCH = 128;
+const OPENAI_URL = "https://api.openai.com/v1/embeddings";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const admin = supabaseUrl && serviceRole
+const openaiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+const admin = (supabaseUrl && serviceRole)
   ? createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } })
   : null;
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID } });
+const fail = (error: string, status = 400, extra: Record<string, unknown> = {}) => json({ ok: false, error, ...extra }, status);
+
+type TableSpec = { table: string; select: string; text: (r: Record<string, unknown>) => string };
+const s = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+
+const TABLES: Record<string, TableSpec> = {
+  world_claims:   { table: "world_claims",   select: "id, predicate, value_text", text: (r) => s(r.value_text) || s(r.predicate) },
+  memory_entries: { table: "memory_entries", select: "id, title, body_md",        text: (r) => [s(r.title), s(r.body_md)].filter(Boolean).join(" — ") },
+  storyline:      { table: "storyline",      select: "id, title, body_md",        text: (r) => [s(r.title), s(r.body_md)].filter(Boolean).join(" — ") },
+};
+
+async function embedBatch(texts: string[]): Promise<number[][]> {
+  const res = await fetch(OPENAI_URL, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${openaiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: EMBED_MODEL, input: texts, dimensions: EMBED_DIMS }),
   });
+  if (!res.ok) { const detail = await res.text().catch(() => ""); throw new Error(`openai_${res.status}:${detail.slice(0, 300)}`); }
+  const data = await res.json();
+  const out: number[][] = (data?.data ?? []).sort((a: any, b: any) => a.index - b.index).map((d: any) => d.embedding as number[]);
+  if (out.length !== texts.length) throw new Error("openai_count_mismatch");
+  return out;
+}
+const toVector = (v: number[]): string => `[${v.join(",")}]`;
 
-const fail = (error: string, status = 400, extra: Record<string, unknown> = {}) =>
-  json({ ok: false, error, ...extra }, status);
-
-/** Each table, and how a row of it reads as one piece of text. */
-const TARGETS = [
-  {
-    table: "memory_entries",
-    columns: "id, title, body_md",
-    text: (r: any) => `${r.title ?? ""}\n${r.body_md ?? ""}`,
-  },
-  {
-    table: "world_claims",
-    columns: "id, predicate, value_text",
-    text: (r: any) => `${r.predicate ?? ""}: ${r.value_text ?? ""}`,
-  },
-  {
-    table: "storyline",
-    columns: "id, title, body_md",
-    text: (r: any) => `${r.title ?? ""}\n${r.body_md ?? ""}`,
-  },
-] as const;
-
-async function fillTable(cid: string, target: (typeof TARGETS)[number], maxBatches: number) {
-  let filled = 0;
-  let skipped = 0;
-  let remaining = 0;
-
-  for (let i = 0; i < maxBatches; i++) {
-    const { data, error } = await admin!
-      .from(target.table)
-      .select(target.columns)
-      .eq("cid", cid)
-      .is("embedding", null)
-      .limit(BATCH);
-    if (error) return { table: target.table, filled, skipped, remaining, error: error.message };
-
-    const rows = (data ?? []) as any[];
+async function embedTable(cid: string, spec: TableSpec, batch: number, max: number) {
+  let embedded = 0, scanned = 0, skipped = 0, rounds = 0;
+  while (embedded + skipped < max) {
+    let q = admin!.from(spec.table).select(spec.select).eq("cid", cid).is("embedding", null).limit(batch);
+    if (spec.table === "world_claims") q = q.neq("status", "voided");
+    const { data, error } = await q;
+    if (error) throw new Error(`${spec.table}_read_failed:${error.message}`);
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
     if (rows.length === 0) break;
-
-    const usable = rows.filter((r) => target.text(r).trim().length > 1);
-    skipped += rows.length - usable.length;
-    if (usable.length === 0) break;
-
-    const vectors = await embedBatch(usable.map((r) => target.text(r).slice(0, 8000)));
-    if (!vectors) return { table: target.table, filled, skipped, remaining, error: "embedding_unavailable" };
-
-    for (let k = 0; k < usable.length; k++) {
-      const upd = await admin!
-        .from(target.table)
-        .update({ embedding: toVectorLiteral(vectors[k]) })
-        .eq("cid", cid)
-        .eq("id", usable[k].id)
-        .is("embedding", null);
-      if (!upd.error) filled++;
+    rounds++; scanned += rows.length;
+    const payload = rows.map((r) => ({ id: r.id as string, text: spec.text(r) }));
+    const embeddable = payload.filter((p) => p.text.length > 0);
+    const empties = payload.filter((p) => p.text.length === 0);
+    for (const e of empties) {
+      await admin!.from(spec.table).update({ embedding: toVector(new Array(EMBED_DIMS).fill(0)) }).eq("cid", cid).eq("id", e.id);
+      skipped++;
     }
+    if (embeddable.length > 0) {
+      const vectors = await embedBatch(embeddable.map((p) => p.text));
+      for (let i = 0; i < embeddable.length; i++) {
+        const { error: uerr } = await admin!.from(spec.table).update({ embedding: toVector(vectors[i]) }).eq("cid", cid).eq("id", embeddable[i].id);
+        if (uerr) throw new Error(`${spec.table}_write_failed:${uerr.message}`);
+        embedded++;
+      }
+    }
+    if (rounds > Math.ceil(max / Math.max(batch, 1)) + 2) break;
   }
-
-  const { count } = await admin!
-    .from(target.table)
-    .select("id", { count: "exact", head: true })
-    .eq("cid", cid)
-    .is("embedding", null);
-  remaining = count ?? 0;
-
-  return { table: target.table, filled, skipped, remaining };
+  let rq = admin!.from(spec.table).select("id", { count: "exact", head: true }).eq("cid", cid).is("embedding", null);
+  if (spec.table === "world_claims") rq = rq.neq("status", "voided");
+  const { count: remaining } = await rq;
+  return { table: spec.table, scanned, embedded, skipped, remaining: remaining ?? 0 };
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method === "GET") {
-    return json({ ok: true, service: "world-embed", build_id: BUILD_ID, provider: Boolean(embedProvider()) });
-  }
+  if (req.method === "GET") return json({ ok: true, service: "world-embed", build_id: BUILD_ID, model: EMBED_MODEL, dims: EMBED_DIMS });
   if (req.method !== "POST") return fail("method_not_allowed", 405);
   if (!admin) return fail("admin_client_unavailable", 503);
-
-  let body: any = {};
+  if (!openaiKey) return fail("openai_key_unset", 503, { hint: "set OPENAI_API_KEY as an edge secret" });
+  const auth = req.headers.get("Authorization") ?? "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  if (!token || token !== serviceRole) return fail("forbidden", 403);
+  let body: any; try { body = await req.json(); } catch { return fail("invalid_json"); }
+  const cid = s(body?.cid); if (!cid) return fail("cid_required");
+  const batch = Math.min(256, Math.max(1, Number(body?.batch) || DEFAULT_BATCH));
+  const max = Math.max(1, Number(body?.max) || 100000);
+  const want: string[] = Array.isArray(body?.tables) && body.tables.length ? body.tables.map(String) : ["world_claims", "memory_entries", "storyline"];
+  const results: unknown[] = [];
   try {
-    body = await req.json();
-  } catch {
-    body = {};
-  }
-
-  // Operator path first, then the signed-in principal path.
-  const operatorKey = Deno.env.get("COB_OPERATOR_KEY") ?? "";
-  const presented = req.headers.get("x-cob-operator-key") ?? "";
-  let cid: string | null = null;
-
-  if (operatorKey && presented && presented === operatorKey) {
-    cid = typeof body?.cid === "string" && body.cid.trim() ? body.cid.trim() : null;
-    if (!cid) return fail("cid_required");
-  } else {
-    const principal = await derivePrincipal(req, admin);
-    if (isFailure(principal)) return fail(principal.error, principal.status);
-    cid = principal.cid;
-  }
-
-  if (!embedProvider()) {
-    return fail("no_embedding_provider", 503, {
-      detail: "No embedding provider is configured. Search keeps working on words alone.",
-    });
-  }
-
-  const maxBatches = Math.min(Math.max(Number(body?.max_batches ?? 20), 1), 200);
-  const only = typeof body?.table === "string" ? body.table : null;
-  const tables = only ? TARGETS.filter((t) => t.table === only) : TARGETS;
-  if (tables.length === 0) return fail("unknown_table");
-
-  const results = [];
-  for (const t of tables) results.push(await fillTable(cid, t, maxBatches));
-
-  return json({
-    ok: true,
-    action: "embed",
-    cid,
-    results,
-    filled: results.reduce((n, r) => n + (r.filled ?? 0), 0),
-    remaining: results.reduce((n, r) => n + (r.remaining ?? 0), 0),
-    build_id: BUILD_ID,
-  });
+    for (const name of want) {
+      const spec = TABLES[name];
+      if (!spec) { results.push({ table: name, error: "unknown_table" }); continue; }
+      results.push(await embedTable(cid, spec, batch, max));
+    }
+  } catch (e) { return fail("embed_failed", 500, { detail: e instanceof Error ? e.message : String(e), partial: results }); }
+  const remaining = results.reduce((n: number, r: any) => n + (r?.remaining ?? 0), 0);
+  return json({ ok: true, action: "embed", cid, model: EMBED_MODEL, dims: EMBED_DIMS, done: remaining === 0, remaining, results, build_id: BUILD_ID });
 });
