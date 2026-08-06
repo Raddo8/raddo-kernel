@@ -8813,6 +8813,13 @@ export type Database = {
           links_created: number
         }[]
       }
+      world_build_events_v2: {
+        Args: { _cid: string }
+        Returns: {
+          events_created: number
+          links_created: number
+        }[]
+      }
       world_entity_heat_v1: {
         Args: { _cid: string }
         Returns: {
