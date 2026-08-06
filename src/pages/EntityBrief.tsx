@@ -75,6 +75,12 @@ export function EntityBrief() {
   const timeline = useMemo(() => {
     if (!data) return [] as Array<{ key: string; when: string; what: string; source: string; late: boolean }>;
     const rows = [
+      ...(data.events ?? []).map((e) => ({
+        key: `e-${e.id}`,
+        iso: e.date,
+        what: e.what,
+        source: e.evidence ? "your COB read this in your own records" : "on your calendar of events",
+      })),
       ...data.claims.map((c) => ({
         key: `c-${c.id}`,
         iso: c.observed_at,
@@ -92,6 +98,15 @@ export function EntityBrief() {
       .sort((a, b) => String(b.iso ?? "").localeCompare(String(a.iso ?? "")))
       .map((r) => ({ key: r.key, when: humanDate(r.iso, true), what: r.what, source: r.source, late: false }));
   }, [data]);
+
+  const typedLinks = useMemo(
+    () => (data?.connections ?? []).filter((c) => c.typed),
+    [data],
+  );
+  const looseLinks = useMemo(
+    () => (data?.connections ?? []).filter((c) => !c.typed),
+    [data],
+  );
 
   const clock = useMemo(() => {
     if (!data) return null;
@@ -266,6 +281,12 @@ export function EntityBrief() {
                       <b>{data.counts.folders}</b>
                     </span>
                   </div>
+                  {data.hub && data.hub.folders >= 3 && (
+                    <div className="irow">
+                      <span className="k">Shows up a lot</span>
+                      <span className="v">appears across {data.hub.folders} folders</span>
+                    </div>
+                  )}
                   <div className="irow">
                     <span className="k">Last updated</span>
                     <span className="v">{humanDate(data.entity.updated_at)}</span>
@@ -286,9 +307,32 @@ export function EntityBrief() {
                   {data.connections.length === 0 && data.folders.length === 0 && (
                     <div className="wsempty">Nothing is linked to this subject yet.</div>
                   )}
-                  {data.connections.map((c) => (
-                    <button className="crow" key={c.id} onClick={() => navigate(`/hq/world/brief/${c.entity_id}`)}>
-                      <span className="crel">{c.relation}</span>
+                  {typedLinks.map((c) => (
+                    <button
+                      className="crow"
+                      key={c.id}
+                      onClick={() => navigate(`/hq/world/brief/${c.entity_id}`)}
+                      title={c.evidence ?? "Your COB has not saved a sentence for this link yet."}
+                    >
+                      <span className="crel">
+                        {c.phrase}
+                        {c.hub_folders && c.hub_folders >= 3
+                          ? ` ${DOT} appears across ${c.hub_folders} folders`
+                          : ""}
+                      </span>
+                      {c.name}
+                      {c.evidence && <span className="ev">{c.evidence}</span>}
+                    </button>
+                  ))}
+                  {looseLinks.length > 0 && <div className="csub">Also appears with</div>}
+                  {looseLinks.map((c) => (
+                    <button
+                      className="crow"
+                      key={c.id}
+                      onClick={() => navigate(`/hq/world/brief/${c.entity_id}`)}
+                      title={c.evidence ?? "They show up in the same notes."}
+                    >
+                      <span className="crel">{subjectKind(c.etype)}</span>
                       {c.name}
                     </button>
                   ))}
