@@ -179,10 +179,35 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     .join(" ")
     .toLowerCase();
   const entities = (entRows ?? []).filter(
-    (e: any) => typeof e.name === "string" && e.name.length > 2 && haystack.includes(e.name.toLowerCase()),
+    (e: any) =>
+      typeof e.name === "string" &&
+      e.name.length > 2 &&
+      e.etype !== "Event" &&
+      haystack.includes(e.name.toLowerCase()),
   );
 
+  // WHO AND WHAT IS IN THIS FOLDER · the same subjects, ordered by how much
+  // attention they deserve, with the reason the database wrote for the score.
+  const [heat, hubs] = await Promise.all([heatByName(admin, cid), hubsByName(admin, cid)]);
+  const subjects = entities
+    .map((e: any) => {
+      const key = String(e.name ?? "").toLowerCase();
+      const h = heat.get(key) ?? null;
+      const hub = hubs.get(key) ?? null;
+      return {
+        id: e.id,
+        name: e.name,
+        etype: e.etype,
+        tag: e.tag ?? null,
+        heat: h ? Number(h.heat) : null,
+        why: h ? (h.why ?? null) : null,
+        hub_folders: hub ? hub.folders : null,
+      };
+    })
+    .sort((a: any, b: any) => (b.heat ?? -1) - (a.heat ?? -1));
+
   const authored = reads.find((r) => String(r.title ?? "").trim() === lane) ?? null;
+
 
   return {
     ok: true,
