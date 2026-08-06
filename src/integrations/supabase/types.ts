@@ -8806,6 +8806,13 @@ export type Database = {
         Returns: boolean
       }
       watchdog_health: { Args: never; Returns: number }
+      world_build_all_v1: {
+        Args: { _cid: string }
+        Returns: {
+          result: string
+          step: string
+        }[]
+      }
       world_build_events_v1: {
         Args: { _cid: string }
         Returns: {
@@ -8857,6 +8864,18 @@ export type Database = {
           name: string
         }[]
       }
+      world_lane_heat_v1: {
+        Args: { _cid: string }
+        Returns: {
+          entries: number
+          heat: number
+          lane: string
+          last_touch: string
+          open_items: number
+          subjects: number
+          why: string
+        }[]
+      }
       world_link_mentions_v1: {
         Args: { _cid: string }
         Returns: {
@@ -8869,7 +8888,7 @@ export type Database = {
         Returns: Json
       }
       world_search_v1: {
-        Args: { _cid: string; _limit?: number; _q: string }
+        Args: { _cid: string; _limit?: number; _q: string; _qvec?: string }
         Returns: {
           lane: string
           rank: number
