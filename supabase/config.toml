@@ -91,4 +91,7 @@ verify_jwt = false
 [functions.world-embed]
 verify_jwt = false
 
+[functions.world-intake]
+verify_jwt = false
+
 
