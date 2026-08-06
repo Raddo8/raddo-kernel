@@ -14,7 +14,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { derivePrincipal, isFailure } from "../world-graph/identity.ts";
+import { derivePrincipal, isFailure } from "../_shared/world-identity/identity.ts";
 import { embedBatch, embedProvider, toVectorLiteral } from "../_shared/embed.ts";
 
 const BUILD_ID = "world-embed.1";
