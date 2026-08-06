@@ -427,6 +427,45 @@ export function WorldCabinet() {
     return out;
   }, [doss, Ilink, openBrief, targets]);
 
+  /** Opening a folder from Grid or List drops you back into the cabinet. */
+  const openFolder = useCallback((slug: string) => {
+    setActive(slug);
+    setView("folders");
+    writeView("world", "folders");
+    window.history.replaceState(null, "", `#${slug}`);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  const sortedByHeat = useMemo(
+    () => [...lanes].sort((a, b) => (b.heat ?? -1) - (a.heat ?? -1) || a.label.localeCompare(b.label)),
+    [lanes],
+  );
+
+  const listRows = useMemo(() => {
+    const out = [...lanes];
+    switch (listSort) {
+      case "folder":
+        return out.sort((a, b) => a.label.localeCompare(b.label));
+      case "holds":
+        return out.sort((a, b) => b.entry_count - a.entry_count);
+      case "people":
+        return out.sort((a, b) => (b.subject_count ?? 0) - (a.subject_count ?? 0));
+      case "touched":
+        return out.sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? "")));
+      default:
+        return out.sort((a, b) => (b.heat ?? -1) - (a.heat ?? -1) || a.label.localeCompare(b.label));
+    }
+  }, [lanes, listSort]);
+
+  const ListHead = ({ label, k }: { label: string; k: typeof listSort }) => (
+    <th>
+      <button type="button" onClick={() => setListSort(k)} title={`Sort by ${label.toLowerCase()}`}>
+        {label}
+        {listSort === k ? " \u25BE" : ""}
+      </button>
+    </th>
+  );
+
   const Fillers = ({ count, k }: { count: number; k: string }) => (
     <>
       {Array.from({ length: count }, (_, i) => (
