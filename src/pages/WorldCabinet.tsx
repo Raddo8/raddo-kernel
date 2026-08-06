@@ -40,11 +40,13 @@ import {
   type DatedLine,
   type LinkTarget,
 } from "@/lib/world-wiki";
+import { ViewSwitch } from "@/components/hq/ViewSwitch";
+import { heatClass, heatTitle, heatWord, readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
 
 const DOT = "\u00b7";
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
-const PER_ROW = 4;
+const PER_ROW = 5;
 const INFOBOX_CEILING = 8;
 
 const shortId = (id: string) => id.slice(0, 8);
@@ -104,6 +106,8 @@ export function WorldCabinet() {
   const [dossErr, setDossErr] = useState<string | null>(null);
 
   // World search.
+  const [view, setView] = useState<HqView>(() => readView("world"));
+  const [listSort, setListSort] = useState<"heat" | "folder" | "holds" | "people" | "touched">("heat");
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -423,6 +427,16 @@ export function WorldCabinet() {
     return out;
   }, [doss, Ilink, openBrief, targets]);
 
+  const Fillers = ({ count, k }: { count: number; k: string }) => (
+    <>
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab fill" key={`${k}-f${i}`} aria-hidden="true">
+          &mdash;
+        </span>
+      ))}
+    </>
+  );
+
   const Tab = ({ row, n }: { row: LaneRow; n: number }) => (
     <button
       className={`tab${row.slug === active ? " on" : ""}`}
@@ -524,6 +538,7 @@ export function WorldCabinet() {
                     {chunk.map((row) => (
                       <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                     ))}
+                    <Fillers count={PER_ROW - chunk.length} k={`r-${ri}`} />
                   </div>
                 ),
               )}
@@ -531,6 +546,7 @@ export function WorldCabinet() {
                 {(chunks[frontRow] ?? []).map((row) => (
                   <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                 ))}
+                <Fillers count={PER_ROW - (chunks[frontRow] ?? []).length} k="front" />
               </div>
             </div>
 
