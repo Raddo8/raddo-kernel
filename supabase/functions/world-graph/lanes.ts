@@ -80,6 +80,11 @@ async function readAll(admin: Admin, cid: string) {
 export async function actionLanes(admin: Admin, cid: string) {
   const { memories, narratives, loops } = await readAll(admin, cid);
 
+  // Heat is how much attention a folder deserves. Absent heat is simply absent.
+  const { data: heatRows } = await admin.rpc("world_lane_heat_v1", { _cid: cid });
+  const heatOf = new Map<string, any>();
+  for (const h of (heatRows ?? []) as any[]) heatOf.set(String(h.lane ?? "").trim().toLowerCase(), h);
+
   const names = new Set<string>();
   for (const m of memories) if (typeof m.lane === "string" && m.lane.trim()) names.add(m.lane.trim());
   for (const n of narratives) if (typeof n.title === "string" && n.title.trim()) names.add(n.title.trim());
@@ -95,6 +100,7 @@ export async function actionLanes(admin: Admin, cid: string) {
         narrative?.created_at ?? null,
       ].filter(Boolean) as string[];
       const freshest = stamps.sort().slice(-1)[0] ?? null;
+      const h = heatOf.get(lane.toLowerCase()) ?? null;
       return {
         lane,
         slug: laneSlug(lane),
@@ -105,6 +111,9 @@ export async function actionLanes(admin: Admin, cid: string) {
         open_threads_derived: true,
         updated_at: freshest,
         has_narrative: Boolean(narrative),
+        heat: h ? Number(h.heat) : null,
+        heat_why: h ? (h.why ?? null) : null,
+        subject_count: h ? Number(h.subjects ?? 0) : null,
       };
     });
 
@@ -113,6 +122,7 @@ export async function actionLanes(admin: Admin, cid: string) {
 
   return { ok: true, action: "lanes", cid, rows, count: rows.length };
 }
+
 
 /** Split a narrative into sections on markdown headings; no heading = one section. */
 function sections(bodyMd: string): Array<{ heading: string; body: string }> {
