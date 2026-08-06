@@ -3734,6 +3734,7 @@ export type Database = {
           confidence: number
           created_at: string
           created_by: string | null
+          embedding: string | null
           id: string
           lane: string | null
           notion_block_ref: string | null
@@ -3752,6 +3753,7 @@ export type Database = {
           confidence?: number
           created_at?: string
           created_by?: string | null
+          embedding?: string | null
           id?: string
           lane?: string | null
           notion_block_ref?: string | null
@@ -3770,6 +3772,7 @@ export type Database = {
           confidence?: number
           created_at?: string
           created_by?: string | null
+          embedding?: string | null
           id?: string
           lane?: string | null
           notion_block_ref?: string | null
@@ -6246,6 +6249,7 @@ export type Database = {
           cites: Json | null
           created_at: string
           curn: string | null
+          embedding: string | null
           grade: string
           id: string
           kind: string
@@ -6259,6 +6263,7 @@ export type Database = {
           cites?: Json | null
           created_at?: string
           curn?: string | null
+          embedding?: string | null
           grade?: string
           id?: string
           kind: string
@@ -6272,6 +6277,7 @@ export type Database = {
           cites?: Json | null
           created_at?: string
           curn?: string | null
+          embedding?: string | null
           grade?: string
           id?: string
           kind?: string
@@ -7606,6 +7612,7 @@ export type Database = {
           confidence: number | null
           created_at: string
           created_by: string | null
+          embedding: string | null
           grade: string
           id: string
           miner: string | null
@@ -7629,6 +7636,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           created_by?: string | null
+          embedding?: string | null
           grade?: string
           id?: string
           miner?: string | null
@@ -7652,6 +7660,7 @@ export type Database = {
           confidence?: number | null
           created_at?: string
           created_by?: string | null
+          embedding?: string | null
           grade?: string
           id?: string
           miner?: string | null
@@ -8797,6 +8806,57 @@ export type Database = {
         Returns: boolean
       }
       watchdog_health: { Args: never; Returns: number }
+      world_build_events_v1: {
+        Args: { _cid: string }
+        Returns: {
+          events_created: number
+          links_created: number
+        }[]
+      }
+      world_entity_heat_v1: {
+        Args: { _cid: string }
+        Returns: {
+          claims: number
+          degree: number
+          entity_id: string
+          etype: string
+          heat: number
+          lanes: number
+          last_touch: string
+          name: string
+        }[]
+      }
+      world_entity_heat_v2: {
+        Args: { _cid: string }
+        Returns: {
+          claims: number
+          degree: number
+          etype: string
+          folders: number
+          heat: number
+          last_touch: string
+          name: string
+          why: string
+        }[]
+      }
+      world_hubs_v1: {
+        Args: { _cid: string }
+        Returns: {
+          degree: number
+          etype: string
+          folder_list: string
+          folders: number
+          is_hub: boolean
+          name: string
+        }[]
+      }
+      world_link_mentions_v1: {
+        Args: { _cid: string }
+        Returns: {
+          edges_written: number
+          pairs_found: number
+        }[]
+      }
       world_resolve_entity_v1: {
         Args: { p_cid: string; p_etype: string; p_keys?: Json; p_name: string }
         Returns: Json
