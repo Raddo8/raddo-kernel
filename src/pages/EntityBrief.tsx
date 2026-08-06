@@ -128,8 +128,15 @@ export function EntityBrief() {
           &larr; Back to your folders
         </button>
 
-        {err && <p className="plain">We could not open this brief just now.</p>}
+        {err && (
+          <p className="plain">
+            {err === "not_found" || err === "entity_not_found"
+              ? "We could not find that subject. It may have been merged or removed. Go back to your folders and open it from there."
+              : "We could not open this brief just now."}
+          </p>
+        )}
         {!err && !data && <p className="plain">Opening the brief.</p>}
+
 
         {data && (
           <motion.div
