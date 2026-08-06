@@ -8801,6 +8801,16 @@ export type Database = {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
       }
+      verify_dissertation_depth_v1: {
+        Args: { _cid: string }
+        Returns: {
+          axis: string
+          detail: string
+          pass: boolean
+          score: number
+          target: number
+        }[]
+      }
       verify_load_test_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
@@ -8821,6 +8831,13 @@ export type Database = {
         }[]
       }
       world_build_events_v2: {
+        Args: { _cid: string }
+        Returns: {
+          events_created: number
+          links_created: number
+        }[]
+      }
+      world_build_events_v3: {
         Args: { _cid: string }
         Returns: {
           events_created: number
