@@ -88,4 +88,7 @@ verify_jwt = false
 [functions.world-graph]
 verify_jwt = false
 
+[functions.world-embed]
+verify_jwt = false
+
 
