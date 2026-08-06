@@ -788,6 +788,34 @@ export function WorldCabinet() {
                           )}
                         </div>
 
+                        {/* WHO AND WHAT IS IN THIS FOLDER */}
+                        {(doss.subjects ?? []).length > 0 && (
+                          <div className="exsec">
+                            <div className="exhead">Who and what is in this folder</div>
+                            <div className="subjects">
+                              {(doss.subjects ?? []).map((sub) => (
+                                <button
+                                  className="subj"
+                                  key={sub.id}
+                                  onClick={() => openBrief(sub.id)}
+                                  title={heatTitle(sub.heat, sub.why)}
+                                >
+                                  <span className="sn">{sub.name}</span>
+                                  <span className="sk">
+                                    {sub.etype} {DOT} {heatWord(sub.heat)}
+                                  </span>
+                                  <span className="heatrow" style={{ marginTop: 6 }}>
+                                    <span className={heatClass(sub.heat)} />
+                                  </span>
+                                  {sub.hub_folders && sub.hub_folders >= 3 && (
+                                    <span className="hub">appears across {sub.hub_folders} folders</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         {/* TABLE OF CONTENTS */}
                         <div className="tock">Table of contents {DOT} tap any line to jump to it</div>
                         <div className="toc">
