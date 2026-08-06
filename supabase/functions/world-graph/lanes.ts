@@ -230,6 +230,8 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     threads,
     threads_derived: true,
     entities,
+    subjects,
+
   };
 }
 
