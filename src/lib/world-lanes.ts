@@ -15,6 +15,21 @@ export interface LaneRow {
   open_threads_derived: boolean;
   updated_at: string | null;
   has_narrative: boolean;
+  /** How much attention this folder deserves. Absent when nothing scored it. */
+  heat?: number | null;
+  heat_why?: string | null;
+  subject_count?: number | null;
+}
+
+/** A person, company, case or place that shows up inside a folder. */
+export interface LaneSubject {
+  id: string;
+  name: string;
+  etype: string;
+  tag: string | null;
+  heat: number | null;
+  why: string | null;
+  hub_folders: number | null;
 }
 
 export interface NarrativeSection {
@@ -68,6 +83,7 @@ export interface LaneDossierPayload {
   threads: LaneThread[];
   threads_derived: boolean;
   entities: LaneEntity[];
+  subjects?: LaneSubject[];
 }
 
 export interface SearchHit {
