@@ -22,6 +22,8 @@ import {
   type SearchHit,
 } from "@/lib/world-lanes";
 import { datedLines, daysAway, linkify, loudestClock, type LinkTarget } from "@/lib/world-wiki";
+import { ViewSwitch } from "@/components/hq/ViewSwitch";
+import { readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
 
 const DOT = "\u00b7";
@@ -114,6 +116,7 @@ export function MemoryVault() {
   const [sort, setSort] = useState<SortKey>("date");
   const [openRows, setOpenRows] = useState<string[]>([]);
   const [openLane, setOpenLane] = useState<string | null>(null);
+  const [view, setView] = useState<HqView>(() => readView("memories"));
 
   const [pop, setPop] = useState<{
     target: LinkTarget;
@@ -333,7 +336,43 @@ export function MemoryVault() {
             )}
 
             {list.length > 0 && (
+              <ViewSwitch
+                view={view}
+                onChange={(v) => {
+                  setView(v);
+                  writeView("memories", v);
+                }}
+                labels={{ folders: "Groups", grid: "Grid", list: "List" }}
+              />
+            )}
+
+            {list.length > 0 && view === "grid" && (
+              <div className="fgrid">
+                {lanes.map(([lane, items], i) => (
+                  <button
+                    className="fcard"
+                    key={lane}
+                    onClick={() => {
+                      setView("folders");
+                      writeView("memories", "folders");
+                      setOpenLane(lane);
+                    }}
+                    title="Open this group"
+                  >
+                    <span className="fn">Group {String(i + 1).padStart(2, "0")}</span>
+                    <span className="ft">{lane}</span>
+                    <span className="fm">
+                      {items.length} {items.length === 1 ? "memory" : "memories"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {list.length > 0 && (
               <>
+                {view === "folders" && (
+                <>
                 <div className="tock" title="Every group your memories are filed under.">
                   Table of contents {DOT} tap any line to open it in full
                 </div>
@@ -381,6 +420,8 @@ export function MemoryVault() {
                     );
                   })}
                 </div>
+                </>
+                )}
 
                 <div className="secname">Everything your COB remembers</div>
                 <div className="mtools">

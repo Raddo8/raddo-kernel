@@ -8,8 +8,15 @@
 //  · public.world_search_v1 is service-role only; it is reached with the admin
 //    client inside this function and is never callable from the browser role
 //  · sensitivity filtering applies to every entity row returned
+//  · MEANING TIER: when the words find little, the query is embedded and the
+//    same function is asked again with a vector. No provider, no vectors, or a
+//    failed call all degrade silently back to the word result.
+
+import { embedOne, toVectorLiteral } from "../_shared/embed.ts";
 
 type Admin = any;
+
+const WEAK_RESULT = 5;
 
 export const laneSlugOf = (name: string): string =>
   String(name ?? "")
@@ -28,18 +35,8 @@ export interface SearchHit {
   rank: number | null;
 }
 
-export async function actionSearch(admin: Admin, cid: string, q: string, limit: number) {
-  const query = q.trim();
-  if (query.length < 2) return { ok: true, action: "search", cid, q: query, rows: [] as SearchHit[] };
-
-  const { data, error } = await admin.rpc("world_search_v1", {
-    _cid: cid,
-    _q: query,
-    _limit: Math.min(Math.max(limit || 20, 1), 50),
-  });
-  if (error) return { ok: false, error: "search_failed", detail: error.message };
-
-  const rows: SearchHit[] = (data ?? []).map((r: any) => ({
+const shape = (data: any[]): SearchHit[] =>
+  (data ?? []).map((r: any) => ({
     register: String(r.register ?? ""),
     rid: String(r.rid ?? ""),
     lane: r.lane ?? null,
@@ -49,7 +46,43 @@ export async function actionSearch(admin: Admin, cid: string, q: string, limit: 
     rank: typeof r.rank === "number" ? r.rank : null,
   }));
 
-  return { ok: true, action: "search", cid, q: query, rows, count: rows.length };
+export async function actionSearch(admin: Admin, cid: string, q: string, limit: number) {
+  const query = q.trim();
+  if (query.length < 2) return { ok: true, action: "search", cid, q: query, rows: [] as SearchHit[] };
+
+  const capped = Math.min(Math.max(limit || 20, 1), 50);
+
+  const { data, error } = await admin.rpc("world_search_v1", {
+    _cid: cid,
+    _q: query,
+    _limit: capped,
+    _qvec: null,
+  });
+  if (error) return { ok: false, error: "search_failed", detail: error.message };
+
+  let rows = shape(data ?? []);
+  let matched_on = "words";
+
+  if (rows.length < WEAK_RESULT) {
+    const vec = await embedOne(query);
+    if (vec) {
+      const second = await admin.rpc("world_search_v1", {
+        _cid: cid,
+        _q: query,
+        _limit: capped,
+        _qvec: toVectorLiteral(vec),
+      });
+      if (!second.error) {
+        const blended = shape(second.data ?? []);
+        if (blended.length > rows.length) {
+          rows = blended;
+          matched_on = "meaning";
+        }
+      }
+    }
+  }
+
+  return { ok: true, action: "search", cid, q: query, rows, count: rows.length, matched_on };
 }
 
 /** The pop-out record for one entity: identity, claim count, a short lead. */

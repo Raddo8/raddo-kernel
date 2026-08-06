@@ -199,3 +199,63 @@
 .wld .connbox button.crow:last-child { border-bottom: none; }
 .wld .connbox button.crow:hover { background: rgba(239, 159, 39, .05); }
 .wld .connbox .crel { display: block; font-family: var(--mono); font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); }
+
+/* ===== FIVE TABS PER ROW · fixed grid, never stretched ===== */
+.wld .trow { display: grid; grid-template-columns: repeat(5, 1fr); align-items: end; gap: 8px; }
+.wld .trow.back { margin-bottom: -10px; padding: 0 14px; }
+.wld .trow.back + .trow.back { margin-top: 6px; }
+.wld .tab { flex: none; width: auto; max-width: none; min-width: 0; }
+.wld .trow.back .tab { border-bottom-color: var(--edge); box-shadow: inset 0 -6px 8px -6px rgba(4, 44, 83, .08); }
+/* filler slots keep every row five wide; navy, quiet, not clickable */
+.wld .tab.fill { background: var(--ink); border-color: var(--ink); color: rgba(250, 248, 244, .35); cursor: default; text-align: center; letter-spacing: .3em; }
+.wld .tab.fill:hover { background: var(--ink); }
+@media (max-width: 900px) { .wld .trow { grid-template-columns: repeat(2, 1fr); } }
+
+/* ===== VIEW SWITCHER ===== */
+.wld .vswitch { display: inline-flex; gap: 0; border: 1px solid var(--edge); border-radius: 8px; overflow: hidden; background: var(--white); margin-top: 16px; }
+.wld .vbtn { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; padding: 8px 15px; border: none; border-right: 1px solid var(--edge); background: none; color: var(--ash); cursor: pointer; }
+.wld .vbtn:last-child { border-right: none; }
+.wld .vbtn:hover { color: var(--brass-deep); }
+.wld .vbtn.on { background: var(--ink); color: var(--paper); }
+
+/* ===== HEAT · brass only, light to deep. Red is never heat. ===== */
+.wld .heat { display: inline-block; width: 34px; height: 8px; border-radius: 20px; background: var(--edge); vertical-align: middle; }
+.wld .heat.h1 { background: rgba(239, 159, 39, .22); }
+.wld .heat.h2 { background: rgba(239, 159, 39, .42); }
+.wld .heat.h3 { background: rgba(239, 159, 39, .65); }
+.wld .heat.h4 { background: var(--brass); }
+.wld .heat.h5 { background: var(--brass-deep); }
+.wld .heatrow { display: inline-flex; align-items: center; gap: 8px; }
+.wld .heatrow .hw { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); }
+
+/* ===== GRID VIEW · one card per folder ===== */
+.wld .fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 12px; margin-top: 16px; }
+.wld .fcard { text-align: left; background: var(--white); border: 1px solid var(--edge); border-top: 2px solid var(--brass); border-radius: 8px; padding: 14px 16px 15px; cursor: pointer; font-family: var(--sans); }
+.wld .fcard:hover { border-color: var(--brass); }
+.wld .fcard .fn { font-family: var(--mono); font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--brass-deep); }
+.wld .fcard .ft { font-size: 15px; font-weight: 700; color: var(--ink); margin-top: 6px; line-height: 1.3; }
+.wld .fcard .fm { font-family: var(--mono); font-size: 9.5px; color: var(--ash); margin-top: 8px; }
+.wld .fcard .fh { margin-top: 10px; }
+
+/* ===== LIST VIEW · one sortable table of every folder ===== */
+.wld .ltab { width: 100%; border-collapse: collapse; background: var(--white); border: 1px solid var(--edge); font-size: 13px; margin-top: 16px; }
+.wld .ltab th { font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); text-align: left; padding: 8px 11px; border-bottom: 1px solid var(--edge); background: var(--strip); white-space: nowrap; }
+.wld .ltab th button { background: none; border: none; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+.wld .ltab th button:hover { color: var(--brass-deep); }
+.wld .ltab td { padding: 9px 11px; border-bottom: 1px solid var(--edge2); vertical-align: top; }
+.wld .ltab td.d { font-family: var(--mono); font-size: 10.5px; color: var(--brass-deep); white-space: nowrap; }
+.wld .ltab td.due { color: #8C2F2F; }
+.wld .ltab .rowbtn { background: none; border: none; padding: 0; font: inherit; text-align: left; color: var(--ink); font-weight: 600; cursor: pointer; }
+.wld .ltab .rowbtn:hover { color: var(--brass-deep); }
+
+/* ===== WHO AND WHAT IS IN THIS FOLDER ===== */
+.wld .subjects { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 10px; margin-top: 12px; }
+.wld .subj { text-align: left; background: var(--white); border: 1px solid var(--edge); border-radius: 8px; padding: 11px 13px; cursor: pointer; font-family: var(--sans); }
+.wld .subj:hover { border-color: var(--brass); }
+.wld .subj .sn { font-size: 14px; font-weight: 700; color: var(--ink); }
+.wld .subj .sk { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); margin-top: 3px; }
+.wld .subj .hub { font-family: var(--mono); font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--brass-deep); margin-top: 5px; display: block; }
+
+/* ===== BRIEF · connected to, typed links first ===== */
+.wld .connbox button.crow .ev { display: block; font-size: 11.5px; color: var(--ash); margin-top: 3px; line-height: 1.5; }
+.wld .connbox .csub { font-family: var(--mono); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); padding: 8px 14px 4px; border-top: 1px solid var(--edge2); }

@@ -15,6 +15,21 @@ export interface LaneRow {
   open_threads_derived: boolean;
   updated_at: string | null;
   has_narrative: boolean;
+  /** How much attention this folder deserves. Absent when nothing scored it. */
+  heat?: number | null;
+  heat_why?: string | null;
+  subject_count?: number | null;
+}
+
+/** A person, company, case or place that shows up inside a folder. */
+export interface LaneSubject {
+  id: string;
+  name: string;
+  etype: string;
+  tag: string | null;
+  heat: number | null;
+  why: string | null;
+  hub_folders: number | null;
 }
 
 export interface NarrativeSection {
@@ -68,6 +83,7 @@ export interface LaneDossierPayload {
   threads: LaneThread[];
   threads_derived: boolean;
   entities: LaneEntity[];
+  subjects?: LaneSubject[];
 }
 
 export interface SearchHit {
@@ -156,11 +172,22 @@ export interface BriefPayload {
   connections: Array<{
     id: string;
     relation: string;
+    /** True when the link names a real relationship, not just a mention. */
+    typed: boolean;
+    /** The link said in plain English: "runs", "represented by". */
+    phrase: string;
     direction: "in" | "out";
     entity_id: string;
     name: string;
     etype: string;
+    /** The sentence that justified the link, when one was saved. */
+    evidence: string | null;
+    from_claim: string | null;
+    hub_folders: number | null;
   }>;
+  /** Dated events this subject took part in. */
+  events: Array<{ id: string; date: string | null; what: string; evidence: string | null }>;
+  hub: { folders: number; folder_list: string[] } | null;
   folders: Array<{ lane: string; slug: string; fact_count: number }>;
   mentions: Array<{
     id: string;
@@ -172,7 +199,7 @@ export interface BriefPayload {
     created_at: string | null;
     updated_at: string | null;
   }>;
-  counts: { claims: number; folders: number; facts: number };
+  counts: { claims: number; folders: number; facts: number; links?: number; events?: number };
 }
 
 /** Plain-English kind for a subject, for the brief kicker. */

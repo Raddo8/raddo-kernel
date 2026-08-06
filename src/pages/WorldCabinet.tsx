@@ -40,11 +40,13 @@ import {
   type DatedLine,
   type LinkTarget,
 } from "@/lib/world-wiki";
+import { ViewSwitch } from "@/components/hq/ViewSwitch";
+import { heatClass, heatTitle, heatWord, readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
 
 const DOT = "\u00b7";
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
-const PER_ROW = 4;
+const PER_ROW = 5;
 const INFOBOX_CEILING = 8;
 
 const shortId = (id: string) => id.slice(0, 8);
@@ -104,6 +106,8 @@ export function WorldCabinet() {
   const [dossErr, setDossErr] = useState<string | null>(null);
 
   // World search.
+  const [view, setView] = useState<HqView>(() => readView("world"));
+  const [listSort, setListSort] = useState<"heat" | "folder" | "holds" | "people" | "touched">("heat");
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
@@ -423,6 +427,55 @@ export function WorldCabinet() {
     return out;
   }, [doss, Ilink, openBrief, targets]);
 
+  /** Opening a folder from Grid or List drops you back into the cabinet. */
+  const openFolder = useCallback((slug: string) => {
+    setActive(slug);
+    setView("folders");
+    writeView("world", "folders");
+    window.history.replaceState(null, "", `#${slug}`);
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
+
+  const sortedByHeat = useMemo(
+    () => [...lanes].sort((a, b) => (b.heat ?? -1) - (a.heat ?? -1) || a.label.localeCompare(b.label)),
+    [lanes],
+  );
+
+  const listRows = useMemo(() => {
+    const out = [...lanes];
+    switch (listSort) {
+      case "folder":
+        return out.sort((a, b) => a.label.localeCompare(b.label));
+      case "holds":
+        return out.sort((a, b) => b.entry_count - a.entry_count);
+      case "people":
+        return out.sort((a, b) => (b.subject_count ?? 0) - (a.subject_count ?? 0));
+      case "touched":
+        return out.sort((a, b) => String(b.updated_at ?? "").localeCompare(String(a.updated_at ?? "")));
+      default:
+        return out.sort((a, b) => (b.heat ?? -1) - (a.heat ?? -1) || a.label.localeCompare(b.label));
+    }
+  }, [lanes, listSort]);
+
+  const ListHead = ({ label, k }: { label: string; k: typeof listSort }) => (
+    <th>
+      <button type="button" onClick={() => setListSort(k)} title={`Sort by ${label.toLowerCase()}`}>
+        {label}
+        {listSort === k ? " \u25BE" : ""}
+      </button>
+    </th>
+  );
+
+  const Fillers = ({ count, k }: { count: number; k: string }) => (
+    <>
+      {Array.from({ length: count }, (_, i) => (
+        <span className="tab fill" key={`${k}-f${i}`} aria-hidden="true">
+          &mdash;
+        </span>
+      ))}
+    </>
+  );
+
   const Tab = ({ row, n }: { row: LaneRow; n: number }) => (
     <button
       className={`tab${row.slug === active ? " on" : ""}`}
@@ -516,6 +569,79 @@ export function WorldCabinet() {
         )}
 
         {lanes.length > 0 && (
+          <ViewSwitch
+            view={view}
+            onChange={(v) => {
+              setView(v);
+              writeView("world", v);
+            }}
+          />
+        )}
+
+        {lanes.length > 0 && view === "grid" && (
+          <div className="fgrid">
+            {sortedByHeat.map((row, i) => (
+              <button
+                className="fcard"
+                key={row.slug}
+                onClick={() => openFolder(row.slug)}
+                title={heatTitle(row.heat, row.heat_why)}
+              >
+                <span className="fn">Folder {num(i + 1)}</span>
+                <span className="ft">{row.label}</span>
+                <span className="fm">
+                  {row.entry_count} {row.entry_count === 1 ? "note" : "notes"}
+                  {row.subject_count ? ` ${DOT} ${row.subject_count} people and companies` : ""}
+                  {` ${DOT} ${freshness(row.updated_at)}`}
+                </span>
+                <span className="fh heatrow">
+                  <span className={heatClass(row.heat)} />
+                  <span className="hw">{heatWord(row.heat)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {lanes.length > 0 && view === "list" && (
+          <table className="ltab">
+            <thead>
+              <tr>
+                <ListHead label="Needs you" k="heat" />
+                <ListHead label="Folder" k="folder" />
+                <ListHead label="What it holds" k="holds" />
+                <ListHead label="People and companies" k="people" />
+                <th title="A date coming up, if there is one.">Clock</th>
+                <ListHead label="Last touched" k="touched" />
+              </tr>
+            </thead>
+            <tbody>
+              {listRows.map((row) => (
+                <tr key={row.slug}>
+                  <td title={heatTitle(row.heat, row.heat_why)}>
+                    <span className="heatrow">
+                      <span className={heatClass(row.heat)} />
+                      <span className="hw">{heatWord(row.heat)}</span>
+                    </span>
+                  </td>
+                  <td>
+                    <button className="rowbtn" onClick={() => openFolder(row.slug)}>
+                      {row.label}
+                    </button>
+                  </td>
+                  <td className="d">
+                    {row.entry_count} {row.entry_count === 1 ? "note" : "notes"}
+                  </td>
+                  <td className="d">{row.subject_count ?? "\u2014"}</td>
+                  <td className="d">{"\u2014"}</td>
+                  <td className="d">{freshness(row.updated_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {lanes.length > 0 && view === "folders" && (
           <>
             <div className="tabs">
               {chunks.map((chunk, ri) =>
@@ -524,6 +650,7 @@ export function WorldCabinet() {
                     {chunk.map((row) => (
                       <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                     ))}
+                    <Fillers count={PER_ROW - chunk.length} k={`r-${ri}`} />
                   </div>
                 ),
               )}
@@ -531,6 +658,7 @@ export function WorldCabinet() {
                 {(chunks[frontRow] ?? []).map((row) => (
                   <Tab key={row.slug} row={row} n={lanes.indexOf(row) + 1} />
                 ))}
+                <Fillers count={PER_ROW - (chunks[frontRow] ?? []).length} k="front" />
               </div>
             </div>
 
@@ -659,6 +787,34 @@ export function WorldCabinet() {
                             </p>
                           )}
                         </div>
+
+                        {/* WHO AND WHAT IS IN THIS FOLDER */}
+                        {(doss.subjects ?? []).length > 0 && (
+                          <div className="exsec">
+                            <div className="exhead">Who and what is in this folder</div>
+                            <div className="subjects">
+                              {(doss.subjects ?? []).map((sub) => (
+                                <button
+                                  className="subj"
+                                  key={sub.id}
+                                  onClick={() => openBrief(sub.id)}
+                                  title={heatTitle(sub.heat, sub.why)}
+                                >
+                                  <span className="sn">{sub.name}</span>
+                                  <span className="sk">
+                                    {sub.etype} {DOT} {heatWord(sub.heat)}
+                                  </span>
+                                  <span className="heatrow" style={{ marginTop: 6 }}>
+                                    <span className={heatClass(sub.heat)} />
+                                  </span>
+                                  {sub.hub_folders && sub.hub_folders >= 3 && (
+                                    <span className="hub">appears across {sub.hub_folders} folders</span>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
                         {/* TABLE OF CONTENTS */}
                         <div className="tock">Table of contents {DOT} tap any line to jump to it</div>

@@ -10,9 +10,12 @@
 //  · a count is only reported when it is genuinely derivable; otherwise the
 //    field is null and the surface says so plainly.
 
+import { heatByName, hubsByName } from "./heat.ts";
+
 type Admin = any;
 
 const LIVE_MEMORY = ["active", "review"];
+
 
 export const laneSlug = (name: string): string =>
   name.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -77,6 +80,11 @@ async function readAll(admin: Admin, cid: string) {
 export async function actionLanes(admin: Admin, cid: string) {
   const { memories, narratives, loops } = await readAll(admin, cid);
 
+  // Heat is how much attention a folder deserves. Absent heat is simply absent.
+  const { data: heatRows } = await admin.rpc("world_lane_heat_v1", { _cid: cid });
+  const heatOf = new Map<string, any>();
+  for (const h of (heatRows ?? []) as any[]) heatOf.set(String(h.lane ?? "").trim().toLowerCase(), h);
+
   const names = new Set<string>();
   for (const m of memories) if (typeof m.lane === "string" && m.lane.trim()) names.add(m.lane.trim());
   for (const n of narratives) if (typeof n.title === "string" && n.title.trim()) names.add(n.title.trim());
@@ -92,6 +100,7 @@ export async function actionLanes(admin: Admin, cid: string) {
         narrative?.created_at ?? null,
       ].filter(Boolean) as string[];
       const freshest = stamps.sort().slice(-1)[0] ?? null;
+      const h = heatOf.get(lane.toLowerCase()) ?? null;
       return {
         lane,
         slug: laneSlug(lane),
@@ -102,6 +111,9 @@ export async function actionLanes(admin: Admin, cid: string) {
         open_threads_derived: true,
         updated_at: freshest,
         has_narrative: Boolean(narrative),
+        heat: h ? Number(h.heat) : null,
+        heat_why: h ? (h.why ?? null) : null,
+        subject_count: h ? Number(h.subjects ?? 0) : null,
       };
     });
 
@@ -110,6 +122,7 @@ export async function actionLanes(admin: Admin, cid: string) {
 
   return { ok: true, action: "lanes", cid, rows, count: rows.length };
 }
+
 
 /** Split a narrative into sections on markdown headings; no heading = one section. */
 function sections(bodyMd: string): Array<{ heading: string; body: string }> {
@@ -166,10 +179,35 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     .join(" ")
     .toLowerCase();
   const entities = (entRows ?? []).filter(
-    (e: any) => typeof e.name === "string" && e.name.length > 2 && haystack.includes(e.name.toLowerCase()),
+    (e: any) =>
+      typeof e.name === "string" &&
+      e.name.length > 2 &&
+      e.etype !== "Event" &&
+      haystack.includes(e.name.toLowerCase()),
   );
 
+  // WHO AND WHAT IS IN THIS FOLDER · the same subjects, ordered by how much
+  // attention they deserve, with the reason the database wrote for the score.
+  const [heat, hubs] = await Promise.all([heatByName(admin, cid), hubsByName(admin, cid)]);
+  const subjects = entities
+    .map((e: any) => {
+      const key = String(e.name ?? "").toLowerCase();
+      const h = heat.get(key) ?? null;
+      const hub = hubs.get(key) ?? null;
+      return {
+        id: e.id,
+        name: e.name,
+        etype: e.etype,
+        tag: e.tag ?? null,
+        heat: h ? Number(h.heat) : null,
+        why: h ? (h.why ?? null) : null,
+        hub_folders: hub ? hub.folders : null,
+      };
+    })
+    .sort((a: any, b: any) => (b.heat ?? -1) - (a.heat ?? -1));
+
   const authored = reads.find((r) => String(r.title ?? "").trim() === lane) ?? null;
+
 
   return {
     ok: true,
@@ -192,6 +230,8 @@ export async function actionLane(admin: Admin, cid: string, slug: string, sensit
     threads,
     threads_derived: true,
     entities,
+    subjects,
+
   };
 }
 

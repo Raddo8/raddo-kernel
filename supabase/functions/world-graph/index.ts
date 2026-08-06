@@ -15,11 +15,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
-import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "./identity.ts";
+import { derivePrincipal, isFailure, readableSensitivities, type Principal } from "../_shared/world-identity/identity.ts";
 import { writeReceipt } from "./receipts.ts";
 import { actionLanes, actionLane } from "./lanes.ts";
 import { actionSearch, actionEntityCard, actionEntityWhere } from "./search.ts";
 import { actionBrief } from "./brief.ts";
+import { actionHeat } from "./heat.ts";
 
 
 const BUILD_ID = "hshell.1";
@@ -633,6 +634,7 @@ Deno.serve(async (req) => {
       case "claims": return await actionClaims(principal, body);
       case "edges": return await actionEdges(principal);
       case "lanes": return json(await actionLanes(admin, principal.cid));
+      case "heat": return json(await actionHeat(admin, principal.cid));
       case "lane": {
         const slug = str(body?.slug);
         if (!slug) return fail("missing_slug");
