@@ -1,7 +1,7 @@
 // TEMPORARY one-shot invoker for world-embed. Deleted immediately after use.
 const url = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const gate = Deno.env.get("COB_OPERATOR_KEY") ?? "";
+const gate = "c025cf3727f3b5caa4edffb0f4aa4c76";
 
 Deno.serve(async (req) => {
   if ((req.headers.get("x-cob-operator-key") ?? "") !== gate || !gate) {
