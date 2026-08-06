@@ -42,6 +42,13 @@ export function EntityBrief() {
     let live = true;
     setData(null);
     setErr(null);
+    // A valid subject id is a uuid. Anything else (a stray link, the route
+    // pattern itself) is a bad address, not a server problem.
+    const valid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    if (!valid) {
+      setErr("not_found");
+      return;
+    }
     callWorld<BriefPayload>("brief", { entity_id: id })
       .then((d) => live && setData(d))
       .catch((e: Error) => live && setErr(e.message));
@@ -49,6 +56,7 @@ export function EntityBrief() {
       live = false;
     };
   }, [id]);
+
 
   const targets = useMemo<LinkTarget[]>(
     () => (data?.connections ?? []).map((c) => ({ id: c.entity_id, name: c.name })),
