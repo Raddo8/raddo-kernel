@@ -530,6 +530,79 @@ export function WorldCabinet() {
         )}
 
         {lanes.length > 0 && (
+          <ViewSwitch
+            view={view}
+            onChange={(v) => {
+              setView(v);
+              writeView("world", v);
+            }}
+          />
+        )}
+
+        {lanes.length > 0 && view === "grid" && (
+          <div className="fgrid">
+            {sortedByHeat.map((row, i) => (
+              <button
+                className="fcard"
+                key={row.slug}
+                onClick={() => openFolder(row.slug)}
+                title={heatTitle(row.heat, row.heat_why)}
+              >
+                <span className="fn">Folder {num(i + 1)}</span>
+                <span className="ft">{row.label}</span>
+                <span className="fm">
+                  {row.entry_count} {row.entry_count === 1 ? "note" : "notes"}
+                  {row.subject_count ? ` ${DOT} ${row.subject_count} people and companies` : ""}
+                  {` ${DOT} ${freshness(row.updated_at)}`}
+                </span>
+                <span className="fh heatrow">
+                  <span className={heatClass(row.heat)} />
+                  <span className="hw">{heatWord(row.heat)}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {lanes.length > 0 && view === "list" && (
+          <table className="ltab">
+            <thead>
+              <tr>
+                <ListHead label="Needs you" k="heat" />
+                <ListHead label="Folder" k="folder" />
+                <ListHead label="What it holds" k="holds" />
+                <ListHead label="People and companies" k="people" />
+                <th title="A date coming up, if there is one.">Clock</th>
+                <ListHead label="Last touched" k="touched" />
+              </tr>
+            </thead>
+            <tbody>
+              {listRows.map((row) => (
+                <tr key={row.slug}>
+                  <td title={heatTitle(row.heat, row.heat_why)}>
+                    <span className="heatrow">
+                      <span className={heatClass(row.heat)} />
+                      <span className="hw">{heatWord(row.heat)}</span>
+                    </span>
+                  </td>
+                  <td>
+                    <button className="rowbtn" onClick={() => openFolder(row.slug)}>
+                      {row.label}
+                    </button>
+                  </td>
+                  <td className="d">
+                    {row.entry_count} {row.entry_count === 1 ? "note" : "notes"}
+                  </td>
+                  <td className="d">{row.subject_count ?? "\u2014"}</td>
+                  <td className="d">{"\u2014"}</td>
+                  <td className="d">{freshness(row.updated_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {lanes.length > 0 && view === "folders" && (
           <>
             <div className="tabs">
               {chunks.map((chunk, ri) =>
