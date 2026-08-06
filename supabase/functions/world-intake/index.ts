@@ -8,7 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
-const BUILD_ID = "wintake.1";
+const BUILD_ID = "wintake.2";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
 const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const admin = (supabaseUrl && serviceRole)
@@ -166,7 +166,7 @@ Deno.serve(async (req) => {
       if (!r.error) counts.scheduled += (r.data ?? []).length;
     }
 
-    await admin!.from("change_log").insert({ tenant_id: cid, entity: "world.intake", entity_id: sourceId, change: "copps", actor: "cob", summary: `COPPS ${kind}${label ? " · " + label : ""} wave ${wave}: ${counts.claims} facts, ${counts.typed_edges} typed, ${counts.loops} loops, ${counts.decisions} decisions, ${counts.memories} filed (${counts.unfiled} unfiled), ${counts.scheduled} scheduled` });
+    await admin!.from("change_log").insert({ tenant_id: cid, entity: "knowledge", entity_id: sourceId, change: "created", actor: "cob", summary: `COPPS ${kind}${label ? " · " + label : ""} wave ${wave}: ${counts.claims} facts, ${counts.typed_edges} typed, ${counts.loops} loops, ${counts.decisions} decisions, ${counts.memories} filed (${counts.unfiled} unfiled), ${counts.scheduled} scheduled` });
 
     return json({ ok: true, action: "intake", cid, source: { kind, label }, wave, idem_key: idem, counts, dirty_embed: counts.claims, build_id: BUILD_ID });
   } catch (e) {
