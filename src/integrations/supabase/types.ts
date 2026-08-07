@@ -6226,6 +6226,24 @@ export type Database = {
         }
         Relationships: []
       }
+      route_eval_dr2: {
+        Row: {
+          claim_id: string | null
+          confidence: number | null
+          domain_key: string | null
+        }
+        Insert: {
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key?: string | null
+        }
+        Update: {
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key?: string | null
+        }
+        Relationships: []
+      }
       save_attempt: {
         Row: {
           canonicalization_version: string | null
@@ -9151,6 +9169,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ingest_dupes: { Args: { p_cid: string }; Returns: Json }
       ingest_enqueue: {
         Args: {
           p_idem: string

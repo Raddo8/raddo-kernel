@@ -1,4 +1,4 @@
-// domain-router · dr.3
+// domain-router · dr.4
 // Adds the self-supervising quality loop. The client is never the labeller.
 //
 // Changes from dr.2:
@@ -11,6 +11,16 @@
 //     this product cannot have. The prompt now names the evidence tests explicitly.
 //  3. CONSENSUS. N independent passes. Agreement is the label. Disagreement is a queue.
 //     This is how ground truth gets manufactured without spending the client's hours.
+//  4. SCOPE GATE (dr.4). An adversarial audit of dr.3 found the personal domains firing on
+//     the literal word rather than the subject: a prospect's family, an adversary's divorce
+//     and the figurative "the family's own network" all landed in the principal's household
+//     folder at 0.75 to 0.89 confidence. Prompt wording alone is not enough, because the
+//     failure IS a wording-level trigger. So the model must now declare WHOSE each personal
+//     domain is, and the server DROPS any personal domain not scoped to the principal.
+//     Judgment stays with the model; enforcement is deterministic.
+//  5. SUBSTANCE-BEFORE-ORBIT (dr.4). 'network' may never stand alone. If a pass returns
+//     network with no substance domain, the server withholds it and files an audit rather
+//     than accepting a parking-spot placement.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -23,7 +33,8 @@ const cors = { "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 type Src = "claim" | "memory";
 type Item = { id: string; src: Src; kind: string; title: string; body: string; occurred?: string };
-type Route = { id: string; domains: { d: string; c: number }[]; why: string };
+type Dom = { d: string; c: number; whose?: string };
+type Route = { id: string; domains: Dom[]; why: string };
 
 async function taxonomy(sb: any) {
   const { data, error } = await sb.from("domain_taxonomy")
@@ -76,8 +87,26 @@ function buildSystem(tax: any[], variant: number) {
     "6. Route on what the material IS ABOUT, never on who sent it or how it arrived.",
     "7. Never invent. Classify the text you were given, nothing more. An honest empty is correct.",
     "",
+    "THE SCOPE AND ABOUTNESS GATE · run this BEFORE you emit anything:",
+    "A. WHOSE IS IT. The personal domains belong to THE PRINCIPAL and their household only.",
+    "   A prospect's family is customers and relationships. An adversary's divorce is legal.",
+    "   A client's golf is customers. A metaphor ('the family's own network') is not family at all.",
+    "   For every personal domain you assign, you MUST state whose it is in the 'whose' field:",
+    "   'principal' when it is the principal or their household, otherwise 'other'.",
+    "   If you cannot tell, say 'other'. An honest 'other' costs nothing; a wrong 'principal' is a lie",
+    "   about someone's own life.",
+    "B. SUBSTANCE BEFORE ORBIT. Before you write 'network', answer this silently: what domain",
+    "   would this claim take if no person were named in it? Emit THAT domain too.",
+    "   Founding a company is capital. Hiring seven people is people. A CEO dying is people.",
+    "   Opening an office is strategy or operations. If the only answer you have is 'network',",
+    "   you have not finished thinking. Never return network alone.",
+    "C. LOCATION IS ALWAYS TRAVEL. A named residence, a stated home, a move, a trip, a week away,",
+    "   or 'out of town' is travel IN ADDITION to whatever else it is. This domain is currently",
+    "   empty across the whole corpus, which means location language is being missed everywhere.",
+    "",
+    "",
     "Return ONLY a JSON array, same order, no prose, no markdown fence:",
-    '[{"id":"<id>","domains":[{"d":"<domain_key>","c":0.0}],"why":"<12 words max>"}]',
+    '[{"id":"<id>","domains":[{"d":"<domain_key>","c":0.0,"whose":"principal|other"}],"why":"<12 words max>"}]',
   ].join("\n");
 }
 
@@ -107,13 +136,17 @@ async function onePass(items: Item[], tax: any[], variant: number): Promise<Rout
 // later by evidence, by the client's ordinary behaviour, or by one question in chat.
 type Merged = { id: string; keep: { d: string; c: number; votes: number }[];
                 audit: { d: string; votes: number; mean: number; reason: string }[] };
-function merge(passes: Route[][], n: number): Merged[] {
+const PERSONAL = new Set(["family","health","education","giving","estate","travel","interests"]);
+function merge(passes: Route[][], n: number, personal: Set<string>): Merged[] {
   const byId = new Map<string, Map<string, number[]>>();
   for (const p of passes) for (const r of p ?? []) {
     if (!byId.has(r.id)) byId.set(r.id, new Map());
     const m = byId.get(r.id)!;
     for (const d of r.domains ?? []) {
       if (!(d.c >= 0.35)) continue;
+      // SCOPE GATE, enforced. A personal domain not scoped to the principal is dropped
+      // outright rather than argued with. This is the dr.3 defect class, killed in code.
+      if (personal.has(d.d) && (d.whose ?? "other") !== "principal") continue;
       if (!m.has(d.d)) m.set(d.d, []);
       m.get(d.d)!.push(d.c);
     }
@@ -127,6 +160,14 @@ function merge(passes: Route[][], n: number): Merged[] {
       else if (mean >= 0.75) { keep.push({ d, c: +(mean * 0.7).toFixed(2), votes });
         audit.push({ d, votes, mean: +mean.toFixed(2), reason: "minority but confident" }); }
       else audit.push({ d, votes, mean: +mean.toFixed(2), reason: "minority and uncertain" });
+    }
+    // SUBSTANCE BEFORE ORBIT, enforced. network alone is never a placement.
+    const kept = keep.filter(k => k.d !== "network");
+    if (!kept.length && keep.some(k => k.d === "network")) {
+      const n0 = keep.find(k => k.d === "network")!;
+      audit.push({ d: "network", votes: n0.votes, mean: n0.c, reason: "network alone, withheld" });
+      out.push({ id, keep: [], audit });
+      continue;
     }
     out.push({ id, keep, audit });
   }
@@ -161,7 +202,7 @@ async function routeAndWrite(sb: any, cid: string, src: Src, batch: Item[], tax:
                              passes: number, valid: Set<string>, dry: boolean) {
   const runs: Route[][] = [];
   for (let v = 0; v < passes; v++) runs.push(await onePass(batch, tax, v));
-  const merged = merge(runs, passes);
+  const merged = merge(runs, passes, PERSONAL);
   const rows: any[] = [], audits: any[] = [];
   let unplaced = 0;
   for (const m of merged) {
@@ -171,7 +212,7 @@ async function routeAndWrite(sb: any, cid: string, src: Src, batch: Item[], tax:
       claim_id:  src === "claim"  ? m.id : null,
       memory_id: src === "memory" ? m.id : null,
       domain_key: k.d, confidence: Math.min(1, Math.max(0, k.c)),
-      routed_by: `domain-router/dr.3/${MODEL}/p${passes}`, routed_at: new Date().toISOString() });
+      routed_by: `domain-router/dr.4/${MODEL}/p${passes}`, routed_at: new Date().toISOString() });
     for (const a of m.audit.filter(a => valid.has(a.d))) audits.push({ cid,
       claim_id:  src === "claim"  ? m.id : null,
       memory_id: src === "memory" ? m.id : null,
@@ -204,7 +245,7 @@ Deno.serve(async (req) => {
       if (items.length > 40) throw new Error("batch cap is 40 items");
       const src: Src = b.src === "memory" ? "memory" : "claim";
       const r = await routeAndWrite(sb, cid, src, items, tax, passes, valid, !!dry_run);
-      return new Response(JSON.stringify({ ok: true, version: "dr.3", mode: "direct",
+      return new Response(JSON.stringify({ ok: true, version: "dr.4", mode: "direct",
         model: MODEL, passes, items: items.length, placements: r.rows.length,
         audits: r.audits.length, unplaced: r.unplaced,
         routes: dry_run ? r.merged : undefined, dry_run: !!dry_run }),
@@ -255,11 +296,11 @@ Deno.serve(async (req) => {
       }
     }
     const { data: gate } = await sb.rpc("ingest_gate", { p_program: program_id });
-    return new Response(JSON.stringify({ ok: true, version: "dr.3", mode: "worker", model: MODEL,
+    return new Response(JSON.stringify({ ok: true, version: "dr.4", mode: "worker", model: MODEL,
       passes, units, items: itemsSeen, placements, audits: auditsN, unplaced: unplacedAll, errors, gate }),
       { headers: { ...cors, "content-type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, version: "dr.3", error: String((e as any)?.message ?? e) }),
+    return new Response(JSON.stringify({ ok: false, version: "dr.4", error: String((e as any)?.message ?? e) }),
       { status: 400, headers: { ...cors, "content-type": "application/json" } });
   }
 });
