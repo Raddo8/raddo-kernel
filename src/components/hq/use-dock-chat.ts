@@ -21,6 +21,7 @@ function uid() {
 }
 
 export function useDockChat() {
+  const cobLabel = useCobLabel();
   const [messages, setMessages] = useState<DockMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +162,7 @@ export function useDockChat() {
         abortRef.current = null;
       }
     },
-    [messages, pending],
+    [messages, pending, cobLabel],
   );
 
   const stop = useCallback(() => {
