@@ -9028,6 +9028,7 @@ export type Database = {
         }
         Returns: Json
       }
+      ingest_catchall: { Args: { p_cid: string }; Returns: Json }
       ingest_claim: {
         Args: {
           p_holder: string
