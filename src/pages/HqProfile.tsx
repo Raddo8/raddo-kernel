@@ -131,7 +131,7 @@ function ProfileBody() {
             Naming your COB is something you can also just say to them in the dock.
           </p>
           {note && <p className="plain" style={{ marginTop: 8 }}>{note}</p>}
-          {err && <p className="plain" style={{ marginTop: 8, color: "#8C2F2F" }}>{err}</p>}
+          {err && <p className="plain" style={{ marginTop: 8, color: "var(--err)" }}>{err}</p>}
         </div>
 
         <aside className="infobox">

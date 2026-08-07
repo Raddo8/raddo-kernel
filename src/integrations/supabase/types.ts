@@ -326,6 +326,36 @@ export type Database = {
           },
         ]
       }
+      admin_audit_access: {
+        Row: {
+          access_id: string
+          action: string
+          at: string
+          detail: Json | null
+          operator: string | null
+          operator_email: string | null
+          target_cid: string
+        }
+        Insert: {
+          access_id?: string
+          action: string
+          at?: string
+          detail?: Json | null
+          operator?: string | null
+          operator_email?: string | null
+          target_cid: string
+        }
+        Update: {
+          access_id?: string
+          action?: string
+          at?: string
+          detail?: Json | null
+          operator?: string | null
+          operator_email?: string | null
+          target_cid?: string
+        }
+        Relationships: []
+      }
       approval_requests: {
         Row: {
           created_at: string
@@ -1072,6 +1102,78 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
+          },
+        ]
+      }
+      change_ledger: {
+        Row: {
+          actor: string | null
+          actor_role: string | null
+          after_row: Json | null
+          at: string
+          before_row: Json | null
+          changed_fields: string[] | null
+          cid: string | null
+          ledger_id: number
+          op: string
+          pk_col: string | null
+          reason: string | null
+          reverted_by: number | null
+          reverts: number | null
+          row_pk: string
+          session_ref: string | null
+          table_name: string
+        }
+        Insert: {
+          actor?: string | null
+          actor_role?: string | null
+          after_row?: Json | null
+          at?: string
+          before_row?: Json | null
+          changed_fields?: string[] | null
+          cid?: string | null
+          ledger_id?: number
+          op: string
+          pk_col?: string | null
+          reason?: string | null
+          reverted_by?: number | null
+          reverts?: number | null
+          row_pk: string
+          session_ref?: string | null
+          table_name: string
+        }
+        Update: {
+          actor?: string | null
+          actor_role?: string | null
+          after_row?: Json | null
+          at?: string
+          before_row?: Json | null
+          changed_fields?: string[] | null
+          cid?: string | null
+          ledger_id?: number
+          op?: string
+          pk_col?: string | null
+          reason?: string | null
+          reverted_by?: number | null
+          reverts?: number | null
+          row_pk?: string
+          session_ref?: string | null
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_ledger_reverted_by_fkey"
+            columns: ["reverted_by"]
+            isOneToOne: false
+            referencedRelation: "change_ledger"
+            referencedColumns: ["ledger_id"]
+          },
+          {
+            foreignKeyName: "change_ledger_reverts_fkey"
+            columns: ["reverts"]
+            isOneToOne: false
+            referencedRelation: "change_ledger"
+            referencedColumns: ["ledger_id"]
           },
         ]
       }
@@ -3039,6 +3141,74 @@ export type Database = {
         }
         Relationships: []
       }
+      hq_page: {
+        Row: {
+          default_enabled: boolean
+          label: string
+          nav_no: string | null
+          note: string | null
+          operator_only: boolean
+          page_key: string
+          route: string
+          sort_order: number
+        }
+        Insert: {
+          default_enabled?: boolean
+          label: string
+          nav_no?: string | null
+          note?: string | null
+          operator_only?: boolean
+          page_key: string
+          route: string
+          sort_order?: number
+        }
+        Update: {
+          default_enabled?: boolean
+          label?: string
+          nav_no?: string | null
+          note?: string | null
+          operator_only?: boolean
+          page_key?: string
+          route?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      hq_page_entitlement: {
+        Row: {
+          cid: string
+          enabled: boolean
+          page_key: string
+          reason: string | null
+          set_at: string
+          set_by: string | null
+        }
+        Insert: {
+          cid: string
+          enabled: boolean
+          page_key: string
+          reason?: string | null
+          set_at?: string
+          set_by?: string | null
+        }
+        Update: {
+          cid?: string
+          enabled?: boolean
+          page_key?: string
+          reason?: string | null
+          set_at?: string
+          set_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hq_page_entitlement_page_key_fkey"
+            columns: ["page_key"]
+            isOneToOne: false
+            referencedRelation: "hq_page"
+            referencedColumns: ["page_key"]
+          },
+        ]
+      }
       identity_observations: {
         Row: {
           authorization_receipt: string | null
@@ -4820,6 +4990,45 @@ export type Database = {
           provider_message_id?: string
           recipient_email?: string | null
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      notion_dependency: {
+        Row: {
+          created_at: string
+          dep_id: string
+          detail: string | null
+          disposition: string
+          layer: string
+          locator: string
+          owner: string
+          resolved_at: string | null
+          severity: string
+          what: string
+        }
+        Insert: {
+          created_at?: string
+          dep_id?: string
+          detail?: string | null
+          disposition?: string
+          layer: string
+          locator: string
+          owner?: string
+          resolved_at?: string | null
+          severity: string
+          what: string
+        }
+        Update: {
+          created_at?: string
+          dep_id?: string
+          detail?: string | null
+          disposition?: string
+          layer?: string
+          locator?: string
+          owner?: string
+          resolved_at?: string | null
+          severity?: string
+          what?: string
         }
         Relationships: []
       }
@@ -7263,6 +7472,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      session_transcript: {
+        Row: {
+          body_md: string
+          chars: number | null
+          cid: string
+          created_at: string
+          fidelity: string
+          part: number
+          parts_total: number
+          scrub_note: string | null
+          scrubbed: boolean
+          session_id: string | null
+          transcript_id: string
+          written_by: string | null
+        }
+        Insert: {
+          body_md: string
+          chars?: number | null
+          cid: string
+          created_at?: string
+          fidelity: string
+          part?: number
+          parts_total?: number
+          scrub_note?: string | null
+          scrubbed?: boolean
+          session_id?: string | null
+          transcript_id?: string
+          written_by?: string | null
+        }
+        Update: {
+          body_md?: string
+          chars?: number | null
+          cid?: string
+          created_at?: string
+          fidelity?: string
+          part?: number
+          parts_total?: number
+          scrub_note?: string | null
+          scrubbed?: boolean
+          session_id?: string | null
+          transcript_id?: string
+          written_by?: string | null
+        }
+        Relationships: []
       }
       sessions: {
         Row: {
@@ -9786,7 +10040,18 @@ export type Database = {
       }
     }
     Functions: {
+      admin_cid_audit: { Args: { p_cid: string }; Returns: Json }
+      admin_fleet_board: { Args: never; Returns: Json }
       admin_guard: { Args: never; Returns: undefined }
+      admin_set_page: {
+        Args: {
+          p_cid: string
+          p_enabled: boolean
+          p_page: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       amend_doctrine_rule: {
         Args: {
           p_actor: string
@@ -9874,6 +10139,15 @@ export type Database = {
         }[]
       }
       campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
+      change_actor: { Args: never; Returns: string }
+      change_feed: {
+        Args: { p_cid?: string; p_limit?: number; p_since?: string }
+        Returns: Json
+      }
+      change_history: {
+        Args: { p_row_pk: string; p_table: string }
+        Returns: Json
+      }
       check_rate_limit: {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
@@ -9997,8 +10271,10 @@ export type Database = {
           title: string
         }[]
       }
+      hq_my_pages: { Args: never; Returns: Json }
       hq_next_run: { Args: { p_cid: string }; Returns: Json }
       hq_next_run_me: { Args: never; Returns: Json }
+      hq_pages_for: { Args: { p_cid: string }; Returns: Json }
       hq_progress_bar: { Args: { p_cid: string }; Returns: Json }
       hq_progress_bar_me: { Args: never; Returns: Json }
       hq_records_counts_v1: {
@@ -10495,12 +10771,23 @@ export type Database = {
         }
         Returns: Json
       }
+      revert_change: {
+        Args: { p_ledger_id: number; p_reason: string }
+        Returns: Json
+      }
       route_evidence_gaps: {
         Args: { p_cid: string }
         Returns: {
           claim_id: string
           expected: string
           snippet: string
+        }[]
+      }
+      route_evidence_match: {
+        Args: { p_cid: string }
+        Returns: {
+          claim_id: string
+          domain_key: string
         }[]
       }
       route_orbit_rescue: { Args: { p_cid: string }; Returns: Json }
@@ -10514,6 +10801,8 @@ export type Database = {
           share: number
         }[]
       }
+      route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
+      save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
       set_doctrine_tier: {
         Args: {
           p_actor: string
