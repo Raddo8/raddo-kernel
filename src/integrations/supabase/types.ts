@@ -1199,6 +1199,45 @@ export type Database = {
           },
         ]
       }
+      claim_ingest_key: {
+        Row: {
+          cid: string
+          claim_id: string
+          created_at: string
+          fingerprint: string
+          source_ref: string
+        }
+        Insert: {
+          cid: string
+          claim_id: string
+          created_at?: string
+          fingerprint: string
+          source_ref: string
+        }
+        Update: {
+          cid?: string
+          claim_id?: string
+          created_at?: string
+          fingerprint?: string
+          source_ref?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_ingest_key_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_ingest_key_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+        ]
+      }
       client_intake: {
         Row: {
           cid: string
@@ -3250,6 +3289,128 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_campaign: {
+        Row: {
+          cadence: string
+          campaign_id: string
+          cid: string
+          created_at: string
+          horizon_note: string | null
+          items_done: number
+          items_per_run: number | null
+          label: string
+          last_run_at: string | null
+          measured_rate_per_hour: number | null
+          minutes_per_run: number
+          next_suggested_at: string | null
+          ordering: string
+          proving_runs_required: number
+          rate_source: string | null
+          runs_done: number
+          status: string
+          total_estimate_basis: string | null
+          total_estimated_items: number | null
+          updated_at: string
+        }
+        Insert: {
+          cadence?: string
+          campaign_id?: string
+          cid: string
+          created_at?: string
+          horizon_note?: string | null
+          items_done?: number
+          items_per_run?: number | null
+          label: string
+          last_run_at?: string | null
+          measured_rate_per_hour?: number | null
+          minutes_per_run?: number
+          next_suggested_at?: string | null
+          ordering?: string
+          proving_runs_required?: number
+          rate_source?: string | null
+          runs_done?: number
+          status?: string
+          total_estimate_basis?: string | null
+          total_estimated_items?: number | null
+          updated_at?: string
+        }
+        Update: {
+          cadence?: string
+          campaign_id?: string
+          cid?: string
+          created_at?: string
+          horizon_note?: string | null
+          items_done?: number
+          items_per_run?: number | null
+          label?: string
+          last_run_at?: string | null
+          measured_rate_per_hour?: number | null
+          minutes_per_run?: number
+          next_suggested_at?: string | null
+          ordering?: string
+          proving_runs_required?: number
+          rate_source?: string | null
+          runs_done?: number
+          status?: string
+          total_estimate_basis?: string | null
+          total_estimated_items?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ingest_campaign_source: {
+        Row: {
+          campaign_id: string
+          cid: string
+          connect_state: string
+          discovered_at: string
+          discovery_state: string
+          estimate_basis: string | null
+          estimated_items: number | null
+          items_done: number
+          kind: string
+          label: string
+          source_key: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          cid: string
+          connect_state?: string
+          discovered_at?: string
+          discovery_state?: string
+          estimate_basis?: string | null
+          estimated_items?: number | null
+          items_done?: number
+          kind: string
+          label: string
+          source_key: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          cid?: string
+          connect_state?: string
+          discovered_at?: string
+          discovery_state?: string
+          estimate_basis?: string | null
+          estimated_items?: number | null
+          items_done?: number
+          kind?: string
+          label?: string
+          source_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_campaign_source_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_campaign"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
       ingest_checkpoint: {
         Row: {
           items_done: number
@@ -3338,6 +3499,7 @@ export type Database = {
       }
       ingest_program: {
         Row: {
+          campaign_id: string | null
           cid: string
           completed_at: string | null
           created_at: string
@@ -3353,6 +3515,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          campaign_id?: string | null
           cid: string
           completed_at?: string | null
           created_at?: string
@@ -3368,6 +3531,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          campaign_id?: string | null
           cid?: string
           completed_at?: string | null
           created_at?: string
@@ -3382,7 +3546,134 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ingest_program_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_campaign"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      ingest_run_receipt: {
+        Row: {
+          campaign_id: string
+          cid: string
+          claims_added: number
+          dated_items_added: number
+          entities_added: number
+          finished_at: string
+          headline: string | null
+          items: number
+          label: string | null
+          minutes: number | null
+          program_id: string | null
+          receipt_id: string
+          run_no: number
+        }
+        Insert: {
+          campaign_id: string
+          cid: string
+          claims_added?: number
+          dated_items_added?: number
+          entities_added?: number
+          finished_at?: string
+          headline?: string | null
+          items?: number
+          label?: string | null
+          minutes?: number | null
+          program_id?: string | null
+          receipt_id?: string
+          run_no: number
+        }
+        Update: {
+          campaign_id?: string
+          cid?: string
+          claims_added?: number
+          dated_items_added?: number
+          entities_added?: number
+          finished_at?: string
+          headline?: string | null
+          items?: number
+          label?: string | null
+          minutes?: number | null
+          program_id?: string | null
+          receipt_id?: string
+          run_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_run_receipt_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_campaign"
+            referencedColumns: ["campaign_id"]
+          },
+        ]
+      }
+      ingest_schedule: {
+        Row: {
+          campaign_id: string
+          cid: string
+          consecutive_misses: number
+          created_at: string
+          days: string
+          enabled: boolean
+          last_confirmed_run: string | null
+          local_tz: string
+          minutes: number
+          state: string
+          surface_key: string | null
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          campaign_id: string
+          cid: string
+          consecutive_misses?: number
+          created_at?: string
+          days?: string
+          enabled?: boolean
+          last_confirmed_run?: string | null
+          local_tz?: string
+          minutes?: number
+          state?: string
+          surface_key?: string | null
+          updated_at?: string
+          window_start?: string
+        }
+        Update: {
+          campaign_id?: string
+          cid?: string
+          consecutive_misses?: number
+          created_at?: string
+          days?: string
+          enabled?: boolean
+          last_confirmed_run?: string | null
+          local_tz?: string
+          minutes?: number
+          state?: string
+          surface_key?: string | null
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_schedule_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: true
+            referencedRelation: "ingest_campaign"
+            referencedColumns: ["campaign_id"]
+          },
+          {
+            foreignKeyName: "ingest_schedule_surface_key_fkey"
+            columns: ["surface_key"]
+            isOneToOne: false
+            referencedRelation: "ingest_surface"
+            referencedColumns: ["surface_key"]
+          },
+        ]
       }
       ingest_source: {
         Row: {
@@ -3442,6 +3733,33 @@ export type Database = {
             referencedColumns: ["program_id"]
           },
         ]
+      }
+      ingest_surface: {
+        Row: {
+          can_run_unattended: boolean
+          can_schedule: boolean
+          label: string
+          sort_order: number
+          surface_key: string
+          why: string
+        }
+        Insert: {
+          can_run_unattended: boolean
+          can_schedule: boolean
+          label: string
+          sort_order?: number
+          surface_key: string
+          why: string
+        }
+        Update: {
+          can_run_unattended?: boolean
+          can_schedule?: boolean
+          label?: string
+          sort_order?: number
+          surface_key?: string
+          why?: string
+        }
+        Relationships: []
       }
       ingest_unit: {
         Row: {
@@ -9552,6 +9870,7 @@ export type Database = {
           state: string
         }[]
       }
+      campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
       check_rate_limit: {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
@@ -9674,6 +9993,10 @@ export type Database = {
           title: string
         }[]
       }
+      hq_next_run: { Args: { p_cid: string }; Returns: Json }
+      hq_next_run_me: { Args: never; Returns: Json }
+      hq_progress_bar: { Args: { p_cid: string }; Returns: Json }
+      hq_progress_bar_me: { Args: never; Returns: Json }
       hq_records_counts_v1: {
         Args: { _cid: string }
         Returns: {
@@ -9767,6 +10090,37 @@ export type Database = {
         }
         Returns: Json
       }
+      ingest_campaign_open: {
+        Args: {
+          p_cadence?: string
+          p_cid: string
+          p_label: string
+          p_minutes?: number
+          p_total_basis: string
+          p_total_items: number
+        }
+        Returns: Json
+      }
+      ingest_campaign_record_run:
+        | {
+            Args: {
+              p_campaign: string
+              p_headline?: string
+              p_program: string
+              p_since?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_campaign: string
+              p_headline?: string
+              p_program: string
+              p_since?: string
+              p_until?: string
+            }
+            Returns: Json
+          }
       ingest_catchall: { Args: { p_cid: string }; Returns: Json }
       ingest_claim: {
         Args: {
@@ -10144,6 +10498,7 @@ export type Database = {
           snippet: string
         }[]
       }
+      route_orbit_rescue: { Args: { p_cid: string }; Returns: Json }
       route_outliers: {
         Args: { p_cid: string; p_min_claims?: number }
         Returns: {
@@ -10291,6 +10646,24 @@ export type Database = {
           unknown_ct: number
         }[]
       }
+      world_claim_write: {
+        Args: {
+          p_cid: string
+          p_confidence?: number
+          p_grade?: string
+          p_miner?: string
+          p_observed: string
+          p_predicate: string
+          p_sensitivity?: string
+          p_source_id: string
+          p_source_ref: string
+          p_subject: string
+          p_text: string
+          p_valid_from?: string
+          p_valid_to?: string
+        }
+        Returns: string
+      }
       world_entity_heat_v1: {
         Args: { _cid: string }
         Returns: {
@@ -10316,6 +10689,10 @@ export type Database = {
           name: string
           why: string
         }[]
+      }
+      world_entity_upsert: {
+        Args: { p_cid: string; p_etype?: string; p_name: string }
+        Returns: string
       }
       world_hubs_v1: {
         Args: { _cid: string }
