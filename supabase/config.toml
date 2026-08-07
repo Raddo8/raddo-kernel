@@ -98,3 +98,6 @@ verify_jwt = false
 
 [functions.domain-router]
 verify_jwt = false
+
+[functions.temporal-assessor]
+verify_jwt = false

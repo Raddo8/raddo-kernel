@@ -2350,6 +2350,125 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_merge_log: {
+        Row: {
+          absorbed: string
+          action: string
+          actor: string
+          at: string
+          cid: string
+          log_id: number
+          pair_id: string | null
+          reason: string | null
+          survivor: string
+        }
+        Insert: {
+          absorbed: string
+          action: string
+          actor: string
+          at?: string
+          cid: string
+          log_id?: number
+          pair_id?: string | null
+          reason?: string | null
+          survivor: string
+        }
+        Update: {
+          absorbed?: string
+          action?: string
+          actor?: string
+          at?: string
+          cid?: string
+          log_id?: number
+          pair_id?: string | null
+          reason?: string | null
+          survivor?: string
+        }
+        Relationships: []
+      }
+      entity_pair: {
+        Row: {
+          blocker: string
+          cid: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          left_id: string
+          llm_conf: number | null
+          llm_verdict: string | null
+          llm_why: string | null
+          pair_id: string
+          right_id: string
+          rule_verdict: string | null
+          shared_keys: Json
+          sim_name: number | null
+          state: string
+        }
+        Insert: {
+          blocker: string
+          cid: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          left_id: string
+          llm_conf?: number | null
+          llm_verdict?: string | null
+          llm_why?: string | null
+          pair_id?: string
+          right_id: string
+          rule_verdict?: string | null
+          shared_keys?: Json
+          sim_name?: number | null
+          state?: string
+        }
+        Update: {
+          blocker?: string
+          cid?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          left_id?: string
+          llm_conf?: number | null
+          llm_verdict?: string | null
+          llm_why?: string | null
+          pair_id?: string
+          right_id?: string
+          rule_verdict?: string | null
+          shared_keys?: Json
+          sim_name?: number | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_pair_left_id_fkey"
+            columns: ["left_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_pair_left_id_fkey"
+            columns: ["left_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_pair_right_id_fkey"
+            columns: ["right_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_pair_right_id_fkey"
+            columns: ["right_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entity_registry: {
         Row: {
           canonical_name: string
@@ -2415,6 +2534,13 @@ export type Database = {
           review_status?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "entity_registry_link_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "entity_registry_link_entity_id_fkey"
             columns: ["entity_id"]
@@ -8077,6 +8203,203 @@ export type Database = {
         }
         Relationships: []
       }
+      work_item: {
+        Row: {
+          answered_by_claim: string | null
+          answered_by_memory: string | null
+          cid: string
+          close_reason: string | null
+          closed_at: string | null
+          consequence: string | null
+          consequence_note: string | null
+          created_at: string
+          date_basis: string | null
+          date_kind: string | null
+          dedup_key: string
+          detail: string | null
+          due_date: string | null
+          kind: string
+          last_surfaced: string | null
+          origin: string
+          owner: string | null
+          principal_acts: boolean | null
+          ref_date: string | null
+          relationship: number | null
+          significance: number | null
+          snooze_until: string | null
+          state: string
+          subject_id: string | null
+          superseded_by: string | null
+          surfaced_count: number
+          title: string
+          trigger: string | null
+          updated_at: string
+          urgency: number | null
+          work_id: string
+        }
+        Insert: {
+          answered_by_claim?: string | null
+          answered_by_memory?: string | null
+          cid: string
+          close_reason?: string | null
+          closed_at?: string | null
+          consequence?: string | null
+          consequence_note?: string | null
+          created_at?: string
+          date_basis?: string | null
+          date_kind?: string | null
+          dedup_key: string
+          detail?: string | null
+          due_date?: string | null
+          kind?: string
+          last_surfaced?: string | null
+          origin: string
+          owner?: string | null
+          principal_acts?: boolean | null
+          ref_date?: string | null
+          relationship?: number | null
+          significance?: number | null
+          snooze_until?: string | null
+          state?: string
+          subject_id?: string | null
+          superseded_by?: string | null
+          surfaced_count?: number
+          title: string
+          trigger?: string | null
+          updated_at?: string
+          urgency?: number | null
+          work_id?: string
+        }
+        Update: {
+          answered_by_claim?: string | null
+          answered_by_memory?: string | null
+          cid?: string
+          close_reason?: string | null
+          closed_at?: string | null
+          consequence?: string | null
+          consequence_note?: string | null
+          created_at?: string
+          date_basis?: string | null
+          date_kind?: string | null
+          dedup_key?: string
+          detail?: string | null
+          due_date?: string | null
+          kind?: string
+          last_surfaced?: string | null
+          origin?: string
+          owner?: string | null
+          principal_acts?: boolean | null
+          ref_date?: string | null
+          relationship?: number | null
+          significance?: number | null
+          snooze_until?: string | null
+          state?: string
+          subject_id?: string | null
+          superseded_by?: string | null
+          surfaced_count?: number
+          title?: string
+          trigger?: string | null
+          updated_at?: string
+          urgency?: number | null
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_answered_by_claim_fkey"
+            columns: ["answered_by_claim"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_answered_by_claim_fkey"
+            columns: ["answered_by_claim"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+          {
+            foreignKeyName: "work_item_answered_by_memory_fkey"
+            columns: ["answered_by_memory"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "work_item"
+            referencedColumns: ["work_id"]
+          },
+          {
+            foreignKeyName: "work_item_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "work_ranked"
+            referencedColumns: ["work_id"]
+          },
+        ]
+      }
+      work_link: {
+        Row: {
+          cid: string
+          created_at: string
+          link_id: number
+          ref_id: string
+          registry: string
+          role: string
+          work_id: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          link_id?: number
+          ref_id: string
+          registry: string
+          role?: string
+          work_id: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          link_id?: number
+          ref_id?: string
+          registry?: string
+          role?: string
+          work_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_link_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "work_item"
+            referencedColumns: ["work_id"]
+          },
+          {
+            foreignKeyName: "work_link_work_id_fkey"
+            columns: ["work_id"]
+            isOneToOne: false
+            referencedRelation: "work_ranked"
+            referencedColumns: ["work_id"]
+          },
+        ]
+      }
       work_orders: {
         Row: {
           claimed_at: string | null
@@ -8355,6 +8678,13 @@ export type Database = {
             foreignKeyName: "world_claims_object_id_fkey"
             columns: ["object_id"]
             isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_object_id_fkey"
+            columns: ["object_id"]
+            isOneToOne: false
             referencedRelation: "world_entities"
             referencedColumns: ["id"]
           },
@@ -8363,6 +8693,13 @@ export type Database = {
             columns: ["source_id"]
             isOneToOne: false
             referencedRelation: "world_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
             referencedColumns: ["id"]
           },
           {
@@ -8421,7 +8758,21 @@ export type Database = {
             foreignKeyName: "world_edges_dst_id_fkey"
             columns: ["dst_id"]
             isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_edges_dst_id_fkey"
+            columns: ["dst_id"]
+            isOneToOne: false
             referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_edges_src_id_fkey"
+            columns: ["src_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
             referencedColumns: ["id"]
           },
           {
@@ -8486,6 +8837,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "world_entities_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "world_entities_merged_into_fkey"
             columns: ["merged_into"]
@@ -8677,6 +9035,75 @@ export type Database = {
         }
         Relationships: []
       }
+      entity_resolvable: {
+        Row: {
+          cid: string | null
+          created_at: string | null
+          end_date: string | null
+          etype: string | null
+          id: string | null
+          lifecycle: string | null
+          merged_into: string | null
+          meta: Json | null
+          name: string | null
+          origin_date: string | null
+          resolution_keys: Json | null
+          sensitivity: string | null
+          status: string | null
+          tag: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          cid?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          etype?: string | null
+          id?: string | null
+          lifecycle?: string | null
+          merged_into?: string | null
+          meta?: Json | null
+          name?: string | null
+          origin_date?: string | null
+          resolution_keys?: Json | null
+          sensitivity?: string | null
+          status?: string | null
+          tag?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          cid?: string | null
+          created_at?: string | null
+          end_date?: string | null
+          etype?: string | null
+          id?: string | null
+          lifecycle?: string | null
+          merged_into?: string | null
+          meta?: Json | null
+          name?: string | null
+          origin_date?: string | null
+          resolution_keys?: Json | null
+          sensitivity?: string | null
+          status?: string | null
+          tag?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "world_entities_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "world_entities_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hq_readiness: {
         Row: {
           blocking_gap: string | null
@@ -8782,6 +9209,161 @@ export type Database = {
         }
         Relationships: []
       }
+      work_ranked: {
+        Row: {
+          answered_by_claim: string | null
+          answered_by_memory: string | null
+          attention: number | null
+          cid: string | null
+          close_reason: string | null
+          closed_at: string | null
+          consequence: string | null
+          consequence_note: string | null
+          created_at: string | null
+          date_basis: string | null
+          date_kind: string | null
+          dedup_key: string | null
+          detail: string | null
+          due_date: string | null
+          kind: string | null
+          last_surfaced: string | null
+          origin: string | null
+          owner: string | null
+          principal_acts: boolean | null
+          ref_date: string | null
+          relationship: number | null
+          significance: number | null
+          snooze_until: string | null
+          state: string | null
+          subject_id: string | null
+          superseded_by: string | null
+          surfaced_count: number | null
+          title: string | null
+          trigger: string | null
+          updated_at: string | null
+          urgency: number | null
+          work_id: string | null
+        }
+        Insert: {
+          answered_by_claim?: string | null
+          answered_by_memory?: string | null
+          attention?: never
+          cid?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          consequence?: string | null
+          consequence_note?: string | null
+          created_at?: string | null
+          date_basis?: string | null
+          date_kind?: string | null
+          dedup_key?: string | null
+          detail?: string | null
+          due_date?: string | null
+          kind?: string | null
+          last_surfaced?: string | null
+          origin?: string | null
+          owner?: string | null
+          principal_acts?: boolean | null
+          ref_date?: string | null
+          relationship?: number | null
+          significance?: number | null
+          snooze_until?: string | null
+          state?: string | null
+          subject_id?: string | null
+          superseded_by?: string | null
+          surfaced_count?: number | null
+          title?: string | null
+          trigger?: string | null
+          updated_at?: string | null
+          urgency?: number | null
+          work_id?: string | null
+        }
+        Update: {
+          answered_by_claim?: string | null
+          answered_by_memory?: string | null
+          attention?: never
+          cid?: string | null
+          close_reason?: string | null
+          closed_at?: string | null
+          consequence?: string | null
+          consequence_note?: string | null
+          created_at?: string | null
+          date_basis?: string | null
+          date_kind?: string | null
+          dedup_key?: string | null
+          detail?: string | null
+          due_date?: string | null
+          kind?: string | null
+          last_surfaced?: string | null
+          origin?: string | null
+          owner?: string | null
+          principal_acts?: boolean | null
+          ref_date?: string | null
+          relationship?: number | null
+          significance?: number | null
+          snooze_until?: string | null
+          state?: string | null
+          subject_id?: string | null
+          superseded_by?: string | null
+          surfaced_count?: number | null
+          title?: string | null
+          trigger?: string | null
+          updated_at?: string | null
+          urgency?: number | null
+          work_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_answered_by_claim_fkey"
+            columns: ["answered_by_claim"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_answered_by_claim_fkey"
+            columns: ["answered_by_claim"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+          {
+            foreignKeyName: "work_item_answered_by_memory_fkey"
+            columns: ["answered_by_memory"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "work_item"
+            referencedColumns: ["work_id"]
+          },
+          {
+            foreignKeyName: "work_item_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "work_ranked"
+            referencedColumns: ["work_id"]
+          },
+        ]
+      }
       world_delta_v: {
         Row: {
           cid: string | null
@@ -8817,6 +9399,13 @@ export type Database = {
           value_text?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "world_claims_subject_id_fkey"
             columns: ["subject_id"]
@@ -8858,6 +9447,13 @@ export type Database = {
           value_text?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "world_claims_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "world_claims_subject_id_fkey"
             columns: ["subject_id"]
@@ -8968,6 +9564,15 @@ export type Database = {
         Returns: Json
       }
       current_cid: { Args: never; Returns: string }
+      entity_block: {
+        Args: { p_cid: string; p_threshold?: number }
+        Returns: number
+      }
+      entity_is_bridge: {
+        Args: { p_cid: string; p_id: string }
+        Returns: boolean
+      }
+      entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
       get_action_response_status: {
         Args: { p_action_id: string }
@@ -9591,6 +10196,64 @@ export type Database = {
         Returns: boolean
       }
       watchdog_health: { Args: never; Returns: number }
+      work_close: {
+        Args: {
+          p_claim?: string
+          p_memory?: string
+          p_reason: string
+          p_state: string
+          p_work: string
+        }
+        Returns: undefined
+      }
+      work_extract_dates: {
+        Args: { p_cid: string }
+        Returns: {
+          deadlines: number
+          refs: number
+          scanned: number
+        }[]
+      }
+      work_fingerprint: { Args: { p_title: string }; Returns: string }
+      work_raise: {
+        Args: {
+          p_cid: string
+          p_detail?: string
+          p_due?: string
+          p_kind: string
+          p_origin: string
+          p_owner?: string
+          p_ref: string
+          p_registry: string
+          p_subject?: string
+          p_title: string
+        }
+        Returns: string
+      }
+      work_rescore: { Args: { p_cid: string }; Returns: number }
+      work_score: { Args: { p_cid: string }; Returns: number }
+      work_unassessed: {
+        Args: { p_cid: string; p_limit?: number }
+        Returns: {
+          detail: string
+          due_date: string
+          kind: string
+          ref_date: string
+          subject: string
+          title: string
+          work_id: string
+        }[]
+      }
+      work_unassessed_count: { Args: { p_cid: string }; Returns: number }
+      work_urgency: {
+        Args: {
+          p_consequence: string
+          p_due: string
+          p_kind: string
+          p_principal_acts: boolean
+        }
+        Returns: number
+      }
       world_build_all_v1: {
         Args: { _cid: string }
         Returns: {
@@ -9617,6 +10280,15 @@ export type Database = {
         Returns: {
           events_created: number
           links_created: number
+        }[]
+      }
+      world_build_spine_v1: {
+        Args: { _cid: string }
+        Returns: {
+          ended_ct: number
+          entities_dated: number
+          live_ct: number
+          unknown_ct: number
         }[]
       }
       world_entity_heat_v1: {
