@@ -13,6 +13,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
 import "@/hq-next/styles/hq-records.css";
+import "@/hq-next/styles/hq-brand.css";
 import { CobMark } from "./CobMark";
 import { CobIdentityProvider, useCob } from "@/lib/cob-identity";
 
