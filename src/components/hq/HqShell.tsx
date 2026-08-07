@@ -13,7 +13,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
 import "@/hq-next/styles/hq-records.css";
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobMark } from "./CobMark";
 import { CobIdentityProvider, useCob } from "@/lib/cob-identity";
 
 import { CobDock } from "./CobDock";
@@ -124,7 +124,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <img className="shmark" src={cobMark.url} alt="" />
+        <CobMark className="shmark" />
         <span>Menu</span>
       </button>
 
@@ -132,7 +132,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
         <div className="rail-brand">
           <div className="mark">
             <div className="mark-tile">
-              <img src={cobMark.url} alt="" />
+              <CobMark />
             </div>
             <div>
               {/* The name is the client's own. Blank beats flashing a default. */}

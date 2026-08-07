@@ -12,7 +12,7 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobMark } from "./CobMark";
 import { useCob } from "@/lib/cob-identity";
 import { useDockContext } from "./dock-context";
 import { useDockChat } from "./use-dock-chat";
@@ -136,7 +136,7 @@ export function CobDock() {
       )}
 
       <header className="dock-head">
-        <img className="dock-mark" src={cobMark.url} alt="" width={20} height={20} />
+        <CobMark className="dock-mark" size={20} />
         <div>
           <div className="dock-title">{cobName ?? "\u00a0"}</div>
           <div className="dock-where">{page.record ? `${page.label} · ${page.record}` : page.label}</div>
