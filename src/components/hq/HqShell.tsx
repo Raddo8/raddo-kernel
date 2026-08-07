@@ -7,13 +7,15 @@
  *
  * Identity is server-derived (current_cid), never self-asserted.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
 import "@/hq-next/styles/hq-records.css";
 import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobDock } from "./CobDock";
+import { DockContextProvider, type DockPageContext } from "./dock-context";
 
 interface NavItem {
   n: string;
@@ -35,6 +37,17 @@ const NAV: NavItem[] = [
 const CONTROL_NAV: NavItem[] = [{ n: "C1", label: "Records", to: "/hq/records" }];
 
 const LENS_KEY = "hq.rail.lens";
+
+/** Plain-words label for whatever surface the principal is on. Read-only context. */
+function labelForPath(pathname: string): string {
+  if (pathname.startsWith("/hq/world/brief")) return "The World \u00b7 a subject brief";
+  if (pathname.startsWith("/hq/world/registers")) return "The World \u00b7 records";
+  if (pathname.startsWith("/hq/world")) return "The World";
+  if (pathname.startsWith("/hq/memories")) return "Memories";
+  if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
+  if (pathname.startsWith("/hq/records")) return "Records";
+  return "HQ";
+}
 
 /** Server-derived operator flag. Client state never opens this gate. */
 export function useIsOperator(): boolean | undefined {
@@ -88,8 +101,15 @@ export function HqShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const dockSeed = useMemo<DockPageContext>(
+    () => ({ label: labelForPath(pathname), record: null }),
+    [pathname],
+  );
+
   return (
+    <DockContextProvider initial={dockSeed}>
     <div className="hqg">
+
       <button
         type="button"
         className="rail-toggle"
@@ -193,7 +213,10 @@ export function HqShell({ children }: { children: ReactNode }) {
       {open && <div className="rail-scrim" onClick={() => setOpen(false)} />}
 
       <div className="main">{children}</div>
+
+      <CobDock />
     </div>
+    </DockContextProvider>
   );
 }
 

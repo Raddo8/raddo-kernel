@@ -3620,6 +3620,7 @@ export type Database = {
           created_at: string
           days: string
           enabled: boolean
+          external_ref: string | null
           last_confirmed_run: string | null
           local_tz: string
           minutes: number
@@ -3635,6 +3636,7 @@ export type Database = {
           created_at?: string
           days?: string
           enabled?: boolean
+          external_ref?: string | null
           last_confirmed_run?: string | null
           local_tz?: string
           minutes?: number
@@ -3650,6 +3652,7 @@ export type Database = {
           created_at?: string
           days?: string
           enabled?: boolean
+          external_ref?: string | null
           last_confirmed_run?: string | null
           local_tz?: string
           minutes?: number
