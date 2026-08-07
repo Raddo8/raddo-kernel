@@ -39,6 +39,6 @@ export function FactRow({ children }: { children: React.ReactNode }) { return <d
 export function ExceptionsBar({ label, detail }: { label: string; detail: string }) { return <div className="xbar"><span className="xt">{label}</span><span className="xd">{detail}</span></div>; }
 export interface Column<R> { key: string; label: string; render: (r: R) => React.ReactNode; align?: 'right' }
 export function RegisterTable<R>({ columns, rows, rowKey }: { columns: Column<R>[]; rows: R[]; rowKey: (r: R) => string }) {
-  return (<table className="reg"><thead><tr>{columns.map(c => <th key={c.key} style={c.align === 'right' ? { textAlign: 'right' } : undefined}>{c.label}</th>)}</tr></thead>
-    <tbody>{rows.map(r => <tr key={rowKey(r)}>{columns.map(c => <td key={c.key} style={c.align === 'right' ? { textAlign: 'right' } : undefined}>{c.render(r)}</td>)}</tr>)}</tbody></table>);
+  return (<div className="reg-scroll"><table className="reg"><thead><tr>{columns.map(c => <th key={c.key} style={c.align === 'right' ? { textAlign: 'right' } : undefined}>{c.label}</th>)}</tr></thead>
+    <tbody>{rows.map(r => <tr key={rowKey(r)}>{columns.map(c => <td key={c.key} style={c.align === 'right' ? { textAlign: 'right' } : undefined}>{c.render(r)}</td>)}</tr>)}</tbody></table></div>);
 }
