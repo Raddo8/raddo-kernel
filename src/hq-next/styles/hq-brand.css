@@ -1,0 +1,225 @@
+/* HQ BRAND DESIGN · the one token sheet for every operating surface.
+ *
+ * Source of truth: public/onboarding-v1.html (chiefofbusiness.ai/start).
+ * This sheet supersedes the Dossier Brand Bible on operating surfaces.
+ * The printed dossier and the pinned document at /hq/original are out of scope.
+ *
+ * Everything here is scoped under .hqg so it reaches every /hq surface and
+ * nothing else. Rules carry an extra .hqg step so they land after the older
+ * page sheets without anyone having to police import order.
+ */
+
+.hqg {
+  /* PALETTE · locked. Nothing outside this list. */
+  --paper: #FAF8F4;
+  --marble-2: #F3F0EA;
+  --marble-3: #ECE8DF;
+  --edge: #E5E3DE;
+  --edge2: #ECE8DF;
+  --ink: #042C53;
+  --ink-soft: #2A4E78;
+  --charcoal: #2C2C2A;
+  --ash: #5F5E5A;
+  --brass: #EF9F27;
+  --brass-deep: #854F0B;
+  --white: #FFFFFF;
+  --ok: #2E6B4F;
+  --warn: #8A5A00;
+  --err: #8C2F2F;
+
+  /* SPACING · the 4 and 8 grid. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 16px;
+  --s4: 24px;
+  --s5: 32px;
+  --s6: 48px;
+  --s7: 64px;
+
+  /* TYPE · three families, no fourth. */
+  --serif: 'Aeonik', 'Figtree', system-ui, sans-serif;
+  --sans: 'Hanken Grotesk', system-ui, sans-serif;
+  --mono: 'Spline Sans Mono', ui-monospace, monospace;
+
+  --t-xs: 12px;
+  --t-sm: 14px;
+  --t-md: 16px;
+  --t-lg: 20px;
+  --t-xl: 28px;
+  --t-2xl: clamp(30px, 4.5vw, 44px);
+  --t-hero: clamp(38px, 5.5vw, 60px);
+
+  /* MOTION · one curve for the whole product. */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+  --dur-3: 300ms;
+
+  /* SHADOW · ink tinted, never neutral grey. */
+  --sh-1: 0 1px 2px rgba(4, 44, 83, .05);
+  --sh-2: 0 8px 24px rgba(4, 44, 83, .06);
+  --sh-3: 0 10px 28px rgba(4, 44, 83, .12);
+  --sh-4: 0 12px 40px rgba(4, 44, 83, .18);
+  --shadow: var(--sh-1);
+
+  /* RADIUS · a short scale plus the folder geometry from /start. */
+  --r-s: 3px;
+  --r-l: 8px;
+  --r-full: 999px;
+  --r-tab: 6px 6px 0 0;
+  --r-tile: 10px 10px 10px 2px;
+  --r-tile-alt: 0 8px 8px 8px;
+}
+
+/* Numbers that carry meaning line up. */
+.hqg .mono,
+.hqg [class*="mono"],
+.hqg .num,
+.hqg .fcount,
+.hqg .reg td.m,
+.hqg .wtable td.m {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* ELEVATION · three opaque warm steps. Depth is never transparency. */
+.hqg .lvl-1 { background: var(--paper); }
+.hqg .lvl-2 { background: var(--marble-2); }
+.hqg .lvl-3 { background: var(--marble-3); }
+
+/* No glass anywhere on an operating surface. */
+.hqg *,
+.hqg *::before,
+.hqg *::after {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* STATUS · a left rule, never a glowing dot. */
+.hqg .st { border-left: 3px solid var(--edge); padding-left: var(--s3); }
+.hqg .st-ok { border-left: 3px solid var(--ok); padding-left: var(--s3); }
+.hqg .st-warn { border-left: 3px solid var(--warn); padding-left: var(--s3); }
+.hqg .st-err { border-left: 3px solid var(--err); padding-left: var(--s3); }
+
+/* MOTION CEILING · transform and opacity only, one curve, press is scale(.98). */
+.hqg button,
+.hqg a.nl,
+.hqg .fcard,
+.hqg .tab {
+  transition: transform var(--dur-1) var(--ease), opacity var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+.hqg button:active,
+.hqg .fcard:active,
+.hqg .tab:active { transform: scale(.98); }
+
+/* The brass pulse ring is for work that is genuinely running, and nothing else.
+   It is never attached to a waiting or a pending count. */
+@keyframes hqg-live-ring {
+  0% { box-shadow: 0 0 0 0 rgba(239, 159, 39, .38); }
+  100% { box-shadow: 0 0 0 10px rgba(239, 159, 39, 0); }
+}
+.hqg .live-ring { border-radius: var(--r-full); animation: hqg-live-ring 1.6s var(--ease) infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hqg *,
+  .hqg *::before,
+  .hqg *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* =====================================================================
+ * FOLDER TILES · The World. The geometry from /start, finished.
+ * =================================================================== */
+.hqg .wld .fgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: var(--s4) var(--s3);
+  margin-top: var(--s4);
+  align-items: start;
+}
+
+.hqg .wld .fcard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  text-align: left;
+  background: var(--white);
+  border: 1px solid var(--edge);
+  border-top: 0;
+  border-radius: var(--r-tile);
+  padding: var(--s3) var(--s3) 14px;
+  margin-top: 22px;
+  cursor: pointer;
+  font-family: var(--sans);
+  box-shadow: var(--sh-1);
+}
+
+/* The tab. Staggered along the row so the grid reads as a real drawer. */
+.hqg .wld .fcard::before {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: 0;
+  width: 96px;
+  height: 21px;
+  background: var(--marble-2);
+  border: 1px solid var(--edge);
+  border-bottom: 0;
+  border-radius: var(--r-tab);
+  box-shadow: var(--sh-1);
+}
+.hqg .wld .fgrid > .fcard:nth-child(3n + 2)::before { left: 46px; width: 104px; }
+.hqg .wld .fgrid > .fcard:nth-child(3n + 3)::before { left: 92px; width: 88px; }
+
+.hqg .wld .fcard:hover { box-shadow: var(--sh-3); }
+.hqg .wld .fcard:hover::before {
+  background: var(--marble-3);
+  border-color: var(--brass);
+  box-shadow: var(--sh-2);
+}
+.hqg .wld .fcard:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+.hqg .wld .fcard .fn {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--brass-deep);
+}
+.hqg .wld .fcard .ft {
+  font-family: var(--serif);
+  font-size: var(--t-md);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.hqg .wld .fcard .fm {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--ash);
+}
+.hqg .wld .fcard .fh { margin-top: var(--s1); }
+
+/* the faint series line, drawn only where a folder actually carries one */
+.hqg .wld .fcard .fspark {
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin-top: var(--s1);
+  opacity: .5;
+}
+.hqg .wld .fcard:hover .fspark { opacity: .85; }
+.hqg .wld .fcard .fspark path { fill: none; stroke: var(--ink-soft); stroke-width: 1.25; }
+
+@media (max-width: 640px) {
+  .hqg .wld .fgrid { grid-template-columns: minmax(0, 1fr); }
+  .hqg .wld .fgrid > .fcard::before { left: 0; width: 96px; }
+}
