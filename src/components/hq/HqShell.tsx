@@ -101,8 +101,15 @@ export function HqShell({ children }: { children: ReactNode }) {
     }
   };
 
+  const dockSeed = useMemo<DockPageContext>(
+    () => ({ label: labelForPath(pathname), record: null }),
+    [pathname],
+  );
+
   return (
+    <DockContextProvider initial={dockSeed}>
     <div className="hqg">
+
       <button
         type="button"
         className="rail-toggle"
