@@ -95,3 +95,6 @@ verify_jwt = false
 verify_jwt = false
 
 
+
+[functions.domain-router]
+verify_jwt = false
