@@ -101,7 +101,7 @@ export function HqNext({ viewer }: HqNextProps) {
             </button>))}
         </div>))}
       </nav>
-      <main className="hqx-main">{body}</main>
+      <main className="hqx-main">{page === 'kernel' ? <AggregationPanel /> : null}{body}</main>
     </div>
   </div>);
 }
