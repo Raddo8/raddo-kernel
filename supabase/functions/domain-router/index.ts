@@ -1,4 +1,4 @@
-// domain-router · dr.4
+// domain-router · dr.5
 // Adds the self-supervising quality loop. The client is never the labeller.
 //
 // Changes from dr.2:
@@ -18,6 +18,13 @@
 //     failure IS a wording-level trigger. So the model must now declare WHOSE each personal
 //     domain is, and the server DROPS any personal domain not scoped to the principal.
 //     Judgment stays with the model; enforcement is deterministic.
+//  6. ORDINAL IDS (dr.5). dr.4 asked the model to echo a 36-character UUID per item and it
+//     mangled them: it returned 0b26f745-4c02-8425-65a197c14e4e for
+//     0b26f745-4ceb-4c02-8425-65a197c14e4e, dropping a segment. The insert then failed and
+//     took the whole unit down with it. Models are not reliable at transcribing long opaque
+//     strings and must never be asked to. Items now carry a small ordinal and the server maps
+//     it back to the real id. A non-numeric or out-of-range ordinal is dropped, never guessed,
+//     so a hallucinated index can no longer poison a batch.
 //  5. SUBSTANCE-BEFORE-ORBIT (dr.4). 'network' may never stand alone. If a pass returns
 //     network with no substance domain, the server withholds it and files an audit rather
 //     than accepting a parking-spot placement.
@@ -106,14 +113,15 @@ function buildSystem(tax: any[], variant: number) {
     "",
     "",
     "Return ONLY a JSON array, same order, no prose, no markdown fence:",
-    '[{"id":"<id>","domains":[{"d":"<domain_key>","c":0.0,"whose":"principal|other"}],"why":"<12 words max>"}]',
+    '[{"i":<the item number>,"domains":[{"d":"<domain_key>","c":0.0,"whose":"principal|other"}],"why":"<12 words max>"}]',
+    "Use the SMALL INTEGER item number from the i attribute. Never copy any long identifier.",
   ].join("\n");
 }
 
 async function onePass(items: Item[], tax: any[], variant: number): Promise<Route[]> {
-  const user = items.map(i =>
-    `<item id="${i.id}" kind="${i.kind}"${i.occurred ? ` occurred="${i.occurred}"` : ""}>\n` +
-    `${(i.title ?? "").slice(0, 300)}\n${(i.body ?? "").slice(0, 1800)}\n</item>`).join("\n\n");
+  const user = items.map((it, n) =>
+    `<item i="${n + 1}" kind="${it.kind}"${it.occurred ? ` occurred="${it.occurred}"` : ""}>\n` +
+    `${(it.title ?? "").slice(0, 300)}\n${(it.body ?? "").slice(0, 1800)}\n</item>`).join("\n\n");
   const r = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
@@ -126,7 +134,13 @@ async function onePass(items: Item[], tax: any[], variant: number): Promise<Rout
   const raw = (j.content?.[0]?.text ?? "").trim().replace(/^```(json)?|```$/g, "").trim();
   const parsed = JSON.parse(raw);
   if (!Array.isArray(parsed)) throw new Error("router did not return an array");
-  return parsed as Route[];
+  const out: Route[] = [];
+  for (const r of parsed as any[]) {
+    const n = Number(r?.i);
+    if (!Number.isInteger(n) || n < 1 || n > items.length) continue;
+    out.push({ id: items[n - 1].id, domains: r.domains ?? [], why: r.why ?? "" });
+  }
+  return out;
 }
 
 // CONSENSUS · agreement is the label, disagreement is a queue.
@@ -212,7 +226,7 @@ async function routeAndWrite(sb: any, cid: string, src: Src, batch: Item[], tax:
       claim_id:  src === "claim"  ? m.id : null,
       memory_id: src === "memory" ? m.id : null,
       domain_key: k.d, confidence: Math.min(1, Math.max(0, k.c)),
-      routed_by: `domain-router/dr.4/${MODEL}/p${passes}`, routed_at: new Date().toISOString() });
+      routed_by: `domain-router/dr.5/${MODEL}/p${passes}`, routed_at: new Date().toISOString() });
     for (const a of m.audit.filter(a => valid.has(a.d))) audits.push({ cid,
       claim_id:  src === "claim"  ? m.id : null,
       memory_id: src === "memory" ? m.id : null,
@@ -245,7 +259,7 @@ Deno.serve(async (req) => {
       if (items.length > 40) throw new Error("batch cap is 40 items");
       const src: Src = b.src === "memory" ? "memory" : "claim";
       const r = await routeAndWrite(sb, cid, src, items, tax, passes, valid, !!dry_run);
-      return new Response(JSON.stringify({ ok: true, version: "dr.4", mode: "direct",
+      return new Response(JSON.stringify({ ok: true, version: "dr.5", mode: "direct",
         model: MODEL, passes, items: items.length, placements: r.rows.length,
         audits: r.audits.length, unplaced: r.unplaced,
         routes: dry_run ? r.merged : undefined, dry_run: !!dry_run }),
@@ -296,11 +310,11 @@ Deno.serve(async (req) => {
       }
     }
     const { data: gate } = await sb.rpc("ingest_gate", { p_program: program_id });
-    return new Response(JSON.stringify({ ok: true, version: "dr.4", mode: "worker", model: MODEL,
+    return new Response(JSON.stringify({ ok: true, version: "dr.5", mode: "worker", model: MODEL,
       passes, units, items: itemsSeen, placements, audits: auditsN, unplaced: unplacedAll, errors, gate }),
       { headers: { ...cors, "content-type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, version: "dr.4", error: String((e as any)?.message ?? e) }),
+    return new Response(JSON.stringify({ ok: false, version: "dr.5", error: String((e as any)?.message ?? e) }),
       { status: 400, headers: { ...cors, "content-type": "application/json" } });
   }
 });
