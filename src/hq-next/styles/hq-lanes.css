@@ -275,3 +275,5 @@
   .wld .mtools input { flex: 1 1 100%; }
 }
 .wld, .wld * { min-width: 0; }
+/* the debriefing table keeps its columns and scrolls sideways on a phone */
+.wld .tscroll { max-width: 100%; overflow-x: auto; }

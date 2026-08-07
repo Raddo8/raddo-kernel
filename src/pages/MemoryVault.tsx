@@ -439,75 +439,77 @@ export function MemoryVault() {
                   </span>
                 </div>
 
-                <table className="dtab">
-                  <thead>
-                    <tr>
-                      <Sortable label="Date" k="date" />
-                      <Sortable label="Group" k="lane" />
-                      <Sortable label="Kind" k="category" />
-                      <th>Memory</th>
-                      <th>Where from</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length === 0 && (
+                <div className="tscroll">
+                  <table className="dtab">
+                    <thead>
                       <tr>
-                        <td className="empty" colSpan={5}>
-                          No memory has those words in it.
-                        </td>
+                        <Sortable label="Date" k="date" />
+                        <Sortable label="Group" k="lane" />
+                        <Sortable label="Kind" k="category" />
+                        <th>Memory</th>
+                        <th>Where from</th>
                       </tr>
-                    )}
-                    {filtered.map((m) => {
-                      const isOpen = openRows.includes(m.id);
-                      return (
-                        <Fragment key={m.id}>
-                          <tr className={isOpen ? "open" : undefined}>
-                            <td className="d">{shortDate(m.created_at)}</td>
-                            <td className="d">{m.lane ?? "\u2014"}</td>
-                            <td className="d">{m.category ?? "\u2014"}</td>
-                            <td>
-                              <button
-                                className="rowbtn"
-                                onClick={() => toggleRow(m.id)}
-                                aria-expanded={isOpen}
-                                title="Open to read the whole memory"
-                              >
-                                {m.title}
-                              </button>
-                            </td>
-                            <td>
-                              <SourceChip row={m} />
-                            </td>
-                          </tr>
-                          {isOpen && (
-                            <tr className="open">
-                              <td className="body" colSpan={5}>
-                                <p>{linkify(m.body_md ?? "Nothing written down yet.", targets, Ilink)}</p>
-                                <div className="chips">
-                                  <span className="chip" title="How this memory stands right now.">
-                                    {statusWord(m.status)}
-                                  </span>
-                                  {m.confidence != null && (
-                                    <span className="chip" title={`How sure ${COB} is about this.`}>
-                                      {Math.round(Number(m.confidence) * 100)}% sure
-                                    </span>
-                                  )}
-                                  <SourceChip row={m} />
-                                  <span className="chip" title="Where this came from.">
-                                    memory {DOT} {shortId(m.id)}
-                                  </span>
-                                </div>
-                                <button className="ask" onClick={() => ask(m)}>
-                                  Tell {COB} to change something here &rarr;
+                    </thead>
+                    <tbody>
+                      {filtered.length === 0 && (
+                        <tr>
+                          <td className="empty" colSpan={5}>
+                            No memory has those words in it.
+                          </td>
+                        </tr>
+                      )}
+                      {filtered.map((m) => {
+                        const isOpen = openRows.includes(m.id);
+                        return (
+                          <Fragment key={m.id}>
+                            <tr className={isOpen ? "open" : undefined}>
+                              <td className="d">{shortDate(m.created_at)}</td>
+                              <td className="d">{m.lane ?? "\u2014"}</td>
+                              <td className="d">{m.category ?? "\u2014"}</td>
+                              <td>
+                                <button
+                                  className="rowbtn"
+                                  onClick={() => toggleRow(m.id)}
+                                  aria-expanded={isOpen}
+                                  title="Open to read the whole memory"
+                                >
+                                  {m.title}
                                 </button>
                               </td>
+                              <td>
+                                <SourceChip row={m} />
+                              </td>
                             </tr>
-                          )}
-                        </Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            {isOpen && (
+                              <tr className="open">
+                                <td className="body" colSpan={5}>
+                                  <p>{linkify(m.body_md ?? "Nothing written down yet.", targets, Ilink)}</p>
+                                  <div className="chips">
+                                    <span className="chip" title="How this memory stands right now.">
+                                      {statusWord(m.status)}
+                                    </span>
+                                    {m.confidence != null && (
+                                      <span className="chip" title={`How sure ${COB} is about this.`}>
+                                        {Math.round(Number(m.confidence) * 100)}% sure
+                                      </span>
+                                    )}
+                                    <SourceChip row={m} />
+                                    <span className="chip" title="Where this came from.">
+                                      memory {DOT} {shortId(m.id)}
+                                    </span>
+                                  </div>
+                                  <button className="ask" onClick={() => ask(m)}>
+                                    Tell {COB} to change something here &rarr;
+                                  </button>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </div>
