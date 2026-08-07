@@ -12,6 +12,7 @@ import { Entities } from './surfaces/Entities';
 import { INTERFACES, COUNTS } from './registry/interface-coverage';
 import { REGISTERS } from './registry/register-migration';
 import { Section, StateBlock, Badge, RegisterTable, type Column } from './components/primitives';
+import { AggregationPanel } from './components/AggregationPanel';
 import type { Viewer } from './useHqRead';
 import type { InterfaceEntry } from './registry/interface-coverage';
 import type { RegisterEntry } from './registry/register-migration';
