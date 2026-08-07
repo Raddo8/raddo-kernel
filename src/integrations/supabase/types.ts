@@ -1150,6 +1150,55 @@ export type Database = {
         }
         Relationships: []
       }
+      claim_code: {
+        Row: {
+          cid: string
+          claim_id: string
+          code_id: string
+          coded_at: string
+          coded_by: string
+          confidence: number | null
+        }
+        Insert: {
+          cid: string
+          claim_id: string
+          code_id: string
+          coded_at?: string
+          coded_by: string
+          confidence?: number | null
+        }
+        Update: {
+          cid?: string
+          claim_id?: string
+          code_id?: string
+          coded_at?: string
+          coded_by?: string
+          confidence?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_code_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "claim_code_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+          {
+            foreignKeyName: "claim_code_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "codebook"
+            referencedColumns: ["code_id"]
+          },
+        ]
+      }
       client_intake: {
         Row: {
           cid: string
@@ -1249,6 +1298,59 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "access_codes"
             referencedColumns: ["code"]
+          },
+        ]
+      }
+      codebook: {
+        Row: {
+          category: string | null
+          cid: string
+          code: string
+          code_id: string
+          definition: string
+          example_ref: string | null
+          first_seen: string
+          hits: number
+          last_seen: string
+          merged_into: string | null
+          status: string
+          theme: string | null
+        }
+        Insert: {
+          category?: string | null
+          cid: string
+          code: string
+          code_id?: string
+          definition: string
+          example_ref?: string | null
+          first_seen?: string
+          hits?: number
+          last_seen?: string
+          merged_into?: string | null
+          status?: string
+          theme?: string | null
+        }
+        Update: {
+          category?: string | null
+          cid?: string
+          code?: string
+          code_id?: string
+          definition?: string
+          example_ref?: string | null
+          first_seen?: string
+          hits?: number
+          last_seen?: string
+          merged_into?: string | null
+          status?: string
+          theme?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "codebook_merged_into_fkey"
+            columns: ["merged_into"]
+            isOneToOne: false
+            referencedRelation: "codebook"
+            referencedColumns: ["code_id"]
           },
         ]
       }
@@ -2218,6 +2320,114 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
+          },
+        ]
+      }
+      domain_taxonomy: {
+        Row: {
+          definition: string
+          domain_key: string
+          label: string
+          lights_with: string | null
+          ordinal: number
+          scope: string
+        }
+        Insert: {
+          definition: string
+          domain_key: string
+          label: string
+          lights_with?: string | null
+          ordinal: number
+          scope?: string
+        }
+        Update: {
+          definition?: string
+          domain_key?: string
+          label?: string
+          lights_with?: string | null
+          ordinal?: number
+          scope?: string
+        }
+        Relationships: []
+      }
+      entity_registry: {
+        Row: {
+          canonical_name: string
+          confidence: number | null
+          created_at: string
+          identifiers: Json
+          kind: string
+          registry_id: string
+          scope_cid: string
+          updated_at: string
+        }
+        Insert: {
+          canonical_name: string
+          confidence?: number | null
+          created_at?: string
+          identifiers?: Json
+          kind: string
+          registry_id: string
+          scope_cid: string
+          updated_at?: string
+        }
+        Update: {
+          canonical_name?: string
+          confidence?: number | null
+          created_at?: string
+          identifiers?: Json
+          kind?: string
+          registry_id?: string
+          scope_cid?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      entity_registry_link: {
+        Row: {
+          cid: string
+          confidence: number | null
+          entity_id: string
+          link_id: string
+          linked_at: string
+          linked_by: string
+          registry_id: string
+          review_status: string
+        }
+        Insert: {
+          cid: string
+          confidence?: number | null
+          entity_id: string
+          link_id?: string
+          linked_at?: string
+          linked_by: string
+          registry_id: string
+          review_status?: string
+        }
+        Update: {
+          cid?: string
+          confidence?: number | null
+          entity_id?: string
+          link_id?: string
+          linked_at?: string
+          linked_by?: string
+          registry_id?: string
+          review_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entity_registry_link_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entity_registry_link_registry_id_fkey"
+            columns: ["registry_id"]
+            isOneToOne: false
+            referencedRelation: "entity_registry"
+            referencedColumns: ["registry_id"]
           },
         ]
       }
@@ -3218,6 +3428,65 @@ export type Database = {
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_domain: {
+        Row: {
+          cid: string
+          claim_id: string | null
+          confidence: number | null
+          domain_key: string
+          memory_id: string | null
+          routed_at: string
+          routed_by: string
+        }
+        Insert: {
+          cid: string
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key: string
+          memory_id?: string | null
+          routed_at?: string
+          routed_by?: string
+        }
+        Update: {
+          cid?: string
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key?: string
+          memory_id?: string | null
+          routed_at?: string
+          routed_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_domain_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_domain_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+          {
+            foreignKeyName: "item_domain_domain_key_fkey"
+            columns: ["domain_key"]
+            isOneToOne: false
+            referencedRelation: "domain_taxonomy"
+            referencedColumns: ["domain_key"]
+          },
+          {
+            foreignKeyName: "item_domain_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -7766,11 +8035,14 @@ export type Database = {
         Row: {
           cid: string
           created_at: string
+          end_date: string | null
           etype: string
           id: string
+          lifecycle: string | null
           merged_into: string | null
           meta: Json
           name: string
+          origin_date: string | null
           resolution_keys: Json
           sensitivity: string
           status: string
@@ -7780,11 +8052,14 @@ export type Database = {
         Insert: {
           cid: string
           created_at?: string
+          end_date?: string | null
           etype: string
           id?: string
+          lifecycle?: string | null
           merged_into?: string | null
           meta?: Json
           name: string
+          origin_date?: string | null
           resolution_keys?: Json
           sensitivity?: string
           status?: string
@@ -7794,11 +8069,14 @@ export type Database = {
         Update: {
           cid?: string
           created_at?: string
+          end_date?: string | null
           etype?: string
           id?: string
+          lifecycle?: string | null
           merged_into?: string | null
           meta?: Json
           name?: string
+          origin_date?: string | null
           resolution_keys?: Json
           sensitivity?: string
           status?: string
@@ -8288,6 +8566,7 @@ export type Database = {
         Returns: Json
       }
       current_cid: { Args: never; Returns: string }
+      er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
       get_action_response_status: {
         Args: { p_action_id: string }
         Returns: Json
