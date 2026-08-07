@@ -13,12 +13,13 @@ import { INTERFACES, COUNTS } from './registry/interface-coverage';
 import { REGISTERS } from './registry/register-migration';
 import { Section, StateBlock, Badge, RegisterTable, type Column } from './components/primitives';
 import { AggregationPanel } from './components/AggregationPanel';
+import { RollUp } from './components/RollUp';
 import type { Viewer } from './useHqRead';
 import type { InterfaceEntry } from './registry/interface-coverage';
 import type { RegisterEntry } from './registry/register-migration';
 
 const NAV: { id: string; label: string; group: string; operatorOnly?: boolean }[] = [
-  { id: 'kernel', label: 'System Pulse', group: 'System Pulse' },
+  { id: 'kernel', label: 'HQ \u00b7 roll up', group: 'System Pulse' },
   { id: 'arsenal', label: 'Intelligence Registry', group: 'Intelligence Registry' },
   { id: 'receipts', label: 'Receipts & Audit', group: 'Receipts & Audit' },
   { id: 'business', label: 'Businesses', group: 'Entities' },
@@ -84,25 +85,23 @@ export function HqNext({ viewer }: HqNextProps) {
       default: return <Section title="Not ported"><StateBlock state="UNVERIFIED" /></Section>;
     }
   })();
-  const groups = [...new Set(visible.map(n => n.group))];
+  // The roll up is the default view of HQ: the aggregation, the other pages,
+  // then the pulse, then the receipts. Every other section stays one tab away.
+  const isHome = page === 'kernel';
   return (<div className="hqx">
-    <div className="flagbar"><b>HQ React Foundation v0.1</b><span>· FIXTURE SNAPSHOT · captured 2026-08-01/02 from production · NOT LIVE · golden master hq v29-r28 remains at /hq</span></div>
-    <div className="hqx-app">
-      <nav className="hqx-rail">
-        <div className="hqx-brand"><b>COB · HQ</b><span>{viewer.displayName ?? viewer.cid} · {viewer.cid}</span></div>
-        <div><div className="hqx-grp">Plan</div>
-          <a className="nl" href="/hq/blueprints"><span>Blueprints</span></a>
-        </div>
-
-        {groups.map(g => (<div key={g}><div className="hqx-grp">{g}</div>
-          {visible.filter(n => n.group === g).map(n => (
-            <button key={n.id} className={`nl ${page === n.id ? 'on' : ''}`} onClick={() => { setPage(n.id); try { location.hash = n.id; } catch {} }}>
-              <span>{n.label}</span>
-            </button>))}
-        </div>))}
-      </nav>
-      <main className="hqx-main">{page === 'kernel' ? <AggregationPanel /> : null}{body}</main>
-    </div>
+    <main className="hqx-main">
+      <div className="hqx-tabs" role="tablist" aria-label="HQ sections">
+        {visible.map(n => (
+          <button key={n.id} type="button" role="tab" aria-selected={page === n.id}
+            className={page === n.id ? 'on' : ''}
+            onClick={() => { setPage(n.id); try { location.hash = n.id; } catch { /* hash is a convenience, not a requirement */ } }}>
+            {n.label}
+          </button>
+        ))}
+      </div>
+      {isHome ? <><AggregationPanel /><RollUp />{body}<Receipts viewer={viewer} /></> : body}
+    </main>
   </div>);
 }
 export default HqNext;
+

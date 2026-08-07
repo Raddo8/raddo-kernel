@@ -9880,6 +9880,7 @@ export type Database = {
       }
       cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      cob_name_normalize: { Args: { raw: string }; Returns: string }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
@@ -10320,6 +10321,7 @@ export type Database = {
         Returns: string
       }
       mint_tenant_v1_archived: { Args: never; Returns: string }
+      my_cob: { Args: never; Returns: Json }
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
@@ -10522,6 +10524,7 @@ export type Database = {
         }
         Returns: Json
       }
+      set_my_cob_name: { Args: { p_name: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       stamp_save_attempt: {

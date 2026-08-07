@@ -13,7 +13,9 @@ import { NavLink, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
 import "@/hq-next/styles/hq-records.css";
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobMark } from "./CobMark";
+import { CobIdentityProvider, useCob } from "@/lib/cob-identity";
+
 import { CobDock } from "./CobDock";
 import { DockContextProvider, type DockPageContext } from "./dock-context";
 
@@ -31,6 +33,7 @@ const NAV: NavItem[] = [
   { n: "03", label: "Memories", to: "/hq/memories" },
   { n: "04", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
   { n: "05", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
+  { n: "06", label: "The original HQ", to: "/hq/original" },
 ];
 
 /** Control group · only ever rendered for a server-confirmed fleet operator. */
@@ -46,6 +49,8 @@ function labelForPath(pathname: string): string {
   if (pathname.startsWith("/hq/memories")) return "Memories";
   if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
   if (pathname.startsWith("/hq/records")) return "Records";
+  if (pathname.startsWith("/hq/original")) return "The original HQ";
+  if (pathname.startsWith("/hq/profile")) return "Profile";
   return "HQ";
 }
 
@@ -79,8 +84,10 @@ function useCid(): string | null {
   return cid;
 }
 
-export function HqShell({ children }: { children: ReactNode }) {
+function HqShellInner({ children }: { children: ReactNode }) {
   const cid = useCid();
+  const { cobName } = useCob();
+
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const isOperator = useIsOperator();
@@ -117,7 +124,7 @@ export function HqShell({ children }: { children: ReactNode }) {
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
-        <img className="shmark" src={cobMark.url} alt="" />
+        <CobMark className="shmark" />
         <span>Menu</span>
       </button>
 
@@ -125,11 +132,13 @@ export function HqShell({ children }: { children: ReactNode }) {
         <div className="rail-brand">
           <div className="mark">
             <div className="mark-tile">
-              <img src={cobMark.url} alt="COB" />
+              <CobMark />
             </div>
             <div>
-              <div className="mark-name">COB &middot; HQ</div>
-              <div className="mark-sub" title="Your account number with your COB">
+              {/* The name is the client's own. Blank beats flashing a default. */}
+              <div className="mark-name">{cobName ? `${cobName} \u00b7 HQ` : "\u00a0"}</div>
+              <div className="mark-sub" title={cobName ? `Your account number with ${cobName}` : "Your account number"}>
+
                 {cid ?? "loading\u2026"}
               </div>
             </div>
@@ -204,9 +213,26 @@ export function HqShell({ children }: { children: ReactNode }) {
         </nav>
 
 
-        <div className="rail-foot" title="These pages show live information. To change anything, ask your COB.">
+        <div
+          className="rail-foot"
+          title={
+            cobName
+              ? `These pages show live information. To change anything, ask ${cobName}.`
+              : "These pages show live information."
+          }
+        >
+          <NavLink to="/hq/profile" className="nl" onClick={() => setOpen(false)}>
+            <span className="nn">&middot;</span>
+            <span>Profile</span>
+          </NavLink>
           <span className="dot" />
           always up to date &middot; you can read, not change
+          {cobName ? (
+            <>
+              <br />
+              to change anything, ask {cobName}
+            </>
+          ) : null}
         </div>
       </aside>
 
@@ -220,4 +246,14 @@ export function HqShell({ children }: { children: ReactNode }) {
   );
 }
 
+/** One provider at the top of the HQ chrome so a single name fetch serves the tree. */
+export function HqShell({ children }: { children: ReactNode }) {
+  return (
+    <CobIdentityProvider>
+      <HqShellInner>{children}</HqShellInner>
+    </CobIdentityProvider>
+  );
+}
+
 export default HqShell;
+

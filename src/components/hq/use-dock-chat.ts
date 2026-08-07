@@ -5,6 +5,9 @@
  */
 import { useCallback, useRef, useState } from "react";
 
+import { useCobLabel } from "@/lib/cob-identity";
+
+
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 const CHAT_URL = `${SUPABASE_URL}/functions/v1/cob-chat`;
@@ -21,6 +24,7 @@ function uid() {
 }
 
 export function useDockChat() {
+  const cobLabel = useCobLabel();
   const [messages, setMessages] = useState<DockMessage[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +89,7 @@ export function useDockChat() {
         });
 
         if (!resp.ok || !resp.body) {
-          let errText = "Couldn't reach your COB. Try again.";
+          let errText = `Couldn't reach ${cobLabel}. Try again.`;
           try {
             const j = await resp.json();
             if (j?.error) errText = String(j.error);
@@ -154,14 +158,14 @@ export function useDockChat() {
         }
         finalize(
           "Signal dropped on my side. Try that again.",
-          (e as Error)?.message || "Couldn't reach your COB.",
+          (e as Error)?.message || `Couldn't reach ${cobLabel}.`,
         );
       } finally {
         setPending(false);
         abortRef.current = null;
       }
     },
-    [messages, pending],
+    [messages, pending, cobLabel],
   );
 
   const stop = useCallback(() => {

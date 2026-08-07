@@ -1,0 +1,90 @@
+/* Roll up row on /hq · one card per page, whole card navigates. */
+.hqx .rollup {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 18px 0 6px;
+}
+.hqx .ru-card {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--edge, #E5E3DE);
+  border-top: 2px solid var(--ink, #0C447C);
+  border-radius: 8px;
+  padding: 14px 16px 15px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.hqx .ru-card:hover {
+  border-color: var(--brass, #EF9F27);
+  box-shadow: 0 2px 8px rgba(12, 68, 124, .08);
+}
+.hqx .ru-card:focus-visible { outline: 2px solid var(--brass, #EF9F27); outline-offset: 2px; }
+.hqx .ru-k {
+  font-family: var(--mono, monospace);
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--ash, #5F5E5A);
+}
+.hqx .ru-n {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--ink, #0C447C);
+  line-height: 1.1;
+  min-height: 29px;
+}
+.hqx .ru-b {
+  font-family: var(--mono, monospace);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--brass-deep, #854F0B);
+}
+.hqx .ru-l {
+  font-size: 13px;
+  color: #2C2C2A;
+  line-height: 1.5;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+.hqx .ru-w {
+  font-family: var(--mono, monospace);
+  font-size: 9px;
+  color: var(--ash, #5F5E5A);
+}
+@media (max-width: 760px) {
+  .hqx .rollup { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Section switcher · replaces the old hq-next rail. One menu in the product. */
+.hqx .hqx-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--edge, #E5E3DE);
+  padding-bottom: 8px;
+}
+.hqx .hqx-tabs button {
+  font-family: var(--mono, monospace);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ash, #5F5E5A);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.hqx .hqx-tabs button:hover { color: var(--ink, #0C447C); border-color: var(--edge, #E5E3DE); }
+.hqx .hqx-tabs button.on {
+  color: var(--ink, #0C447C);
+  border-color: var(--brass, #EF9F27);
+  background: rgba(239, 159, 39, .08);
+  font-weight: 700;
+}

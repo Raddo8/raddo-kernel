@@ -19,6 +19,7 @@ import {
 } from "@/lib/world-lanes";
 import { datedLines, daysAway, humanDate, linkify, loudestClock, type LinkTarget } from "@/lib/world-wiki";
 import "@/hq-next/styles/hq-lanes.css";
+import { useCobLabel } from "@/lib/cob-identity";
 
 const DOT = "\u00b7";
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -31,6 +32,7 @@ const CONFIDENCE_COPY: Record<string, string> = {
 };
 
 export function EntityBrief() {
+  const COB = useCobLabel();
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -79,7 +81,7 @@ export function EntityBrief() {
         key: `e-${e.id}`,
         iso: e.date,
         what: e.what,
-        source: e.evidence ? "your COB read this in your own records" : "on your calendar of events",
+        source: e.evidence ? `${COB} read this in your own records` : "on your calendar of events",
       })),
       ...data.claims.map((c) => ({
         key: `c-${c.id}`,
@@ -126,7 +128,7 @@ export function EntityBrief() {
     });
     try {
       await navigator.clipboard.writeText(message);
-      toast({ title: "Copied for your COB", description: "Paste this into your COB conversation." });
+      toast({ title: `Copied for ${COB}`, description: `Paste this into your ${COB} conversation.` });
     } catch {
       toast({ title: "Copy it manually", description: message });
     }
@@ -177,13 +179,13 @@ export function EntityBrief() {
                     <p className="inshort">{linkify(read.synopsis, targets, Ilink)}</p>
                   ) : (
                     <p className="nowrite">
-                      Your COB has not written a short version on {data.entity.name} yet. What it has is below.
+                      {COB} has not written a short version on {data.entity.name} yet. What it has is below.
                     </p>
                   )}
                 </div>
 
                 <div className="exsec">
-                  <div className="exhead">What your COB concludes</div>
+                  <div className="exhead">What {COB} concludes</div>
                   {read && read.judgments.length > 0 ? (
                     read.judgments.map((j, i) => (
                       <div className="kj" key={i}>
@@ -192,7 +194,7 @@ export function EntityBrief() {
                         {j.reasoning && <div className="kjr">{linkify(j.reasoning, targets, Ilink)}</div>}
                         <div className="kjfoot">
                           {j.confidence && (
-                            <span className={`pill ${j.confidence}`} title="How sure your COB is about this.">
+                            <span className={`pill ${j.confidence}`} title={`How sure ${COB} is about this.`}>
                               {CONFIDENCE_COPY[j.confidence]}
                             </span>
                           )}
@@ -205,13 +207,13 @@ export function EntityBrief() {
                       </div>
                     ))
                   ) : (
-                    <p className="nowrite">Your COB has not written its read on this subject yet.</p>
+                    <p className="nowrite">{COB} has not written its read on this subject yet.</p>
                   )}
                 </div>
 
                 {read && read.actions.length > 0 && (
                   <div className="exsec">
-                    <div className="exhead">What your COB recommends</div>
+                    <div className="exhead">What {COB} recommends</div>
                     <div className="recs">
                       {read.actions.map((a, i) => (
                         <div className="rec" key={i}>
@@ -251,7 +253,7 @@ export function EntityBrief() {
                     </table>
                   )}
                   <button className="ask" onClick={ask}>
-                    Tell your COB to change something here &rarr;
+                    Tell {COB} to change something here &rarr;
                   </button>
                 </div>
               </div>
@@ -312,7 +314,7 @@ export function EntityBrief() {
                       className="crow"
                       key={c.id}
                       onClick={() => navigate(`/hq/world/brief/${c.entity_id}`)}
-                      title={c.evidence ?? "Your COB has not saved a sentence for this link yet."}
+                      title={c.evidence ?? `${COB} has not saved a sentence for this link yet.`}
                     >
                       <span className="crel">
                         {c.phrase}

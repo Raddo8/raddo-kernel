@@ -259,3 +259,21 @@
 /* ===== BRIEF · connected to, typed links first ===== */
 .wld .connbox button.crow .ev { display: block; font-size: 11.5px; color: var(--ash); margin-top: 3px; line-height: 1.5; }
 .wld .connbox .csub { font-family: var(--mono); font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ash); padding: 8px 14px 4px; border-top: 1px solid var(--edge2); }
+
+/* ===== NARROW SCREENS · the record column collapses, nothing sits wider than the screen ===== */
+@media (max-width: 900px) {
+  .wld .article { grid-template-columns: minmax(0, 1fr); }
+  .wld .article > * { min-width: 0; }
+  .wld .infobox { position: static; width: auto; max-width: 100%; }
+}
+@media (max-width: 640px) {
+  .wld .trow { grid-template-columns: repeat(2, 1fr); }
+  .wld .lead, .wld .expand p { max-width: 100%; }
+  .wld .toc button.tline { width: 100%; min-width: 0; flex-wrap: wrap; }
+  .wld .toc .tt { flex: 1 1 auto; min-width: 0; word-break: break-word; }
+  .wld .wtab { display: block; width: 100%; overflow-x: auto; }
+  .wld .mtools input { flex: 1 1 100%; }
+}
+.wld, .wld * { min-width: 0; }
+/* the debriefing table keeps its columns and scrolls sideways on a phone */
+.wld .tscroll { max-width: 100%; overflow-x: auto; }

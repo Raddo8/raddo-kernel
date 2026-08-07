@@ -12,6 +12,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import HqNext from "./HqNext";
+import { HqShell } from "@/components/hq/HqShell";
 import type { Viewer } from "./useHqRead";
 import { Section, StateBlock } from "./components/primitives";
 import "./styles/hq-next.css";
@@ -61,13 +62,13 @@ function useResolvedViewer(): Resolution {
   return state;
 }
 
-function HqNextHost() {
+function HqNextBody() {
   const resolution = useResolvedViewer();
 
   if (resolution.kind === "loading") {
     return (
       <div className="hqx">
-        <div className="hqx-app">
+        <div>
           <main className="hqx-main">
             <Section title="Identity">
               <p className="hqx-sub">resolving viewer from server context…</p>
@@ -81,7 +82,7 @@ function HqNextHost() {
   if (resolution.kind === "unauthorized") {
     return (
       <div className="hqx">
-        <div className="hqx-app">
+        <div>
           <main className="hqx-main">
             <Section title="Access">
               <StateBlock
@@ -98,6 +99,15 @@ function HqNextHost() {
   return <HqNext viewer={resolution.viewer} />;
 }
 
+/** One menu in the product: hq-next renders inside HqShell like every /hq page. */
+function HqNextHost() {
+  return (
+    <HqShell>
+      <HqNextBody />
+    </HqShell>
+  );
+}
+
 /** /hq-next · client plane. Wrapped by AuthGate + ClientReadinessGate in App.tsx. */
 export function HqNextClient() {
   return <HqNextHost />;
@@ -105,5 +115,5 @@ export function HqNextClient() {
 
 /** /control/hq-next · operator plane. Inherits AuthGate + FleetOperatorGate from ControlShell. */
 export function HqNextOperator() {
-  return <HqNextHost />;
+  return <HqNextBody />;
 }

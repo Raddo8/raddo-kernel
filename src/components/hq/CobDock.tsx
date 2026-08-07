@@ -12,7 +12,8 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobMark } from "./CobMark";
+import { useCob } from "@/lib/cob-identity";
 import { useDockContext } from "./dock-context";
 import { useDockChat } from "./use-dock-chat";
 import "./cob-dock.css";
@@ -44,6 +45,7 @@ function readHeight(): number {
 
 export function CobDock() {
   const { page } = useDockContext();
+  const { cobName } = useCob();
   const { messages, pending, error, send } = useDockChat();
   const [mode, setMode] = useState<DockMode>(() => readMode());
   const [height, setHeight] = useState<number>(() => readHeight());
@@ -118,7 +120,7 @@ export function CobDock() {
   return (
     <section
       className={`cobdock ${mode}`}
-      aria-label="Talk to your COB"
+      aria-label={cobName ? `Talk to ${cobName}` : "Talk to your chief of business"}
       style={mode === "bottom" && height > 0 ? { height } : undefined}
     >
       {(mode === "bottom" || mode === "expanded") && (
@@ -134,9 +136,9 @@ export function CobDock() {
       )}
 
       <header className="dock-head">
-        <img className="dock-mark" src={cobMark.url} alt="" />
+        <CobMark className="dock-mark" size={20} />
         <div>
-          <div className="dock-title">Your COB</div>
+          <div className="dock-title">{cobName ?? "\u00a0"}</div>
           <div className="dock-where">{page.record ? `${page.label} · ${page.record}` : page.label}</div>
         </div>
         <div className="dock-acts">
@@ -171,8 +173,8 @@ export function CobDock() {
         <div className="dock-log" ref={logRef} aria-live="polite">
           {messages.length === 0 && (
             <div className="bub">
-              I am here on every page. Ask me what this record means, or tell me what
-              you want changed &middot; I make the change, you read the result.
+              {cobName ? `${cobName} is here on every page. ` : ""}Ask what this record means,
+              or say what you want changed &middot; the change is made for you, you read the result.
             </div>
           )}
           {messages.map((m) =>
@@ -182,6 +184,7 @@ export function CobDock() {
               </div>
             ) : (
               <div key={m.id} className={`bub ${m.role === "you" ? "me" : ""}`}>
+                <span className="bub-who">{m.role === "you" ? "You" : cobName ?? ""}</span>
                 {m.text}
               </div>
             ),
@@ -198,7 +201,7 @@ export function CobDock() {
           }}
         >
           <label className="sr-only" htmlFor="cob-dock-input">
-            Message your COB
+            {cobName ? `Message ${cobName}` : "Send a message"}
           </label>
           <textarea
             id="cob-dock-input"
@@ -206,7 +209,7 @@ export function CobDock() {
             className="dock-in"
             rows={1}
             value={draft}
-            placeholder="Ask your COB about this page&hellip;"
+            placeholder={cobName ? `Ask ${cobName} about this page\u2026` : "Ask about this page\u2026"}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

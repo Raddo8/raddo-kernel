@@ -51,6 +51,7 @@ import ResetPassword from "@/pages/ResetPassword";
 import BuildView from "@/pages/BuildView";
 import BuildsAdmin from "@/pages/BuildsAdmin";
 import HqSurface from "@/pages/HqSurface";
+import HqProfile from "@/pages/HqProfile";
 import BlueprintsOS from "@/pages/BlueprintsOS";
 import WorldSurface from "@/pages/WorldSurface";
 import WorldCabinet from "@/pages/WorldCabinet";
@@ -138,7 +139,11 @@ const App = () => (
             <Route path="/hq-next" element={<AuthGate><ClientReadinessGate><HqNextClient /></ClientReadinessGate></AuthGate>} />
 
             {/* Client zone */}
-            <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq" element={<AuthGate><ClientReadinessGate><HqNextClient /></ClientReadinessGate></AuthGate>} />
+            {/* The pinned v29-r28 document stays reachable while we port it. */}
+            <Route path="/hq/original" element={<AuthGate><ClientReadinessGate><HqSurface /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/profile" element={<AuthGate><ClientReadinessGate><HqProfile /></ClientReadinessGate></AuthGate>} />
+
             <Route path="/hq/blueprints" element={<AuthGate><ClientReadinessGate><BlueprintsOS /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/world" element={<AuthGate><ClientReadinessGate><WorldCabinet /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/world/brief/:id" element={<AuthGate><ClientReadinessGate><EntityBrief /></ClientReadinessGate></AuthGate>} />
