@@ -77,6 +77,7 @@ export interface NextRun {
   last_run: LastRun | null;
   progress: NextRunProgress | null;
   action: string | null;
+  action_label: string | null;
 }
 
 export interface AggregationPayload {
