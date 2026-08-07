@@ -11,6 +11,7 @@ import React from 'react';
 import '../styles/aggregation.css';
 import { useAggregation } from '../useAggregation';
 import { CONFIDENCE_LABEL, type AggregationPayload, type AggregationSource, type UnattendedSurface } from '../contracts/aggregation';
+import { useCobLabel } from "@/lib/cob-identity";
 
 const EMPTY = 'not counted yet';
 
@@ -82,6 +83,7 @@ function Skeleton() {
 }
 
 function Drawer({ source, onClose }: { source: AggregationSource; onClose: () => void }) {
+  const COB = useCobLabel();
   const closeRef = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
     closeRef.current?.focus();
@@ -104,7 +106,7 @@ function Drawer({ source, onClose }: { source: AggregationSource; onClose: () =>
           <div className="drw-f"><div className="k">Connection</div><div className="v">{source.connect_state}</div></div>
           <div className="drw-f"><div className="k">Discovery</div><div className="v">{source.discovery_state}</div></div>
           <div className="drw-f"><div className="k">Size</div><div className="v">{SourceSize(source)}</div></div>
-          <div className="drw-f"><div className="k">Why your COB knows this exists</div><div className="v">{source.basis ?? 'no basis recorded'}</div></div>
+          <div className="drw-f"><div className="k">Why {COB} knows this exists</div><div className="v">{source.basis ?? 'no basis recorded'}</div></div>
         </div>
       </aside>
     </>

@@ -25,6 +25,7 @@ import { datedLines, daysAway, linkify, loudestClock, type LinkTarget } from "@/
 import { ViewSwitch } from "@/components/hq/ViewSwitch";
 import { readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
+import { useCobLabel } from "@/lib/cob-identity";
 
 const DOT = "\u00b7";
 const INFOBOX_CEILING = 8;
@@ -89,12 +90,13 @@ function statusWord(status: string | null): string {
 }
 
 function SourceChip({ row }: { row: MemoryRow }) {
+  const COB = useCobLabel();
   const by = (row.created_by ?? "").toLowerCase();
   const seen = SEEN_GRADES.some((g) => by.includes(g));
   return (
     <span
       className={`chip ${seen ? "seen" : "told"}`}
-      title={seen ? "Your COB checked this itself." : "Someone told your COB this."}
+      title={seen ? `${COB} checked this itself.` : `Someone told ${COB} this.`}
     >
       {seen ? "SEEN" : "TOLD"}
       {row.created_by ? ` ${DOT} ${row.created_by}` : ""}
@@ -105,6 +107,7 @@ function SourceChip({ row }: { row: MemoryRow }) {
 type SortKey = "date" | "lane" | "category";
 
 export function MemoryVault() {
+  const COB = useCobLabel();
   const { toast } = useToast();
 
   const [rows, setRows] = useState<MemoryRow[] | null>(null);
@@ -218,11 +221,11 @@ export function MemoryVault() {
       try {
         await navigator.clipboard.writeText(message);
         toast({
-          title: "Copied for your COB",
+          title: `Copied for ${COB}`,
           description: "Paste this into your chat and say what should change.",
         });
       } catch {
-        toast({ title: "Copy this to your COB", description: message });
+        toast({ title: `Copy this to ${COB}`, description: message });
       }
     },
     [toast],
@@ -322,16 +325,16 @@ export function MemoryVault() {
         <div className="article">
           <div>
             <p className="lead">
-              <b>These are the things your COB remembers about you.</b> {DOT} Each one is a short
+              <b>These are the things {COB} remembers about you.</b> {DOT} Each one is a short
               note. They are grouped below. Open any line to read the whole thing. If something is
-              wrong, tell your COB and it will fix it.
+              wrong, tell {COB} and it will fix it.
             </p>
 
             {err && <p className="plain">{err}</p>}
             {!err && rows === null && <p className="plain">Opening your memories.</p>}
             {!err && rows !== null && list.length === 0 && (
               <p className="plain">
-                Nothing here yet. Your COB adds memories as you work together.
+                Nothing here yet. {COB} adds memories as you work together.
               </p>
             )}
 
@@ -410,7 +413,7 @@ export function MemoryVault() {
                                   </span>
                                 </div>
                                 <button className="ask" onClick={() => ask(m)}>
-                                  Tell your COB to change something here &rarr;
+                                  Tell {COB} to change something here &rarr;
                                 </button>
                               </div>
                             ))}
@@ -423,7 +426,7 @@ export function MemoryVault() {
                 </>
                 )}
 
-                <div className="secname">Everything your COB remembers</div>
+                <div className="secname">Everything {COB} remembers</div>
                 <div className="mtools">
                   <input
                     value={filter}
@@ -485,7 +488,7 @@ export function MemoryVault() {
                                     {statusWord(m.status)}
                                   </span>
                                   {m.confidence != null && (
-                                    <span className="chip" title="How sure your COB is about this.">
+                                    <span className="chip" title={`How sure ${COB} is about this.`}>
                                       {Math.round(Number(m.confidence) * 100)}% sure
                                     </span>
                                   )}
@@ -495,7 +498,7 @@ export function MemoryVault() {
                                   </span>
                                 </div>
                                 <button className="ask" onClick={() => ask(m)}>
-                                  Tell your COB to change something here &rarr;
+                                  Tell {COB} to change something here &rarr;
                                 </button>
                               </td>
                             </tr>

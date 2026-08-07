@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { HqShell } from "@/components/hq/HqShell";
 import "@/hq-next/styles/hq-design.css";
+import { useCobLabel } from "@/lib/cob-identity";
 
 /* ---------------------------------------------------------------- contracts */
 
@@ -67,8 +68,8 @@ type Selection =
   | { kind: "scheduled"; row: ScheduledRow }
   | null;
 
-const READ_ONLY_NOTE =
-  "Builds are created, scheduled, and moved through your COB Connector \u00b7 just ask your COB.";
+const readOnlyNote = (cob: string) =>
+  `Builds are created, scheduled, and moved through the Connector \u00b7 just ask ${cob}.`;
 
 /* ------------------------------------------------------------------- shapes */
 
@@ -296,6 +297,7 @@ const VIEWS = ["Board", "Roadmap", "Calendar"] as const;
 type View = (typeof VIEWS)[number];
 
 export function BlueprintsOS() {
+  const COB = useCobLabel();
   const resolution = useResolvedViewer();
   const [view, setView] = useState<View>("Board");
   const [monthCursor, setMonthCursor] = useState<Date>(new Date());
@@ -585,7 +587,7 @@ export function BlueprintsOS() {
             <div className="note">Signing you in.</div>
           ) : (
             <div className="note">
-              <b>This board is not open to you.</b> Ask your COB to check your account.
+              <b>This board is not open to you.</b> Ask {COB} to check your account.
             </div>
           )}
         </div>
@@ -634,7 +636,7 @@ export function BlueprintsOS() {
               {v}
             </button>
           ))}
-          <button type="button" className="vb brass spacer" onClick={() => toast(READ_ONLY_NOTE)}>
+          <button type="button" className="vb brass spacer" onClick={() => toast(readOnlyNote(COB))}>
             Kick it off
           </button>
         </div>
@@ -655,7 +657,7 @@ export function BlueprintsOS() {
 
         {!isLoading && !isError && total === 0 && (
           <div className="note">
-            <b>No plans yet.</b> Ask your COB to start one.
+            <b>No plans yet.</b> Ask {COB} to start one.
           </div>
         )}
 
@@ -819,7 +821,7 @@ export function BlueprintsOS() {
               )}
 
               <div style={{ marginTop: 24 }}>
-                <button type="button" className="vb brass" onClick={() => toast(READ_ONLY_NOTE)}>
+                <button type="button" className="vb brass" onClick={() => toast(readOnlyNote(COB))}>
                   Kick it off
                 </button>
               </div>

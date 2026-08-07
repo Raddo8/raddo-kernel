@@ -4,7 +4,7 @@
  * giant folder is open beneath, and the folder face carries, in order:
  *   · IN SHORT              a short synopsis of the whole folder
  *   · WHAT YOUR COB CONCLUDES  numbered conclusions, each with its reasoning,
- *                              how sure your COB is, and the records behind it
+ *                              how sure the read is, and the records behind it
  *   · WHAT YOUR COB RECOMMENDS sequenced next moves
  *   · TABLE OF CONTENTS     leader dots, one line per group of details
  *   · THE DETAILS           every fact, grouped by theme, dates in the margin
@@ -43,6 +43,7 @@ import {
 import { ViewSwitch } from "@/components/hq/ViewSwitch";
 import { heatClass, heatTitle, heatWord, readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
+import { useCobLabel } from "@/lib/cob-identity";
 
 const DOT = "\u00b7";
 const EASE: Transition["ease"] = [0.22, 1, 0.36, 1];
@@ -96,6 +97,7 @@ type DetailGroup = {
 };
 
 export function WorldCabinet() {
+  const COB = useCobLabel();
   const { toast } = useToast();
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -184,8 +186,8 @@ export function WorldCabinet() {
       try {
         await navigator.clipboard.writeText(message);
         toast({
-          title: "Copied for your COB",
-          description: "Paste this into your COB conversation and say what should change.",
+          title: `Copied for ${COB}`,
+          description: `Paste this into your ${COB} conversation and say what should change.`,
         });
       } catch {
         toast({ title: "Copy it manually", description: message });
@@ -197,7 +199,7 @@ export function WorldCabinet() {
   const Ask = useCallback(
     ({ section, ids }: { section: string; ids: string[] }) => (
       <button className="ask" onClick={() => ask(section, ids)}>
-        Tell your COB to change something here &rarr;
+        Tell {COB} to change something here &rarr;
       </button>
     ),
     [ask],
@@ -307,7 +309,7 @@ export function WorldCabinet() {
       out.push({
         key: `s-${i + 1}`,
         title: s.heading,
-        summary: leadSentences(s.body, 1) || "Written up by your COB from the notes in this folder.",
+        summary: leadSentences(s.body, 1) || `Written up by ${COB} from the notes in this folder.`,
         meta: `${s.body.trim().split(/\s+/).length} words`,
         ids: doss.narrative ? [doss.narrative.id] : [],
         facts: dated.map((l, li) => {
@@ -564,7 +566,7 @@ export function WorldCabinet() {
         {!err && rows === null && <div className="plain">Opening your world.</div>}
         {!err && rows !== null && lanes.length === 0 && (
           <div className="plain">
-            No folders have taken shape yet. The first one appears here the moment your COB writes something down.
+            No folders have taken shape yet. The first one appears here the moment {COB} writes something down.
           </div>
         )}
 
@@ -718,7 +720,7 @@ export function WorldCabinet() {
                             </p>
                           ) : (
                             <p className="nowrite">
-                              Your COB has not written a short version of this folder yet. The notes below are what it
+                              {COB} has not written a short version of this folder yet. The notes below are what it
                               has so far.
                             </p>
                           )}
@@ -726,7 +728,7 @@ export function WorldCabinet() {
 
                         {/* WHAT YOUR COB CONCLUDES */}
                         <div className="exsec">
-                          <div className="exhead">What your COB concludes</div>
+                          <div className="exhead">What {COB} concludes</div>
                           {read && read.judgments.length > 0 ? (
                             <>
                               {read.judgments.map((j, i) => (
@@ -738,7 +740,7 @@ export function WorldCabinet() {
                                     {j.confidence && (
                                       <span
                                         className={`pill ${j.confidence}`}
-                                        title="How sure your COB is about this."
+                                        title={`How sure ${COB} is about this.`}
                                       >
                                         {CONFIDENCE_COPY[j.confidence]}
                                       </span>
@@ -756,11 +758,11 @@ export function WorldCabinet() {
                                   </div>
                                 </div>
                               ))}
-                              <Ask section="What your COB concludes" ids={read.judgments.flatMap((j) => j.sources)} />
+                              <Ask section={`What ${COB} concludes`} ids={read.judgments.flatMap((j) => j.sources)} />
                             </>
                           ) : (
                             <p className="nowrite">
-                              Your COB has not written its read on this folder yet. Ask it for one and it will show up
+                              {COB} has not written its read on this folder yet. Ask it for one and it will show up
                               here.
                             </p>
                           )}
@@ -768,7 +770,7 @@ export function WorldCabinet() {
 
                         {/* WHAT YOUR COB RECOMMENDS */}
                         <div className="exsec">
-                          <div className="exhead">What your COB recommends</div>
+                          <div className="exhead">What {COB} recommends</div>
                           {read && read.actions.length > 0 ? (
                             <div className="recs">
                               {read.actions.map((a, i) => (
@@ -783,7 +785,7 @@ export function WorldCabinet() {
                             </div>
                           ) : (
                             <p className="nowrite">
-                              Your COB has not written any next moves for this folder yet.
+                              {COB} has not written any next moves for this folder yet.
                             </p>
                           )}
                         </div>
