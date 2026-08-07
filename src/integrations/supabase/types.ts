@@ -3124,6 +3124,274 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_checkpoint: {
+        Row: {
+          items_done: number
+          phase: string
+          position: string
+          program_id: string
+          source_id: string
+          updated_at: string
+        }
+        Insert: {
+          items_done?: number
+          phase: string
+          position: string
+          program_id: string
+          source_id: string
+          updated_at?: string
+        }
+        Update: {
+          items_done?: number
+          phase?: string
+          position?: string
+          program_id?: string
+          source_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_checkpoint_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_program"
+            referencedColumns: ["program_id"]
+          },
+          {
+            foreignKeyName: "ingest_checkpoint_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_source"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
+      ingest_event: {
+        Row: {
+          at: string
+          cid: string
+          detail: Json
+          event_id: number
+          kind: string
+          program_id: string | null
+          session_ref: string | null
+          source_id: string | null
+          unit_id: string | null
+        }
+        Insert: {
+          at?: string
+          cid: string
+          detail?: Json
+          event_id?: number
+          kind: string
+          program_id?: string | null
+          session_ref?: string | null
+          source_id?: string | null
+          unit_id?: string | null
+        }
+        Update: {
+          at?: string
+          cid?: string
+          detail?: Json
+          event_id?: number
+          kind?: string
+          program_id?: string | null
+          session_ref?: string | null
+          source_id?: string | null
+          unit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_event_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_program"
+            referencedColumns: ["program_id"]
+          },
+        ]
+      }
+      ingest_program: {
+        Row: {
+          cid: string
+          completed_at: string | null
+          created_at: string
+          envelope_policy: Json
+          items_done: number
+          items_seen: number
+          label: string
+          ordering: string
+          phase: string
+          program_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          completed_at?: string | null
+          created_at?: string
+          envelope_policy?: Json
+          items_done?: number
+          items_seen?: number
+          label: string
+          ordering?: string
+          phase?: string
+          program_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          completed_at?: string | null
+          created_at?: string
+          envelope_policy?: Json
+          items_done?: number
+          items_seen?: number
+          label?: string
+          ordering?: string
+          phase?: string
+          program_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ingest_source: {
+        Row: {
+          auth_state: string
+          cid: string
+          created_at: string
+          cursor: string | null
+          discovered: number
+          handle: string
+          health: string
+          kind: string
+          last_seen_at: string | null
+          program_id: string
+          read_attempts: number
+          read_failures: number
+          source_id: string
+          throttle_hits: number
+        }
+        Insert: {
+          auth_state?: string
+          cid: string
+          created_at?: string
+          cursor?: string | null
+          discovered?: number
+          handle: string
+          health?: string
+          kind: string
+          last_seen_at?: string | null
+          program_id: string
+          read_attempts?: number
+          read_failures?: number
+          source_id?: string
+          throttle_hits?: number
+        }
+        Update: {
+          auth_state?: string
+          cid?: string
+          created_at?: string
+          cursor?: string | null
+          discovered?: number
+          handle?: string
+          health?: string
+          kind?: string
+          last_seen_at?: string | null
+          program_id?: string
+          read_attempts?: number
+          read_failures?: number
+          source_id?: string
+          throttle_hits?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_source_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_program"
+            referencedColumns: ["program_id"]
+          },
+        ]
+      }
+      ingest_unit: {
+        Row: {
+          attempts: number
+          cid: string
+          completed_at: string | null
+          created_at: string
+          idem_key: string
+          item_count: number
+          last_error: string | null
+          lease_expires: string | null
+          lease_holder: string | null
+          payload: Json
+          phase: string
+          priority: number
+          program_id: string
+          seq: number | null
+          source_id: string | null
+          status: string
+          unit_id: string
+        }
+        Insert: {
+          attempts?: number
+          cid: string
+          completed_at?: string | null
+          created_at?: string
+          idem_key: string
+          item_count?: number
+          last_error?: string | null
+          lease_expires?: string | null
+          lease_holder?: string | null
+          payload?: Json
+          phase: string
+          priority?: number
+          program_id: string
+          seq?: number | null
+          source_id?: string | null
+          status?: string
+          unit_id?: string
+        }
+        Update: {
+          attempts?: number
+          cid?: string
+          completed_at?: string | null
+          created_at?: string
+          idem_key?: string
+          item_count?: number
+          last_error?: string | null
+          lease_expires?: string | null
+          lease_holder?: string | null
+          payload?: Json
+          phase?: string
+          priority?: number
+          program_id?: string
+          seq?: number | null
+          source_id?: string | null
+          status?: string
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_unit_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_program"
+            referencedColumns: ["program_id"]
+          },
+          {
+            foreignKeyName: "ingest_unit_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_source"
+            referencedColumns: ["source_id"]
+          },
+        ]
+      }
       intake_corrections: {
         Row: {
           cid: string
@@ -8752,6 +9020,80 @@ export type Database = {
               title: string
             }[]
           }
+      ingest_budget: {
+        Args: {
+          p_envelope_left: number
+          p_program: string
+          p_used_units: number
+        }
+        Returns: Json
+      }
+      ingest_claim: {
+        Args: {
+          p_holder: string
+          p_lease_seconds?: number
+          p_phase: string
+          p_program: string
+        }
+        Returns: {
+          attempts: number
+          item_count: number
+          payload: Json
+          reclaimed: boolean
+          unit_id: string
+        }[]
+      }
+      ingest_commit: {
+        Args: {
+          p_holder: string
+          p_items?: number
+          p_position?: string
+          p_unit: string
+        }
+        Returns: boolean
+      }
+      ingest_enqueue: {
+        Args: {
+          p_idem: string
+          p_items?: number
+          p_payload?: Json
+          p_phase: string
+          p_priority?: number
+          p_program: string
+          p_seq?: number
+          p_source: string
+        }
+        Returns: string
+      }
+      ingest_fail: {
+        Args: {
+          p_error: string
+          p_holder: string
+          p_permanent?: boolean
+          p_unit: string
+        }
+        Returns: undefined
+      }
+      ingest_gate: { Args: { p_program: string }; Returns: Json }
+      ingest_indicators: { Args: { p_program: string }; Returns: Json }
+      ingest_release: {
+        Args: { p_holder: string; p_unit: string }
+        Returns: undefined
+      }
+      ingest_session_close: {
+        Args: {
+          p_holder: string
+          p_items: number
+          p_program: string
+          p_reason: string
+          p_units: number
+        }
+        Returns: Json
+      }
+      ingest_session_open: {
+        Args: { p_holder: string; p_program: string }
+        Returns: Json
+      }
       is_cob_operator: { Args: never; Returns: boolean }
       is_fleet_operator: { Args: never; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
