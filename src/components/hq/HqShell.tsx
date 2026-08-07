@@ -7,13 +7,15 @@
  *
  * Identity is server-derived (current_cid), never self-asserted.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-golden.css";
 import "@/hq-next/styles/hq-records.css";
 import cobMark from "@/assets/cob-mark.png.asset.json";
+import { CobDock } from "./CobDock";
+import { DockContextProvider, type DockPageContext } from "./dock-context";
 
 interface NavItem {
   n: string;
