@@ -85,7 +85,7 @@ export function useDockChat() {
         });
 
         if (!resp.ok || !resp.body) {
-          let errText = "Couldn't reach your COB. Try again.";
+          let errText = `Couldn't reach ${cobLabel}. Try again.`;
           try {
             const j = await resp.json();
             if (j?.error) errText = String(j.error);
@@ -154,7 +154,7 @@ export function useDockChat() {
         }
         finalize(
           "Signal dropped on my side. Try that again.",
-          (e as Error)?.message || "Couldn't reach your COB.",
+          (e as Error)?.message || `Couldn't reach ${cobLabel}.`,
         );
       } finally {
         setPending(false);
