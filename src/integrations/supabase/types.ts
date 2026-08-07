@@ -6128,6 +6128,24 @@ export type Database = {
         }
         Relationships: []
       }
+      route_eval_baseline: {
+        Row: {
+          claim_id: string | null
+          confidence: number | null
+          domain_key: string | null
+        }
+        Insert: {
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key?: string | null
+        }
+        Update: {
+          claim_id?: string | null
+          confidence?: number | null
+          domain_key?: string | null
+        }
+        Relationships: []
+      }
       save_attempt: {
         Row: {
           canonicalization_version: string | null
