@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Biscuit Bar · Dossier · COB</title>
+<meta name="description" content="The Biscuit Bar operating dossier. Fourteen-domain knowledge graph, lifecycle-anchored, compiled by COB.">
+<meta property="og:title" content="The Biscuit Bar · COB Dossier">
+<meta property="og:description" content="Fourteen-domain knowledge graph, lifecycle-anchored, compiled by COB.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23042C53'/%3E%3Cpath d='M9 8h11a5 5 0 010 10H9zM9 18h12a5 5 0 010 10H9z' fill='%23EF9F27'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════ §III-A · TOKENS. No raw hex below this block. ══════════════ */
+:root{
+  /* ink ramp (navy) */
+  --ink-50:#eef2f7;--ink-100:#d6e0eb;--ink-200:#adc1d7;--ink-300:#7e9bbb;--ink-400:#4e739c;
+  --ink-500:#2a5280;--ink-600:#123f69;--ink-700:#08355a;--ink-800:#042C53;--ink-900:#02203e;--ink-950:#011527;
+  /* brass ramp */
+  --br-50:#fdf6e9;--br-100:#fbe9c8;--br-200:#f7d18d;--br-300:#f3b854;--br-400:#EF9F27;
+  --br-500:#d9871a;--br-600:#b56c12;--br-700:#854F0B;--br-800:#653c09;--br-900:#4a2c07;
+  /* paper ramp (warm neutral, tinted) */
+  --pa-0:#ffffff;--pa-50:#FAF8F4;--pa-100:#f3efe6;--pa-200:#e8e1d3;--pa-300:#d6ccb8;
+  --pa-400:#b3a68d;--pa-500:#8a7d67;--pa-600:#6b5f4c;--pa-700:#4f4638;--pa-800:#332d24;--pa-900:#1d1a15;
+  /* semantic status ramps */
+  --risk-100:#f7e4e4;--risk-500:#a63a3a;--risk-700:#7a2828;
+  --live-100:#dcefe4;--live-500:#1d7a4f;--live-700:#125639;
+  --warn-100:#fbeacd;--warn-500:#9a6a1a;--warn-700:#6f4b10;
+  --seal-100:#e7e6ec;--seal-500:#57536b;--seal-700:#3d3a4d;
+  /* SEMANTIC roles */
+  --bg:var(--pa-50);--surface-1:var(--pa-0);--surface-2:var(--pa-100);--surface-3:var(--pa-200);--surface-4:var(--pa-300);
+  --text:var(--ink-900);--text-2:var(--pa-700);--text-3:var(--pa-600);--on-accent:var(--ink-950);
+  --line:var(--pa-200);--line-2:var(--pa-300);
+  --accent:var(--br-400);--accent-2:var(--br-700);--accent-soft:var(--br-50);
+  --brand:var(--ink-800);--brand-text:var(--pa-0);
+  --focus:var(--br-500);
+  /* type scale · 7 sizes */
+  --t-xs:clamp(.66rem,.63rem + .12vw,.72rem);
+  --t-sm:clamp(.75rem,.72rem + .13vw,.82rem);
+  --t-base:clamp(.84rem,.81rem + .14vw,.92rem);
+  --t-md:clamp(.95rem,.9rem + .2vw,1.05rem);
+  --t-lg:clamp(1.1rem,1rem + .4vw,1.35rem);
+  --t-xl:clamp(1.4rem,1.2rem + .8vw,2rem);
+  --t-2xl:clamp(1.8rem,1.4rem + 1.6vw,3rem);
+  /* space · 4pt grid */
+  --s-1:4px;--s-2:8px;--s-3:12px;--s-4:16px;--s-5:20px;--s-6:24px;--s-8:32px;--s-10:40px;
+  --r-sm:4px;--r-md:8px;--r-lg:12px;--r-full:999px;
+  --el-1:0 1px 2px rgba(2,32,62,.06);--el-2:0 4px 12px rgba(2,32,62,.10);--el-3:0 12px 32px rgba(2,32,62,.18);
+  --ease:cubic-bezier(.22,1,.36,1);--dur:180ms;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --serif:"Fraunces",Georgia,serif;
+}
+[data-theme="dark"]{
+  --bg:var(--ink-950);--surface-1:#04203a;--surface-2:#062a4a;--surface-3:#0a355c;--surface-4:#10426f;
+  --text:var(--ink-100);--text-2:var(--ink-300);--text-3:var(--ink-400);
+  --line:rgba(255,255,255,.09);--line-2:rgba(255,255,255,.16);
+  --accent:var(--br-300);--accent-2:var(--br-200);--accent-soft:rgba(239,159,39,.14);
+  --brand:var(--ink-900);--brand-text:var(--pa-50);--on-accent:var(--ink-950);
+  --risk-100:rgba(166,58,58,.22);--risk-500:#e88d8d;
+  --live-100:rgba(29,122,79,.22);--live-500:#7fd3a6;
+  --warn-100:rgba(239,159,39,.18);--warn-500:var(--br-300);
+  --seal-100:rgba(87,83,107,.28);--seal-500:#b9b5c9;
+  --el-1:0 1px 2px rgba(0,0,0,.4);--el-2:0 4px 14px rgba(0,0,0,.5);--el-3:0 14px 36px rgba(0,0,0,.6);
+}
+/* ══════════════ §III-F · fluid-first ══════════════ */
+*,*::before,*::after{box-sizing:border-box}
+img,svg,video,table{max-width:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:var(--t-base);
+  line-height:1.55;overflow-wrap:break-word;-webkit-font-smoothing:antialiased;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.serif{font-family:var(--serif)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:var(--r-sm)}
+
+/* ══════════════ TOPBAR ══════════════ */
+.top{position:sticky;top:0;z-index:60;background:var(--brand);color:var(--brand-text);
+  border-bottom:1px solid var(--line-2);padding:var(--s-2) var(--s-4)}
+.trow{display:flex;align-items:center;gap:var(--s-4);flex-wrap:wrap;min-width:0}
+.eyebrow{font-family:var(--mono);font-size:var(--t-xs);letter-spacing:.14em;text-transform:uppercase;color:var(--br-300)}
+.ttl{font-family:var(--serif);font-size:var(--t-lg);line-height:1.1}
+.spacer{flex:1;min-width:0}
+.iconbtn{background:transparent;border:1px solid var(--line-2);border-radius:var(--r-md);padding:var(--s-1) var(--s-3);
+  font-size:var(--t-xs);cursor:pointer;transition:background var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.iconbtn:hover{background:rgba(255,255,255,.09)}
+.iconbtn:active{transform:scale(.97)}
+.iconbtn[disabled]{opacity:.45;cursor:not-allowed}
+/* KPI scoreboard · §III-B primary metric top-left + largest */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s-2);margin-top:var(--s-3)}
+.kpi{background:rgba(255,255,255,.06);border:1px solid var(--line-2);border-radius:var(--r-md);
+  padding:var(--s-2) var(--s-3);text-align:left;cursor:pointer;min-width:0;
+  transition:background var(--dur) var(--ease),transform var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.kpi:hover{background:rgba(255,255,255,.12);border-color:var(--br-400)}
+.kpi:active{transform:scale(.97)}
+.kpi.lead{grid-column:span 2}
+@media(max-width:640px){.kpi.lead{grid-column:span 1}}
+.kpi .kl{font-family:var(--mono);font-size:var(--t-xs);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-200)}
+.kpi .kpiv{font-family:var(--serif);font-size:var(--t-lg);line-height:1.15;color:var(--brand-text)}
+.kpi.lead .kpiv{font-size:var(--t-xl)}
+.kpi .kd{font-family:var(--mono);font-size:var(--t-xs);color:var(--br-300)}
+
+/* ══════════════ SHELL ══════════════ */
+.app{display:grid;grid-template-columns:236px minmax(0,1fr) 280px}
+@media(max-width:1100px){.app{grid-template-columns:212px minmax(0,1fr)} .rail-r{display:none}}
+@media(max-width:780px){.app{grid-template-columns:minmax(0,1fr)}
+  .rail-l{display:none;position:fixed;inset:0;z-index:70;overflow:auto}
+  .rail-l.open{display:block;top:0;height:100dvh} .m-only{display:inline-block!important}}
+.m-only{display:none}
+.rail-l,.rail-r{background:var(--surface-2);height:calc(100dvh - var(--top-h,120px));position:sticky;top:var(--top-h,120px);
+  overflow-y:auto;padding:var(--s-3) var(--s-2) var(--s-10);min-width:0}
+.rail-l{border-right:1px solid var(--line)}
+.rail-r{border-left:1px solid var(--line)}
+main{padding:var(--s-4) var(--s-5) var(--s-10);min-width:0}
+
+/* nav */
+.grp{margin-bottom:var(--s-2)}
+.gh{width:100%;background:transparent;border:0;text-align:left;font-family:var(--mono);font-size:var(--t-xs);
+  letter-spacing:.13em;text-transform:uppercase;color:var(--text-2);padding:var(--s-1) var(--s-2);
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;border-radius:var(--r-sm)}
+.gh:hover{color:var(--text)}
+.grp.closed .gitems{display:none}
+.nav{width:100%;background:transparent;border:0;text-align:left;border-radius:var(--r-md);
+  padding:var(--s-1) var(--s-2);font-size:var(--t-sm);cursor:pointer;display:flex;align-items:center;
+  justify-content:space-between;gap:var(--s-2);min-width:0;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.nav span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.nav:hover{background:var(--surface-3)}
+.nav:active{transform:scale(.97)}
+.nav[aria-current="true"]{background:var(--brand);color:var(--brand-text);font-weight:600}
+.nav[aria-current="true"] .ct{color:var(--br-300)}
+.nav[aria-current="true"] .dot{outline:1px solid var(--brand-text);outline-offset:1px}
+.meta{display:flex;gap:var(--s-1);align-items:center;flex:none}
+.ct{font-family:var(--mono);font-size:var(--t-xs);color:var(--accent-2)}
+.dot{width:6px;height:6px;border-radius:var(--r-full)}
+.s-rich{background:var(--live-500)}.s-thin{background:var(--accent)}.s-dark{background:var(--pa-400)}
+.toc{margin-top:var(--s-4);border-top:1px solid var(--line);padding-top:var(--s-3)}
+.tl{width:100%;background:transparent;border:0;border-left:2px solid transparent;text-align:left;
+  padding:var(--s-1) var(--s-2);font-size:var(--t-sm);color:var(--text-2);cursor:pointer;
+  transition:color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.tl:hover{color:var(--text)}
+.tl[aria-current="true"]{border-left-color:var(--accent);color:var(--text);font-weight:600;background:var(--surface-3)}
+
+/* headings */
+.hgroup{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s-3);flex-wrap:wrap}
+h1{font-family:var(--serif);font-size:var(--t-2xl);margin:0;line-height:1.08;font-weight:600}
+.claim{font-size:var(--t-md);color:var(--text-2);margin:var(--s-2) 0 var(--s-4);max-width:66ch}
+h2{font-family:var(--mono);font-size:var(--t-xs);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-2);border-bottom:1px solid var(--line);padding-bottom:var(--s-1);
+  margin:var(--s-6) 0 var(--s-3);scroll-margin-top:calc(var(--top-h,120px) + 12px);font-weight:500}
+
+/* cards */
+.card{background:var(--surface-1);border:1px solid var(--line);border-left:3px solid var(--line-2);
+  border-radius:var(--r-md);padding:var(--s-3);margin-bottom:var(--s-2);cursor:pointer;min-width:0;
+  transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.card:hover{border-color:var(--line-2);box-shadow:var(--el-2)}
+.card:active{transform:scale(.97)}
+.card[data-risk="crit"]{border-left-color:var(--risk-500)}
+.card[data-risk="zombie"]{border-left-color:var(--seal-500)}
+.card[data-risk="dark"]{border-left-color:var(--pa-400);border-style:dashed}
+.card[data-risk="struct"]{border-left-color:var(--brand)}
+.chead{display:flex;justify-content:space-between;gap:var(--s-3);align-items:flex-start;flex-wrap:wrap}
+.cn{font-size:var(--t-md);font-weight:600;color:var(--text);min-width:0}
+.cx{font-size:var(--t-base);color:var(--text-2);margin-top:var(--s-1)}
+.cf{display:flex;gap:var(--s-1);flex-wrap:wrap;align-items:center;margin-top:var(--s-2)}
+
+/* pills */
+.p{font-family:var(--mono);font-size:var(--t-xs);letter-spacing:.06em;text-transform:uppercase;
+  padding:2px var(--s-2);border-radius:var(--r-full);white-space:nowrap;border:1px solid transparent}
+.p-crit{background:var(--risk-100);color:var(--risk-500);border-color:var(--risk-500)}
+.p-live{background:var(--live-100);color:var(--live-500);border-color:var(--live-500)}
+.p-end{background:var(--surface-3);color:var(--text-2);border-color:var(--line-2)}
+.p-open{background:var(--surface-2);color:var(--text);border-color:var(--line-2)}
+.p-seal{background:var(--seal-100);color:var(--seal-500);border-color:var(--seal-500)}
+.p-dark{background:transparent;color:var(--text-2);border-color:var(--line-2);border-style:dashed}
+.p-warn{background:var(--warn-100);color:var(--warn-500);border-color:var(--warn-500)}
+.route{font-family:var(--mono);font-size:var(--t-xs);background:var(--surface-2);color:var(--text-2);
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:2px var(--s-2);cursor:pointer;
+  transition:background var(--dur) var(--ease),color var(--dur) var(--ease)}
+.route:hover{background:var(--brand);color:var(--brand-text)}
+.route:active{transform:scale(.97)}
+
+/* entity chips · §III-C hover + click */
+.ent{background:var(--accent-soft);border:1px solid transparent;border-radius:var(--r-sm);
+  padding:1px 6px 1px 5px;cursor:pointer;font-size:.96em;color:inherit;display:inline-flex;
+  align-items:center;gap:5px;transition:border-color var(--dur) var(--ease),background var(--dur) var(--ease)}
+.ent:hover{border-color:var(--accent)}
+.ent::before{content:"";width:5px;height:5px;border-radius:var(--r-full);background:var(--live-500);flex:none}
+.ent[data-risk="1"]::before{background:var(--risk-500)}
+
+/* filters §III-C */
+.filters{display:flex;gap:var(--s-2);align-items:center;flex-wrap:wrap;margin-bottom:var(--s-3)}
+.chip{font-family:var(--mono);font-size:var(--t-xs);background:var(--surface-2);border:1px solid var(--line-2);
+  border-radius:var(--r-full);padding:3px var(--s-2);cursor:pointer;display:inline-flex;gap:6px;align-items:center;
+  transition:background var(--dur) var(--ease)}
+.chip:hover{background:var(--surface-3)}
+.chip[aria-pressed="true"]{background:var(--brand);color:var(--brand-text);border-color:var(--brand)}
+.chip .n{color:var(--accent-2)}
+.chip[aria-pressed="true"] .n{color:var(--br-300)}
+.clr{font-family:var(--mono);font-size:var(--t-xs);background:transparent;border:1px dashed var(--accent);
+  color:var(--accent-2);border-radius:var(--r-full);padding:3px var(--s-3);cursor:pointer}
+.clr:hover{background:var(--accent-soft)}
+
+/* table §III-C sortable */
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r-md);margin:var(--s-2) 0}
+table{width:100%;border-collapse:collapse;background:var(--surface-1);border:1px solid var(--line);
+  border-radius:var(--r-md);overflow:hidden;margin:var(--s-2) 0}
+th[tabindex]{cursor:pointer}
+th{background:var(--brand);color:var(--brand-text);font-family:var(--mono);font-size:var(--t-xs);
+  letter-spacing:.08em;text-transform:uppercase;text-align:left;padding:var(--s-2);font-weight:500;cursor:pointer;
+  transition:background var(--dur) var(--ease)}
+th:hover{background:var(--ink-700)}
+td{padding:var(--s-2);font-size:var(--t-sm);border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr{cursor:pointer;transition:background var(--dur) var(--ease)}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+
+/* drawer · ONE inspector primitive §III-C */
+.scrim{position:fixed;inset:0;background:rgba(1,21,39,.5);opacity:0;pointer-events:none;z-index:80;
+  transition:opacity var(--dur) var(--ease)}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(430px,92vw);background:var(--surface-1);
+  border-left:1px solid var(--line-2);z-index:90;transform:translateX(100%);
+  transition:transform 260ms var(--ease);overflow-y:auto;box-shadow:var(--el-3)}
+.drawer.on{transform:translateX(0)}
+.dh{position:sticky;top:0;background:var(--brand);color:var(--brand-text);padding:var(--s-3);
+  display:flex;justify-content:space-between;gap:var(--s-3);align-items:flex-start}
+.dbody{padding:var(--s-3)}
+.kv{display:flex;justify-content:space-between;gap:var(--s-3);padding:var(--s-2) 0;border-bottom:1px dashed var(--line)}
+.kv:last-child{border-bottom:none}
+.kv .k{color:var(--text-2);font-size:var(--t-sm)}
+.kv .v{text-align:right;font-size:var(--t-sm)}
+
+/* action queue */
+.q{background:var(--surface-1);border:1px solid var(--line);border-radius:var(--r-md);padding:var(--s-2);
+  margin-bottom:var(--s-2);transition:opacity var(--dur) var(--ease)}
+.q.done{opacity:.45}
+.q.done .qt{text-decoration:line-through}
+.qt{font-size:var(--t-sm);font-weight:600;line-height:1.35}
+.qm{font-family:var(--mono);font-size:var(--t-xs);color:var(--text-2);margin-top:2px}
+.qr{display:flex;gap:var(--s-1);margin-top:var(--s-2);align-items:center}
+.qc{width:18px;height:18px;flex:none;border:1.5px solid var(--accent);border-radius:var(--r-sm);
+  background:var(--surface-1);cursor:pointer;font-size:11px;line-height:1;color:var(--text);padding:0;
+  transition:background var(--dur) var(--ease),transform var(--dur) var(--ease)}
+.qc:hover{background:var(--accent-soft)}
+.qc:active{transform:scale(.92)}
+.qd{flex:1;background:transparent;border:1px dashed var(--accent);color:var(--accent-2);
+  border-radius:var(--r-sm);padding:3px;font-family:var(--mono);font-size:var(--t-xs);cursor:pointer;
+  transition:background var(--dur) var(--ease)}
+.qd:hover{background:var(--accent-soft)}
+.qd:active{transform:scale(.98)}
+
+/* states §III-D */
+.empty{border:1px dashed var(--line-2);border-radius:var(--r-md);padding:var(--s-6) var(--s-4);
+  text-align:center;color:var(--text-2);background:var(--surface-2)}
+.empty .et{font-family:var(--serif);font-size:var(--t-lg);color:var(--text);margin-bottom:var(--s-1)}
+.skel{background:linear-gradient(90deg,var(--surface-2) 25%,var(--surface-3) 37%,var(--surface-2) 63%);
+  background-size:400% 100%;animation:sh 1.3s ease-in-out infinite;border-radius:var(--r-md);height:76px;margin-bottom:var(--s-2)}
+@keyframes sh{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.modal{position:fixed;inset:0;background:rgba(1,21,39,.5);display:none;align-items:center;justify-content:center;
+  z-index:100;padding:var(--s-4)}
+.modal.on{display:flex}
+.mb{background:var(--surface-1);border-radius:var(--r-lg);max-width:600px;width:100%;padding:var(--s-5);box-shadow:var(--el-3)}
+textarea{width:100%;min-height:120px;border:1px solid var(--line-2);border-radius:var(--r-md);padding:var(--s-3);
+  font:inherit;font-size:var(--t-sm);background:var(--bg);color:var(--text);resize:vertical}
+.mrow{display:flex;gap:var(--s-2);justify-content:flex-end;margin-top:var(--s-3)}
+.btn{border:0;border-radius:var(--r-md);padding:var(--s-2) var(--s-4);font-size:var(--t-sm);font-weight:600;
+  cursor:pointer;transition:transform var(--dur) var(--ease),opacity var(--dur) var(--ease)}
+.btn:active{transform:scale(.97)}
+.btn-p{background:var(--brand);color:var(--brand-text)}
+.btn-g{background:var(--surface-3);color:var(--text)}
+.note{font-size:var(--t-xs);color:var(--text-2);border-top:1px solid var(--line);margin-top:var(--s-3);padding-top:var(--s-2)}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="trow">
+    <button class="iconbtn m-only" onclick="document.querySelector('.rail-l').classList.toggle('open')" aria-label="Toggle folders">Folders</button>
+    <div style="min-width:0">
+      <div class="eyebrow">Dossier 01 · 06 &middot; confidential</div>
+      <div class="ttl serif">The Biscuit Bar</div>
+    </div>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="themebtn" onclick="theme()" aria-label="Toggle colour mode">Dark</button>
+  </div>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<div class="app">
+  <nav class="rail-l" id="rail" aria-label="Domains"></nav>
+  <main>
+    <div id="canvas" aria-live="polite"></div>
+  </main>
+  <aside class="rail-r" id="drawerRail" aria-label="Action queue"></aside>
+</div>
+
+<div class="scrim" id="scrim" onclick="closeD()"></div>
+<aside class="drawer" id="insp" role="dialog" aria-modal="true" aria-label="Detail inspector" inert aria-hidden="true"></aside>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+  <div class="mb">
+    <h2 id="mtitle" style="border:0;margin:0 0 var(--s-1)">Draft for your COB</h2>
+    <p style="font-size:var(--t-sm);color:var(--text-2);margin:0 0 var(--s-3)">Nothing has been written or sent. Edit this, then hand it to your COB.</p>
+    <textarea id="mtext" aria-label="Draft request"></textarea>
+    <div class="mrow"><button class="btn btn-g" onclick="closeM()">Cancel</button>
+      <button class="btn btn-p" id="cbtn" onclick="copyM()">Copy for my COB</button></div>
+    <div class="note">The surface never writes. Ticking an item marks it reviewed for this session only. Your COB is the only pen.</div>
+  </div>
+</div>
+
+<script>
+/* ══════════ §III-H · ONE typed model, one data service ══════════ */
+const DB={
+ groups:[{g:"Overview",k:["dossier","coverage"]},{g:"Governance",k:["legal","capital","strategy"]},
+  {g:"Money",k:["cash","sales","customers"]},{g:"Operating",k:["ops","supply","tech","people"]},
+  {g:"Assets and risk",k:["property","risk"]},{g:"Outward",k:["marketing","network"]}],
+ domains:{dossier:{n:"Dossier"},coverage:{n:"Coverage"},legal:{n:"Legal and compliance"},
+  capital:{n:"Capital and ownership"},property:{n:"Property and assets"},risk:{n:"Risk and insurance"},
+  people:{n:"People and payroll"},cash:{n:"Cash flow and finance",src:"Connect QuickBooks and the bankruptcy operating reports"},
+  sales:{n:"Sales and revenue",src:"Connect the POS export and the Uber Eats account"},
+  customers:{n:"Customers and pipeline",src:"Connect the CRM, loyalty platform and catering inbox"},
+  ops:{n:"Operations and delivery",src:"Connect the Box and Dropbox archives"},
+  supply:{n:"Supply and vendors",src:"Connect accounts payable records"},
+  tech:{n:"Technology and systems",src:"Connect the Google Workspace admin console"},
+  marketing:{n:"Marketing and brand",src:"Connect the marketing drive and social accounts"},
+  strategy:{n:"Strategy and planning",src:"Connect the board and planning files"},
+  network:{n:"Relationships and network",src:"Connect the calendar and contacts"}},
+ entities:{
+  beard:{n:"Patrick Beard",role:"Investor &middot; opposing",risk:1,rows:[["Claim","~$1.9M, contested"],["Since","Q1 2023"],["Position","Plaintiff"]],last:"2026-05-26"},
+  fbfk:{n:"FBFK Law",role:"Law firm &middot; your counsel",risk:1,rows:[["Owed","$6,295.50"],["Status","Withdrawal threatened"],["Since","2026-01"]],last:"2026-08-04"},
+  mbest:{n:"Michael Best",role:"Law firm &middot; former counsel",risk:1,rows:[["Status","Asking to be released"],["Matter","352-358245-24"]],last:"2026-08-06"},
+  gusto:{n:"Gusto",role:"Payroll and lending",risk:1,rows:[["Status","Still billing"],["Blocker","TWC account inactive"],["Affects","5 entities"]],last:"2026-08-03"},
+  epic:{n:"Epic Dallas Office LP",role:"Landlord &middot; Deep Ellum",risk:1,rows:[["Action","Refused assignment"],["Effect","Sale collapsed"]],last:"2025-12-10"},
+  meraki:{n:"Meraki",role:"Network vendor",risk:0,rows:[["Status","Still active"],["Networks","2 live"]],last:"2026-07-27"},
+  celtic:{n:"Celtic Bank",role:"Lender of record",risk:1,rows:[["Via","Parafin"],["Defaults","6 entities"]],last:"2026-03-25"},
+  turner:{n:"Sean Turner",role:"Stalking horse bidder",risk:0,rows:[["Company","Biscuit Brand Holdings"],["Bid","~$417,000"]],last:"2025-11-23"},
+  concepts:{n:"818 Concepts LLC",role:"Parent entity",risk:1,rows:[["Owns","TBB and Kickback"],["Members","Disputed"]],last:"2026-05-26"},
+  olo:{n:"Olo",role:"Ordering platform",risk:0,rows:[["Billing","Stopped 2026-01"],["Offboard","2026-07-20"]],last:"2026-07-13"}},
+ items:[
+  {t:"Adversary 26-03048-swe &middot; section 523 nondischargeability",o:"2026-05-26",e:"live",r:"crit",d:["legal","capital"],ent:["beard","fbfk"],x:"Asks the court to rule roughly $1.9M is not dischargeable. Trial week 2026-12-14. Both defendants listed pro se on the 2026-06-23 docket."},
+  {t:"Texas Capital Bank v. TBB Stockyards FW",o:"2024",e:"live",r:"crit",d:["legal","property"],ent:["mbest"],x:"Tarrant County 352-358245-24. Trial week 2027-02-01. Counsel unconfirmed."},
+  {t:"Collin County 401-09066-2025 &middot; the state suit",o:"2025",e:"live",r:"open",d:["legal","capital"],ent:["beard","concepts"],x:"Names both principals plus three entities. Stay lifted so it can proceed."},
+  {t:"In re The Biscuit Bar LLC &middot; Chapter 7",o:"2025-10-02",e:"live",r:"open",d:["legal","capital","cash"],ent:["concepts"],x:"Filed Chapter 11, converted to Chapter 7. All entities found to be no asset cases."},
+  {t:"Beard capital contributions",o:"2023-Q1",e:"2025-08",r:"seal",d:["capital","cash","network"],ent:["beard","concepts"],x:"Roughly $1.9 million alleged across the period. Recorded as pleaded, not asserted."},
+  {t:"Fortress I buys 10% of Kickback Holdings",o:"2023-06-27",e:"disputed",r:"open",d:["capital","cash"],ent:["beard"],x:"$500,000 at an implied $5,000,000 valuation."},
+  {t:"APA &middot; Biscuit Brand Holdings, stalking horse",o:"2025-09-29",e:"2025-11-30",r:"end",d:["capital","strategy"],ent:["turner"],x:"Roughly $417,000. The outside closing date passed without closing."},
+  {t:"PSWW Acquisition winning bid",o:"2025-11-17",e:"2025-12-10",r:"end",d:["capital","property","strategy"],ent:["epic"],x:"Declared winner 2025-11-24, withdrew 2025-12-10 when a landlord stopped negotiating."},
+  {t:"Deep Ellum &middot; Epic Dallas Office",o:"circa 2021",e:"2025-12",r:"crit",d:["property","capital"],ent:["epic"],x:"The landlord refused lease assignment the day before the sale hearing, which collapsed the sale."},
+  {t:"Boardwalk &middot; GPI Boardwalk LP",o:"circa 2020",e:"2026-05-20",r:"end",d:["property","legal"],ent:[],x:"Notice of lease termination served through Jackson Walker."},
+  {t:"Abilene &middot; Emerson's CRE",o:"circa 2022",e:"live",r:"zombie",d:["property","cash"],ent:[],x:"Rent statements were still arriving as of 2026-07, after closure."},
+  {t:"4692 Clydesdale &middot; held by 818 Capital",o:"unknown",e:"live",r:"open",d:["property","capital","risk"],ent:["concepts"],x:"Texas Bank and Trust loan. Described as the entity's principal asset."},
+  {t:"HUB International &middot; policies cancelled",o:"unknown",e:"2025-12-04",r:"end",d:["risk","cash"],ent:[],x:"Backdated after closures appeared on local news. $45,362.03 unearned premium not owed."},
+  {t:"Society Insurance &middot; four policies",o:"unknown",e:"live",r:"crit",d:["risk","legal","cash"],ent:[],x:"$9,582.03 placed with a collection firm, suit threatened after a 2026-06-30 deadline."},
+  {t:"Gusto payroll",o:"unknown",e:"live",r:"zombie",d:["people","cash","tech"],ent:["gusto"],x:"Still sending payroll reminders in 2026-08, eight months after the restaurants closed."},
+  {t:"Texas Workforce Commission account inactive",o:"unknown",e:"live",r:"crit",d:["people","legal","cash"],ent:["gusto"],x:"Blocks the Q4 2025 filing and drives penalty exposure across five entities. Warned three times, unresolved."},
+  {t:"Parafin, Gusto Capital lines &middot; six defaults",o:"2025-09-22",e:"live",r:"crit",d:["cash","legal","capital"],ent:["gusto","celtic"],x:"Six entities declared in default on one day. Boardwalk owed $8,533.55 of $13,156. Five balances unpriced."},
+  {t:"FY2023 gross revenue &middot; $2,127,874",o:"2023",e:"2023",r:"seal",d:["cash","sales","capital","strategy"],ent:["beard"],x:"Recorded from the bankruptcy filing. The complaint contrasts it with more than $9,000,000 said to have been shown to investors. The comparison is the plaintiffs&#39; pleaded case, not a finding."},
+  {t:"Monthly P and L, 2019 to 2025",o:"circa 2019",e:"2025-12",r:"dark",d:["cash","sales","strategy"],ent:[],x:"The entire trading history. Not present in any connected source. The largest single hole in this world."},
+  {t:"QuickBooks &middot; 818 Capital",o:"unknown",e:"live",r:"dark",d:["cash","tech"],ent:["concepts"],x:"Books exist and are reachable. Not yet connected, so the ledger page stays dark."},
+  {t:"Uber Eats monthly statements",o:"unknown",e:"live",r:"zombie",d:["sales","cash","tech"],ent:[],x:"Still arriving in 2026 for stores that closed in 2025-12."},
+  {t:"Olo &middot; online ordering",o:"unknown",e:"2026-07-20",r:"end",d:["ops","sales","tech"],ent:["olo"],x:"Suspended 2026-01, held open seven months awaiting buyer news, then offboarded."},
+  {t:"Restaurant365 &middot; accounting platform",o:"unknown",e:"2025-07-17",r:"end",d:["ops","cash","tech"],ent:[],x:"Cancelled months before the closures, which removed the reporting layer early."},
+  {t:"Ecolab &middot; dishmachine lease",o:"unknown",e:"live",r:"crit",d:["supply","legal","property"],ent:[],x:"Declared in default at the Plano site, repossession asserted through counsel."},
+  {t:"Stratus Unlimited",o:"unknown",e:"live",r:"crit",d:["supply","legal","cash"],ent:[],x:"$11,142.23, suit authorized against The Kickback."},
+  {t:"Hudson Energy &middot; TBB Coppell",o:"unknown",e:"live",r:"open",d:["supply","cash"],ent:[],x:"$3,126.02 on a closed account, chased seven times in a single month."},
+  {t:"Food distributors",o:"unknown",e:"unknown",r:"dark",d:["supply","ops"],ent:[],x:"No distributor correspondence in any connected source. A real gap for a restaurant group."},
+  {t:"Meraki &middot; network licensing",o:"unknown",e:"live",r:"zombie",d:["tech","ops"],ent:["meraki"],x:"Still scheduling firmware upgrades on two live networks in 2026-07."},
+  {t:"RingCentral &middot; phone and text",o:"unknown",e:"live",r:"zombie",d:["tech","ops"],ent:[],x:"Still forwarding texts to the principal."},
+  {t:"Textedly &middot; SMS marketing",o:"unknown",e:"live",r:"zombie",d:["tech","marketing"],ent:[],x:"Payment failing, vendor still chasing."},
+  {t:"Google Workspace",o:"unknown",e:"live",r:"open",d:["tech"],ent:[],x:"At 95% of pooled storage as of 2026-08. The archive itself is at risk."},
+  {t:"7shifts &middot; scheduling",o:"unknown",e:"2025-12",r:"end",d:["tech","people"],ent:[],x:"Lapsed, which is why a former employee cannot retrieve his W-2 or the entity EIN."},
+  {t:"THE PLAN &middot; expansion document",o:"2024",e:"2024",r:"seal",d:["strategy","capital"],ent:["beard"],x:"Described in the complaint as soliciting a further $500,000 against a projected $210M valuation by 2033. Recorded as pleaded, not asserted."},
+  {t:"TBB pitch deck &middot; $19M to $24M valuation",o:"2023-05-02",e:"2023",r:"seal",d:["strategy","capital","cash"],ent:["beard"],x:"A valuation range described in the complaint. Separately, the Chapter 7 trustee recorded the entities as no asset cases. Recorded as pleaded, not asserted."},
+  {t:"Janie Burkett &middot; COO and Co-CEO",o:"unknown",e:"live",r:"open",d:["people","legal"],ent:[],x:"Handled the vendor wind-down. Co-defendant on every personal matter."},
+  {t:"Former employee W-2 request",o:"2026-06-18",e:"live",r:"open",d:["people","tech"],ent:[],x:"Records unreachable after the scheduling system lapsed."},
+  {t:"Prestonwood Baptist Church connection",o:"circa 2022",e:"live",r:"seal",d:["network","capital"],ent:["beard"],x:"Where the parties met, per the complaint. Recorded as pleaded, not asserted."},
+  {t:"Texas Restaurant Association",o:"unknown",e:"live",r:"open",d:["network","strategy"],ent:[],x:"Industry updates still arriving."}],
+ queue:[
+  {t:"Confirm the answer status in Adversary 26-03048-swe",rec:0,m:"Answer due 2026-06-26",dr:"Confirm whether an answer was filed in Adversary 26-03048-swe after 2026-06-26 and whether any default was entered."},
+  {t:"Name counsel of record on the adversary",rec:0,m:"Both pro se &middot; docket call 2026-11-30",dr:"Confirm who is counsel of record in Adversary 26-03048-swe before the 2026-11-30 docket call."},
+  {t:"Reply to Katie Fillmore on the bank case",rec:1,m:"Trial week 2027-02-01",dr:"Draft a reply to Katie Fillmore confirming who is handling Texas Capital Bank v. TBB Stockyards FW."},
+  {t:"Reactivate the TWC account",rec:15,m:"Clears penalties on 5 entities",dr:"Find what it takes to reactivate the Texas Workforce Commission account so Gusto can file the Q4 2025 returns."},
+  {t:"Cancel the systems still billing",rec:27,m:"6 live after closure",dr:"List every system still billing for the closed entities with cost, and tell me which to cancel first."},
+  {t:"Build one debt schedule",rec:16,m:"5 of 6 Parafin defaults unpriced",dr:"Build one written schedule of every remaining entity level debt, including the five unpriced Parafin defaults."}]
+};
+/* ══════════ §III-C · central state, serialized to URL ══════════ */
+const S={view:"dossier",ent:null,risk:null,sort:null,dir:1,item:null,done:{}};
+function readURL(){const p=new URLSearchParams(location.hash.slice(1));
+  S.view=p.get("v")||"dossier";S.ent=p.get("e")||null;S.risk=p.get("r")||null;
+  S.sort=p.get("s")||null;S.dir=p.get("d")==="-1"?-1:1;S.item=p.get("i")!==null?+p.get("i"):null;}
+function writeURL(push){const p=new URLSearchParams();p.set("v",S.view);
+  if(S.ent)p.set("e",S.ent);if(S.risk)p.set("r",S.risk);
+  if(S.sort){p.set("s",S.sort);p.set("d",S.dir)}
+  if(S.item!=null)p.set("i",S.item);
+  const h='#'+p.toString();
+  if(push&&h!==location.hash)history.pushState(null,"",h);else history.replaceState(null,"",h);}
+const CLAIMS={"legal": "Five proceedings run at once against three opposing firms, and the one that decides whether $1.9 million survives the bankruptcy has no confirmed counsel.", "capital": "Two sale attempts failed and the ownership structure that funded the business is now the subject of the litigation.", "property": "Six leased sites, each in its own entity with its own landlord. One landlord refusing to assign collapsed the entire estate.", "risk": "Coverage was cancelled at closure, and one insurer has become a creditor.", "people": "Payroll systems still run for entities with no employees, and one inactive government account drives penalty exposure across five of them.", "cash": "The most valuable series in this business is the least connected, and a single unconnected revenue number is the factual core of a $1.9 million claim.", "sales": "Delivery statements still arrive for stores that closed, while the sales history that would explain the business is not connected at all.", "customers": "Nothing is connected here, which for a restaurant group means the loyalty, catering and repeat-customer history is entirely dark.", "ops": "Platform accounts were suspended rather than closed, and several were held open for months waiting on a buyer who never closed.", "supply": "Four vendors moved to collections or counsel once payment stopped, and the food distributors are missing from the record entirely.", "tech": "This is where money leaks quietly. Several systems are still live and still billing for a company that stopped trading in December 2025.", "marketing": "Nothing is connected, and the brand itself was the asset being sold, so its history is a material gap.", "strategy": "The planning documents and the litigation exhibits are the same documents.", "network": "The central relationship in this record began socially and is now adversarial."};
+const D=DB.domains,E=DB.entities;
+const byDomain=k=>DB.items.filter(i=>i.d.includes(k));
+const filtered=k=>{let l=byDomain(k);
+  if(S.ent)l=l.filter(i=>i.ent.includes(S.ent));
+  if(S.risk)l=l.filter(i=>i.r===S.risk);
+  if(S.sort==="o")l=[...l].sort((a,b)=>a.o.localeCompare(b.o)*S.dir);
+  if(S.sort==="t")l=[...l].sort((a,b)=>a.t.localeCompare(b.t)*S.dir);
+  return l;};
+const stateOf=k=>{const n=byDomain(k),dk=n.filter(i=>i.r==="dark").length;
+  return !n.length?"dark":(n.length-dk)>=5?"rich":"thin";};
+const esc=s=>String(s).replace(/&(?!\w+;)/g,"&amp;").replace(/</g,"&lt;");
+const lifeP=e=>e==="live"?'<span class="p p-live">Live</span>':e==="disputed"?'<span class="p p-seal">Disputed</span>':
+  e==="unknown"?'<span class="p p-dark">Unknown</span>':'<span class="p p-end">to '+e+'</span>';
+const riskP=r=>({crit:'<span class="p p-crit">Critical</span>',open:'<span class="p p-open">Open</span>',
+  end:'<span class="p p-end">Ended</span>',dark:'<span class="p p-dark">Dark</span>',
+  zombie:'<span class="p p-seal">Still billing</span>',seal:'<span class="p p-seal">As pleaded</span>'}[r]||'');
+const chip=k=>`<button class="ent" data-ent="${k}" data-risk="${E[k].risk}" aria-label="Inspect ${E[k].n}">${E[k].n}</button>`;
+
+/* ══════════ KPI scoreboard · every KPI clickable + delta ══════════ */
+function kpis(){
+  const live=DB.items.filter(i=>i.e==="live").length,z=DB.items.filter(i=>i.r==="zombie").length,
+    dk=Object.keys(D).filter(k=>k!=="dossier"&&k!=="coverage"&&stateOf(k)!=="dark").length;
+  const K=[
+   {l:"Contested exposure",v:"$1.9M",d:"section 523 &middot; trial 2026-12",act:()=>go("legal","crit"),lead:1},
+   {l:"2023 variance",v:"-76%",d:"actual vs pitched",act:()=>go("cash")},
+   {l:"Next clock",v:"2026-11-30",d:"docket call",act:()=>go("legal","crit")},
+   {l:"Still billing",v:z,d:"after closure",act:()=>go("tech","zombie")},
+   {l:"Domains lit",v:dk+" / 14",d:"coverage",act:()=>go("coverage")}];
+  document.getElementById("kpis").innerHTML=K.map((k,i)=>
+    `<button class="kpi${k.lead?" lead":""}" data-kpi="${i}" title="${k.l}: ${k.v}. ${k.d.replace(/&middot;/g,'·')}">
+      <span class="kl">${k.l}</span><div class="kpiv mono">${k.v}</div><span class="kd">${k.d}</span></button>`).join("");
+  document.querySelectorAll("[data-kpi]").forEach((el,i)=>el.onclick=K[i].act);
+}
+/* ══════════ NAV ══════════ */
+function rail(){
+  let h="";
+  DB.groups.forEach((g,gi)=>{
+    h+=`<div class="grp" id="g${gi}"><button class="gh" aria-expanded="true" onclick="document.getElementById('g${gi}').classList.toggle('closed')">${g.g}<span>&minus;</span></button><div class="gitems">`;
+    g.k.forEach(k=>{const sp=k==="dossier"||k==="coverage";
+      h+=`<button class="nav" aria-current="${k===S.view}" onclick="go('${k}')"><span>${D[k].n}</span>
+        <span class="meta">${sp?"":`<span class="ct">${byDomain(k).length}</span><span class="dot s-${stateOf(k)}"></span>`}</span></button>`;});
+    h+="</div></div>";});
+  h+=`<div class="toc"><div class="gh" style="cursor:default">On this page</div><div id="toc"></div></div>`;
+  document.getElementById("rail").innerHTML=h;
+}
+/* ══════════ CANVAS ══════════ */
+let SECT=[];
+function canvas(){
+  const el=document.getElementById("canvas"),k=S.view;
+  el.innerHTML='<div class="skel"></div><div class="skel"></div>';
+  requestAnimationFrame(()=>{
+    el.innerHTML = k==="dossier"?vDossier():k==="coverage"?vCoverage():vDomain(k);
+    toc();bind();
+  });
+}
+function filterBar(k){
+  const all=S.ent?byDomain(k).filter(i=>i.ent.includes(S.ent)):byDomain(k),cats=["crit","zombie","open","seal","end","dark"];
+  const counts=cats.map(c=>[c,all.filter(i=>i.r===c).length]).filter(x=>x[1]);
+  if(!counts.length&&!S.ent)return"";
+  return `<div class="filters">
+    ${counts.map(([c,n])=>`<button class="chip" aria-pressed="${S.risk===c}" onclick="setRisk('${c}')">${
+      ({crit:"Critical",zombie:"Still billing",open:"Open",seal:"As pleaded",end:"Ended",dark:"Dark"})[c]
+    } <span class="n mono">${n}</span></button>`).join("")}
+    ${(S.risk||S.ent)?`<button class="clr" onclick="clearAll()">Clear all</button>`:""}
+    ${S.ent?`<span class="p p-open">Entity: ${E[S.ent].n}</span>`:""}
+  </div>`;
+}
+function vDomain(k){
+  const list=filtered(k),all=byDomain(k);
+  let h=`<div class="hgroup"><div><h1 class="serif">${D[k].n}</h1></div>
+    <span class="p ${stateOf(k)==="rich"?"p-live":stateOf(k)==="thin"?"p-open":"p-dark"}">${list.length} of ${all.length}</span></div>
+    <p class="claim">${CLAIMS[k]||"Every row carries its lifespan."}</p>
+    ${filterBar(k)}`;
+  SECT=[];
+  if(!all.length){SECT=["Nothing connected"];
+    return h+`<h2 id="s0">Nothing connected</h2><div class="empty"><div class="et serif">This domain is dark</div>
+      <p>It exists from day one so its emptiness is visible and answerable.</p>
+      <button class="btn btn-p" onclick="draft('${(D[k].src||"Connect a source")} for the Biscuit Bar world.')">${D[k].src||"Connect a source"}</button></div>`;}
+  if(!list.length){SECT=["No results"];
+    return h+`<h2 id="s0">No results</h2><div class="empty"><div class="et serif">Nothing matches these filters</div>
+      <p>${all.length} items exist in this domain.</p><button class="btn btn-p" onclick="clearAll()">Clear all filters</button></div>`;}
+  SECT=["Records","Timeline"];
+  h+=`<h2 id="s0">Records</h2>`;
+  list.forEach((it,i)=>{
+    const routes=it.d.filter(x=>x!==k).map(x=>`<button class="route" onclick="event.stopPropagation();go('${x}')">${D[x].n.split(" ")[0]}</button>`).join("");
+    h+=`<article class="card" data-risk="${it.r}" data-item="${DB.items.indexOf(it)}" tabindex="0">
+      <div class="chead"><span class="cn">${esc(it.t)}</span><span class="mono" style="font-size:var(--t-xs);color:var(--accent-2)">${it.o}</span></div>
+      <div class="cx">${esc(it.x)}</div>
+      <div class="cf">${lifeP(it.e)}${riskP(it.r)}${it.ent.map(chip).join("")}${routes?`<span class="mono" style="font-size:var(--t-xs);color:var(--text-3)">also in</span>${routes}`:""}</div>
+    </article>`;});
+  h+=`<h2 id="s1">Timeline</h2><div class="tw"><table><thead><tr>
+    <th tabindex="0" role="columnheader" aria-sort="${S.sort==="t"?(S.dir>0?"ascending":"descending"):"none"}" onclick="setSort('t')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSort('t')}">Item ${S.sort==="t"?(S.dir>0?"&uarr;":"&darr;"):""}</th>
+    <th tabindex="0" role="columnheader" aria-sort="${S.sort==="o"?(S.dir>0?"ascending":"descending"):"none"}" onclick="setSort('o')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();setSort('o')}">Origin ${S.sort==="o"?(S.dir>0?"&uarr;":"&darr;"):""}</th>
+    <th>End state</th></tr></thead><tbody>`;
+  list.forEach(it=>{h+=`<tr data-item="${DB.items.indexOf(it)}" tabindex="0"><td>${esc(it.t)}</td>
+    <td class="num">${it.o}</td><td>${lifeP(it.e)}</td></tr>`;});
+  h+=`</tbody></table></div>`;
+  if(D[k].src)h+=`<div class="empty" style="margin-top:var(--s-3)"><div class="et serif">Partly dark</div>
+    <p>${D[k].src}.</p><button class="btn btn-p" onclick="draft('${D[k].src} for the Biscuit Bar world.')">Draft this ask</button></div>`;
+  return h;}
+function vDossier(){
+  const z=DB.items.filter(i=>i.r==="zombie").length;
+  SECT=["The verdict","What changed the picture","Where money leaks"];
+  return `<div class="hgroup"><h1 class="serif">The Biscuit Bar</h1><span class="p p-open">Wind-down active</span></div>
+  <p class="claim">A six-site restaurant group under ${chip("concepts")} that traded from around 2019 and ceased in December 2025 after a going concern sale collapsed. The exposure did not end with the companies. It moved onto the principals.</p>
+  <h2 id="s0">The verdict</h2>
+  <article class="card" data-risk="crit" data-item="0" tabindex="0"><div class="chead">
+    <span class="cn">The nondischargeability adversary is the most consequential open matter</span></div>
+    <div class="cx">It asks the court to rule roughly $1.9 million is not dischargeable. If it succeeds the debt survives the bankruptcy and follows the principals personally. Trial week 2026-12-14, and both were listed pro se on the last docket in the record.</div>
+    <div class="cf"><span class="p p-crit">Urgency</span>${chip("beard")}${chip("fbfk")}</div></article>
+  <h2 id="s1">What changed the picture</h2>
+  <article class="card" data-risk="struct" data-item="17" tabindex="0"><div class="chead">
+    <span class="cn">The routine number was the early warning. The lawsuit is the late one.</span></div>
+    <div class="cx">The entire claim rests on one variance: 2023 revenue of $2,127,874 against more than $9,000,000 shown to investors. That is a finance finding, not a legal one, and it was visible in 2023. It routes to four domains at once.</div>
+    <div class="cf"><span class="p p-open">Significance</span><button class="route" onclick="event.stopPropagation();go('cash')">Cash flow</button></div></article>
+  <h2 id="s2">Where money leaks</h2>
+  <article class="card" data-risk="zombie" data-item="14" tabindex="0"><div class="chead">
+    <span class="cn">${z} systems are still live for a company that stopped trading</span></div>
+    <div class="cx">${chip("meraki")} ${chip("gusto")} and four more are still active or still billing eight months after closure. Quiet recurring cost with no deadline attached, which is exactly why it never surfaced before.</div>
+    <div class="cf"><span class="p p-seal">Still billing</span><button class="route" onclick="event.stopPropagation();go('tech','zombie')">Technology</button></div></article>`;}
+function vCoverage(){
+  let ks=Object.keys(D).filter(k=>k!=="dossier"&&k!=="coverage");
+  if(S.sort==="cn")ks=[...ks].sort((a,b)=>D[a].n.localeCompare(D[b].n)*S.dir);
+  if(S.sort==="ci")ks=[...ks].sort((a,b)=>(byDomain(a).length-byDomain(b).length)*S.dir);
+  const lit=ks.filter(k=>stateOf(k)!=="dark").length;
+  SECT=["Domain map"];
+  let h=`<div class="hgroup"><h1 class="serif">Coverage</h1><span class="p p-open">${lit} of 14 lit</span></div>
+  <p class="claim">Every business gets all fourteen areas from the first day. A dark area is not an absence of data. It is a work list.</p>
+  <h2 id="s0">Domain map</h2><div class="tw"><table><thead><tr><th tabindex="0" onclick="setSort('cn')" onkeydown="if(event.key==='Enter'){setSort('cn')}">Domain</th><th tabindex="0" onclick="setSort('ci')" onkeydown="if(event.key==='Enter'){setSort('ci')}">Items</th><th>State</th><th>What lights it</th></tr></thead><tbody>`;
+  ks.forEach(k=>{const s=stateOf(k);
+    h+=`<tr data-goto="${k}" tabindex="0"><td>${D[k].n}</td><td class="num">${byDomain(k).length}</td>
+      <td>${s==="rich"?'<span class="p p-live">Rich</span>':s==="thin"?'<span class="p p-open">Partial</span>':'<span class="p p-dark">Dark</span>'}</td>
+      <td style="color:var(--text-2)">${D[k].src||"Connected"}</td></tr>`;});
+  return h+`</tbody></table></div>`;}
+/* ══════════ TOC + scrollspy ══════════ */
+function toc(){document.getElementById("toc").innerHTML=SECT.map((s,i)=>
+  `<button class="tl" data-t="s${i}" onclick="jump('s${i}')">${s}</button>`).join("");}
+function jump(id){document.getElementById(id)?.scrollIntoView({behavior:"smooth",block:"start"});}
+addEventListener("scroll",()=>{let cur=null;
+  document.querySelectorAll("main h2").forEach(h=>{if(h.getBoundingClientRect().top<140)cur=h.id;});
+  document.querySelectorAll(".tl").forEach(t=>t.setAttribute("aria-current",t.dataset.t===cur));},{passive:true});
+/* ══════════ ACTION QUEUE ══════════ */
+function queue(){
+  const open=DB.queue.filter((_,i)=>!S.done[i]).length;
+  document.getElementById("drawerRail").innerHTML=
+   `<div class="gh" style="cursor:default">Action queue <span class="ct mono">${open}</span></div>`+
+   DB.queue.map((q,i)=>`<div class="q${S.done[i]?" done":""}">
+     <div class="qt">${q.t}</div><div class="qm">${q.m}</div>
+     <div class="qr"><button class="qc" onclick="tog(${i})" aria-pressed="${!!S.done[i]}" aria-label="Mark reviewed">${S.done[i]?"&#10003;":""}</button>
+     ${q.rec!=null?`<button class="qd" onclick="openItem(${q.rec})">Open record</button>`:""}
+     <button class="qd" onclick="draft('${q.dr.replace(/'/g,"\\'")}')">Draft</button></div></div>`).join("");
+}
+function tog(i){S.done[i]=!S.done[i];queue();}
+/* ══════════ INSPECTOR · one primitive ══════════ */
+function openItem(idx){const it=DB.items[idx];if(!it)return;S.item=idx;writeURL();
+  document.getElementById("insp").innerHTML=`
+   <div class="dh"><div><div class="eyebrow" style="color:var(--br-300)">Record</div>
+     <div class="serif" style="font-size:var(--t-lg)">${it.t}</div></div>
+     <button class="iconbtn" onclick="closeD()" aria-label="Close">Close</button></div>
+   <div class="dbody"><p style="color:var(--text-2)">${it.x}</p>
+    <div class="kv"><span class="k">Origin</span><span class="v mono">${it.o}</span></div>
+    <div class="kv"><span class="k">End state</span><span class="v">${lifeP(it.e)}</span></div>
+    <div class="kv"><span class="k">Status</span><span class="v">${riskP(it.r)}</span></div>
+    <div class="kv"><span class="k">Domains</span><span class="v">${it.d.map(x=>D[x].n).join(", ")}</span></div>
+    <div class="kv"><span class="k">Entities</span><span class="v">${it.ent.length?it.ent.map(x=>E[x].n).join(", "):"none recorded"}</span></div>
+    <button class="btn btn-p" style="width:100%;margin-top:var(--s-3)" onclick="draft('Tell me everything about: ${it.t.replace(/'/g,"\\'").replace(/&middot;/g,'·')}')">Draft an ask about this</button></div>`;
+  show();}
+function openEnt(k){const e=E[k];if(!e)return;
+  const its=DB.items.filter(i=>i.ent.includes(k)),ds=[...new Set(its.flatMap(i=>i.d))];
+  document.getElementById("insp").innerHTML=`
+   <div class="dh"><div><div class="eyebrow" style="color:var(--br-300)">${e.role}</div>
+     <div class="serif" style="font-size:var(--t-lg)">${e.n}</div></div>
+     <button class="iconbtn" onclick="closeD()" aria-label="Close">Close</button></div>
+   <div class="dbody">
+    ${e.rows.map(r=>`<div class="kv"><span class="k">${r[0]}</span><span class="v">${r[1]}</span></div>`).join("")}
+    <div class="kv"><span class="k">Appears in</span><span class="v mono">${ds.length} domains</span></div>
+    <div class="kv"><span class="k">Records</span><span class="v mono">${its.length}</span></div>
+    <div class="kv"><span class="k">Last activity</span><span class="v mono">${e.last}</span></div>
+    <button class="btn btn-p" style="width:100%;margin-top:var(--s-3)" onclick="closeD();setEnt('${k}')">Filter all domains by ${e.n}</button>
+    <button class="btn btn-g" style="width:100%;margin-top:var(--s-2)" onclick="draft('Open the Brief on ${e.n} and show everything connected across all fourteen domains.')">Draft an ask</button></div>`;
+  show();}
+let LASTF=null;
+function show(){LASTF=document.activeElement;const d=document.getElementById("insp");
+  d.removeAttribute('inert');d.removeAttribute('aria-hidden');d.classList.add("on");
+  document.getElementById("scrim").classList.add("on");
+  setTimeout(()=>{const f=d.querySelector('button');if(f)f.focus();},60);}
+function closeD(){const d=document.getElementById("insp");d.classList.remove("on");d.setAttribute('inert','');d.setAttribute('aria-hidden','true');
+  document.getElementById("scrim").classList.remove("on");if(S.item!=null){S.item=null;writeURL();}
+  if(LASTF&&document.contains(LASTF))LASTF.focus();}
+/* ══════════ ACTIONS ══════════ */
+function go(k,risk){S.view=k;S.risk=(risk!==undefined)?risk:null;S.sort=null;
+  document.querySelector(".rail-l").classList.remove("open");
+  writeURL(true);rail();canvas();scrollTo({top:0,behavior:"smooth"});}
+function setEnt(k){S.ent=k;if(S.view==="dossier"||S.view==="coverage")S.view="legal";writeURL();rail();canvas();}
+function setRisk(c){S.risk=S.risk===c?null:c;writeURL();canvas();}
+function setSort(c){if(S.sort===c)S.dir*=-1;else{S.sort=c;S.dir=1}writeURL();canvas();}
+function clearAll(){S.ent=null;S.risk=null;S.sort=null;writeURL();rail();canvas();}
+function bind(){
+  document.querySelectorAll("[data-item]").forEach(el=>el.onclick=e=>{
+    if(e.target.closest(".ent")||e.target.closest(".route"))return;openItem(+el.dataset.item);});
+  document.querySelectorAll("[data-item]").forEach(el=>el.onkeydown=e=>{
+    if(e.key==="Enter"){e.preventDefault();openItem(+el.dataset.item);}});
+  document.querySelectorAll("[data-ent]").forEach(el=>el.onclick=e=>{e.stopPropagation();openEnt(el.dataset.ent);});
+  document.querySelectorAll("[data-goto]").forEach(el=>el.onclick=()=>go(el.dataset.goto));
+}
+function theme(){const r=document.documentElement,d=r.dataset.theme==="dark";
+  r.dataset.theme=d?"light":"dark";document.getElementById("themebtn").textContent=d?"Dark":"Light";}
+function draft(t){closeD();document.getElementById("mtext").value=t.replace(/&middot;/g,"·");
+  document.getElementById("modal").classList.add("on");document.getElementById("mtext").focus();}
+function closeM(){document.getElementById("modal").classList.remove("on")}
+function copyM(){const ta=document.getElementById("mtext");ta.select();
+  try{document.execCommand("copy")}catch(e){}
+  const b=document.getElementById("cbtn");b.textContent="Copied";
+  setTimeout(()=>{b.textContent="Copy for my COB";closeM()},700);}
+document.getElementById("modal").onclick=e=>{if(e.target.id==="modal")closeM()};
+addEventListener("keydown",e=>{if(e.key==="Escape"){closeD();closeM();}});
+addEventListener('hashchange',()=>{readURL();kpis();rail();canvas();if(S.item!=null)openItem(S.item);else closeD();});
+function sizeTop(){document.documentElement.style.setProperty('--top-h',document.querySelector('.top').offsetHeight+'px');}
+addEventListener('resize',sizeTop);
+readURL();kpis();rail();canvas();queue();sizeTop();setTimeout(sizeTop,400);
+if(S.item!=null)openItem(S.item);
+</script>
+</body>
+</html>
