@@ -6128,6 +6128,86 @@ export type Database = {
         }
         Relationships: []
       }
+      route_audit: {
+        Row: {
+          audit_id: string
+          cid: string
+          claim_id: string | null
+          created_at: string
+          domain_key: string
+          mean_conf: number | null
+          memory_id: string | null
+          passes: number
+          reason: string
+          resolved_as: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          state: string
+          votes: number
+        }
+        Insert: {
+          audit_id?: string
+          cid: string
+          claim_id?: string | null
+          created_at?: string
+          domain_key: string
+          mean_conf?: number | null
+          memory_id?: string | null
+          passes: number
+          reason: string
+          resolved_as?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          state?: string
+          votes: number
+        }
+        Update: {
+          audit_id?: string
+          cid?: string
+          claim_id?: string | null
+          created_at?: string
+          domain_key?: string
+          mean_conf?: number | null
+          memory_id?: string | null
+          passes?: number
+          reason?: string
+          resolved_as?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          state?: string
+          votes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "route_audit_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_claims"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "route_audit_claim_id_fkey"
+            columns: ["claim_id"]
+            isOneToOne: false
+            referencedRelation: "world_delta_v"
+            referencedColumns: ["claim_id"]
+          },
+          {
+            foreignKeyName: "route_audit_domain_key_fkey"
+            columns: ["domain_key"]
+            isOneToOne: false
+            referencedRelation: "domain_taxonomy"
+            referencedColumns: ["domain_key"]
+          },
+          {
+            foreignKeyName: "route_audit_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       route_eval_baseline: {
         Row: {
           claim_id: string | null
@@ -9413,6 +9493,24 @@ export type Database = {
           p_rule_key: string
         }
         Returns: Json
+      }
+      route_evidence_gaps: {
+        Args: { p_cid: string }
+        Returns: {
+          claim_id: string
+          expected: string
+          snippet: string
+        }[]
+      }
+      route_outliers: {
+        Args: { p_cid: string; p_min_claims?: number }
+        Returns: {
+          domain_key: string
+          entity: string
+          entity_claims: number
+          hits: number
+          share: number
+        }[]
       }
       set_doctrine_tier: {
         Args: {
