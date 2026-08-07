@@ -1,0 +1,71 @@
+/* HQ-NEXT · AGGREGATION PANEL
+ * Every selector is scoped under .hqx .agg. Tokens are inherited from
+ * hq-next.css. No new palette, no warning colour, no red. */
+.hqx .agg { background:#fff; border:1px solid var(--edge); border-radius:9px; box-shadow:0 1px 2px rgba(44,44,42,.04); padding:18px 20px 20px; margin-bottom:6px; }
+.hqx .agg-top { display:flex; gap:22px; align-items:flex-start; flex-wrap:wrap; }
+.hqx .agg-barcol { flex:1 1 420px; min-width:0; }
+.hqx .agg-statcol { flex:0 1 300px; min-width:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.hqx .agg-pct { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; min-width:0; }
+.hqx .agg-pct b { font-family:var(--serif); font-size:34px; font-weight:800; color:var(--ink); line-height:1; }
+.hqx .agg-pct .cf { font-family:var(--mono); font-size:9px; letter-spacing:.16em; text-transform:uppercase; color:var(--ash); }
+.hqx .agg-pct .none { font-family:var(--serif); font-size:22px; font-weight:800; color:var(--ash); line-height:1; }
+
+.hqx .agg-track { display:flex; height:16px; margin-top:11px; border:1px solid var(--edge); border-radius:8px; overflow:hidden; background:#F5F3EF; }
+.hqx .agg-seg { min-width:0; height:100%; }
+.hqx .agg-seg.read { background:var(--brass); }
+.hqx .agg-seg.rem { background:#E3DDD1; }
+.hqx .agg-seg.tail {
+  flex:0 0 22%;
+  background-image:repeating-linear-gradient(135deg, rgba(239,159,39,.42) 0 3px, rgba(239,159,39,0) 3px 8px);
+  -webkit-mask-image:linear-gradient(to right, #000 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,0) 100%);
+  mask-image:linear-gradient(to right, #000 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,0) 100%);
+}
+.hqx .agg-line { font-size:13px; color:var(--charcoal); line-height:1.55; margin:10px 0 0; max-width:74ch; }
+.hqx .agg-note { font-family:var(--mono); font-size:9px; color:var(--ash); margin-top:6px; }
+
+.hqx .agg-stat { border:1px solid var(--edge); border-radius:8px; padding:9px 11px; min-width:0; background:#FBFAF7; }
+.hqx .agg-stat .k { font-family:var(--mono); font-size:8.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); }
+.hqx .agg-stat .v { font-family:var(--serif); font-size:18px; font-weight:800; color:var(--ink); margin-top:3px; overflow-wrap:anywhere; }
+.hqx .agg-stat .v.empty { font-family:var(--mono); font-size:10px; font-weight:400; color:var(--ash); }
+
+.hqx .agg-h { font-family:var(--mono); font-size:8.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--ash); margin:22px 0 8px; border-bottom:1px solid var(--edge); padding-bottom:5px; }
+.hqx .agg-src { display:flex; align-items:center; gap:10px; width:100%; text-align:left; min-width:0; flex-wrap:wrap;
+  border:1px solid var(--edge); border-radius:8px; background:#fff; padding:9px 11px; margin-bottom:6px; cursor:pointer; font:inherit; color:inherit; }
+.hqx .agg-src:hover { border-color:var(--brass); }
+.hqx .agg-src .sl { min-width:0; flex:1 1 190px; }
+.hqx .agg-src .sl b { display:block; font-size:12.5px; font-weight:600; color:var(--ink); overflow-wrap:anywhere; }
+.hqx .agg-src .sl span { display:block; font-family:var(--mono); font-size:9px; color:var(--ash); margin-top:2px; overflow-wrap:anywhere; }
+.hqx .agg-src .ss { font-family:var(--mono); font-size:9.5px; color:var(--ash); min-width:0; }
+.hqx .agg-connect { font-family:var(--mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; border:1px solid var(--brass); background:var(--brass); color:#2C2C2A; font-weight:600; border-radius:4px; padding:5px 12px; cursor:pointer; }
+
+.hqx .agg-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px; }
+.hqx .agg-card { min-width:0; border:1px solid var(--edge); border-radius:8px; background:#FBFAF7; padding:13px 15px; }
+.hqx .agg-card h4 { font-family:var(--serif); font-size:14px; font-weight:800; color:var(--ink); margin:0; line-height:1.4; overflow-wrap:anywhere; }
+.hqx .agg-card p { font-size:12.5px; color:var(--charcoal); line-height:1.6; margin:8px 0 0; overflow-wrap:anywhere; }
+.hqx .agg-card p.q { font-size:11.5px; color:var(--ash); }
+.hqx .agg-facts { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; }
+.hqx .agg-facts div { min-width:0; }
+.hqx .agg-facts .k { font-family:var(--mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); }
+.hqx .agg-facts .v { font-family:var(--mono); font-size:12px; color:var(--ink); margin-top:2px; }
+.hqx .agg-cta { margin-top:12px; font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; border:1px solid var(--brass); background:var(--brass); color:#2C2C2A; font-weight:600; border-radius:4px; padding:9px 16px; cursor:pointer; }
+.hqx .agg-ghost { margin-top:10px; font-family:var(--mono); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; border:1px solid var(--edge); background:var(--paper); color:var(--ash); border-radius:4px; padding:8px 14px; cursor:pointer; }
+.hqx .agg-ghost:hover, .hqx .agg-cta:hover, .hqx .agg-connect:hover { border-color:var(--brass-deep); }
+.hqx .agg-quiet { margin-top:12px; border-top:1px dashed var(--edge); padding-top:9px; }
+.hqx .agg-quiet .qh { font-family:var(--mono); font-size:8px; letter-spacing:.12em; text-transform:uppercase; color:var(--ash); }
+.hqx .agg-quiet ul { margin:6px 0 0; padding-left:16px; }
+.hqx .agg-quiet li { font-size:10.5px; color:var(--ash); line-height:1.55; overflow-wrap:anywhere; }
+.hqx .agg-surf { border:1px solid var(--edge); border-radius:6px; background:#fff; padding:8px 10px; margin-top:7px; min-width:0; }
+.hqx .agg-surf b { font-size:12px; color:var(--ink); overflow-wrap:anywhere; }
+.hqx .agg-surf span { display:block; font-size:11px; color:var(--ash); margin-top:3px; line-height:1.5; overflow-wrap:anywhere; }
+
+.hqx .agg button:focus-visible, .hqx .agg [tabindex]:focus-visible { outline:2px solid var(--brass); outline-offset:2px; }
+
+/* skeleton mirrors the real layout, including the bar track */
+.hqx .agg-sk { background:#EFEDE8; border-radius:4px; animation:agg-pulse 1400ms ease-in-out infinite; }
+@keyframes agg-pulse { 0%,100% { opacity:.7 } 50% { opacity:.35 } }
+@media (prefers-reduced-motion: reduce) { .hqx .agg-sk { animation:none } }
+
+@media (max-width:767px) {
+  .hqx .agg-top { flex-direction:column; gap:14px; }
+  .hqx .agg-barcol, .hqx .agg-statcol { flex:1 1 auto; width:100%; }
+}
