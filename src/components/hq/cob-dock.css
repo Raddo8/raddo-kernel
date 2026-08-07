@@ -6,7 +6,7 @@
   z-index: 60;
   background: var(--white);
   border-top: 2px solid var(--ink);
-  box-shadow: 0 -2px 8px rgba(44, 44, 42, 0.06);
+  box-shadow: 0 -2px 8px rgba(4, 44, 83, 0.06);
   display: flex;
   flex-direction: column;
   font-family: var(--sans);
@@ -40,7 +40,7 @@
   height: 100vh;
   border-top: 0;
   border-left: 2px solid var(--ink);
-  box-shadow: -2px 0 8px rgba(44, 44, 42, 0.06);
+  box-shadow: -2px 0 8px rgba(4, 44, 83, 0.06);
 }
 
 /* 04 · collapsed · a single bar */
@@ -82,7 +82,7 @@
 .hqg .dock-mark {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
+  border-radius:8px;
   background: var(--ink);
   flex: 0 0 auto;
   object-fit: cover;
@@ -113,7 +113,7 @@
   color: var(--don);
   border: 1px solid var(--edge);
   background: var(--white);
-  border-radius: 20px;
+  border-radius:999px;
   padding: 3px 9px;
   cursor: pointer;
 }
@@ -149,7 +149,7 @@
   align-self: flex-start;
   background: var(--pon);
   border-left: 3px solid var(--ink);
-  border-radius: 0 11px 11px 0;
+  border-radius:0 8px 8px 0;
   padding: 8px 11px;
   font-size: 12.5px;
   line-height: 1.45;
@@ -161,7 +161,7 @@
   background: #fbf1dd;
   border-left: 0;
   border-right: 3px solid var(--brass);
-  border-radius: 11px 0 0 11px;
+  border-radius:8px 0 0 8px;
   color: var(--charcoal);
 }
 .hqg .bub.wait {
@@ -190,7 +190,7 @@
   flex: 1 1 auto;
   resize: none;
   border: 1px solid var(--edge);
-  border-radius: 16px;
+  border-radius:999px;
   padding: 8px 13px;
   font-family: var(--sans);
   font-size: 12.5px;
@@ -211,7 +211,7 @@
   font-family: var(--sans);
   font-weight: 600;
   font-size: 11.5px;
-  border-radius: 16px;
+  border-radius:999px;
   padding: 0 15px;
   cursor: pointer;
 }
@@ -247,7 +247,7 @@
 /* fallback mark · painted when the image cannot be fetched */
 .cobmark-fb {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 100%; height: 100%; border-radius: 4px;
+  width: 100%; height: 100%; border-radius:3px;
   background: var(--ink, #0C447C); color: var(--paper, #FAF8F4);
   font-weight: 800; letter-spacing: 0;
 }

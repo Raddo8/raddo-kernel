@@ -13,14 +13,14 @@
   background: #fff;
   border: 1px solid var(--edge, #E5E3DE);
   border-top: 2px solid var(--ink, #0C447C);
-  border-radius: 8px;
+  border-radius:8px;
   padding: 14px 16px 15px;
   cursor: pointer;
   font-family: inherit;
 }
 .hqx .ru-card:hover {
   border-color: var(--brass, #EF9F27);
-  box-shadow: 0 2px 8px rgba(12, 68, 124, .08);
+  box-shadow: 0 2px 8px rgba(4, 44, 83, .08);
 }
 .hqx .ru-card:focus-visible { outline: 2px solid var(--brass, #EF9F27); outline-offset: 2px; }
 .hqx .ru-k {
@@ -77,7 +77,7 @@
   color: var(--ash, #5F5E5A);
   background: none;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius:3px;
   padding: 6px 10px;
   cursor: pointer;
 }
