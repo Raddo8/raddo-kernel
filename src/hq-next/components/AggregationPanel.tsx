@@ -218,7 +218,7 @@ export function AggregationPanel() {
           {nr.why_it_matters ? <p className="q">{nr.why_it_matters}</p> : null}
           {nr.horizon_line ? <p className="q">{nr.horizon_line}</p> : null}
           {nr.action && p.state !== 'complete' && nr.posture !== 'complete' ? (
-            <button className="agg-cta">{nr.action}</button>
+            <button className="agg-cta" data-action={nr.action}>{nr.action_label ?? nr.action}</button>
           ) : null}
         </div>
 
