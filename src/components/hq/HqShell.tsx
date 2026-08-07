@@ -213,7 +213,10 @@ export function HqShell({ children }: { children: ReactNode }) {
       {open && <div className="rail-scrim" onClick={() => setOpen(false)} />}
 
       <div className="main">{children}</div>
+
+      <CobDock />
     </div>
+    </DockContextProvider>
   );
 }
 
