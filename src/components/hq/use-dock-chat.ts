@@ -40,18 +40,14 @@ export function useDockChat() {
       setMessages([...history, { id: replyId, role: "cob", text: "", streaming: true }]);
       setPending(true);
 
-      const wire = history.map((m) => ({
+      // Page context rides along with the live turn as plain words, never a write.
+      const wire = history.map((m, i) => ({
         role: m.role === "you" ? "user" : "assistant",
-        content: m.text,
+        content:
+          i === history.length - 1 && pageLabel
+            ? `${m.text}\n\n[I am looking at: ${pageLabel}]`
+            : m.text,
       }));
-      // Page context rides in as a plain conversational preface, not a write.
-      if (pageLabel) {
-        wire.unshift({
-          role: "user",
-          content: `[context] I am looking at: ${pageLabel}`,
-        });
-        wire.unshift({ role: "assistant", content: "Noted." } as never);
-      }
 
       const controller = new AbortController();
       abortRef.current = controller;
