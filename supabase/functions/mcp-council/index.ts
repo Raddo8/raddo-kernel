@@ -3358,6 +3358,33 @@ Deno.serve(async (req) => {
     }
   };
 
+  // CHANGE 4 · soft boot guard. Advisory only: a council that refuses is
+  // worse than a council that warns.
+  const bootAdvisory = async (cid: string | null): Promise<string | null> => {
+    if (!supabaseAdmin || !cid) return null;
+    try {
+      const { data: k } = await supabaseAdmin
+        .from("kernels").select("id").eq("cid", cid).eq("status", "active").maybeSingle();
+      if (!k) {
+        return "This workspace has no identity kernel yet. The Council is answering from general judgement, not from this principal's world.";
+      }
+      const { count: recentLoads } = await supabaseAdmin
+        .from("kernel_access_log")
+        .select("id", { count: "exact", head: true })
+        .eq("cid", cid)
+        .eq("access_kind", "RUNTIME_LOAD")
+        .gte("at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
+      if ((recentLoads ?? 0) === 0) {
+        return "No identity kernel has been loaded in this session. Call begin_session so the Council answers with the principal's own context, then ask again if the answer should be grounded in their world.";
+      }
+      return null;
+    } catch (_e) {
+      return null;
+    }
+  };
+
+
+
   // ── ITEM 5 · SESSION CLOCK ────────────────────────────────────────────
   // Storage stays UTC. Presentation and day-boundary reasoning are
   // America/Chicago: a brief delivered at 22:51 Central is not "morning".
