@@ -5833,6 +5833,7 @@ Deno.serve(async (req) => {
             }
           } catch { /* best-effort — a telemetry failure must never fail the council */ }
           (out as any).run_id = runId;
+          if (conveneAdvisory) (out as any).boot_advisory = conveneAdvisory;
           await completeMinuteRun(supabaseAdmin, {
             run_id: runId,
             minute: out,
