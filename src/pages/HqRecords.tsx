@@ -331,7 +331,7 @@ export function HqRecords() {
           Every number reads live from its one register; nothing here is hand-authored.
         </p>
 
-        <div className="rec-tabs" role="tablist" aria-label="Records views">
+        <div className="lv-tabs" role="tablist" aria-label="Records views">
           <button
             type="button"
             role="tab"

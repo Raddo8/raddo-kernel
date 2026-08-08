@@ -430,7 +430,7 @@ export function FleetLive() {
             }
           >
             {s.label} <span className="m">{streamCounts[s.key] ?? 0}</span>
-            {streams.includes(s.key) ? <span aria-hidden="true">\u00d7</span> : null}
+            {streams.includes(s.key) ? <span aria-hidden="true">{"\u00d7"}</span> : null}
           </button>
         ))}
         <button type="button" className="btn" onClick={() => setStreams([])} disabled={streams.length === 0}>
