@@ -11096,6 +11096,7 @@ export type Database = {
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
       save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
+      session_title_rule: { Args: never; Returns: string }
       session_transcript_read: { Args: { p_session_id: string }; Returns: Json }
       session_transcript_write: {
         Args: {
