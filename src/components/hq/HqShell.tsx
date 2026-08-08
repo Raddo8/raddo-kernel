@@ -115,6 +115,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(false);
   const isOperator = useIsOperator();
+  const entitledPages = useEntitledPages();
   const [lens, setLens] = useState<"admin" | "me">(() => {
     try {
       return localStorage.getItem(LENS_KEY) === "me" ? "me" : "admin";
