@@ -6293,6 +6293,38 @@ Deno.serve(async (req) => {
       } finally {
         releaseConcurrency(tenant);
       }
+      })();
+        try {
+          const ct = __dispatchResponse.headers.get("content-type") ?? "";
+          if (ct.includes("application/json")) {
+            const j = await __dispatchResponse.clone().json();
+            if (j?.error) {
+              __receiptOutcome = "error";
+              __receiptErrorClass = String(j.error?.message ?? "error");
+            } else {
+              const sc = j?.result?.structuredContent;
+              const degraded = sc && (
+                sc.reason ||
+                (Array.isArray(sc.reasons) && sc.reasons.length > 0) ||
+                (Array.isArray(sc.degradedReasons) && sc.degradedReasons.length > 0)
+              );
+              if (degraded) __receiptOutcome = "degraded";
+            }
+          }
+        } catch (_e) { /* receipt classification is best-effort */ }
+        return __dispatchResponse;
+      } catch (e) {
+        __receiptOutcome = "error";
+        __receiptErrorClass = e instanceof Error ? e.message : String(e);
+        throw e;
+      } finally {
+        await recordExecutionReceipt(supabaseAdmin, {
+          ctx: __receiptCtx,
+          tool: typeof name === "string" ? name : "unknown",
+          outcome: __receiptOutcome,
+          error_class: __receiptErrorClass,
+        });
+      }
     }
 
 
