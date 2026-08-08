@@ -7754,6 +7754,9 @@ export type Database = {
           opened_at: string
           surface: string | null
           tenant: string
+          title: string | null
+          titled_at: string | null
+          titled_by: string | null
         }
         Insert: {
           cid?: string | null
@@ -7765,6 +7768,9 @@ export type Database = {
           opened_at?: string
           surface?: string | null
           tenant: string
+          title?: string | null
+          titled_at?: string | null
+          titled_by?: string | null
         }
         Update: {
           cid?: string | null
@@ -7776,6 +7782,9 @@ export type Database = {
           opened_at?: string
           surface?: string | null
           tenant?: string
+          title?: string | null
+          titled_at?: string | null
+          titled_by?: string | null
         }
         Relationships: []
       }
@@ -10405,6 +10414,10 @@ export type Database = {
       }
       cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      close_board_v2: {
+        Args: { p_cid?: string; p_session_id?: string }
+        Returns: Json
+      }
       cob_name_normalize: { Args: { raw: string }; Returns: string }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
@@ -11121,6 +11134,7 @@ export type Database = {
         }
         Returns: Json
       }
+      tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
