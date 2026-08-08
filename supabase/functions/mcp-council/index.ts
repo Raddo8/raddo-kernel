@@ -3326,6 +3326,7 @@ Deno.serve(async (req) => {
     cid: string | null; kernel_id: string | null; part: string; seq: number | null;
     bytes: number; access_kind: string; surface: string | null; session_id?: string | null;
     keyed_by?: "cid" | "tenant_id" | "none";
+    purpose?: string | null;
   }): Promise<boolean> => {
     if (!supabaseAdmin || !a.cid || !a.kernel_id) return false;
     try {
@@ -3342,7 +3343,7 @@ Deno.serve(async (req) => {
         p_surface: a.surface,
         p_auth_subject: ctx.provider_subject,
         p_session_id: a.session_id ?? null,
-        p_purpose: null,
+        p_purpose: a.purpose ?? null,
         p_issuer: ctx.issuer,
         p_token_version: ctx.token_version,
         p_tenant_claim: ctx.tenant_claim,
