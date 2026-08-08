@@ -262,7 +262,7 @@ const ANTHROPIC_VERSION = "2023-06-01";
 const MODEL_CHAIR = "claude-sonnet-4-5";
 const MODEL_SYNTHESIS = "claude-opus-4-5";
 const MAX_TOKENS_CHAIR = 1500;
-const MAX_TOKENS_SYNTH = 4096;
+const MAX_TOKENS_SYNTH = 8192;
 
 async function callAnthropic(opts: {
   model: string;
@@ -452,11 +452,28 @@ function extractJson(s: string): any {
   const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
   if (fence) t = fence[1].trim();
   const first = t.indexOf("{");
-  const last = t.lastIndexOf("}");
-  if (first === -1 || last === -1 || last <= first) {
-    throw new Error("minute_unparseable");
+  if (first === -1) throw new Error("minute_unparseable");
+  // Brace-balanced scan · string-literal and escape aware, so braces inside
+  // strings never move the depth and a trailing block is never welded on.
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = first; i < t.length; i++) {
+    const ch = t[i];
+    if (inStr) {
+      if (esc) { esc = false; continue; }
+      if (ch === "\\") { esc = true; continue; }
+      if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') { inStr = true; continue; }
+    if (ch === "{") { depth++; continue; }
+    if (ch === "}") {
+      depth--;
+      if (depth === 0) return JSON.parse(t.slice(first, i + 1));
+    }
   }
-  return JSON.parse(t.slice(first, last + 1));
+  throw new Error("minute_unparseable");
 }
 
 function validateMinute(
@@ -1047,8 +1064,12 @@ async function runCouncilWithResynth(
     try {
       rawMinute = await tryOnce(baseUser);
     } catch (e1) {
-      const cls = (e1 as any)?.message;
-      if (cls === "minute_unparseable" || cls === "minute_shape") {
+      const cls = (e1 as any)?.message ?? "";
+      const isParse = (e1 instanceof SyntaxError)
+        || cls === "minute_unparseable"
+        || cls === "minute_shape"
+        || /JSON|Unexpected token|Unexpected end of|Expected ['",}\]]/.test(cls);
+      if (isParse) {
         const repairUser = `${baseUser}\n\nYour previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary.`;
         try {
           rawMinute = await tryOnce(repairUser);
@@ -1538,8 +1559,12 @@ async function runPanelWithResynth(
     try {
       rawMinute = await tryOnce(baseUser);
     } catch (e1) {
-      const cls = (e1 as any)?.message;
-      if (cls === "minute_unparseable" || cls === "minute_shape") {
+      const cls = (e1 as any)?.message ?? "";
+      const isParse = (e1 instanceof SyntaxError)
+        || cls === "minute_unparseable"
+        || cls === "minute_shape"
+        || /JSON|Unexpected token|Unexpected end of|Expected ['",}\]]/.test(cls);
+      if (isParse) {
         const repairUser = `${baseUser}\n\nYour previous reply was not a single valid JSON object. Return ONLY the JSON object specified in the lead-synthesis schema. No prose, no fence, no commentary.`;
         try {
           rawMinute = await tryOnce(repairUser);
@@ -2162,7 +2187,7 @@ const TOOL_RUN_COUNCIL = {
   name: "convene_council",
   title: "Convene the Council",
   description:
-    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor).",
+    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor). This deliberation runs 90 to 130 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Convene the Council" },
   inputSchema: {
     type: "object",
@@ -2188,7 +2213,7 @@ const TOOL_SUMMON_BEST_ADVISOR = {
   name: "summon_best_advisor",
   title: "Summon the Best Advisor",
   description:
-    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question.",
+    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question. This deliberation runs 60 to 95 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Summon the Best Advisor" },
   inputSchema: {
     type: "object",
@@ -2223,7 +2248,7 @@ const TOOL_ABE_WEIGHING_IN = {
   name: "abe_weighing_in",
   title: "Abe weighing in",
   description:
-    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them.",
+    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them. This deliberation runs 60 to 110 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Abe weighing in" },
   inputSchema: {
     type: "object",
