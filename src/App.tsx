@@ -151,6 +151,7 @@ const App = () => (
             <Route path="/hq/world/registers" element={<AuthGate><ClientReadinessGate><WorldSurface /></ClientReadinessGate></AuthGate>} />
 
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/boardroom" element={<AuthGate><ClientReadinessGate><HqBoardroom /></ClientReadinessGate></AuthGate>} />
             {/* Records is admin-only; the page itself refuses a non-operator and so does its data path */}
             <Route path="/hq/records" element={<AuthGate><HqRecords /></AuthGate>} />
 
