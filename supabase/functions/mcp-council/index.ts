@@ -6128,6 +6128,9 @@ Deno.serve(async (req) => {
           if (result && typeof result === "object" && (result as any).run_id === undefined) {
             (result as any).run_id = summonRunId;
           }
+          if (summonAdvisory && result && typeof result === "object") {
+            (result as any).boot_advisory = summonAdvisory;
+          }
           return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
             structuredContent: stampBuildId(result as any),
