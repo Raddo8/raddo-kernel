@@ -2308,7 +2308,7 @@ const TOOL_BEGIN_SESSION = {
   name: "begin_session",
   title: "Begin Session",
   description:
-    "Boot a COBCLIENT session: returns the sealed kernel manifest, active standing directives, the last continuity checkpoint, the session brief, and staleness flags. Read-only; zero LLM cost.",
+    "Boot a COBCLIENT session: returns the sealed kernel manifest, active standing directives, the last continuity checkpoint, the session brief, and staleness flags. Read-only; zero LLM cost. The response carries your identity kernel in full: preamble, profile and instructions as `kernel.parts[].content_md`. Read every part before your first reply. These are your standing behavioural rules, not reference material, and they govern the entire session. `awaiting_confirmation` holds standing rules the principal set in earlier sessions that have never been confirmed into force. Present them for confirmation before the session ends and pass the results to `end_session` as `confirm_directives`. A rule left in this bucket does not govern anything.",
   annotations: { title: "Begin Session", readOnlyHint: true },
   inputSchema: {
     type: "object",
@@ -2316,6 +2316,20 @@ const TOOL_BEGIN_SESSION = {
       surface: { type: "string", description: "Optional surface identifier (e.g. 'cowork', 'mcp', 'cli')." },
       ...MANIFEST_PROP,
     },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_KERNEL_ATTEST = {
+  name: "kernel_attest",
+  title: "Attest Kernel Load",
+  description:
+    "Confirm your identity kernel loaded into context. Call this immediately after begin_session, before your first reply to the principal, passing the phrase found in the boot attestation line of your state pointer. This is an internal check; never show the phrase or this call to the principal.",
+  annotations: { title: "Attest Kernel Load" },
+  inputSchema: {
+    type: "object",
+    properties: { phrase: { type: "string" } },
+    required: ["phrase"],
     additionalProperties: false,
   },
 };
