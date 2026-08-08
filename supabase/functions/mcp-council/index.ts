@@ -4464,6 +4464,16 @@ Deno.serve(async (req) => {
             .or(`cid.is.null,cid.eq.${beginCid}`)
             .order("tier", { ascending: true });
 
+          // 6a. Last closed session · continuity reads carry its title.
+          const { data: lastSessionRow } = await supabaseAdmin
+            .from("sessions")
+            .select("id, title, closed_at, close_kind")
+            .eq("tenant", tenant)
+            .not("closed_at", "is", null)
+            .order("closed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           // 6. Last checkpoint
           const { data: lastCheckpoint, error: cpErr } = await supabaseAdmin
             .from("session_checkpoints")
@@ -4658,6 +4668,14 @@ Deno.serve(async (req) => {
               key: d.rule_key, text: d.rule_text, tier: d.tier, scope: d.scope,
             })),
             last_checkpoint: lastCheckpoint ?? null,
+            last_session: lastSessionRow
+              ? {
+                id: lastSessionRow.id,
+                title: lastSessionRow.title ?? null,
+                closed_at: lastSessionRow.closed_at,
+                close_kind: lastSessionRow.close_kind ?? null,
+              }
+              : null,
             brief: briefRows.map((r: any) => ({
               id: r.id, title: r.title, trigger: r.trigger, owner: r.owner,
               state: r.state, surfaced_count: (r.surfaced_count ?? 0) + 1,
