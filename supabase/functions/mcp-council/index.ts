@@ -5887,6 +5887,7 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000 || minute.length > 16000) {
           return rpcError(id, -32602, "invalid_params");
         }
+        const abeAdvisory = await bootAdvisory(pctx.legacy_cid);
         const abeRunId = crypto.randomUUID();
         const abeQhash = await hashQuestion(question);
         await openMinuteRun(supabaseAdmin, {
