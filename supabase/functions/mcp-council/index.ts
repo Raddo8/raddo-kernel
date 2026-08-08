@@ -3730,6 +3730,24 @@ Deno.serve(async (req) => {
           ? params._meta.progressToken
           : undefined;
 
+      // CHANGE 5 · ONE receipt owner. Every tool call, present and future,
+      // leaves an execution receipt from this single site.
+      const __receiptCtx = newRequestContext({
+        req,
+        tenant,
+        cid: pctx.legacy_cid,
+        authenticated_sub: identity.sub ?? null,
+        auth_mode: authMode,
+        surface: "mcp",
+        build_id: BUILD_ID,
+      });
+      let __receiptOutcome: "ok" | "error" | "degraded" = "ok";
+      let __receiptErrorClass: string | null = null;
+      try {
+        const __dispatchResponse = await (async (): Promise<Response> => {
+
+
+
       if (name === "set_chief_name") {
         // UNIT 3 · one shared server path, also used by the Welcome Party.
         const cid = pctx.legacy_cid;
