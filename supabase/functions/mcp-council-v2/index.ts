@@ -2421,7 +2421,8 @@ const TOOL_END_SESSION = {
   description:
     "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop · the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board. " +
     "Propose a title for the session and pass it as `title`. Name what the session was actually about, in the principal's own language. A principal finds a session again by its title, so a generic one is the same as none. " +
-    "`close_board` is rendered to the principal ONCE, filled inline, with a single submit. Never auto-fire per item. Closure itself is non-blocking, but the identity write is not: an unconfirmed rule stays pending and governs nothing.",
+    "`close_board` is rendered to the principal ONCE, filled inline, with a single submit. Never auto-fire per item. Closure itself is non-blocking, but the identity write is not: an unconfirmed rule stays pending and governs nothing. " +
+    "The proposed title is the VERY LAST thing you output at close, on its own line, ready to copy. Nothing follows it. The principal applies it themselves; you offer it.",
   annotations: { title: "End Session", readOnlyHint: false },
   inputSchema: {
     type: "object",
@@ -2444,7 +2445,7 @@ const TOOL_END_SESSION = {
       title: {
         type: "string",
         description:
-          "A title for this session in the principal's own language, naming what it was actually about. Never a date, never a tool name, never 'session summary'.",
+          "A title for this session, in the format YYMMDD · <high-point summary>. YYMMDD is the close date as six digits in the principal's local timezone, so 2026-08-08 becomes 260808. The separator is a middle dot U+00B7 with one space on each side. The summary is a tight, specific one-line distillation of the session's high points, the decisions and the work that mattered, in the principal's own language, with multiple high points separated by a semicolon or a middle dot. Single line. Never a generic label, never 'session summary', never a tool name. Example: 260703 · single-home + adherence-loop re-cut of /begin /save /end",
       },
     },
     required: ["session_id"],
