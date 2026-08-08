@@ -327,6 +327,29 @@ export function HqRecords() {
           Every number reads live from its one register; nothing here is hand-authored.
         </p>
 
+        <div className="rec-tabs" role="tablist" aria-label="Records views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "explorer"}
+            className={tab === "explorer" ? "on" : ""}
+            onClick={() => setTab("explorer")}
+          >
+            Explorer
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "live"}
+            className={tab === "live" ? "on" : ""}
+            onClick={() => setTab("live")}
+          >
+            Live
+          </button>
+        </div>
+
+        {tab === "live" ? <FleetLive /> : (
+        <>
         {/* LEVEL 1 · FLEET */}
         <div className="sec" style={{ marginTop: 18 }}>
           <div className="sec-k">
