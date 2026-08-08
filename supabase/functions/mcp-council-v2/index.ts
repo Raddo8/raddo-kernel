@@ -5432,11 +5432,17 @@ Deno.serve(async (req) => {
               gap_reason: tWire.gap_reason ?? null,
             },
           };
-          return rpcResult(id, {
+          return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
             structuredContent: stampBuildId(result as any),
             isError: false,
-          });
+          };
+        };
+        if (progressToken !== undefined) {
+          return rpcStreamingResult(id, progressToken, summonProduce, toRpcParts);
+        }
+        try {
+          return rpcResult(id, await summonProduce(() => {}));
         } catch (e) {
           return toRpc(e);
         }
