@@ -5508,6 +5508,8 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              mirror_status: res.mirror_status,
+              mirror_note: res.mirror_note,
               ...identityBlock(pctx),
               ...manifestBlock(args),
             };
@@ -5639,6 +5641,9 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              mirror_status: "skipped" as const,
+              mirror_note:
+                "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.",
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
@@ -5700,6 +5705,15 @@ Deno.serve(async (req) => {
             await supabaseAdmin.from("sessions")
               .update({ closed_at: nowIso, close_kind })
               .eq("id", session_id).eq("tenant", tenant);
+            // Session title · how a principal finds this session again.
+            const sessionTitle = typeof args?.title === "string" && args.title.trim()
+              ? args.title.trim().slice(0, 200)
+              : null;
+            if (sessionTitle) {
+              await supabaseAdmin.from("sessions")
+                .update({ title: sessionTitle, titled_at: nowIso, titled_by: "cobclient" })
+                .eq("id", session_id).eq("tenant", tenant);
+            }
             // Makeup-close any other still-open sessions for this tenant
             const { data: orphans } = await supabaseAdmin
               .from("sessions").select("id").eq("tenant", tenant)
@@ -5731,7 +5745,14 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
-            // 5. Close board
+            // 5. Close board · the database builds the readable board. The raw
+            // list stays available as close_board_all for anything that needs it.
+            let closeBoard: any = null;
+            try {
+              const { data: cb } = await supabaseAdmin
+                .rpc("close_board_v2", { p_cid: pctx.legacy_cid, p_session_id: session_id });
+              closeBoard = cb ?? null;
+            } catch (_e) { closeBoard = null; }
             const { data: board } = await supabaseAdmin
               .from("directives").select("id, text, scope, status")
               .eq("tenant_id", tenant).in("status", ["queued", "pending-confirm"]);
@@ -5745,7 +5766,11 @@ Deno.serve(async (req) => {
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
-              close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
+              mirror_status: res.mirror_status,
+              mirror_note: res.mirror_note,
+              ...(sessionTitle ? { title: sessionTitle } : { title: null }),
+              close_board: closeBoard,
+              close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
               makeup_closed,
             };
