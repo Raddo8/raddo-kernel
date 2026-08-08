@@ -4325,6 +4325,22 @@ Deno.serve(async (req) => {
             .eq("status", "pending-confirm")
             .order("rank", { ascending: true, nullsFirst: false });
           if (pendErr) outcome = "partial";
+          // CHANGE 2b · queued standing rules that have never been confirmed.
+          const { data: queuedDirectives } = await supabaseAdmin
+            .from("directives")
+            .select("id, text, scope, created_at")
+            .eq("tenant_id", tenant)
+            .eq("status", "queued")
+            .order("created_at", { ascending: true });
+
+          // CHANGE 2a · binding doctrine. Tenant scoped: fleet rules plus this
+          // tenant's own, never another tenant's.
+          const { data: doctrine } = await supabaseAdmin
+            .from("doctrine_rules")
+            .select("rule_key, rule_text, tier, scope, cid")
+            .eq("status", "ACTIVE")
+            .or(`cid.is.null,cid.eq.${beginCid}`)
+            .order("tier", { ascending: true });
 
           // 6. Last checkpoint
           const { data: lastCheckpoint, error: cpErr } = await supabaseAdmin
