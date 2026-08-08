@@ -4166,15 +4166,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // CHANGE 3b · kernel_attest · proof the delivered kernel entered context.
+      // CHANGE B · kernel_attest · per-part proof the kernel entered context.
       if (name === "kernel_attest") {
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
-        const phrase = typeof args?.phrase === "string" ? args.phrase.trim() : "";
-        if (!phrase) return rpcError(id, -32602, "invalid_params");
+        const phrases = args?.phrases;
+        const validPhrases =
+          phrases && typeof phrases === "object" && !Array.isArray(phrases) &&
+          Object.keys(phrases).length > 0;
+        if (!validPhrases) return rpcError(id, -32602, "invalid_params");
         const attestCid = pctx.legacy_cid;
         if (!attestCid) return rpcError(id, -32004, "cid_unresolved");
         const { data: attestOut, error: attestErr } = await supabaseAdmin
-          .rpc("kernel_challenge_attest", { p_cid: attestCid, p_phrase: phrase });
+          .rpc("kernel_challenge_attest", { p_cid: attestCid, p_phrases: phrases });
         if (attestErr) return rpcError(id, -32003, "attest_failed");
         try {
           await recordMcpUsage(supabaseAdmin, {
