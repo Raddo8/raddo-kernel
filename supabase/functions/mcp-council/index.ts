@@ -6125,13 +6125,29 @@ Deno.serve(async (req) => {
               cost_usd: aggregate(passes).total_cost_usd,
             });
           }
-          return rpcResult(id, {
+          if (result && typeof result === "object" && (result as any).run_id === undefined) {
+            (result as any).run_id = summonRunId;
+          }
+          return {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(result as any)) }],
             structuredContent: stampBuildId(result as any),
             isError: false,
-          });
+          };
+        };
+        const summonProduce = async (notify: ProgressFn) => {
+          try {
+            return await summonProduceInner(notify);
+          } catch (e) {
+            await failMinuteRun(supabaseAdmin, summonRunId, e);
+            throw e;
+          }
+        };
+        if (progressToken !== undefined) {
+          return rpcStreamingResult(id, progressToken, summonProduce, toRpcParts);
+        }
+        try {
+          return rpcResult(id, await summonProduce(() => {}));
         } catch (e) {
-          await failMinuteRun(supabaseAdmin, summonRunId, e);
           return toRpc(e);
         }
       }
