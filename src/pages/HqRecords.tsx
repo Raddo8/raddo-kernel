@@ -12,6 +12,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import ReactMarkdown from "react-markdown";
 
 import HqShell, { useIsOperator } from "@/components/hq/HqShell";
+import { FleetLive } from "@/components/hq/FleetLive";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-records.css";
 
@@ -171,6 +172,9 @@ function toCsv(cols: string[], rows: Row[]): string {
 
 export function HqRecords() {
   const isOperator = useIsOperator();
+  const [tab, setTab] = useState<"explorer" | "live">(
+    () => (typeof location !== "undefined" && location.hash === "#live" ? "live" : "explorer"),
+  );
 
   const [fleet, setFleet] = useState<FleetRow[] | null>(null);
   const [fleetErr, setFleetErr] = useState<string | null>(null);
@@ -327,6 +331,29 @@ export function HqRecords() {
           Every number reads live from its one register; nothing here is hand-authored.
         </p>
 
+        <div className="lv-tabs" role="tablist" aria-label="Records views">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "explorer"}
+            className={tab === "explorer" ? "on" : ""}
+            onClick={() => setTab("explorer")}
+          >
+            Explorer
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === "live"}
+            className={tab === "live" ? "on" : ""}
+            onClick={() => setTab("live")}
+          >
+            Live
+          </button>
+        </div>
+
+        {tab === "live" ? <FleetLive /> : (
+        <>
         {/* LEVEL 1 · FLEET */}
         <div className="sec" style={{ marginTop: 18 }}>
           <div className="sec-k">
@@ -679,6 +706,8 @@ export function HqRecords() {
           read live &middot; read only &middot; every value on this page is what the server returned for the
           selected CID &middot; registers are matched by client id, never by display name
         </p>
+        </>
+        )}
       </div>
     </HqShell>
   );
