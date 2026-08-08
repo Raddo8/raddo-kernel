@@ -4392,6 +4392,8 @@ Deno.serve(async (req) => {
               saved: { decisions: 0, open_loops: 0, signals: 0, memory: 0, rules_captured: 0, checkpoint_id: null },
               unsaved,
               outcome: "degraded",
+              mirror_status: "skipped" as const,
+              mirror_note: MIRROR_NOTE,
               scrub: scrubReport,
               layers: ALL_LAYERS.map((l) => L[l]),
               totalRequested,
