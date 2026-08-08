@@ -4231,8 +4231,9 @@ Deno.serve(async (req) => {
           // read path as load_kernel_part, hashes what it received, and
           // compares against the manifest hash. An unverified kernel can
           // never return ok.
-          let kernelBlock: any = { version: null, status: null, parts: [], sealed: true };
+          let kernelBlock: any = { version: null, status: null, parts: [], sealed: true, delivery: "full" };
           let kernelVerification: any = null;
+          let kernelBytesDelivered = 0;
           let statePointer: { part: string; seq: number; content_md: string }[] = [];
           if (kernel) {
             const { data: parts, error: partsErr } = await supabaseAdmin
@@ -4245,13 +4246,17 @@ Deno.serve(async (req) => {
             const partRows = (parts ?? []) as Array<
               { part: string; seq: number; sha256: string; bytes: number; content_md: string }
             >;
+            // CHANGE 1 · verification and DELIVERY. The content travels with
+            // the manifest: a verified kernel that never arrives is no kernel.
             kernelBlock = {
               version: kernel.version,
               status: kernel.status,
               parts: partRows.map((p) => ({
                 part: p.part, seq: p.seq, sha256: p.sha256, bytes: p.bytes,
+                content_md: p.content_md,
               })),
               sealed: true,
+              delivery: "full",
             };
 
             const segments: any[] = [];
@@ -4259,6 +4264,7 @@ Deno.serve(async (req) => {
             for (const row of partRows) {
               const content = typeof row.content_md === "string" ? row.content_md : "";
               const bytes_served = new TextEncoder().encode(content).length;
+              kernelBytesDelivered += bytes_served;
               let computed = "";
               try {
                 const digest = await crypto.subtle.digest(
@@ -4287,6 +4293,7 @@ Deno.serve(async (req) => {
                 bytes: bytes_served, access_kind: "RUNTIME_LOAD",
                 surface: `begin_session:${surface}`, session_id: sessionId,
                 keyed_by: beginLookup.keyed_by,
+                purpose: "begin_session_delivery",
               });
             }
             const verified_parts = segments.filter((x) => x.hash_match).length;
