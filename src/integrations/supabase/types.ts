@@ -4699,6 +4699,54 @@ export type Database = {
           },
         ]
       }
+      kernel_boot_challenge: {
+        Row: {
+          attest_latency_ms: number | null
+          attested_at: string | null
+          bytes_served: number | null
+          challenge_id: string
+          cid: string
+          expires_at: string
+          issued_at: string
+          kernel_id: string | null
+          outcome: string
+          parts_served: number | null
+          phrase: string
+          session_ref: string | null
+          surface: string | null
+        }
+        Insert: {
+          attest_latency_ms?: number | null
+          attested_at?: string | null
+          bytes_served?: number | null
+          challenge_id?: string
+          cid: string
+          expires_at?: string
+          issued_at?: string
+          kernel_id?: string | null
+          outcome?: string
+          parts_served?: number | null
+          phrase: string
+          session_ref?: string | null
+          surface?: string | null
+        }
+        Update: {
+          attest_latency_ms?: number | null
+          attested_at?: string | null
+          bytes_served?: number | null
+          challenge_id?: string
+          cid?: string
+          expires_at?: string
+          issued_at?: string
+          kernel_id?: string | null
+          outcome?: string
+          parts_served?: number | null
+          phrase?: string
+          session_ref?: string | null
+          surface?: string | null
+        }
+        Relationships: []
+      }
       kernel_part_audit: {
         Row: {
           at: string
@@ -9661,6 +9709,21 @@ export type Database = {
       }
     }
     Views: {
+      admin_activity_feed: {
+        Row: {
+          at: string | null
+          cid: string | null
+          detail_a: string | null
+          detail_b: string | null
+          payload: Json | null
+          ref: string | null
+          stream: string | null
+          subject: string | null
+          tenant_label: string | null
+          verb: string | null
+        }
+        Relationships: []
+      }
       assurance_asserted_state_without_substrate: {
         Row: {
           asserted_without_substrate: number | null
@@ -10184,8 +10247,19 @@ export type Database = {
       }
     }
     Functions: {
+      admin_activity_read: {
+        Args: {
+          p_before?: string
+          p_cid?: string
+          p_limit?: number
+          p_since?: string
+          p_streams?: string[]
+        }
+        Returns: Json
+      }
       admin_cid_audit: { Args: { p_cid: string }; Returns: Json }
       admin_fleet_board: { Args: never; Returns: Json }
+      admin_fleet_live: { Args: { p_since?: string }; Returns: Json }
       admin_guard: { Args: never; Returns: undefined }
       admin_set_page: {
         Args: {
@@ -10633,6 +10707,27 @@ export type Database = {
           retired: string
         }[]
       }
+      kernel_boot_scorecard: {
+        Args: { p_cid?: string; p_days?: number }
+        Returns: Json
+      }
+      kernel_boot_watchdog: { Args: never; Returns: number }
+      kernel_challenge_attest: {
+        Args: { p_cid: string; p_phrase: string }
+        Returns: Json
+      }
+      kernel_challenge_issue: {
+        Args: {
+          p_bytes?: number
+          p_cid: string
+          p_kernel_id?: string
+          p_parts?: number
+          p_session_ref?: string
+          p_surface?: string
+        }
+        Returns: Json
+      }
+      kernel_challenge_sweep: { Args: never; Returns: number }
       kernel_validate: {
         Args: { p_kernel_id: string }
         Returns: {
