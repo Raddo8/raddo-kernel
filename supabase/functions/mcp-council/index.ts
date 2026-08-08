@@ -6017,12 +6017,16 @@ Deno.serve(async (req) => {
           question_hash: summonQhash,
           session_id: typeof args?.session_id === "string" ? args.session_id : null,
         });
-        try {
+        const summonProduceInner = async (notify: ProgressFn) => {
+          // Run handle first · the client must hold it before the long work.
+          notify(JSON.stringify({ run_id: summonRunId, status: "running", poll_with: "council_minute_fetch", poll_args: { latest: true } }));
+          notify("triage.start");
           const summoned = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored,
           });
           const result = summoned.result;
           const passes = [...summoned.passes];
+          notify(`deliberation.done · ${result.mode}${result.selected_advisor ? ` · ${result.selected_advisor}` : ""}`);
           // Raise-the-Bar · platform escalate-below-floor ladder.
           // Mutates `result` and `passes` in place when an eligible hop fires.
           // Returns internal-only quality telemetry (never on the wire).
