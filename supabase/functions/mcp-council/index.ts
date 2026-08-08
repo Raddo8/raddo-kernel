@@ -3389,6 +3389,21 @@ Deno.serve(async (req) => {
       if (!k) {
         return "This workspace has no identity kernel yet. The Council is answering from general judgement, not from this principal's world.";
       }
+      // CHANGE C · an unconfirmed kernel is not a loaded kernel.
+      const { data: lastChal } = await supabaseAdmin
+        .from("kernel_boot_challenge")
+        .select("outcome,issued_at")
+        .eq("cid", cid)
+        .order("issued_at", { ascending: false })
+        .limit(1);
+      const chalRow = (lastChal ?? [])[0] as { outcome: string; issued_at: string } | undefined;
+      if (
+        chalRow &&
+        ["partial", "wrong_phrase", "never_attested", "issued"].includes(String(chalRow.outcome)) &&
+        new Date(chalRow.issued_at).getTime() > Date.now() - 12 * 60 * 60 * 1000
+      ) {
+        return "This session has not confirmed its identity kernel. The Council is answering without the principal's full context. Read every kernel part, call kernel_attest, then ask again if the answer should be grounded in their world.";
+      }
       const { count: recentLoads } = await supabaseAdmin
         .from("kernel_access_log")
         .select("id", { count: "exact", head: true })
