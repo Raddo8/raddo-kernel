@@ -5343,18 +5343,22 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        try {
+        const summonProduce = async (notify: ProgressFn) => {
+          notify("triage.start");
           const summoned = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored,
           });
           const result = summoned.result;
           const passes = [...summoned.passes];
+          notify(`deliberation.done · ${result.mode}${result.selected_advisor ? ` · ${result.selected_advisor}` : ""}`);
           // Raise-the-Bar · platform escalate-below-floor ladder.
           // Mutates `result` and `passes` in place when an eligible hop fires.
           // Returns internal-only quality telemetry (never on the wire).
+          notify("raise_the_bar.start");
           const quality = await applyRaiseTheBar({
             result, passes, question, context, clientContext, tenant,
           });
+          notify("raise_the_bar.done");
           const qhash = await hashQuestion(question);
           // Deterministic gap-signal post-step · ensures structured
           // missing_lanes / refer_to fire when triage detected a capability
