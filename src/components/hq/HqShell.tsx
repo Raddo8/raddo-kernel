@@ -27,20 +27,42 @@ interface NavItem {
   disabled?: boolean;
 }
 
-/** Rail order is the principal's reading order, not alphabetical. */
-const NAV: NavItem[] = [
+/** Rail order is the principal's reading order, not alphabetical.
+ *  Items carrying a page_key only appear when the server entitles them. */
+const NAV: (NavItem & { pageKey?: string })[] = [
   { n: "01", label: "HQ", to: "/hq" },
   { n: "02", label: "The World", to: "/hq/world" },
   { n: "03", label: "Memories", to: "/hq/memories" },
   { n: "04", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
   { n: "05", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
-  { n: "06", label: "The original HQ", to: "/hq/original" },
+  { n: "06", label: "The Boardroom", to: "/hq/boardroom", pageKey: "boardroom" },
+  { n: "07", label: "The original HQ", to: "/hq/original" },
 ];
 
 /** Control group · only ever rendered for a server-confirmed fleet operator. */
 const CONTROL_NAV: NavItem[] = [{ n: "C1", label: "Records", to: "/hq/records" }];
 
 const LENS_KEY = "hq.rail.lens";
+
+/** Page keys the server has entitled for this principal. */
+function useEntitledPages(): Set<string> {
+  const [keys, setKeys] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let cancelled = false;
+    void supabase.rpc("hq_my_pages").then(({ data, error }) => {
+      if (cancelled || error || !Array.isArray(data)) return;
+      const next = new Set<string>();
+      for (const row of data as { page_key?: string; enabled?: boolean }[]) {
+        if (row?.page_key && row.enabled !== false) next.add(row.page_key);
+      }
+      setKeys(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return keys;
+}
 
 /** Plain-words label for whatever surface the principal is on. Read-only context. */
 function labelForPath(pathname: string): string {
@@ -49,6 +71,7 @@ function labelForPath(pathname: string): string {
   if (pathname.startsWith("/hq/world")) return "The World";
   if (pathname.startsWith("/hq/memories")) return "Memories";
   if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
+  if (pathname.startsWith("/hq/boardroom")) return "The Boardroom";
   if (pathname.startsWith("/hq/records")) return "Records";
   if (pathname.startsWith("/hq/original")) return "The original HQ";
   if (pathname.startsWith("/hq/profile")) return "Profile";
