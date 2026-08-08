@@ -5623,6 +5623,7 @@ Deno.serve(async (req) => {
         // Minute persistence · open the run row BEFORE deliberating so a
         // fetch mid-run reports still_running honestly, and the finished
         // minute survives a client that hung up at its 60s cap.
+        const conveneAdvisory = await bootAdvisory(pctx.legacy_cid);
         const runId = crypto.randomUUID();
         const runQhash = await hashQuestion(question);
         await openMinuteRun(supabaseAdmin, {
