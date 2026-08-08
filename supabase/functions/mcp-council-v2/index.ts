@@ -3632,6 +3632,35 @@ Deno.serve(async (req) => {
         }
       }
 
+      // CHANGE 3b · kernel_attest · proof the delivered kernel entered context.
+      if (name === "kernel_attest") {
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+        const phrase = typeof args?.phrase === "string" ? args.phrase.trim() : "";
+        if (!phrase) return rpcError(id, -32602, "invalid_params");
+        const attestCid = pctx.legacy_cid;
+        if (!attestCid) return rpcError(id, -32004, "cid_unresolved");
+        const { data: attestOut, error: attestErr } = await supabaseAdmin
+          .rpc("kernel_challenge_attest", { p_cid: attestCid, p_phrase: phrase });
+        if (attestErr) return rpcError(id, -32003, "attest_failed");
+        try {
+          await recordMcpUsage(supabaseAdmin, {
+            tenant,
+            tool: "kernel_attest",
+            agent_id: null,
+            passes: [],
+            cid: pctx.legacy_cid,
+            principal_id: pctx.principal_id,
+            external_identity_id: pctx.external_identity_id,
+            resolution_mode: pctx.resolution_mode,
+          });
+        } catch { /* best-effort */ }
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(attestOut) }],
+          structuredContent: attestOut as any,
+          isError: false,
+        });
+      }
+
       if (name === "load_kernel_part") {
         const part = typeof args?.part === "string" ? args.part.trim() : "";
         const seq = Number.isFinite(args?.seq) ? Math.trunc(args.seq) : 1;
