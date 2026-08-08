@@ -193,7 +193,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
 
         <nav className="rail-nav" aria-label="HQ">
           <div className="nav-k">Your HQ</div>
-          {NAV.map((item) =>
+          {NAV.filter((item) => !item.pageKey || entitledPages.has(item.pageKey)).map((item) =>
             item.disabled ? (
               <span key={item.label} className="nl off" aria-disabled="true">
                 <span className="nn">{item.n}</span>
