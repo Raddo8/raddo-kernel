@@ -4463,15 +4463,49 @@ Deno.serve(async (req) => {
           }
           if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
 
+          // CHANGE 3a · boot attestation. The phrase is discoverable ONLY by
+          // reading the delivered state pointer text. Canon is never rewritten.
+          let bootAttestation: { required: boolean; challenge_id: string } | null = null;
+          try {
+            const { data: chal } = await supabaseAdmin.rpc("kernel_challenge_issue", {
+              p_cid: beginCid,
+              p_kernel_id: kernel?.id ?? null,
+              p_session_ref: sessionId,
+              p_surface: surface,
+              p_parts: kernelBlock.parts.length,
+              p_bytes: kernelBytesDelivered,
+            });
+            const line = typeof chal?.line === "string" ? chal.line : null;
+            if (chal?.challenge_id) {
+              bootAttestation = { required: true, challenge_id: chal.challenge_id };
+            }
+            if (line) {
+              if (statePointer.length > 0) {
+                const last = statePointer[statePointer.length - 1];
+                last.content_md = `${last.content_md}\n${line}`;
+              } else {
+                statePointer.push({ part: "state_pointer", seq: 1, content_md: line });
+              }
+            }
+          } catch (_e) { /* attestation is additive, never fails a boot */ }
+
           const out = {
             session_id: sessionId,
             tenant,
             kernel: kernelBlock,
+            kernel_bytes_delivered: kernelBytesDelivered,
             kernel_verification: kernelVerification,
             state_pointer: statePointer,
+            ...(bootAttestation ? { boot_attestation: bootAttestation } : {}),
             clock: sessionClock(),
             directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
+            awaiting_confirmation: (queuedDirectives ?? []).map((d: any) => ({
+              id: d.id, text: d.text, scope: d.scope, captured_at: d.created_at,
+            })),
+            doctrine: (doctrine ?? []).map((d: any) => ({
+              key: d.rule_key, text: d.rule_text, tier: d.tier, scope: d.scope,
+            })),
             last_checkpoint: lastCheckpoint ?? null,
             brief: briefRows.map((r: any) => ({
               id: r.id, title: r.title, trigger: r.trigger, owner: r.owner,
