@@ -2408,7 +2408,10 @@ const RITUAL_SAVE_PROPS = {
       properties: {
         title: { type: "string" },
         body_md: { type: "string" },
-        category: { type: "string" },
+        category: {
+          type: "string",
+          enum: ["architecture","build","capability","client-domain","correction","decision","defect","diagnosis","doctrine","gap","operations","people","product","security","synthetic","verification"],
+        },
       },
       required: ["title", "body_md"],
       additionalProperties: false,
@@ -2477,7 +2480,9 @@ const TOOL_END_SESSION = {
   name: "end_session",
   title: "End Session",
   description:
-    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop — the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board.",
+    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop · the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board. " +
+    "Propose a title for the session and pass it as `title`. Name what the session was actually about, in the principal's own language. A principal finds a session again by its title, so a generic one is the same as none. " +
+    "`close_board` is rendered to the principal ONCE, filled inline, with a single submit. Never auto-fire per item. Closure itself is non-blocking, but the identity write is not: an unconfirmed rule stays pending and governs nothing.",
   annotations: { title: "End Session", readOnlyHint: false },
   inputSchema: {
     type: "object",
@@ -2497,6 +2502,11 @@ const TOOL_END_SESSION = {
         },
       },
       close_kind: { type: "string", description: "'clean' | 'crash' | 'makeup' (default 'clean')" },
+      title: {
+        type: "string",
+        description:
+          "A title for this session in the principal's own language, naming what it was actually about. Never a date, never a tool name, never 'session summary'.",
+      },
     },
     required: ["session_id"],
     additionalProperties: false,
@@ -4858,6 +4868,8 @@ Deno.serve(async (req) => {
         type LayerName =
           | "checkpoint" | "open_loops" | "memory"
           | "decisions" | "signals" | "rules_captured" | "notion_mirror";
+        const MIRROR_NOTE =
+          "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.";
 
         const ALL_LAYERS: LayerName[] = [
           "checkpoint", "open_loops", "memory",
@@ -4908,6 +4920,8 @@ Deno.serve(async (req) => {
           saved: any;
           unsaved: Array<{ layer: string; reason: string }>;
           outcome: "ok" | "partial" | "degraded";
+          mirror_status: "ok" | "failed" | "skipped";
+          mirror_note: string;
           scrub: any;
           layers: LayerAcc[];
           totalRequested: number;
@@ -5326,10 +5340,18 @@ Deno.serve(async (req) => {
           }
 
           const layers = ALL_LAYERS.map((l) => L[l]);
-          const anyFailed = layers.some((x) => x.failed > 0);
-          const anyEmptyUnexpected = layers.some(
-            (x) => x.layer !== "notion_mirror" && x.requested > 0 && x.saved + x.updated === 0,
+          // Outcome is computed from CANONICAL layers only. Notion is a
+          // write-only mirror being retired: its failures are reported, never
+          // allowed to downgrade a close whose canonical layers all verified.
+          const canonicalLayers = layers.filter((x) => x.layer !== "notion_mirror");
+          const anyFailed = canonicalLayers.some((x) => x.failed > 0);
+          const anyEmptyUnexpected = canonicalLayers.some(
+            (x) => x.requested > 0 && x.saved + x.updated === 0,
           );
+          const mirrorStatus: "ok" | "failed" | "skipped" =
+            L.notion_mirror.attempted === 0
+              ? "skipped"
+              : (L.notion_mirror.failed > 0 ? "failed" : "ok");
 
           return {
             checkpointId,
@@ -5344,6 +5366,8 @@ Deno.serve(async (req) => {
             },
             unsaved,
             outcome: anyEmptyUnexpected ? "degraded" : (anyFailed ? "partial" : "ok"),
+            mirror_status: mirrorStatus,
+            mirror_note: MIRROR_NOTE,
             scrub: scrubReport,
             layers,
             totalRequested,
