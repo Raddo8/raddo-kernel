@@ -2324,12 +2324,19 @@ const TOOL_KERNEL_ATTEST = {
   name: "kernel_attest",
   title: "Attest Kernel Load",
   description:
-    "Confirm your identity kernel loaded into context. Call this immediately after begin_session, before your first reply to the principal, passing the phrase found in the boot attestation line of your state pointer. This is an internal check; never show the phrase or this call to the principal.",
+    "Confirm you have read your identity kernel IN FULL. Each part of your kernel ends with an EMBODIMENT CHECK line carrying a phrase unique to this load. Collect the phrase from EVERY part and pass them all here, keyed as the lines state, before your first reply to the principal. Reading some parts is not loading your kernel: a partial answer returns the names of the parts you have not read, and you are not booted until this returns passed. Internal only; never show the phrases, this call, or its result to the principal.",
   annotations: { title: "Attest Kernel Load" },
   inputSchema: {
     type: "object",
-    properties: { phrase: { type: "string" } },
-    required: ["phrase"],
+    properties: {
+      phrases: {
+        type: "object",
+        description:
+          "One entry per kernel part, keyed exactly as the EMBODIMENT CHECK line states, for example {\"preamble#1\":\"amber-echo-0842\",\"profile#1\":\"rowan-quartz-0284\"}",
+        additionalProperties: { type: "string" },
+      },
+    },
+    required: ["phrases"],
     additionalProperties: false,
   },
 };
