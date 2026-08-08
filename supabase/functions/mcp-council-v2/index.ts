@@ -2347,7 +2347,10 @@ const RITUAL_SAVE_PROPS = {
       properties: {
         title: { type: "string" },
         body_md: { type: "string" },
-        category: { type: "string" },
+        category: {
+          type: "string",
+          enum: ["architecture","build","capability","client-domain","correction","decision","defect","diagnosis","doctrine","gap","operations","people","product","security","synthetic","verification"],
+        },
       },
       required: ["title", "body_md"],
       additionalProperties: false,
@@ -2416,7 +2419,9 @@ const TOOL_END_SESSION = {
   name: "end_session",
   title: "End Session",
   description:
-    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop — the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board.",
+    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop · the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board. " +
+    "Propose a title for the session and pass it as `title`. Name what the session was actually about, in the principal's own language. A principal finds a session again by its title, so a generic one is the same as none. " +
+    "`close_board` is rendered to the principal ONCE, filled inline, with a single submit. Never auto-fire per item. Closure itself is non-blocking, but the identity write is not: an unconfirmed rule stays pending and governs nothing.",
   annotations: { title: "End Session", readOnlyHint: false },
   inputSchema: {
     type: "object",
@@ -2436,6 +2441,11 @@ const TOOL_END_SESSION = {
         },
       },
       close_kind: { type: "string", description: "'clean' | 'crash' | 'makeup' (default 'clean')" },
+      title: {
+        type: "string",
+        description:
+          "A title for this session in the principal's own language, naming what it was actually about. Never a date, never a tool name, never 'session summary'.",
+      },
     },
     required: ["session_id"],
     additionalProperties: false,
@@ -3909,6 +3919,16 @@ Deno.serve(async (req) => {
             .or(`cid.is.null,cid.eq.${beginCid}`)
             .order("tier", { ascending: true });
 
+          // 6a. Last closed session · continuity reads carry its title.
+          const { data: lastSessionRow } = await supabaseAdmin
+            .from("sessions")
+            .select("id, title, closed_at, close_kind")
+            .eq("tenant", tenant)
+            .not("closed_at", "is", null)
+            .order("closed_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
           // 6. Last checkpoint
           const { data: lastCheckpoint, error: cpErr } = await supabaseAdmin
             .from("session_checkpoints")
@@ -4089,6 +4109,14 @@ Deno.serve(async (req) => {
               key: d.rule_key, text: d.rule_text, tier: d.tier, scope: d.scope,
             })),
             last_checkpoint: lastCheckpoint ?? null,
+            last_session: lastSessionRow
+              ? {
+                id: lastSessionRow.id,
+                title: lastSessionRow.title ?? null,
+                closed_at: lastSessionRow.closed_at,
+                close_kind: lastSessionRow.close_kind ?? null,
+              }
+              : null,
             brief: briefRows.map((r: any) => ({
               id: r.id, title: r.title, trigger: r.trigger, owner: r.owner,
               state: r.state, surfaced_count: (r.surfaced_count ?? 0) + 1,
@@ -4259,6 +4287,8 @@ Deno.serve(async (req) => {
         type LayerName =
           | "checkpoint" | "open_loops" | "memory"
           | "decisions" | "signals" | "rules_captured" | "notion_mirror";
+        const MIRROR_NOTE =
+          "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.";
 
         const ALL_LAYERS: LayerName[] = [
           "checkpoint", "open_loops", "memory",
@@ -4309,6 +4339,8 @@ Deno.serve(async (req) => {
           saved: any;
           unsaved: Array<{ layer: string; reason: string }>;
           outcome: "ok" | "partial" | "degraded";
+          mirror_status: "ok" | "failed" | "skipped";
+          mirror_note: string;
           scrub: any;
           layers: LayerAcc[];
           totalRequested: number;
@@ -4360,6 +4392,8 @@ Deno.serve(async (req) => {
               saved: { decisions: 0, open_loops: 0, signals: 0, memory: 0, rules_captured: 0, checkpoint_id: null },
               unsaved,
               outcome: "degraded",
+              mirror_status: "skipped" as const,
+              mirror_note: MIRROR_NOTE,
               scrub: scrubReport,
               layers: ALL_LAYERS.map((l) => L[l]),
               totalRequested,
@@ -4727,10 +4761,18 @@ Deno.serve(async (req) => {
           }
 
           const layers = ALL_LAYERS.map((l) => L[l]);
-          const anyFailed = layers.some((x) => x.failed > 0);
-          const anyEmptyUnexpected = layers.some(
-            (x) => x.layer !== "notion_mirror" && x.requested > 0 && x.saved + x.updated === 0,
+          // Outcome is computed from CANONICAL layers only. Notion is a
+          // write-only mirror being retired: its failures are reported, never
+          // allowed to downgrade a close whose canonical layers all verified.
+          const canonicalLayers = layers.filter((x) => x.layer !== "notion_mirror");
+          const anyFailed = canonicalLayers.some((x) => x.failed > 0);
+          const anyEmptyUnexpected = canonicalLayers.some(
+            (x) => x.requested > 0 && x.saved + x.updated === 0,
           );
+          const mirrorStatus: "ok" | "failed" | "skipped" =
+            L.notion_mirror.attempted === 0
+              ? "skipped"
+              : (L.notion_mirror.failed > 0 ? "failed" : "ok");
 
           return {
             checkpointId,
@@ -4745,6 +4787,8 @@ Deno.serve(async (req) => {
             },
             unsaved,
             outcome: anyEmptyUnexpected ? "degraded" : (anyFailed ? "partial" : "ok"),
+            mirror_status: mirrorStatus,
+            mirror_note: MIRROR_NOTE,
             scrub: scrubReport,
             layers,
             totalRequested,
@@ -4885,6 +4929,8 @@ Deno.serve(async (req) => {
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: res.outcome,
+              mirror_status: res.mirror_status,
+              mirror_note: res.mirror_note,
               ...identityBlock(pctx),
               ...manifestBlock(args),
             };
@@ -5016,6 +5062,9 @@ Deno.serve(async (req) => {
               staleness,
               registers_empty,
               outcome: syncOutcome,
+              mirror_status: "skipped" as const,
+              mirror_note:
+                "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.",
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
@@ -5077,6 +5126,15 @@ Deno.serve(async (req) => {
             await supabaseAdmin.from("sessions")
               .update({ closed_at: nowIso, close_kind })
               .eq("id", session_id).eq("tenant", tenant);
+            // Session title · how a principal finds this session again.
+            const sessionTitle = typeof args?.title === "string" && args.title.trim()
+              ? args.title.trim().slice(0, 200)
+              : null;
+            if (sessionTitle) {
+              await supabaseAdmin.from("sessions")
+                .update({ title: sessionTitle, titled_at: nowIso, titled_by: "cobclient" })
+                .eq("id", session_id).eq("tenant", tenant);
+            }
             // Makeup-close any other still-open sessions for this tenant
             const { data: orphans } = await supabaseAdmin
               .from("sessions").select("id").eq("tenant", tenant)
@@ -5108,7 +5166,14 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
-            // 5. Close board
+            // 5. Close board · the database builds the readable board. The raw
+            // list stays available as close_board_all for anything that needs it.
+            let closeBoard: any = null;
+            try {
+              const { data: cb } = await supabaseAdmin
+                .rpc("close_board_v2", { p_cid: pctx.legacy_cid, p_session_id: session_id });
+              closeBoard = cb ?? null;
+            } catch (_e) { closeBoard = null; }
             const { data: board } = await supabaseAdmin
               .from("directives").select("id, text, scope, status")
               .eq("tenant_id", tenant).in("status", ["queued", "pending-confirm"]);
@@ -5122,7 +5187,11 @@ Deno.serve(async (req) => {
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
               layers: res.layers,
-              close_board: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
+              mirror_status: res.mirror_status,
+              mirror_note: res.mirror_note,
+              ...(sessionTitle ? { title: sessionTitle } : { title: null }),
+              close_board: closeBoard,
+              close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
               makeup_closed,
             };
