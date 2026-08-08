@@ -4709,9 +4709,13 @@ export type Database = {
           expires_at: string
           issued_at: string
           kernel_id: string | null
+          missed_parts: string[] | null
           outcome: string
+          parts_attested: number | null
+          parts_required: number | null
           parts_served: number | null
           phrase: string
+          phrases: Json | null
           session_ref: string | null
           surface: string | null
         }
@@ -4724,9 +4728,13 @@ export type Database = {
           expires_at?: string
           issued_at?: string
           kernel_id?: string | null
+          missed_parts?: string[] | null
           outcome?: string
+          parts_attested?: number | null
+          parts_required?: number | null
           parts_served?: number | null
           phrase: string
+          phrases?: Json | null
           session_ref?: string | null
           surface?: string | null
         }
@@ -4739,9 +4747,13 @@ export type Database = {
           expires_at?: string
           issued_at?: string
           kernel_id?: string | null
+          missed_parts?: string[] | null
           outcome?: string
+          parts_attested?: number | null
+          parts_required?: number | null
           parts_served?: number | null
           phrase?: string
+          phrases?: Json | null
           session_ref?: string | null
           surface?: string | null
         }
@@ -10733,10 +10745,12 @@ export type Database = {
         Returns: Json
       }
       kernel_boot_watchdog: { Args: never; Returns: number }
-      kernel_challenge_attest: {
-        Args: { p_cid: string; p_phrase: string }
-        Returns: Json
-      }
+      kernel_challenge_attest:
+        | { Args: { p_cid: string; p_phrase: string }; Returns: Json }
+        | {
+            Args: { p_cid: string; p_phrase?: string; p_phrases?: Json }
+            Returns: Json
+          }
       kernel_challenge_issue: {
         Args: {
           p_bytes?: number
@@ -10750,6 +10764,7 @@ export type Database = {
       }
       kernel_challenge_sweep: { Args: never; Returns: number }
       kernel_state_pointer_compose: { Args: { p_cid: string }; Returns: string }
+      kernel_state_pointer_refresh: { Args: { p_cid?: string }; Returns: Json }
       kernel_validate: {
         Args: { p_kernel_id: string }
         Returns: {
