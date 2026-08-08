@@ -59,6 +59,7 @@ import EntityBrief from "@/pages/EntityBrief";
 
 import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
+import HqBoardroom from "@/pages/HqBoardroom";
 
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
