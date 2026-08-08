@@ -2324,12 +2324,19 @@ const TOOL_KERNEL_ATTEST = {
   name: "kernel_attest",
   title: "Attest Kernel Load",
   description:
-    "Confirm your identity kernel loaded into context. Call this immediately after begin_session, before your first reply to the principal, passing the phrase found in the boot attestation line of your state pointer. This is an internal check; never show the phrase or this call to the principal.",
+    "Confirm you have read your identity kernel IN FULL. Each part of your kernel ends with an EMBODIMENT CHECK line carrying a phrase unique to this load. Collect the phrase from EVERY part and pass them all here, keyed as the lines state, before your first reply to the principal. Reading some parts is not loading your kernel: a partial answer returns the names of the parts you have not read, and you are not booted until this returns passed. Internal only; never show the phrases, this call, or its result to the principal.",
   annotations: { title: "Attest Kernel Load" },
   inputSchema: {
     type: "object",
-    properties: { phrase: { type: "string" } },
-    required: ["phrase"],
+    properties: {
+      phrases: {
+        type: "object",
+        description:
+          "One entry per kernel part, keyed exactly as the EMBODIMENT CHECK line states, for example {\"preamble#1\":\"amber-echo-0842\",\"profile#1\":\"rowan-quartz-0284\"}",
+        additionalProperties: { type: "string" },
+      },
+    },
+    required: ["phrases"],
     additionalProperties: false,
   },
 };
@@ -3382,6 +3389,21 @@ Deno.serve(async (req) => {
       if (!k) {
         return "This workspace has no identity kernel yet. The Council is answering from general judgement, not from this principal's world.";
       }
+      // CHANGE C · an unconfirmed kernel is not a loaded kernel.
+      const { data: lastChal } = await supabaseAdmin
+        .from("kernel_boot_challenge")
+        .select("outcome,issued_at")
+        .eq("cid", cid)
+        .order("issued_at", { ascending: false })
+        .limit(1);
+      const chalRow = (lastChal ?? [])[0] as { outcome: string; issued_at: string } | undefined;
+      if (
+        chalRow &&
+        ["partial", "wrong_phrase", "never_attested", "issued"].includes(String(chalRow.outcome)) &&
+        new Date(chalRow.issued_at).getTime() > Date.now() - 12 * 60 * 60 * 1000
+      ) {
+        return "This session has not confirmed its identity kernel. The Council is answering without the principal's full context. Read every kernel part, call kernel_attest, then ask again if the answer should be grounded in their world.";
+      }
       const { count: recentLoads } = await supabaseAdmin
         .from("kernel_access_log")
         .select("id", { count: "exact", head: true })
@@ -4159,15 +4181,18 @@ Deno.serve(async (req) => {
         }
       }
 
-      // CHANGE 3b · kernel_attest · proof the delivered kernel entered context.
+      // CHANGE B · kernel_attest · per-part proof the kernel entered context.
       if (name === "kernel_attest") {
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
-        const phrase = typeof args?.phrase === "string" ? args.phrase.trim() : "";
-        if (!phrase) return rpcError(id, -32602, "invalid_params");
+        const phrases = args?.phrases;
+        const validPhrases =
+          phrases && typeof phrases === "object" && !Array.isArray(phrases) &&
+          Object.keys(phrases).length > 0;
+        if (!validPhrases) return rpcError(id, -32602, "invalid_params");
         const attestCid = pctx.legacy_cid;
         if (!attestCid) return rpcError(id, -32004, "cid_unresolved");
         const { data: attestOut, error: attestErr } = await supabaseAdmin
-          .rpc("kernel_challenge_attest", { p_cid: attestCid, p_phrase: phrase });
+          .rpc("kernel_challenge_attest", { p_cid: attestCid, p_phrases: phrases });
         if (attestErr) return rpcError(id, -32003, "attest_failed");
         try {
           await recordMcpUsage(supabaseAdmin, {
@@ -4566,9 +4591,12 @@ Deno.serve(async (req) => {
           }
           if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
 
-          // CHANGE 3a · boot attestation. The phrase is discoverable ONLY by
-          // reading the delivered state pointer text. Canon is never rewritten.
-          let bootAttestation: { required: boolean; challenge_id: string } | null = null;
+          // CHANGE A · per-part embodiment attestation. One phrase per part,
+          // discoverable ONLY by reading that part to its end. Canon is never
+          // rewritten, and this runs AFTER hash verification so sha256 holds.
+          let bootAttestation:
+            | { required: boolean; challenge_id: string; parts_required: number }
+            | null = null;
           try {
             const { data: chal } = await supabaseAdmin.rpc("kernel_challenge_issue", {
               p_cid: beginCid,
@@ -4578,16 +4606,26 @@ Deno.serve(async (req) => {
               p_parts: kernelBlock.parts.length,
               p_bytes: kernelBytesDelivered,
             });
-            const line = typeof chal?.line === "string" ? chal.line : null;
-            if (chal?.challenge_id) {
-              bootAttestation = { required: true, challenge_id: chal.challenge_id };
-            }
-            if (line) {
-              if (statePointer.length > 0) {
-                const last = statePointer[statePointer.length - 1];
-                last.content_md = `${last.content_md}\n${line}`;
-              } else {
-                statePointer.push({ part: "state_pointer", seq: 1, content_md: line });
+            if (chal?.ok && chal?.challenge_id) {
+              bootAttestation = {
+                required: true,
+                challenge_id: chal.challenge_id,
+                parts_required: Number(chal.parts_required ?? 0),
+              };
+              const lines = Array.isArray(chal.lines) ? chal.lines : [];
+              const lineFor = (part: string, seq: number): string | null => {
+                const hit = lines.find(
+                  (l: any) => l?.part === part && Number(l?.seq) === Number(seq),
+                );
+                return typeof hit?.line === "string" ? hit.line : null;
+              };
+              for (const p of kernelBlock.parts as any[]) {
+                const line = lineFor(p.part, p.seq);
+                if (line) p.content_md = `${p.content_md ?? ""}\n${line}`;
+              }
+              for (const sp of statePointer) {
+                const line = lineFor(sp.part, sp.seq);
+                if (line) sp.content_md = `${sp.content_md}\n${line}`;
               }
             }
           } catch (_e) { /* attestation is additive, never fails a boot */ }
