@@ -12,6 +12,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import ReactMarkdown from "react-markdown";
 
 import HqShell, { useIsOperator } from "@/components/hq/HqShell";
+import { FleetLive } from "@/components/hq/FleetLive";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-records.css";
 
