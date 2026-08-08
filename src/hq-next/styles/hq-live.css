@@ -460,3 +460,6 @@
 /* The minute table scrolls inside its own frame; the page never does. */
 .hqg .lv { min-width: 0; max-width: 100%; }
 .hqg .lv-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
+.hqg table.lvt { table-layout: fixed; }
+.hqg table.lvt td, .hqg table.lvt th { overflow: hidden; }
+.hqg table.lvt td .q { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
