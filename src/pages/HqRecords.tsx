@@ -171,6 +171,9 @@ function toCsv(cols: string[], rows: Row[]): string {
 
 export function HqRecords() {
   const isOperator = useIsOperator();
+  const [tab, setTab] = useState<"explorer" | "live">(
+    () => (typeof location !== "undefined" && location.hash === "#live" ? "live" : "explorer"),
+  );
 
   const [fleet, setFleet] = useState<FleetRow[] | null>(null);
   const [fleetErr, setFleetErr] = useState<string | null>(null);
