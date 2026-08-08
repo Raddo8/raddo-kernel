@@ -5955,6 +5955,7 @@ Deno.serve(async (req) => {
             model,
             degraded,
             run_id: abeRunId,
+            ...(abeAdvisory ? { boot_advisory: abeAdvisory } : {}),
             attribution: "Abe · loyal dissent (deferred pass)",
           } as any);
           await completeMinuteRun(supabaseAdmin, {
