@@ -3090,6 +3090,99 @@ export type Database = {
         }
         Relationships: []
       }
+      fleet_qa_scorecard: {
+        Row: {
+          audit_date: string | null
+          audit_label: string | null
+          cid: string | null
+          client_label: string
+          created_at: string
+          migrated_from: string | null
+          office_health: string | null
+          open_issues: string | null
+          operator_exceptions: string | null
+          overall_grade: string | null
+          profile_grade: string | null
+          scorecard_id: string
+          skill_versions: string | null
+          source_ref: string | null
+        }
+        Insert: {
+          audit_date?: string | null
+          audit_label?: string | null
+          cid?: string | null
+          client_label: string
+          created_at?: string
+          migrated_from?: string | null
+          office_health?: string | null
+          open_issues?: string | null
+          operator_exceptions?: string | null
+          overall_grade?: string | null
+          profile_grade?: string | null
+          scorecard_id?: string
+          skill_versions?: string | null
+          source_ref?: string | null
+        }
+        Update: {
+          audit_date?: string | null
+          audit_label?: string | null
+          cid?: string | null
+          client_label?: string
+          created_at?: string
+          migrated_from?: string | null
+          office_health?: string | null
+          open_issues?: string | null
+          operator_exceptions?: string | null
+          overall_grade?: string | null
+          profile_grade?: string | null
+          scorecard_id?: string
+          skill_versions?: string | null
+          source_ref?: string | null
+        }
+        Relationships: []
+      }
+      fleet_skill_install: {
+        Row: {
+          cid: string | null
+          client_label: string
+          created_at: string
+          install_id: string
+          installed_at: string | null
+          migrated_from: string | null
+          note: string | null
+          skill_key: string
+          source_ref: string | null
+          status: string | null
+          version: string | null
+        }
+        Insert: {
+          cid?: string | null
+          client_label: string
+          created_at?: string
+          install_id?: string
+          installed_at?: string | null
+          migrated_from?: string | null
+          note?: string | null
+          skill_key: string
+          source_ref?: string | null
+          status?: string | null
+          version?: string | null
+        }
+        Update: {
+          cid?: string | null
+          client_label?: string
+          created_at?: string
+          install_id?: string
+          installed_at?: string | null
+          migrated_from?: string | null
+          note?: string | null
+          skill_key?: string
+          source_ref?: string | null
+          status?: string | null
+          version?: string | null
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           cid: string | null
@@ -5029,6 +5122,57 @@ export type Database = {
           resolved_at?: string | null
           severity?: string
           what?: string
+        }
+        Relationships: []
+      }
+      office_record_index: {
+        Row: {
+          box_link: string | null
+          cid: string | null
+          created_at: string
+          drive_link: string | null
+          kind: string | null
+          linked_decision: string | null
+          linked_entity: string | null
+          migrated_from: string | null
+          name: string
+          note: string | null
+          other_link: string | null
+          record_date: string | null
+          record_id: string
+          source_ref: string | null
+        }
+        Insert: {
+          box_link?: string | null
+          cid?: string | null
+          created_at?: string
+          drive_link?: string | null
+          kind?: string | null
+          linked_decision?: string | null
+          linked_entity?: string | null
+          migrated_from?: string | null
+          name: string
+          note?: string | null
+          other_link?: string | null
+          record_date?: string | null
+          record_id?: string
+          source_ref?: string | null
+        }
+        Update: {
+          box_link?: string | null
+          cid?: string | null
+          created_at?: string
+          drive_link?: string | null
+          kind?: string | null
+          linked_decision?: string | null
+          linked_entity?: string | null
+          migrated_from?: string | null
+          name?: string
+          note?: string | null
+          other_link?: string | null
+          record_date?: string | null
+          record_id?: string
+          source_ref?: string | null
         }
         Relationships: []
       }
@@ -10227,6 +10371,10 @@ export type Database = {
               version: number
             }[]
           }
+      hq_boardroom_read: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       hq_memory_counts: { Args: never; Returns: Json }
       hq_memory_lineage: {
         Args: { p_limit?: number }
@@ -10803,6 +10951,20 @@ export type Database = {
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
       save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
+      session_transcript_read: { Args: { p_session_id: string }; Returns: Json }
+      session_transcript_write: {
+        Args: {
+          p_body_md: string
+          p_cid?: string
+          p_fidelity?: string
+          p_part?: number
+          p_parts_total?: number
+          p_scrub_note?: string
+          p_scrubbed?: boolean
+          p_session_id: string
+        }
+        Returns: Json
+      }
       set_doctrine_tier: {
         Args: {
           p_actor: string
