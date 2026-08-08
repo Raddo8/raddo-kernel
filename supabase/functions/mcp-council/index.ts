@@ -4566,9 +4566,12 @@ Deno.serve(async (req) => {
           }
           if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
 
-          // CHANGE 3a · boot attestation. The phrase is discoverable ONLY by
-          // reading the delivered state pointer text. Canon is never rewritten.
-          let bootAttestation: { required: boolean; challenge_id: string } | null = null;
+          // CHANGE A · per-part embodiment attestation. One phrase per part,
+          // discoverable ONLY by reading that part to its end. Canon is never
+          // rewritten, and this runs AFTER hash verification so sha256 holds.
+          let bootAttestation:
+            | { required: boolean; challenge_id: string; parts_required: number }
+            | null = null;
           try {
             const { data: chal } = await supabaseAdmin.rpc("kernel_challenge_issue", {
               p_cid: beginCid,
@@ -4578,16 +4581,26 @@ Deno.serve(async (req) => {
               p_parts: kernelBlock.parts.length,
               p_bytes: kernelBytesDelivered,
             });
-            const line = typeof chal?.line === "string" ? chal.line : null;
-            if (chal?.challenge_id) {
-              bootAttestation = { required: true, challenge_id: chal.challenge_id };
-            }
-            if (line) {
-              if (statePointer.length > 0) {
-                const last = statePointer[statePointer.length - 1];
-                last.content_md = `${last.content_md}\n${line}`;
-              } else {
-                statePointer.push({ part: "state_pointer", seq: 1, content_md: line });
+            if (chal?.ok && chal?.challenge_id) {
+              bootAttestation = {
+                required: true,
+                challenge_id: chal.challenge_id,
+                parts_required: Number(chal.parts_required ?? 0),
+              };
+              const lines = Array.isArray(chal.lines) ? chal.lines : [];
+              const lineFor = (part: string, seq: number): string | null => {
+                const hit = lines.find(
+                  (l: any) => l?.part === part && Number(l?.seq) === Number(seq),
+                );
+                return typeof hit?.line === "string" ? hit.line : null;
+              };
+              for (const p of kernelBlock.parts as any[]) {
+                const line = lineFor(p.part, p.seq);
+                if (line) p.content_md = `${p.content_md ?? ""}\n${line}`;
+              }
+              for (const sp of statePointer) {
+                const line = lineFor(sp.part, sp.seq);
+                if (line) sp.content_md = `${sp.content_md}\n${line}`;
               }
             }
           } catch (_e) { /* attestation is additive, never fails a boot */ }
