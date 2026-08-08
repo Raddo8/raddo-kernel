@@ -4842,6 +4842,27 @@ export type Database = {
           },
         ]
       }
+      kernel_state_notes: {
+        Row: {
+          cid: string
+          notes_md: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          cid: string
+          notes_md: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          cid?: string
+          notes_md?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       kernels: {
         Row: {
           activated_at: string | null
@@ -10728,6 +10749,7 @@ export type Database = {
         Returns: Json
       }
       kernel_challenge_sweep: { Args: never; Returns: number }
+      kernel_state_pointer_compose: { Args: { p_cid: string }; Returns: string }
       kernel_validate: {
         Args: { p_kernel_id: string }
         Returns: {
