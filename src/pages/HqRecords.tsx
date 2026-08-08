@@ -702,6 +702,8 @@ export function HqRecords() {
           read live &middot; read only &middot; every value on this page is what the server returned for the
           selected CID &middot; registers are matched by client id, never by display name
         </p>
+        </>
+        )}
       </div>
     </HqShell>
   );
