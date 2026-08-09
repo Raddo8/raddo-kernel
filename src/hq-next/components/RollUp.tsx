@@ -1,6 +1,6 @@
 /** ROLL UP ROW · /hq is where the other pages surface.
  *
- * One card each for The World, Memories and BOB Blueprints. Each card carries a
+ * One card each for Your World, Memories and BOB Blueprints. Each card carries a
  * live count and the single most recent item from that page, and the whole card
  * navigates. Read only: nothing here writes.
  */
@@ -107,7 +107,7 @@ export function RollUp() {
   }, []);
 
   const cards: { k: string; label: string; to: string; blurb: string; s: CardState }[] = [
-    { k: "w", label: "The World", to: "/hq/world", blurb: "folders", s: world },
+    { k: "w", label: "Your World", to: "/hq/world", blurb: "folders", s: world },
     { k: "m", label: "Memories", to: "/hq/memories", blurb: "memories", s: mem },
     { k: "b", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints", blurb: "plans", s: bob },
   ];

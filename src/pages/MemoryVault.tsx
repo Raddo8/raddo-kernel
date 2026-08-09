@@ -1,6 +1,6 @@
 /** MEMORIES · /hq/memories
  *
- * Same family as The World: a lead line, a wikipedia-style infobox on the
+ * Same family as Your World: a lead line, a wikipedia-style infobox on the
  * right, a table of contents grouped by lane, and one long debriefing table
  * of every memory. The table of contents and the table both run as long as
  * the data does: never clamped, never paginated.

@@ -139,7 +139,7 @@ export function EntityBrief() {
   return (
     <HqShell>
       <div className="wld">
-        <div className="crumb">HQ {DOT} 02 {DOT} the world {DOT} brief</div>
+        <div className="crumb">HQ {DOT} 02 {DOT} your world {DOT} brief</div>
 
         <button className="backbtn" onClick={() => navigate("/hq/world")}>
           &larr; Back to your folders
