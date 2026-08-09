@@ -66,9 +66,9 @@ export function EntityBrief() {
   );
 
   const Ilink = useCallback(
-    (target: LinkTarget, key: string) => (
+    (target: LinkTarget, key: string, matched: string) => (
       <button key={key} className="ilink" onClick={() => navigate(`/hq/world/brief/${target.id}`)}>
-        {target.name}
+        {matched}
       </button>
     ),
     [navigate],
