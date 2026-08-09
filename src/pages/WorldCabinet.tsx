@@ -514,8 +514,8 @@ export function WorldCabinet() {
   return (
     <HqShell>
       <div className="wld">
-        <div className="crumb">HQ {DOT} 02 {DOT} the world</div>
-        <h1>The World</h1>
+        <div className="crumb">HQ {DOT} 02 {DOT} your world</div>
+        <h1>Your World</h1>
 
         <div className="wsearch">
           <div className="wsbar">
@@ -531,7 +531,7 @@ export function WorldCabinet() {
                 }
               }}
               placeholder="Ask your world a question, or name anyone in it"
-              aria-label="Search the world"
+              aria-label="Search your world"
             />
             {q.length > 0 && (
               <button
@@ -544,7 +544,7 @@ export function WorldCabinet() {
                 &times;
               </button>
             )}
-            <span className="tagline">{searching ? "SEARCHING" : "SEARCH THE WORLD"}</span>
+            <span className="tagline">{searching ? "SEARCHING" : "SEARCH YOUR WORLD"}</span>
           </div>
 
           {hits !== null && (

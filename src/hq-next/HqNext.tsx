@@ -19,7 +19,7 @@ import type { InterfaceEntry } from './registry/interface-coverage';
 import type { RegisterEntry } from './registry/register-migration';
 
 const NAV: { id: string; label: string; group: string; operatorOnly?: boolean }[] = [
-  { id: 'kernel', label: 'HQ \u00b7 roll up', group: 'System Pulse' },
+  { id: 'kernel', label: 'Overview \u00b7 roll up', group: 'System Pulse' },
   { id: 'arsenal', label: 'Intelligence Registry', group: 'Intelligence Registry' },
   { id: 'receipts', label: 'Receipts & Audit', group: 'Receipts & Audit' },
   { id: 'business', label: 'Businesses', group: 'Entities' },

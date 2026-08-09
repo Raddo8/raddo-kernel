@@ -14,7 +14,7 @@ import {
 } from "react";
 
 export type DockPageContext = {
-  /** Human label for the surface, e.g. "The World · Lane: Revenue". */
+  /** Human label for the surface, e.g. "Your World · Lane: Revenue". */
   label: string;
   /** Optional record the principal has open. */
   record?: string | null;
