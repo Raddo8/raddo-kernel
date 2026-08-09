@@ -120,23 +120,47 @@ export interface LinkTarget {
   name: string;
 }
 
-/** Wrap every named entity that appears in the text as an inline graph link. */
+/** Wrap every named entity that appears in the text as an inline graph link.
+ *
+ * Matching is case insensitive but boundary aware: a name never matches inside
+ * a longer word, so the entity "Roc" leaves "proceeding" alone. The rendered
+ * link always carries the text exactly as the prose wrote it, never the stored
+ * name, so spelling and capitalisation are preserved. Where two names overlap
+ * at the same position the longer one wins.
+ */
 export function linkify(
   text: string,
   targets: LinkTarget[],
-  render: (target: LinkTarget, key: string) => ReactNode,
+  render: (target: LinkTarget, key: string, matched: string) => ReactNode,
 ): ReactNode {
-  const usable = targets.filter((t) => t.name && t.name.length > 2);
-  if (!usable.length) return text;
+  const source = String(text ?? "");
+  const usable = targets.filter((t) => t.name && t.name.trim().length > 2);
+  if (!usable.length || !source) return source;
   const ordered = [...usable].sort((a, b) => b.name.length - a.name.length);
-  const re = new RegExp(`(${ordered.map((t) => escapeRe(t.name)).join("|")})`, "gi");
-  const parts = text.split(re);
+  // Longest first inside the alternation, so the regex engine prefers it.
+  const re = new RegExp(
+    `(?<![0-9A-Za-z])(${ordered.map((t) => escapeRe(t.name)).join("|")})(?![0-9A-Za-z])`,
+    "gi",
+  );
   const nodes: ReactNode[] = [];
-  parts.forEach((part, i) => {
-    const match = ordered.find((t) => t.name.toLowerCase() === part.toLowerCase());
-    if (match) nodes.push(render(match, `${match.id}-${i}`));
-    else if (part) nodes.push(createElement(Fragment, { key: `t-${i}` }, part));
-  });
+  let cursor = 0;
+  let i = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(source)) !== null) {
+    const matched = m[0];
+    const hit = ordered.find((t) => t.name.toLowerCase() === matched.toLowerCase());
+    if (!hit) continue;
+    if (m.index > cursor) {
+      nodes.push(createElement(Fragment, { key: `t-${i}` }, source.slice(cursor, m.index)));
+    }
+    nodes.push(render(hit, `${hit.id}-${m.index}`, matched));
+    cursor = m.index + matched.length;
+    i += 1;
+  }
+  if (!nodes.length) return source;
+  if (cursor < source.length) {
+    nodes.push(createElement(Fragment, { key: `t-end` }, source.slice(cursor)));
+  }
   return nodes;
 }
 

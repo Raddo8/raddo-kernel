@@ -53,6 +53,13 @@ const INFOBOX_CEILING = 8;
 const shortId = (id: string) => id.slice(0, 8);
 const num = (n: number) => String(n).padStart(2, "0");
 
+/** Lane labels sometimes carry their own article. Never say "The The". */
+function folderTitle(label: string | null | undefined): string {
+  const name = (label ?? "").trim();
+  if (!name) return "The folder";
+  return /^the\b/i.test(name) ? `${name} folder` : `The ${name} folder`;
+}
+
 function freshness(iso: string | null): string {
   if (!iso) return "nothing dated yet";
   const d = new Date(iso);
@@ -228,9 +235,9 @@ export function WorldCabinet() {
   );
 
   const Ilink = useCallback(
-    (target: LinkTarget, key: string) => (
+    (target: LinkTarget, key: string, matched: string) => (
       <button key={key} className="ilink" onClick={() => openBrief(target.id)} title={`Open the brief on ${target.name}`}>
-        {target.name}
+        {matched}
       </button>
     ),
     [openBrief],
@@ -686,7 +693,7 @@ export function WorldCabinet() {
                     {num(activeIndex + 1)} {DOT} {activeRow?.label ?? ""}
                   </div>
                   <div className="rule" />
-                  <div className="dtitle">The {activeRow?.label ?? ""} folder</div>
+                  <div className="dtitle">{folderTitle(activeRow?.label)}</div>
                   <div className="dsub">
                     {activeRow && (
                       <>

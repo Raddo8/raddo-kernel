@@ -196,7 +196,7 @@ export function MemoryVault() {
   }, []);
 
   const Ilink = useCallback(
-    (t: LinkTarget, key: string) => (
+    (t: LinkTarget, key: string, matched: string) => (
       <button
         key={key}
         className="ilink"
@@ -204,7 +204,7 @@ export function MemoryVault() {
         onTouchStart={() => prefetch(t)}
         onClick={() => openPop(t)}
       >
-        {t.name}
+        {matched}
       </button>
     ),
     [openPop, prefetch],
