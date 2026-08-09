@@ -19,6 +19,9 @@
   --accent-wash: var(--brass-wash);
 }
 
+/* Dark elevation only. The locked palette (paper, ink, brass) is never
+ * repainted here: HQ is light dominant, and flipping --ink turned the rail
+ * pale blue while its light-on-navy foreground tokens stayed put. */
 @media (prefers-color-scheme: dark) {
   .hqg {
     --surf-1: #14161B;
@@ -28,19 +31,6 @@
     --line: #333944;
     --body: #DCDFE6;
     --quiet: #9BA2AE;
-    --ink: #A9C6EA;
-    --ink-soft: #8FB2DD;
-    --paper: #14161B;
-    --white: #191C22;
-    --marble-2: #1F232B;
-    --marble-3: #262B34;
-    --edge: #333944;
-    --charcoal: #DCDFE6;
-    --ash: #9BA2AE;
-    --brass-wash: #2A2418;
-    --ok: #5FBF8F;
-    --warn: #D9A441;
-    --err: #E08B8B;
   }
 }
 
