@@ -224,3 +224,7 @@
   .hqg .wld .fgrid { grid-template-columns: minmax(0, 1fr); }
   .hqg .wld .fgrid > .fcard::before { left: 0; width: 96px; }
 }
+
+/* Rail brand line · the client's COB name keeps its treatment, the possessive
+   suffix reads in brass against the navy rail. */
+.hqg .mark-name .mark-suffix { color: var(--brass, #EF9F27); }
