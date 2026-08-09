@@ -207,8 +207,9 @@
 .wld .tab { flex: none; width: auto; max-width: none; min-width: 0; }
 .wld .trow.back .tab { border-bottom-color: var(--edge); box-shadow: inset 0 -6px 8px -6px rgba(4, 44, 83, .08); }
 /* filler slots keep every row five wide; navy, quiet, not clickable */
-.wld .tab.fill { background: var(--ink); border-color: var(--ink); color: rgba(250, 248, 244, .35); cursor: default; text-align: center; letter-spacing: .3em; }
-.wld .tab.fill:hover { background: var(--ink); }
+.wld .trow .tab.fill,
+.wld .trow.back .tab.fill { background: var(--ink, #042C53); border-color: var(--ink, #042C53); color: rgba(250, 248, 244, .38); cursor: default; text-align: center; letter-spacing: .3em; box-shadow: none; }
+.wld .trow .tab.fill:hover { background: var(--ink, #042C53); }
 @media (max-width: 900px) { .wld .trow { grid-template-columns: repeat(2, 1fr); } }
 
 /* ===== VIEW SWITCHER ===== */

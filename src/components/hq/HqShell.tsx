@@ -161,7 +161,16 @@ function HqShellInner({ children }: { children: ReactNode }) {
             </div>
             <div>
               {/* The name is the client's own. Blank beats flashing a default. */}
-              <div className="mark-name">{cobName ? `${cobName} \u00b7 HQ` : "\u00a0"}</div>
+              <div className="mark-name">
+                {cobName ? (
+                  <>
+                    {cobName}
+                    <span className="mark-suffix">{"'S \u00b7 HQ"}</span>
+                  </>
+                ) : (
+                  "\u00a0"
+                )}
+              </div>
               <div className="mark-sub" title={cobName ? `Your account number with ${cobName}` : "Your account number"}>
 
                 {cid ?? "loading\u2026"}

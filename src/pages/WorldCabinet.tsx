@@ -479,7 +479,7 @@ export function WorldCabinet() {
     <>
       {Array.from({ length: count }, (_, i) => (
         <span className="tab fill" key={`${k}-f${i}`} aria-hidden="true">
-          &mdash;
+          &middot;
         </span>
       ))}
     </>
