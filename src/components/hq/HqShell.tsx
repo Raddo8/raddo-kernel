@@ -16,6 +16,7 @@ import "@/hq-next/styles/hq-records.css";
 import "@/hq-next/styles/hq-brand.css";
 import { CobMark } from "./CobMark";
 import { CobIdentityProvider, useCob } from "@/lib/cob-identity";
+import { railSuffix } from "@/lib/cob-possessive";
 
 import { CobDock } from "./CobDock";
 import { DockContextProvider, type DockPageContext } from "./dock-context";
@@ -165,8 +166,9 @@ function HqShellInner({ children }: { children: ReactNode }) {
                 {cobName ? (
                   <>
                     {cobName}
-                    <span className="mark-suffix">{"'S \u00b7 HQ"}</span>
+                    <span className="mark-suffix">{railSuffix(cobName)}</span>
                   </>
+
                 ) : (
                   "\u00a0"
                 )}
