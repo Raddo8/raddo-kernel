@@ -251,3 +251,23 @@
   background: var(--ink, #042C53); color: var(--paper, #FAF8F4);
   font-weight: 800; letter-spacing: 0;
 }
+
+/* speaker label · reads as a label, never as the first words of the sentence.
+   Same treatment in every dock state: bottom, expanded, pinned, collapsed. */
+.hqg .bub .bub-who {
+  display: block;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--edge2);
+  font-family: var(--mono);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+.hqg .bub.me .bub-who {
+  color: var(--brass-deep);
+  border-bottom-color: var(--brass);
+  text-align: right;
+}
