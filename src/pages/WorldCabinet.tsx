@@ -53,6 +53,13 @@ const INFOBOX_CEILING = 8;
 const shortId = (id: string) => id.slice(0, 8);
 const num = (n: number) => String(n).padStart(2, "0");
 
+/** Lane labels sometimes carry their own article. Never say "The The". */
+function folderTitle(label: string | null | undefined): string {
+  const name = (label ?? "").trim();
+  if (!name) return "The folder";
+  return /^the\b/i.test(name) ? `${name} folder` : `The ${name} folder`;
+}
+
 function freshness(iso: string | null): string {
   if (!iso) return "nothing dated yet";
   const d = new Date(iso);
