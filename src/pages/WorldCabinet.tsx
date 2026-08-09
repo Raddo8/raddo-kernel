@@ -686,7 +686,7 @@ export function WorldCabinet() {
                     {num(activeIndex + 1)} {DOT} {activeRow?.label ?? ""}
                   </div>
                   <div className="rule" />
-                  <div className="dtitle">The {activeRow?.label ?? ""} folder</div>
+                  <div className="dtitle">{folderTitle(activeRow?.label)}</div>
                   <div className="dsub">
                     {activeRow && (
                       <>
