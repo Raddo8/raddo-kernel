@@ -228,9 +228,9 @@ export function WorldCabinet() {
   );
 
   const Ilink = useCallback(
-    (target: LinkTarget, key: string) => (
+    (target: LinkTarget, key: string, matched: string) => (
       <button key={key} className="ilink" onClick={() => openBrief(target.id)} title={`Open the brief on ${target.name}`}>
-        {target.name}
+        {matched}
       </button>
     ),
     [openBrief],
