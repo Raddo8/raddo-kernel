@@ -2848,7 +2848,114 @@ const TOOL_MEMORY_SEARCH = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+// ── CLIENT WORLD v1 · the client's own world, read and write ─────────────
+// The identity kernel stays sealed; these five touch only client-owned
+// records. `cid` is never an argument: it is derived server-side.
+const TOOL_WORLD_READ = {
+  name: "world_read",
+  title: "World Read",
+  description:
+    "Read this client's world: their folders, the people and organisations in it, and what is known about them. Search with `q`.",
+  annotations: { title: "World Read", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      q: { type: "string", description: "Optional search words." },
+      limit: { type: "number", description: "Max rows per section (default 40)." },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_REGISTERS_READ = {
+  name: "registers_read",
+  title: "Registers Read",
+  description:
+    "Read every register in this client's HQ at once: memories, standing rules, blueprints, open loops, requests waiting on you, and lane narratives. Call this at the start of a session.",
+  annotations: { title: "Registers Read", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      limit: { type: "number", description: "Max rows per register (default 60)." },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_MEMORY_WRITE = {
+  name: "memory_write",
+  title: "Memory Write",
+  description:
+    "Save, correct, retire, restore or supersede a memory. Retiring puts it away; nothing is ever deleted.",
+  annotations: { title: "Memory Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "Existing memory id. Omit to create." },
+      title: { type: "string" },
+      body_md: { type: "string" },
+      lane: { type: "string" },
+      category: { type: "string" },
+      action: { type: "string", enum: ["upsert", "retire", "restore", "supersede"] },
+      reason: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_NARRATIVE_WRITE = {
+  name: "narrative_write",
+  title: "Narrative Write",
+  description:
+    "Write the read at the top of a folder in Your World · the narrative or the judgments for one lane.",
+  annotations: { title: "Narrative Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      lane: { type: "string" },
+      kind: { type: "string", enum: ["lane-narrative", "lane-judgments", "subject-judgments"] },
+      body_md: { type: "string" },
+      title: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: ["lane", "kind", "body_md"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_BLUEPRINT_WRITE = {
+  name: "blueprint_write",
+  title: "Blueprint Write",
+  description:
+    "Open a blueprint or advance one. Leave `id` empty to open a new one; pass `id` to advance an existing one.",
+  annotations: { title: "Blueprint Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "Existing blueprint id. Omit to open a new one." },
+      title: { type: "string" },
+      intent: { type: "string" },
+      current_state: { type: "string" },
+      next_action: { type: "string" },
+      owner: { type: "string", enum: ["cob", "client", "shared"] },
+      status: { type: "string", enum: ["active", "blocked", "done", "retired"] },
+      loop_cadence: { type: "string", enum: ["daily", "weekly", "monthly", "event"] },
+      milestones: { type: "array", description: "Milestone objects." },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
 const SETUP_STEP_KEYS: Record<string, string> = {
