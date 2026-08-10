@@ -4749,6 +4749,114 @@ Deno.serve(async (req) => {
         });
       }
 
+      // ── CLIENT WORLD v1 · read/write the client's own world ─────────────
+      // p_cid is derived server-side from the authenticated tenant via
+      // tenantCid(). Any `cid` argument in the body is ignored outright.
+      if (
+        name === "world_read" || name === "registers_read" ||
+        name === "memory_write" || name === "narrative_write" ||
+        name === "blueprint_write"
+      ) {
+        if (!tenant) return rpcError(id, -32001, "invalid_token");
+        if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
+
+        let worldCid: string;
+        try {
+          worldCid = await tenantCid(tenant);
+        } catch (e) {
+          return rpcError(id, -32004, e instanceof Error ? e.message : String(e));
+        }
+
+        const num = (v: unknown, def: number): number =>
+          typeof v === "number" && Number.isFinite(v) ? Math.floor(v) : def;
+        const str = (v: unknown): string | null =>
+          typeof v === "string" && v.trim() ? v.trim() : null;
+
+        let rpcName: string;
+        let params: Record<string, unknown>;
+        if (name === "world_read") {
+          rpcName = "cob_world_read";
+          params = { p_cid: worldCid, p_q: str(args?.q), p_limit: num(args?.limit, 40) };
+        } else if (name === "registers_read") {
+          rpcName = "cob_registers_read";
+          params = { p_cid: worldCid, p_limit: num(args?.limit, 60) };
+        } else if (name === "memory_write") {
+          rpcName = "cob_memory_write";
+          params = {
+            p_cid: worldCid,
+            p_id: str(args?.id),
+            p_title: str(args?.title),
+            p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
+            p_lane: str(args?.lane),
+            p_category: str(args?.category),
+            p_action: str(args?.action) ?? "upsert",
+            p_reason: str(args?.reason),
+          };
+        } else if (name === "narrative_write") {
+          rpcName = "cob_narrative_write";
+          params = {
+            p_cid: worldCid,
+            p_lane: str(args?.lane),
+            p_kind: str(args?.kind),
+            p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
+            p_title: str(args?.title),
+          };
+        } else {
+          rpcName = "cob_blueprint_write";
+          params = {
+            p_cid: worldCid,
+            p_id: str(args?.id),
+            p_title: str(args?.title),
+            p_intent: typeof args?.intent === "string" ? args.intent : null,
+            p_current_state: typeof args?.current_state === "string" ? args.current_state : null,
+            p_next_action: typeof args?.next_action === "string" ? args.next_action : null,
+            p_owner: str(args?.owner),
+            p_status: str(args?.status),
+            p_loop_cadence: str(args?.loop_cadence),
+            p_milestones: args?.milestones ?? null,
+          };
+        }
+
+        const { data, error } = await supabaseAdmin.rpc(rpcName, params);
+        if (error) {
+          // Verbatim Postgres message: it names the bad value and the allowed set.
+          const out = {
+            ok: false,
+            tool: name,
+            error: error.message,
+            ...identityBlock(pctx),
+            ...manifestBlock(args),
+          };
+          return rpcResult(id, {
+            content: [{ type: "text", text: JSON.stringify(out) }],
+            structuredContent: out,
+            isError: true,
+          });
+        }
+
+        try {
+          await recordMcpUsage(supabaseAdmin, {
+            tenant,
+            cid: pctx.legacy_cid, principal_id: pctx.principal_id,
+            external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
+            tool: name,
+            agent_id: null,
+            passes: [],
+            routing_log: { rpc: rpcName },
+          });
+        } catch { /* best-effort */ }
+
+        const out = {
+          ...(data && typeof data === "object" ? data as Record<string, unknown> : { result: data }),
+          ...identityBlock(pctx),
+          ...manifestBlock(args),
+        };
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(out) }],
+          structuredContent: out,
+          isError: false,
+        });
+      }
 
 
       // ══════════════════════════════════════════════════════════════════
