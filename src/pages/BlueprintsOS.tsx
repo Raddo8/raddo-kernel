@@ -302,6 +302,7 @@ export function BlueprintsOS() {
   const [kicking, setKicking] = useState(false);
   // A confirmation belongs to the row it was filed against.
   const [kickLine, setKickLine] = useState<string | null>(null);
+  useEffect(() => { setKickLine(null); }, [selection]);
 
   const blueprintsQuery = useQuery({
     queryKey: ["hq-blueprints"],
