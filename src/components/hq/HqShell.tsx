@@ -215,7 +215,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
               <NavLink
                 key={item.label}
                 to={item.to}
-                end={item.to === "/hq"}
+                end={item.to === "/hq" || item.to === "/hq/world"}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
                   `nl ${isActive || pathname === item.to ? "on" : ""}`
