@@ -3382,7 +3382,9 @@ Deno.serve(async (req) => {
   // reverse-unique on (tenant_id, status='active'); `tenants.cob_name` is NOT
   // unique (three CIDs are named JAEL) and must never be used for this.
   async function tenantCid(t: string): Promise<string> {
+    if (!supabaseAdmin) throw new Error("CID_LOOKUP_FAILED: no_admin_client");
     const { data, error } = await supabaseAdmin
+
       .from("kernels").select("cid")
       .eq("tenant_id", t).eq("status", "active").maybeSingle();
     if (error) throw new Error(`CID_LOOKUP_FAILED: ${error.message}`);
