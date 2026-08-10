@@ -12,6 +12,7 @@ import '../styles/aggregation.css';
 import { useAggregation } from '../useAggregation';
 import { CONFIDENCE_LABEL, type AggregationPayload, type AggregationSource, type UnattendedSurface } from '../contracts/aggregation';
 import { useCobLabel } from "@/lib/cob-identity";
+import { requestAction } from "@/lib/hq-request-action";
 
 const EMPTY = 'not counted yet';
 
@@ -113,9 +114,31 @@ function Drawer({ source, onClose }: { source: AggregationSource; onClose: () =>
   );
 }
 
-export function AggregationPanel() {
+export interface AggregationPanelProps {
+  /** Called after any successful request so the surface can re-read. */
+  onRequested?: () => void;
+}
+
+export function AggregationPanel({ onRequested }: AggregationPanelProps = {}) {
   const { read, reload } = useAggregation();
   const [open, setOpen] = React.useState<AggregationSource | null>(null);
+  const [said, setSaid] = React.useState<Record<string, string>>({});
+  const [busy, setBusy] = React.useState<string | null>(null);
+
+  /** Records a request. It does not start the work and never says it did. */
+  const ask = React.useCallback(
+    async (slot: string, action: string, params: Record<string, unknown>, title: string) => {
+      setBusy(slot);
+      const res = await requestAction(action, params, title);
+      setBusy(null);
+      setSaid((prev) => ({ ...prev, [slot]: res.line }));
+      if (res.ok) {
+        onRequested?.();
+        reload();
+      }
+    },
+    [onRequested, reload],
+  );
 
   if (read.status === 'loading') return <Skeleton />;
 
@@ -135,6 +158,13 @@ export function AggregationPanel() {
   const sc = p.schedule;
   const notCounted = p.confidence !== 'counted';
   const ariaLabel = `Share of your world read${notCounted ? ', the total is an estimate' : ''}`;
+
+  // campaign_id is not part of the typed aggregation contract; it is read
+  // defensively from the payload and from the next-run block when present.
+  const campaignId =
+    (p as unknown as { campaign_id?: string | null }).campaign_id ??
+    (nr as unknown as { campaign_id?: string | null }).campaign_id ??
+    null;
 
   const connected = p.sources.filter((s) => s.connect_state === 'connected');
   const available = p.sources.filter((s) => s.connect_state !== 'connected');
@@ -167,6 +197,7 @@ export function AggregationPanel() {
           {bar}
           <p className="agg-line">{p.line}</p>
           {p.ordering_note ? <div className="agg-note">{p.ordering_note}</div> : null}
+          <button className="agg-ghost" onClick={reload}>Read again</button>
         </div>
         <div className="agg-statcol">
           <Stat k="Runs done" v={num(p.runs_done)} />
@@ -219,8 +250,16 @@ export function AggregationPanel() {
           {nr.promise ? <p>{nr.promise}</p> : null}
           {nr.why_it_matters ? <p className="q">{nr.why_it_matters}</p> : null}
           {nr.horizon_line ? <p className="q">{nr.horizon_line}</p> : null}
-          {nr.action && p.state !== 'complete' && nr.posture !== 'complete' ? (
-            <button className="agg-cta" data-action={nr.action}>{nr.action_label ?? nr.action}</button>
+          {said.next_run ? (
+            <p className="agg-said">{said.next_run}</p>
+          ) : nr.action && p.state !== 'complete' && nr.posture !== 'complete' ? (
+            <button
+              className="agg-cta"
+              disabled={busy === 'next_run'}
+              onClick={() => void ask('next_run', nr.action as string, { campaign_id: campaignId }, nr.action_label ?? (nr.action as string))}
+            >
+              {nr.action_label ?? nr.action}
+            </button>
           ) : null}
         </div>
 
@@ -236,7 +275,19 @@ export function AggregationPanel() {
             </div>
           ) : (
             <>
-              <button className="agg-cta">Turn the schedule on</button>
+              {said.schedule ? (
+                <p className="agg-said">{said.schedule}</p>
+              ) : (
+                <button
+                  className="agg-cta"
+                  disabled={busy === 'schedule'}
+                  onClick={() =>
+                    void ask('schedule', 'schedule.arm', { campaign_id: campaignId, surface: 'cowork' }, 'Turn the overnight schedule on')
+                  }
+                >
+                  Turn the schedule on
+                </button>
+              )}
               {sc.unattended_surfaces.map((s) => <SurfaceCard key={s.surface} s={s} />)}
               {sc.not_for_unattended.length > 0 ? (
                 <div className="agg-quiet">
