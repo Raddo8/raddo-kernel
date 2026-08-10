@@ -211,24 +211,17 @@ export function MemoryVault() {
   );
 
   const ask = useCallback(
-    async (row: MemoryRow) => {
+    (row: MemoryRow) => {
       const message = [
         `Change request for a memory.`,
         `Lane: ${row.lane ?? "not filed to a lane"}.`,
         `Memory: ${row.title} (${row.id}).`,
         "What should change:",
       ].join("\n");
-      try {
-        await navigator.clipboard.writeText(message);
-        toast({
-          title: `Copied for ${COB}`,
-          description: "Paste this into your chat and say what should change.",
-        });
-      } catch {
-        toast({ title: `Copy this to ${COB}`, description: message });
-      }
+      // The dock is the only pen. The message lands in the composer, ready to send.
+      composeToDock(message);
     },
-    [toast],
+    [composeToDock],
   );
 
   const list = rows ?? [];
