@@ -22,10 +22,10 @@ export function Entities({ kind }: { kind?: Kind } = {}) {
         </button>
       ))}
     </div>
-    <p className="hqx-sub">The interface exists before the data, deliberately. The domain model (tenant \u2192 business \u2192 lane \u2192 workstream \u2192 initiative) is an open decision \u2014 and this page will not pretend otherwise.</p>
+    <p className="hqx-sub">The interface exists before the data, deliberately. The domain model (tenant to business to lane to workstream to initiative) is an open decision, and this page will not pretend otherwise.</p>
     <Section title="Status" source="domain model undecided">
       <StateBlock state="ASSERTED_STATE_WITHOUT_SUBSTRATE" reasons={[
-        'items is CRM-workspace scoped (requires account_id, workspace-member authority) \u2014 rejected as substrate',
+        'items is CRM-workspace scoped (requires account_id, workspace-member authority) \u00b7 rejected as substrate',
         'no lane/workstream table exists; creating one awaits the entity-domain ruling',
       ]} />
     </Section>
