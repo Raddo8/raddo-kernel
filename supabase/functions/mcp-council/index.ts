@@ -3271,6 +3271,19 @@ Deno.serve(async (req) => {
     };
   };
 
+  // CLIENT WORLD v1 · authoritative tenant -> CID map. `kernels` is
+  // reverse-unique on (tenant_id, status='active'); `tenants.cob_name` is NOT
+  // unique (three CIDs are named JAEL) and must never be used for this.
+  async function tenantCid(t: string): Promise<string> {
+    const { data, error } = await supabaseAdmin
+      .from("kernels").select("cid")
+      .eq("tenant_id", t).eq("status", "active").maybeSingle();
+    if (error) throw new Error(`CID_LOOKUP_FAILED: ${error.message}`);
+    if (!data?.cid) throw new Error(`NO_ACTIVE_KERNEL_FOR_TENANT: ${t}`);
+    return data.cid as string;
+  }
+
+
   // Server-side CID for receipts. Name resolution first; when the display
   // name is ambiguous, the tenant's own active kernel row carries the CID.
   // Never sourced from the request body.
