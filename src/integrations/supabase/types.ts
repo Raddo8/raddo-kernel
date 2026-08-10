@@ -10526,7 +10526,57 @@ export type Database = {
         Args: { p_cid?: string; p_session_id?: string }
         Returns: Json
       }
+      cob_blueprint_write: {
+        Args: {
+          p_cid: string
+          p_current_state?: string
+          p_id?: string
+          p_intent?: string
+          p_loop_cadence?: string
+          p_milestones?: Json
+          p_next_action?: string
+          p_owner?: string
+          p_status?: string
+          p_title?: string
+        }
+        Returns: Json
+      }
+      cob_guard: { Args: { p_cid: string }; Returns: string }
+      cob_memory_write: {
+        Args: {
+          p_action?: string
+          p_body_md?: string
+          p_category?: string
+          p_cid: string
+          p_id?: string
+          p_lane?: string
+          p_reason?: string
+          p_title?: string
+        }
+        Returns: Json
+      }
       cob_name_normalize: { Args: { raw: string }; Returns: string }
+      cob_narrative_write: {
+        Args: {
+          p_body_md: string
+          p_cid: string
+          p_kind: string
+          p_lane: string
+          p_title?: string
+        }
+        Returns: Json
+      }
+      cob_registers_read: {
+        Args: { p_cid: string; p_limit?: number }
+        Returns: Json
+      }
+      cob_tenant_key: { Args: { p_cid: string }; Returns: string }
+      cob_tenant_key_or_cid: { Args: { p_cid: string }; Returns: string }
+      cob_tenant_labels: { Args: { p_cid: string }; Returns: string[] }
+      cob_world_read: {
+        Args: { p_cid: string; p_limit?: number; p_q?: string }
+        Returns: Json
+      }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
