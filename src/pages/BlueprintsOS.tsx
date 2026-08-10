@@ -22,7 +22,6 @@ import {
   isSameMonth,
 } from "date-fns";
 import { X } from "lucide-react";
-import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { HqShell } from "@/components/hq/HqShell";
@@ -68,9 +67,6 @@ type Selection =
   | { kind: "blueprint"; row: BlueprintRow }
   | { kind: "scheduled"; row: ScheduledRow }
   | null;
-
-const readOnlyNote = (cob: string) =>
-  `Builds are created, scheduled, and moved through the Connector \u00b7 just ask ${cob}.`;
 
 /* ------------------------------------------------------------------- shapes */
 
@@ -304,6 +300,7 @@ export function BlueprintsOS() {
   const [monthCursor, setMonthCursor] = useState<Date>(new Date());
   const [selection, setSelection] = useState<Selection>(null);
   const [kicking, setKicking] = useState(false);
+  // A confirmation belongs to the row it was filed against.
   const [kickLine, setKickLine] = useState<string | null>(null);
 
   const blueprintsQuery = useQuery({
@@ -822,7 +819,7 @@ export function BlueprintsOS() {
 
               <div style={{ marginTop: 24 }}>
                 {kickLine ? (
-                  <div className="said">{kickLine}</div>
+                  <div style={{ fontSize: 12.5, color: 'var(--ash)', lineHeight: 1.6 }}>{kickLine}</div>
                 ) : (
                   <button
                     type="button"
