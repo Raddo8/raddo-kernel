@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { HqShell } from "@/components/hq/HqShell";
 import "@/hq-next/styles/hq-design.css";
 import { useCobLabel } from "@/lib/cob-identity";
+import { requestAction } from "@/lib/hq-request-action";
 
 /* ---------------------------------------------------------------- contracts */
 
@@ -302,6 +303,8 @@ export function BlueprintsOS() {
   const [view, setView] = useState<View>("Board");
   const [monthCursor, setMonthCursor] = useState<Date>(new Date());
   const [selection, setSelection] = useState<Selection>(null);
+  const [kicking, setKicking] = useState(false);
+  const [kickLine, setKickLine] = useState<string | null>(null);
 
   const blueprintsQuery = useQuery({
     queryKey: ["hq-blueprints"],
@@ -636,9 +639,6 @@ export function BlueprintsOS() {
               {v}
             </button>
           ))}
-          <button type="button" className="vb brass spacer" onClick={() => toast(readOnlyNote(COB))}>
-            Kick it off
-          </button>
         </div>
 
         {isLoading && (
@@ -821,9 +821,26 @@ export function BlueprintsOS() {
               )}
 
               <div style={{ marginTop: 24 }}>
-                <button type="button" className="vb brass" onClick={() => toast(readOnlyNote(COB))}>
-                  Kick it off
-                </button>
+                {kickLine ? (
+                  <div className="said">{kickLine}</div>
+                ) : (
+                  <button
+                    type="button"
+                    className="vb brass"
+                    disabled={kicking}
+                    onClick={() => {
+                      const row = selection.row as { id?: string; title?: string | null };
+                      if (!row.id) return;
+                      setKicking(true);
+                      void requestAction('build.start', { blueprint_id: row.id }, `Kick off: ${row.title ?? 'this build'}`).then((res) => {
+                        setKicking(false);
+                        setKickLine(res.line);
+                      });
+                    }}
+                  >
+                    Kick it off
+                  </button>
+                )}
               </div>
             </div>
           </aside>
