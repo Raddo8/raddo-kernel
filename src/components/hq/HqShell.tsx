@@ -33,11 +33,11 @@ interface NavItem {
 const NAV: (NavItem & { pageKey?: string })[] = [
   { n: "01", label: "Overview", to: "/hq" },
   { n: "02", label: "Your World", to: "/hq/world" },
-  { n: "03", label: "Memories", to: "/hq/memories" },
-  { n: "04", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
-  { n: "05", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
-  { n: "06", label: "The Boardroom", to: "/hq/boardroom", pageKey: "boardroom" },
-  { n: "07", label: "The original HQ", to: "/hq/original" },
+  { n: "03", label: "Your World \u00b7 records", to: "/hq/world/registers" },
+  { n: "04", label: "Memories", to: "/hq/memories" },
+  { n: "05", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
+  { n: "06", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
+  { n: "07", label: "The Boardroom", to: "/hq/boardroom", pageKey: "boardroom" },
 ];
 
 /** Control group · only ever rendered for a server-confirmed fleet operator. */
@@ -74,7 +74,6 @@ function labelForPath(pathname: string): string {
   if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
   if (pathname.startsWith("/hq/boardroom")) return "The Boardroom";
   if (pathname.startsWith("/hq/records")) return "Records";
-  if (pathname.startsWith("/hq/original")) return "The original HQ";
   if (pathname.startsWith("/hq/profile")) return "Profile";
   return "Overview";
 }
@@ -216,7 +215,7 @@ function HqShellInner({ children }: { children: ReactNode }) {
               <NavLink
                 key={item.label}
                 to={item.to}
-                end={item.to === "/hq"}
+                end={item.to === "/hq" || item.to === "/hq/world"}
                 onClick={() => setOpen(false)}
                 className={({ isActive }) =>
                   `nl ${isActive || pathname === item.to ? "on" : ""}`

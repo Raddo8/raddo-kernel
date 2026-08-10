@@ -2201,6 +2201,7 @@ export type Database = {
           status: string
           tenant_id: string
           text: string
+          title: string | null
           updated_at: string
         }
         Insert: {
@@ -2213,6 +2214,7 @@ export type Database = {
           status?: string
           tenant_id: string
           text: string
+          title?: string | null
           updated_at?: string
         }
         Update: {
@@ -2225,6 +2227,7 @@ export type Database = {
           status?: string
           tenant_id?: string
           text?: string
+          title?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3231,6 +3234,57 @@ export type Database = {
           value_pillar?: string
           version?: number
           why?: string | null
+        }
+        Relationships: []
+      }
+      hq_action_request: {
+        Row: {
+          ack_at: string | null
+          action: string
+          cid: string
+          fulfilled_at: string | null
+          outcome: string | null
+          params: Json
+          receipt: Json | null
+          request_id: string
+          requested_at: string
+          requested_by: string | null
+          state: string
+          surface: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          ack_at?: string | null
+          action: string
+          cid: string
+          fulfilled_at?: string | null
+          outcome?: string | null
+          params?: Json
+          receipt?: Json | null
+          request_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          state?: string
+          surface?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ack_at?: string | null
+          action?: string
+          cid?: string
+          fulfilled_at?: string | null
+          outcome?: string | null
+          params?: Json
+          receipt?: Json | null
+          request_id?: string
+          requested_at?: string
+          requested_by?: string | null
+          state?: string
+          surface?: string | null
+          title?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -10540,8 +10594,10 @@ export type Database = {
         }[]
       }
       hq_my_pages: { Args: never; Returns: Json }
+      hq_my_requests: { Args: { p_limit?: number }; Returns: Json }
       hq_next_run: { Args: { p_cid: string }; Returns: Json }
       hq_next_run_me: { Args: never; Returns: Json }
+      hq_open_requests: { Args: { p_cid?: string }; Returns: Json }
       hq_pages_for: { Args: { p_cid: string }; Returns: Json }
       hq_progress_bar: { Args: { p_cid: string }; Returns: Json }
       hq_progress_bar_me: { Args: never; Returns: Json }
@@ -10572,6 +10628,10 @@ export type Database = {
         }[]
       }
       hq_records_keys_v1: { Args: { _cid: string }; Returns: string[] }
+      hq_request_action: {
+        Args: { p_action: string; p_params?: Json; p_title?: string }
+        Returns: Json
+      }
       hq_scheduled_read:
         | {
             Args: never

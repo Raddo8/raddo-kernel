@@ -9,6 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, useReducedMotion, type Transition } from "framer-motion";
 
 import { HqShell } from "@/components/hq/HqShell";
+import { useComposeToDock } from "@/components/hq/dock-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   callWorld,
@@ -32,6 +33,7 @@ const CONFIDENCE_COPY: Record<string, string> = {
 };
 
 export function EntityBrief() {
+  const composeToDock = useComposeToDock();
   const COB = useCobLabel();
   const { id = "" } = useParams();
   const navigate = useNavigate();
@@ -119,20 +121,17 @@ export function EntityBrief() {
     return loudestClock(lines);
   }, [data]);
 
-  const ask = useCallback(async () => {
+  const ask = useCallback(() => {
     if (!data) return;
-    const message = composeChangeRequest({
-      lane: `the brief on ${data.entity.name}`,
-      section: "This brief",
-      recordIds: [data.entity.id],
-    });
-    try {
-      await navigator.clipboard.writeText(message);
-      toast({ title: `Copied for ${COB}`, description: `Paste this into your ${COB} conversation.` });
-    } catch {
-      toast({ title: "Copy it manually", description: message });
-    }
-  }, [data, toast]);
+    // The dock is the only pen. The message lands in the composer, ready to send.
+    composeToDock(
+      composeChangeRequest({
+        lane: `the brief on ${data.entity.name}`,
+        section: "This brief",
+        recordIds: [data.entity.id],
+      }),
+    );
+  }, [data, composeToDock]);
 
   const read = data?.read ?? null;
 

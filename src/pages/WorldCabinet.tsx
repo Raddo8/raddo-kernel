@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion, type Transition } from "framer-motion";
 
 import { HqShell } from "@/components/hq/HqShell";
+import { useComposeToDock } from "@/components/hq/dock-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   callWorld,
@@ -104,6 +105,7 @@ type DetailGroup = {
 };
 
 export function WorldCabinet() {
+  const composeToDock = useComposeToDock();
   const COB = useCobLabel();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -187,20 +189,12 @@ export function WorldCabinet() {
   const openBrief = useCallback((id: string) => navigate(`/hq/world/brief/${id}`), [navigate]);
 
   const ask = useCallback(
-    async (section: string, recordIds: string[]) => {
+    (section: string, recordIds: string[]) => {
       if (!doss) return;
-      const message = composeChangeRequest({ lane: doss.lane, section, recordIds });
-      try {
-        await navigator.clipboard.writeText(message);
-        toast({
-          title: `Copied for ${COB}`,
-          description: `Paste this into your ${COB} conversation and say what should change.`,
-        });
-      } catch {
-        toast({ title: "Copy it manually", description: message });
-      }
+      // The dock is the only pen. The message lands in the composer, ready to send.
+      composeToDock(composeChangeRequest({ lane: doss.lane, section, recordIds }));
     },
-    [doss, toast],
+    [doss, composeToDock],
   );
 
   const Ask = useCallback(
