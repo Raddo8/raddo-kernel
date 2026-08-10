@@ -9,6 +9,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, useReducedMotion, type Transition } from "framer-motion";
 
 import { HqShell } from "@/components/hq/HqShell";
+import { useComposeToDock } from "@/components/hq/dock-context";
 import { useToast } from "@/hooks/use-toast";
 import {
   callWorld,
@@ -32,6 +33,7 @@ const CONFIDENCE_COPY: Record<string, string> = {
 };
 
 export function EntityBrief() {
+  const composeToDock = useComposeToDock();
   const COB = useCobLabel();
   const { id = "" } = useParams();
   const navigate = useNavigate();

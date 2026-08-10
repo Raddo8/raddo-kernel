@@ -12,6 +12,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { HqShell } from "@/components/hq/HqShell";
+import { useComposeToDock } from "@/components/hq/dock-context";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -107,6 +108,7 @@ function SourceChip({ row }: { row: MemoryRow }) {
 type SortKey = "date" | "lane" | "category";
 
 export function MemoryVault() {
+  const composeToDock = useComposeToDock();
   const COB = useCobLabel();
   const { toast } = useToast();
 
