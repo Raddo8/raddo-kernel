@@ -33,6 +33,16 @@ type Ctx = {
 
 const DockCtx = createContext<Ctx | null>(null);
 
+/** Pages render `<HqShell>` themselves, so a page component sits ABOVE this
+ *  provider in the tree and cannot read the context. A tiny module bus carries
+ *  a composed message down to the dock. It is still read-only: the text lands
+ *  in the composer and the client presses send. */
+const composeListeners = new Set<(text: string) => void>();
+
+export function composeToDock(text: string) {
+  composeListeners.forEach((fn) => fn(text));
+}
+
 export function DockContextProvider({
   initial,
   children,
@@ -46,6 +56,13 @@ export function DockContextProvider({
   const composeMessage = useCallback((text: string) => {
     setCompose((prev) => ({ text, nonce: (prev?.nonce ?? 0) + 1 }));
   }, []);
+
+  useEffect(() => {
+    composeListeners.add(composeMessage);
+    return () => {
+      composeListeners.delete(composeMessage);
+    };
+  }, [composeMessage]);
 
   // Route changes re-seed the label; a page may then refine it.
   useEffect(() => {
@@ -63,11 +80,11 @@ export function useDockContext(): Ctx {
   return ctx;
 }
 
-/** Page-side helper · hand a composed message to the dock. Safe outside the provider. */
+/** Page-side helper · hand a composed message to the dock. Safe anywhere. */
 export function useComposeToDock(): (text: string) => void {
-  const ctx = useContext(DockCtx);
-  return ctx?.composeMessage ?? (() => { /* no dock on this surface */ });
+  return composeToDock;
 }
+
 
 /** Page-side helper · declare what this surface is showing. Safe outside the provider. */
 export function useDeclareDockContext(next: DockPageContext) {
