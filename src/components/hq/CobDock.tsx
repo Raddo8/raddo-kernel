@@ -44,7 +44,7 @@ function readHeight(): number {
 }
 
 export function CobDock() {
-  const { page } = useDockContext();
+  const { page, compose } = useDockContext();
   const { cobName } = useCob();
   const { messages, pending, error, send } = useDockChat();
   const [mode, setMode] = useState<DockMode>(() => readMode());
@@ -82,6 +82,19 @@ export function CobDock() {
   useEffect(() => {
     if (mode !== "collapsed") inputRef.current?.focus();
   }, [mode]);
+
+  // A page can hand the composer a message. It is never sent for the client.
+  useEffect(() => {
+    if (!compose) return;
+    setDraft(compose.text);
+    persistMode(mode === "collapsed" ? "bottom" : mode);
+    const el = inputRef.current;
+    if (el) {
+      el.focus();
+      el.setSelectionRange(el.value.length, el.value.length);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [compose?.nonce]);
 
   // Vertical resize grip · bottom and expanded only.
   const dragRef = useRef<{ y: number; h: number } | null>(null);

@@ -41,6 +41,11 @@ export function DockContextProvider({
   children: ReactNode;
 }) {
   const [page, setPage] = useState<DockPageContext>(initial);
+  const [compose, setCompose] = useState<DockCompose | null>(null);
+
+  const composeMessage = useCallback((text: string) => {
+    setCompose((prev) => ({ text, nonce: (prev?.nonce ?? 0) + 1 }));
+  }, []);
 
   // Route changes re-seed the label; a page may then refine it.
   useEffect(() => {
@@ -48,7 +53,7 @@ export function DockContextProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initial.label]);
 
-  const value = useMemo<Ctx>(() => ({ page, setPage }), [page]);
+  const value = useMemo<Ctx>(() => ({ page, setPage, compose, composeMessage }), [page, compose, composeMessage]);
   return <DockCtx.Provider value={value}>{children}</DockCtx.Provider>;
 }
 
@@ -56,6 +61,12 @@ export function useDockContext(): Ctx {
   const ctx = useContext(DockCtx);
   if (!ctx) throw new Error("useDockContext must be used inside DockContextProvider");
   return ctx;
+}
+
+/** Page-side helper · hand a composed message to the dock. Safe outside the provider. */
+export function useComposeToDock(): (text: string) => void {
+  const ctx = useContext(DockCtx);
+  return ctx?.composeMessage ?? (() => { /* no dock on this surface */ });
 }
 
 /** Page-side helper · declare what this surface is showing. Safe outside the provider. */
