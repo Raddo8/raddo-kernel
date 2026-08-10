@@ -27,6 +27,8 @@ import { ViewSwitch } from "@/components/hq/ViewSwitch";
 import { readView, writeView, type HqView } from "@/lib/world-views";
 import "@/hq-next/styles/hq-lanes.css";
 import { useCobLabel } from "@/lib/cob-identity";
+import { RulesView } from "@/components/hq/RulesView";
+
 
 const DOT = "\u00b7";
 const INFOBOX_CEILING = 8;
@@ -122,6 +124,8 @@ export function MemoryVault() {
   const [openRows, setOpenRows] = useState<string[]>([]);
   const [openLane, setOpenLane] = useState<string | null>(null);
   const [view, setView] = useState<HqView>(() => readView("memories"));
+  const [pane, setPane] = useState<"facts" | "rules">("facts");
+
 
   const [pop, setPop] = useState<{
     target: LinkTarget;
@@ -317,7 +321,29 @@ export function MemoryVault() {
         <div className="crumb">HQ {DOT} 03 {DOT} memories</div>
         <h1>Memories</h1>
 
+        <div className="vswitch" role="group" aria-label="What to look at">
+          {(["facts", "rules"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`vbtn${pane === p ? " on" : ""}`}
+              aria-pressed={pane === p}
+              onClick={() => setPane(p)}
+            >
+              {p === "facts" ? "Facts" : "Rules"}
+            </button>
+          ))}
+        </div>
+
+        {pane === "rules" && (
+          <RulesView
+            unauthenticated={<p className="plain">We could not open your rules just now.</p>}
+          />
+        )}
+
+        {pane === "facts" && (
         <div className="article">
+
           <div>
             <p className="lead">
               <b>These are the things {COB} remembers about you.</b> {DOT} Each one is a short
@@ -559,6 +585,8 @@ export function MemoryVault() {
             )}
           </div>
         </div>
+        )}
+
       </div>
     </HqShell>
   );

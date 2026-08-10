@@ -1,0 +1,147 @@
+/* RULES VIEW · /hq/memories, second view.
+ *
+ * Titles and state only. One line per rule. All detail lives in the shared
+ * inspector drawer. Locked palette, no new colours.
+ */
+
+.hqg .rules { margin-top: var(--s4); }
+
+.hqg .rules .rhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--marble-2, #F3F0EA);
+  border: 1px solid var(--edge, #E5E3DE);
+  border-radius: var(--r-l, 8px);
+}
+.hqg .rules .rbig {
+  font-family: var(--serif);
+  font-size: var(--t-xl);
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.hqg .rules .rsub {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ash);
+}
+
+.hqg .rules .rtools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: center;
+  margin: var(--s4) 0 var(--s3);
+}
+.hqg .rules .rtools input {
+  font-family: var(--sans);
+  font-size: var(--t-sm);
+  padding: 7px 10px;
+  border: 1px solid var(--edge, #E5E3DE);
+  border-radius: var(--r-s, 3px);
+  background: var(--white, #fff);
+  color: var(--ink);
+  min-width: 220px;
+}
+.hqg .rules .rtools input:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+
+.hqg .rules .rtog {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border: 1px solid var(--edge, #E5E3DE);
+  background: var(--white, #fff);
+  color: var(--ash);
+  border-radius: var(--r-s, 3px);
+  cursor: pointer;
+}
+.hqg .rules .rtog.on { border-color: var(--brass); color: var(--ink); background: var(--brass-wash, #FBF1DD); }
+
+.hqg .rules .rgroup { margin-top: var(--s5); }
+.hqg .rules .rgt {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--brass-deep);
+  padding-bottom: var(--s2);
+  border-bottom: 1px solid var(--edge, #E5E3DE);
+}
+.hqg .rules .rempty { font-size: var(--t-sm); color: var(--ash); padding: var(--s3) 0; }
+
+.hqg .rules .rrow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  text-align: left;
+  padding: 9px 4px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--edge, #E5E3DE);
+  cursor: pointer;
+  font-family: var(--sans);
+}
+.hqg .rules .rrow:hover { background: var(--marble-2, #F3F0EA); }
+.hqg .rules .rrow:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+.hqg .rules .rrow .rt {
+  font-size: var(--t-sm);
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hqg .rules .rrow .rb {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ash);
+  border: 1px solid var(--edge, #E5E3DE);
+  border-radius: var(--r-s, 3px);
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+.hqg .rules .rrow .rb.gov { border-color: var(--brass); color: var(--brass-deep); }
+.hqg .rules .rrow .rage {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  color: var(--ash);
+  white-space: nowrap;
+}
+.hqg .rules .rrow .rflag { color: var(--brass); font-size: 12px; }
+
+.hqg .rules .rtier {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ash);
+  margin: var(--s3) 0 var(--s1);
+}
+
+.hqg .insp .rax { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s3); }
+.hqg .insp .rax button {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  border: 1px solid var(--brass);
+  background: var(--brass);
+  color: #2C2C2A;
+  font-weight: 600;
+  border-radius: var(--r-s, 3px);
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.hqg .insp .rax button.ghost { background: transparent; color: var(--ink); border-color: var(--edge, #E5E3DE); }
+.hqg .insp .rsaid { margin-top: var(--s3); font-size: var(--t-sm); color: var(--ash); line-height: 1.6; }

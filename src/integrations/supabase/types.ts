@@ -7197,6 +7197,60 @@ export type Database = {
         }
         Relationships: []
       }
+      rule_relation: {
+        Row: {
+          a_id: string
+          b_id: string
+          cid: string | null
+          found_at: string
+          found_by: string
+          kind: string
+          note: string | null
+          relation_id: string
+          resolved_at: string | null
+          state: string
+        }
+        Insert: {
+          a_id: string
+          b_id: string
+          cid?: string | null
+          found_at?: string
+          found_by: string
+          kind: string
+          note?: string | null
+          relation_id?: string
+          resolved_at?: string | null
+          state?: string
+        }
+        Update: {
+          a_id?: string
+          b_id?: string
+          cid?: string | null
+          found_at?: string
+          found_by?: string
+          kind?: string
+          note?: string | null
+          relation_id?: string
+          resolved_at?: string | null
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_relation_a_fk"
+            columns: ["a_id"]
+            isOneToOne: false
+            referencedRelation: "directives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_relation_b_fk"
+            columns: ["b_id"]
+            isOneToOne: false
+            referencedRelation: "directives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       save_attempt: {
         Row: {
           canonicalization_version: string | null
@@ -10632,6 +10686,7 @@ export type Database = {
         Args: { p_action: string; p_params?: Json; p_title?: string }
         Returns: Json
       }
+      hq_rules_read: { Args: never; Returns: Json }
       hq_scheduled_read:
         | {
             Args: never
