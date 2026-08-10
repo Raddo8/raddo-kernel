@@ -585,6 +585,8 @@ export function MemoryVault() {
             )}
           </div>
         </div>
+        )}
+
       </div>
     </HqShell>
   );
