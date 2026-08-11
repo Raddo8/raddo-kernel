@@ -4907,6 +4907,20 @@ Deno.serve(async (req) => {
           if (!beginCid) degradedReasons.push("cid_unresolved");
           if (kernelErr) outcome = "partial";
 
+          // H7 · what this tenant booted with last time, read BEFORE the new
+          // session row exists, so the comparison is against the prior boot.
+          let priorManifestVersion: string | null = null;
+          try {
+            const { data: priorRows } = await supabaseAdmin
+              .from("sessions")
+              .select("tool_manifest_version, opened_at")
+              .eq("tenant", tenant)
+              .not("tool_manifest_version", "is", null)
+              .order("opened_at", { ascending: false })
+              .limit(1);
+            priorManifestVersion = (priorRows ?? [])[0]?.tool_manifest_version ?? null;
+          } catch { priorManifestVersion = null; }
+
           // 3. Insert new session row
           const { data: newSession, error: sessErr } = await supabaseAdmin
             .from("sessions")
@@ -4914,6 +4928,7 @@ Deno.serve(async (req) => {
               cid: pctx.legacy_cid,
               tenant,
               surface,
+              tool_manifest_version: TOOL_MANIFEST_VERSION,
               kernel_version: kernel?.version ?? null,
             })
             .select("id")
