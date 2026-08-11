@@ -3261,6 +3261,120 @@ const TOOL_BOARD_SUPERSEDE = {
   },
 };
 
+// D6 · the work register is the operational position; the board is what it
+// projects. Anything raised mid-session goes through here and is triaged.
+// Nothing becomes tracked work by the act of being mentioned.
+const TOOL_WORK_RAISE = {
+  name: "work_raise",
+  title: "Raise something mid-session",
+  description:
+    "Record something that came up during a session. It is not tracked work yet. Say who must move on it: pass principal_acts true when the principal personally has to act, false when someone else owns it. Leave it unset and it waits in the disposition queue until it is either tracked or forgotten with a reason. Only an item the principal must act on reaches their board. Origin is required, because an item with no origin cannot be triaged later.",
+  annotations: { title: "Raise something mid-session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "The item in one line." },
+      origin: { type: "string", enum: ["mined", "conversation", "audit", "scheduled", "client", "operator"], description: "What raised it." },
+      principal_acts: { type: "boolean", description: "True when the principal is the one who must move. Leave unset to defer the call to the disposition queue." },
+      detail: { type: "string" },
+      owner: { type: "string" },
+      kind: { type: "string", description: "task | question | risk | commitment. Default task." },
+      due: { type: "string", description: "YYYY-MM-DD." },
+      session_id: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: ["title", "origin"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_WORK_DISPOSITION = {
+  name: "work_disposition",
+  title: "What has been raised but not triaged",
+  description:
+    "List everything raised that has not yet been disposed of: no call made on whether the principal acts, or no lane set. Each entry names what is missing and offers track or forget. A session that closes with entries here closed over an open question.",
+  annotations: { title: "What has been raised but not triaged", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      limit: { type: "number", description: "Default 50." },
+      ...MANIFEST_PROP,
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_WORK_DISPOSE = {
+  name: "work_dispose",
+  title: "Track it or forget it",
+  description:
+    "Settle a raised item. Tracking it requires saying whether the principal is the one who must move, and puts it on the board when they are. Forgetting it requires a reason: forgotten is a state with a reason on it, never a quiet disappearance, and a forgotten item stays retrievable.",
+  annotations: { title: "Track it or forget it", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      work_id: { type: "string", description: "The id from work_disposition or work_raise." },
+      disposition: { type: "string", enum: ["tracked", "forgotten"] },
+      principal_acts: { type: "boolean", description: "Required when tracking." },
+      lane: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this carries." },
+      reason: { type: "string", description: "Required when forgetting." },
+      ...MANIFEST_PROP,
+    },
+    required: ["work_id", "disposition"],
+    additionalProperties: false,
+  },
+};
+
+// D3/D5 · the lane is chosen from the board, never from a mood. The board is
+// the input to the choice, so a session cannot open on open ground while an
+// item sits at its eighth unanswered showing.
+function channelSelect(board: any, disposition: any) {
+  const items: any[] = Array.isArray(board?.items) ? board.items : [];
+  const mech = items.filter((i) => i?.escalation_state === "mechanism_review");
+  const flagged = items.filter((i) => i?.escalation_state === "flagged");
+  const urgent = items.filter((i) => i?.urgent === true);
+  const undisposed = Number(disposition?.undisposed ?? board?.undisposed_count ?? 0);
+
+  let lane: string;
+  let because: string;
+  if (mech.length > 0) {
+    lane = "repair_the_surfacing";
+    because = `${mech.length} item(s) have been shown eight or more times without resolution. The surfacing is the defect. Rewrite or escalate them before anything else.`;
+  } else if (urgent.length > 0) {
+    lane = "work_the_urgent";
+    because = `${urgent.length} item(s) carry a hard deadline or external exposure and are exempt from deferral.`;
+  } else if (undisposed > 0) {
+    lane = "triage_what_was_raised";
+    because = `${undisposed} item(s) were raised and never disposed of. Track each one or forget it with a reason before opening new ground.`;
+  } else if (flagged.length > 0) {
+    lane = "unstick_the_flagged";
+    because = `${flagged.length} item(s) have been shown three or more times with no action. Showing them again unchanged is not one of the choices.`;
+  } else if (items.length > 0) {
+    lane = "work_the_board";
+    because = `${items.length} open item(s) the principal must act on.`;
+  } else {
+    lane = "open_ground";
+    because = typeof board?.empty_reason === "string" && board.empty_reason
+      ? board.empty_reason
+      : "Nothing is open on the board and nothing is awaiting triage.";
+  }
+
+  return {
+    lane,
+    because,
+    counts: {
+      rendered: items.length,
+      urgent: urgent.length,
+      flagged: flagged.length,
+      mechanism_review: mech.length,
+      undisposed,
+      withheld: Array.isArray(board?.withheld) ? board.withheld.length : 0,
+    },
+    // The choice is a recommendation with the board behind it, not a lock.
+    alternatives: ["work_the_board", "triage_what_was_raised", "open_ground"]
+      .filter((l) => l !== lane),
+  };
+}
 
 
 const TOOL_DECISION_WRITE = {
