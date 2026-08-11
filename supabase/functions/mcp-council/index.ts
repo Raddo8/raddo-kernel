@@ -5978,25 +5978,56 @@ Deno.serve(async (req) => {
             const res = await runSaveLeg(args ?? {}, "end");
 
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
+            // Every update is read back: a miss must be reported, never silently
+            // reported as clean. A queued correction that did not bind is the
+            // whole failure this reports on.
             const confirmations = Array.isArray(args?.confirm_directives) ? args.confirm_directives : [];
             const nowIso = new Date().toISOString();
+            const directives_confirmed: string[] = [];
+            const directives_edited: string[] = [];
+            const directives_dropped: string[] = [];
+            const directives_not_applied: Array<{ id: string; action: string; reason: string }> = [];
+            const applyDirective = async (
+              c: any,
+              action: string,
+              patch: Record<string, unknown>,
+              landed: string[],
+            ) => {
+              const { data: rows, error: upErr } = await supabaseAdmin.from("directives")
+                .update(patch)
+                .eq("id", c.id).eq("tenant_id", tenant)
+                .select("id");
+              if (upErr) {
+                directives_not_applied.push({ id: String(c.id), action, reason: upErr.message });
+                return;
+              }
+              if (!rows || rows.length === 0) {
+                directives_not_applied.push({ id: String(c.id), action, reason: "no_matching_row_in_tenant" });
+                return;
+              }
+              landed.push(String(c.id));
+            };
             for (const c of confirmations) {
               if (!c?.id || !c?.action) continue;
               if (c.action === "confirm") {
-                await supabaseAdmin.from("directives")
-                  .update({ status: "active", confirmed_at: nowIso })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                await applyDirective(c, "confirm", { status: "active", confirmed_at: nowIso }, directives_confirmed);
               } else if (c.action === "edit") {
-                if (typeof c.text !== "string" || !c.text.trim()) continue;
-                await supabaseAdmin.from("directives")
-                  .update({ text: c.text, status: "active", confirmed_at: nowIso })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                if (typeof c.text !== "string" || !c.text.trim()) {
+                  directives_not_applied.push({ id: String(c.id), action: "edit", reason: "empty_text" });
+                  continue;
+                }
+                await applyDirective(
+                  c, "edit",
+                  { text: c.text, status: "active", confirmed_at: nowIso },
+                  directives_edited,
+                );
               } else if (c.action === "drop") {
-                await supabaseAdmin.from("directives")
-                  .update({ status: "retired" })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                await applyDirective(c, "drop", { status: "retired" }, directives_dropped);
+              } else {
+                directives_not_applied.push({ id: String(c.id), action: String(c.action), reason: "unknown_action" });
               }
             }
+
 
             // 3. Close this session
             await supabaseAdmin.from("sessions")
