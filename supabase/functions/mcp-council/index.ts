@@ -2966,7 +2966,7 @@ const TOOL_RULE_WRITE = {
   name: "rule_write",
   title: "Rule Write",
   description:
-    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes. Canon outranks every rule you write here. You can narrow it for your client; you cannot switch it off. A rule that tries will be refused and told why.",
+    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes. Canon outranks every rule you write here. You can narrow it for your client; you cannot switch it off. A rule that tries will be refused and told why. `write_scope` says who the rule is for: `LOCAL` is this client only, which is the default and almost always right; `FLEET` is doctrine for every client and is reserved to a fleet operator. The receipt tells you in words which one happened.",
   annotations: { title: "Rule Write" },
   inputSchema: {
     type: "object",
@@ -2976,10 +2976,20 @@ const TOOL_RULE_WRITE = {
         enum: ["state", "propose", "confirm", "amend", "retire", "restore", "rank"],
         description: "Default `state`. `state` governs at once; `propose` waits for the principal.",
       },
+      write_scope: {
+        type: "string",
+        enum: ["LOCAL", "FLEET"],
+        description:
+          "Who the rule binds. Default `LOCAL` (this client only). `FLEET` routes to fleet doctrine and is refused unless you are an active fleet operator.",
+      },
       id: { type: "string", description: "Existing rule id. Required for confirm, amend, retire, restore, rank." },
       text: { type: "string", description: "The rule itself, in the principal's own words where possible." },
       title: { type: "string" },
-      scope: { type: "string", enum: ["LOCKED", "SITUATIONAL"] },
+      scope: {
+        type: "string",
+        enum: ["LOCKED", "SITUATIONAL"],
+        description: "How hard the rule binds. Not who it applies to · that is `write_scope`.",
+      },
       rank: { type: "number" },
       reason: { type: "string" },
       ...MANIFEST_PROP,
@@ -3176,9 +3186,49 @@ const TOOL_DECISION_WRITE = {
       minute_id: { type: "string", description: "The council minute it came out of, when it did." },
       supersedes: { type: "string", description: "The id of the decision this replaces." },
       session_id: { type: "string", description: "The session it was taken in." },
+      verification_state: {
+        type: "string",
+        enum: ["recorded", "probe_passed", "verified"],
+        description:
+          "Default `recorded`. A decision that says the work is executed, shipped, done, live, fixed or deployed must be `probe_passed` or `verified` and must name the probe in `test_run_id`, or it will be refused.",
+      },
+      test_run_id: {
+        type: "string",
+        description: "The probe id returned by `record_probe`. Required for any completion claim.",
+      },
       ...MANIFEST_PROP,
     },
     required: ["title"],
+    additionalProperties: false,
+  },
+};
+
+// ── HARDEN-02 · H1 · the only writer of probe_runs ──────────────────────────
+// A completion claim in a decision is refused unless it names a probe here
+// that passed. cid is resolved on the server; it is never a tool argument.
+const TOOL_RECORD_PROBE = {
+  name: "record_probe",
+  title: "Record a probe",
+  description:
+    "Record a check you actually ran: what was claimed, how you checked it, what you expected, what you observed, and whether it passed. Returns a probe id. Before you write a decision that says something is executed, done, shipped, live, fixed or deployed, run the check, record it here, and put the returned id in `test_run_id`. A claim without a passing probe is refused.",
+  annotations: { title: "Record a probe", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      subject_kind: {
+        type: "string",
+        enum: ["decision", "migration", "function", "cron", "register"],
+        description: "What sort of thing you checked. Default `decision`.",
+      },
+      subject_ref: { type: "string", description: "Which one: an id, a name, or a path." },
+      claim: { type: "string", description: "The claim being tested, in one line." },
+      method: { type: "string", description: "How you checked it." },
+      expected: { type: "string", description: "What a pass looks like." },
+      observed: { type: "string", description: "What you actually saw." },
+      passed: { type: "boolean", description: "True only if observed matches expected." },
+      ...MANIFEST_PROP,
+    },
+    required: ["subject_ref", "claim", "method", "expected", "observed", "passed"],
     additionalProperties: false,
   },
 };
