@@ -3604,6 +3604,34 @@ Deno.serve(async (req) => {
   const serverCid = async (): Promise<string | null> =>
     (await resolvedCid()) ?? (await activeKernel("id, cid")).cid;
 
+  // FAILURE PATHS · a console line is not a record. Everything below that used
+  // to fail only into the logs now also lands on the client's Signals page,
+  // rolled up on a stable key so the third occurrence reads as chronic rather
+  // than as three unrelated bad nights. Fire-and-forget by construction: a
+  // signal that cannot be raised must never turn a soft failure into a hard one.
+  const raiseSignal = async (
+    key: string,
+    detail: string,
+    extra: { session_id?: string | null; surface?: string | null; subject?: string | null; link?: Record<string, unknown> | null } = {},
+  ): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const cid = await serverCid();
+      if (!cid) return;
+      await supabaseAdmin.rpc("cob_signal_raise", {
+        p_cid: cid,
+        p_key: key,
+        p_detail: detail,
+        p_session_id: extra.session_id ?? null,
+        p_tool: "mcp-council",
+        p_surface: extra.surface ?? "connector",
+        p_subject: extra.subject ?? null,
+        p_link: extra.link ?? null,
+        p_audience: null,
+      });
+    } catch { /* the log line already happened; never fail on the record of a failure */ }
+  };
+
   // UNIT 1 · CONNECTOR-SUCCESS SIGNAL. Records the first time a tenant's
   // connector completes an authenticated MCP request. Additive, keyed on
   // CID, fire-and-forget: it can never fail or slow a request.
@@ -3637,6 +3665,7 @@ Deno.serve(async (req) => {
       });
     } catch (e) {
       console.error("connector_success_exception", e instanceof Error ? e.message : String(e));
+      void raiseSignal("connector_success_write_failed", e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -3709,10 +3738,15 @@ Deno.serve(async (req) => {
         p_resolved_keyed_by: a.keyed_by ?? ctx.legacy_keyed_by,
       });
 
-      if (error) { console.error("kernel_access_log_failed", error.message); return false; }
+      if (error) {
+        console.error("kernel_access_log_failed", error.message);
+        void raiseSignal("kernel_access_log_failed", error.message, { subject: a.part ?? null });
+        return false;
+      }
       return true;
     } catch (e) {
       console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
+      void raiseSignal("kernel_access_log_failed", e instanceof Error ? e.message : String(e));
       return false;
     }
   };
@@ -4216,6 +4250,7 @@ Deno.serve(async (req) => {
             .insert({ cid, topic, content_md: content, source });
           if (intakeErr) {
             console.error("record_intake_failed", intakeErr.message);
+            void raiseSignal("intake_save_failed", intakeErr.message, { subject: topic });
             const out = { ok: false, reason: "save-failed" };
             return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
           }
@@ -4233,6 +4268,7 @@ Deno.serve(async (req) => {
             }
           } catch (e) {
             console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+            void raiseSignal("thread_mirror_failed", e instanceof Error ? e.message : String(e), { subject: topic, surface: "taylor" });
           }
         }
         let inventory: unknown = null;
@@ -4277,6 +4313,7 @@ Deno.serve(async (req) => {
           if (Array.isArray(data)) checklist = data as any;
         } catch (e) {
           console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
+      void raiseSignal("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e), { surface: "onboarding" });
         }
         const out = { ok: true, recorded: step, checklist };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -4359,6 +4396,7 @@ Deno.serve(async (req) => {
             // The helper above already recorded its own failure row. This only
             // catches a thread-resolution fault, which is a separate cause.
             console.error("welcome_intro_thread_unresolved", e instanceof Error ? e.message : String(e));
+          void raiseSignal("welcome_intro_not_posted", e instanceof Error ? e.message : String(e), { surface: "taylor" });
           }
 
           const payload = buildWelcomePayload(client);
@@ -4576,6 +4614,11 @@ Deno.serve(async (req) => {
             console.error("kernel_tenant_mismatch", JSON.stringify({
               subject_cid: subjectCid, kernel_cid: partCid, part,
             }));
+            void raiseSignal(
+              "kernel_tenant_mismatch",
+              `a kernel part was requested for one tenant and found under another: part ${part}`,
+              { subject: String(part) },
+            );
             const mismatch = { error: "routing_error", reason: "kernel_tenant_mismatch", part, seq };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(mismatch) }],
