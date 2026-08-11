@@ -5269,19 +5269,37 @@ Deno.serve(async (req) => {
             p_reason: typeof args?.reason === "string" ? args.reason : null,
           };
         } else if (name === "signal_raise") {
-          // Rolled up on the key. The same key twice is a repeat; three times
-          // is chronic, and the client sees it before you tell them.
-          rpcName = "cob_signal_raise";
+          // E1 · One door. record_signal() validates provenance and raises
+          // SIGNAL_BAD_PROVENANCE by name; the direct insert that bypassed it
+          // is gone, which is why callers used to see a raw constraint name.
+          // Provenance is NOT passed from a client path — the function default
+          // (CLIENT) is the honest answer for a COBCLIENT call.
+          const rawDetail = typeof args?.detail === "string" ? args.detail : null;
+          const link = args?.link && typeof args.link === "object" ? args.link : null;
+          const detail = [rawDetail, link ? `link: ${JSON.stringify(link)}` : null]
+            .filter(Boolean).join("\n") || null;
+          rpcName = "record_signal";
           params = {
+            p_title: str(args?.key),
+            p_detail_md: detail,
+            p_pattern: str(args?.key),
+            p_signal_type: str(args?.audience),
+            p_status: "open",
             p_cid: worldCid,
-            p_key: str(args?.key),
-            p_detail: typeof args?.detail === "string" ? args.detail : null,
+            p_source_session_id: str(args?.session_id),
+            p_source_subject: str(args?.subject),
+            p_source_surface: str(args?.surface),
+            p_tool_version: str(args?.tool),
+          };
+        } else if (name === "board_respond") {
+          // E2 · The principal answers the board in one submit. A snoozed item
+          // with no date is refused by name, never coerced into a default.
+          rpcName = "board_respond";
+          params = {
+            p_items: Array.isArray(args?.items) ? args.items : [],
             p_session_id: str(args?.session_id),
-            p_tool: str(args?.tool),
-            p_surface: str(args?.surface),
-            p_subject: str(args?.subject),
-            p_link: args?.link && typeof args.link === "object" ? args.link : null,
-            p_audience: str(args?.audience),
+            p_timezone: str(args?.timezone) ?? "UTC",
+            p_cid: worldCid,
           };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
