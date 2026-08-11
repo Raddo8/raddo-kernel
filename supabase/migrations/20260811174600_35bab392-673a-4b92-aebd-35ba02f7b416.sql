@@ -1,0 +1,2 @@
+ALTER TABLE public.session_event ADD COLUMN IF NOT EXISTS session_source text;
+COMMENT ON COLUMN public.session_event.session_source IS 'How session_id was resolved: arg | open_session | none:<reason>. Never silently null.';

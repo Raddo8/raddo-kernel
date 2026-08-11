@@ -7949,6 +7949,7 @@ export type Database = {
           ok: boolean
           result_digest: string | null
           session_id: string | null
+          session_source: string | null
           surface: string | null
           tool: string
           tool_manifest_version: string | null
@@ -7963,6 +7964,7 @@ export type Database = {
           ok: boolean
           result_digest?: string | null
           session_id?: string | null
+          session_source?: string | null
           surface?: string | null
           tool: string
           tool_manifest_version?: string | null
@@ -7977,6 +7979,7 @@ export type Database = {
           ok?: boolean
           result_digest?: string | null
           session_id?: string | null
+          session_source?: string | null
           surface?: string | null
           tool?: string
           tool_manifest_version?: string | null

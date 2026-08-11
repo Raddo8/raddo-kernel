@@ -2176,7 +2176,7 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.2";
+const TOOL_MANIFEST_VERSION = "2026.08.12.3";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3749,6 +3749,49 @@ Deno.serve(async (req) => {
 
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+  // F1 · every event names its session, or says in words why it cannot.
+  // Order of authority: the id the caller passed, then the tenant's own most
+  // recent open session. A call made outside any session is a real state and
+  // is recorded as such, never as a silent null.
+  const resolveEventSession = async (
+    cid: string,
+    args: unknown,
+  ): Promise<{ session_id: string | null; session_source: string }> => {
+    const sid = (args as any)?.session_id;
+    if (typeof sid === "string" && UUID_RE.test(sid)) {
+      return { session_id: sid, session_source: "arg" };
+    }
+    try {
+      const { data, error } = await supabaseAdmin
+        .from("sessions")
+        .select("id")
+        .eq("cid", cid)
+        .is("closed_at", null)
+        .order("opened_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return { session_id: null, session_source: `none:lookup_error:${error.code ?? "unknown"}` };
+      if (data?.id) return { session_id: data.id as string, session_source: "open_session" };
+      return { session_id: null, session_source: "none:no_open_session" };
+    } catch (err) {
+      return {
+        session_id: null,
+        session_source: `none:exception:${err instanceof Error ? err.name : "unknown"}`,
+      };
+    }
+  };
+
+  // F1 · surface is where the call came FROM. The transport and the client
+  // name are facts the gateway observes; `args.surface` is only what the
+  // caller said about itself and can no longer overwrite the observation.
+  const callOrigin = (): string => {
+    let client = "";
+    try {
+      client = (req.headers.get("x-client-info") ?? req.headers.get("user-agent") ?? "").slice(0, 40);
+    } catch { client = ""; }
+    return `connector:http${client ? `:${client}` : ""}`.slice(0, 64);
+  };
+
   const logSessionEvent = async (e: {
     tool: string;
     ok: boolean;
@@ -3762,17 +3805,18 @@ Deno.serve(async (req) => {
     try {
       const cid = await serverCid();
       if (!cid) return;
-      const sid = (e.args as any)?.session_id;
+      const sess = await resolveEventSession(cid, e.args);
       await supabaseAdmin.from("session_event").insert({
         cid,
-        session_id: typeof sid === "string" && UUID_RE.test(sid) ? sid : null,
+        session_id: sess.session_id,
+        session_source: sess.session_source,
         tool: e.tool,
         ok: e.ok,
         error_code: e.error_code ? String(e.error_code).slice(0, 200) : null,
         latency_ms: Number.isFinite(e.latency_ms) ? Math.max(0, Math.floor(e.latency_ms)) : null,
         arg_digest: await digest(e.args),
         result_digest: await digest(e.result),
-        surface: e.surface,
+        surface: e.surface ?? callOrigin(),
         tool_manifest_version: TOOL_MANIFEST_VERSION,
       });
     } catch (err) {
@@ -5434,7 +5478,15 @@ Deno.serve(async (req) => {
         try {
           worldCid = await tenantCid(tenant);
         } catch (e) {
-          return rpcError(id, -32004, e instanceof Error ? e.message : String(e));
+          // F2 · record_probe is evidence about the system, not a write into a
+          // client's world. It needs an authenticated identity and a resolved
+          // cid; it must not need an installed kernel, because the first thing
+          // worth proving is often that the kernel path itself works.
+          const fallback = name === "record_probe" ? await serverCid() : null;
+          if (!fallback) {
+            return rpcError(id, -32004, e instanceof Error ? e.message : String(e));
+          }
+          worldCid = fallback;
         }
 
         const num = (v: unknown, def: number): number =>
@@ -7504,7 +7556,7 @@ Deno.serve(async (req) => {
           latency_ms: elapsedMs(__receiptCtx),
           args,
           result: __eventResult,
-          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+          surface: null, // F1 · origin is observed by the gateway, not claimed by the caller
         });
         return __dispatchResponse;
       } catch (e) {
@@ -7517,7 +7569,7 @@ Deno.serve(async (req) => {
           latency_ms: elapsedMs(__receiptCtx),
           args,
           result: null,
-          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+          surface: null, // F1 · origin is observed by the gateway, not claimed by the caller
         });
         throw e;
       } finally {
