@@ -6076,29 +6076,52 @@ Deno.serve(async (req) => {
             }
 
 
-            // 3. Close this session
-            await supabaseAdmin.from("sessions")
+            // 3. Close this session · read back. A close is not reported as
+            // closed until the row comes back closed. No id-only optimism.
+            const closeConfirm: Record<string, unknown> = {};
+            const { data: closedRows, error: closeErr } = await supabaseAdmin
+              .from("sessions")
               .update({ closed_at: nowIso, close_kind })
-              .eq("id", session_id).eq("tenant", tenant);
+              .eq("id", session_id).eq("tenant", tenant)
+              .select("id, closed_at, close_kind");
+            const closedRow = (closedRows ?? [])[0] as any;
+            const close_confirmed = Boolean(!closeErr && closedRow?.closed_at);
+            if (!close_confirmed) {
+              closeConfirm.close_error = closeErr?.message ?? "no_matching_row_in_tenant";
+              endReasons.push("session_close_not_confirmed");
+            }
             // Session title · how a principal finds this session again.
             const sessionTitle = typeof args?.title === "string" && args.title.trim()
               ? args.title.trim().slice(0, 200)
               : null;
+            let title_confirmed: boolean | null = null;
             if (sessionTitle) {
-              await supabaseAdmin.from("sessions")
+              const { data: titledRows, error: titleErr } = await supabaseAdmin
+                .from("sessions")
                 .update({ title: sessionTitle, titled_at: nowIso, titled_by: "cobclient" })
-                .eq("id", session_id).eq("tenant", tenant);
+                .eq("id", session_id).eq("tenant", tenant)
+                .select("id, title");
+              title_confirmed = Boolean(!titleErr && (titledRows ?? [])[0]?.title === sessionTitle);
+              if (!title_confirmed) {
+                closeConfirm.title_error = titleErr?.message ?? "title_not_readable_after_write";
+                endReasons.push("session_title_not_confirmed");
+              }
             }
-            // Makeup-close any other still-open sessions for this tenant
+            // Makeup-close any other still-open sessions for this tenant.
+            // Only rows that read back closed are counted as closed.
             const { data: orphans } = await supabaseAdmin
               .from("sessions").select("id").eq("tenant", tenant)
               .is("closed_at", null).neq("id", session_id);
             const makeup_closed: string[] = [];
+            const makeup_not_closed: Array<{ id: string; reason: string }> = [];
             for (const o of (orphans ?? [])) {
-              await supabaseAdmin.from("sessions")
+              const { data: mkRows, error: mkErr } = await supabaseAdmin
+                .from("sessions")
                 .update({ closed_at: nowIso, close_kind: "makeup" })
-                .eq("id", o.id).eq("tenant", tenant);
-              makeup_closed.push(o.id);
+                .eq("id", o.id).eq("tenant", tenant)
+                .select("id, closed_at");
+              if (!mkErr && (mkRows ?? [])[0]?.closed_at) makeup_closed.push(o.id);
+              else makeup_not_closed.push({ id: o.id, reason: mkErr?.message ?? "no_matching_row_in_tenant" });
             }
 
             // 4. ritual_runs
