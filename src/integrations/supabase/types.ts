@@ -2129,6 +2129,56 @@ export type Database = {
           },
         ]
       }
+      directive_canon_flag: {
+        Row: {
+          cid: string
+          directive_id: string
+          flag_id: string
+          found_at: string
+          found_by: string
+          kind: string
+          note: string | null
+          rule_key: string
+          score: number | null
+          state: string
+          tier: number
+        }
+        Insert: {
+          cid: string
+          directive_id: string
+          flag_id?: string
+          found_at?: string
+          found_by: string
+          kind: string
+          note?: string | null
+          rule_key: string
+          score?: number | null
+          state?: string
+          tier: number
+        }
+        Update: {
+          cid?: string
+          directive_id?: string
+          flag_id?: string
+          found_at?: string
+          found_by?: string
+          kind?: string
+          note?: string | null
+          rule_key?: string
+          score?: number | null
+          state?: string
+          tier?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "directive_canon_flag_directive_id_fkey"
+            columns: ["directive_id"]
+            isOneToOne: false
+            referencedRelation: "directives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       directive_log: {
         Row: {
           at: string
@@ -10560,6 +10610,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_canon_check: { Args: { p_text: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_memory_write: {
         Args: {
@@ -10606,6 +10657,7 @@ export type Database = {
       cob_tenant_key: { Args: { p_cid: string }; Returns: string }
       cob_tenant_key_or_cid: { Args: { p_cid: string }; Returns: string }
       cob_tenant_labels: { Args: { p_cid: string }; Returns: string[] }
+      cob_text_overlap: { Args: { a: string; b: string }; Returns: number }
       cob_world_read: {
         Args: { p_cid: string; p_limit?: number; p_q?: string }
         Returns: Json
