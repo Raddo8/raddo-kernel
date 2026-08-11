@@ -11759,6 +11759,15 @@ export type Database = {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
       }
+      vocabulary_gaps: {
+        Args: never
+        Returns: {
+          value: string
+          verdict: string
+          vocabulary: string
+          writer: string
+        }[]
+      }
       watchdog_health: { Args: never; Returns: number }
       work_close: {
         Args: {
