@@ -101,3 +101,7 @@ verify_jwt = false
 
 [functions.temporal-assessor]
 verify_jwt = false
+
+[functions.embed-backfill]
+verify_jwt = false
+
