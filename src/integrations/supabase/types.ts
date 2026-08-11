@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      _g2_probe_log: {
+        Row: {
+          at: string | null
+          id: number
+          note: string | null
+        }
+        Insert: {
+          at?: string | null
+          id?: number
+          note?: string | null
+        }
+        Update: {
+          at?: string | null
+          id?: number
+          note?: string | null
+        }
+        Relationships: []
+      }
       _grant_rollback_20260729: {
         Row: {
           stmt: string | null
