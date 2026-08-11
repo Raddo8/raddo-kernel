@@ -6169,8 +6169,11 @@ Deno.serve(async (req) => {
               ...(sessionTitle ? { title: sessionTitle } : { title: null }),
               close_board: closeBoard,
               close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
-              closed: { session_id, close_kind },
+              // `confirmed` means the row was read back closed, not that an
+              // update call returned without error.
+              closed: { session_id, close_kind, confirmed: close_confirmed, title_confirmed, ...closeConfirm },
               makeup_closed,
+              ...(makeup_not_closed.length ? { makeup_not_closed } : {}),
               // Whether each correction actually bound. `not_applied` is the
               // honest answer to "did my correction take?".
               directives: {
