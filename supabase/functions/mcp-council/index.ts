@@ -7548,7 +7548,7 @@ Deno.serve(async (req) => {
           latency_ms: elapsedMs(__receiptCtx),
           args,
           result: __eventResult,
-          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+          surface: null, // F1 · origin is observed by the gateway, not claimed by the caller
         });
         return __dispatchResponse;
       } catch (e) {
@@ -7561,7 +7561,7 @@ Deno.serve(async (req) => {
           latency_ms: elapsedMs(__receiptCtx),
           args,
           result: null,
-          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+          surface: null, // F1 · origin is observed by the gateway, not claimed by the caller
         });
         throw e;
       } finally {
