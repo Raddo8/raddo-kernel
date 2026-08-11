@@ -75,6 +75,11 @@ function labelForPath(pathname: string): string {
   if (pathname.startsWith("/hq/world/brief")) return "Your World \u00b7 a subject brief";
   if (pathname.startsWith("/hq/world/registers")) return "Your World \u00b7 records";
   if (pathname.startsWith("/hq/world")) return "Your World";
+  if (pathname.startsWith("/hq/tasks")) return "Tasks";
+  if (pathname.startsWith("/hq/messages")) return "Messages";
+  if (pathname.startsWith("/hq/decisions")) return "Decisions";
+  if (pathname.startsWith("/hq/signals")) return "Signals";
+  if (pathname.startsWith("/hq/sessions")) return "Sessions";
   if (pathname.startsWith("/hq/memories")) return "Memories";
   if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
   if (pathname.startsWith("/hq/boardroom")) return "The Boardroom";
