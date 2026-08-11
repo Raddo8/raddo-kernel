@@ -15,20 +15,132 @@ const DEFAULT_AS_URL = "https://rnjqpwmzmbnnaonppfkm.supabase.co";
 const ISSUER = (Deno.env.get("OAUTH_ISSUER") ?? `${DEFAULT_AS_URL}/auth/v1`).replace(/\/+$/, "");
 const JWKS_URL = Deno.env.get("OAUTH_JWKS_URL") ?? `${DEFAULT_AS_URL}/auth/v1/.well-known/jwks.json`;
 
-// The protected-resource id exposed by the Cloudflare worker at
-// mcp.chiefofbusiness.ai. Clients receive it via RFC 9728 metadata and
-// MUST request tokens whose `aud` includes it (or whose `scope` contains
-// the council scope).
-// Accepted resource identifiers (RFC 8707). The production Cloudflare worker
-// uses mcp.chiefofbusiness.ai; the interim Supabase-only gateway uses the
-// mcp-gateway function URL on this same project. Either is acceptable so the
-// SPINNEY test can register the gateway directly without DNS.
+// ── RESOURCE BINDING · NOT ENFORCED · read this before trusting it ─────────
+// State of play, stated accurately so nobody reads a control into this file
+// that does not exist:
+//
+//   VERIFIED on every request:  signature (JWKS, ES256/RS256), `exp`, `nbf`
+//                               when present, `iss` (exact, required),
+//                               non-empty `sub`.
+//   NOT VERIFIED:               `aud`, `scope`, RFC 8707 `resource`, and the
+//                               calling `client_id`.
+//
+// The consequence, said plainly: any token the Authorization Server project
+// mints, for any purpose, is accepted here. There is no binding between a
+// token and this resource. That is the confused-deputy exposure RFC 8707
+// resource indicators exist to close.
+//
+// The two lists below are the identifiers we WOULD bind to. They are retained
+// deliberately, and are referenced only by `recordClaimShape` below, which
+// records what claims live tokens actually carry so the gate can be written
+// against evidence rather than against a guess. Nothing here gates a request.
 const RESOURCE_IDS = [
   "https://mcp.chiefofbusiness.ai/",
   "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway",
   "https://vacpgxxgdfhgvkduljgs.supabase.co/functions/v1/mcp-gateway/",
 ];
 const COUNCIL_SCOPE = "mcp:council";
+
+// ── Rejection record ───────────────────────────────────────────────────────
+// Every rejection below returns the same generic `invalid_token` to the
+// caller · an attacker must never learn which check failed. The distinct
+// reason goes to our record only.
+export type AuthRejectReason =
+  | "malformed"
+  | "alg_unsupported"
+  | "jwks_unavailable"
+  | "no_matching_key"
+  | "sig_invalid"
+  | "exp_missing"
+  | "exp_past"
+  | "nbf_future"
+  | "iss_missing"
+  | "iss_mismatch"
+  | "sub_missing"
+  | "resource_mismatch";
+
+// Fleet-level home for auth rejections · there is, by definition, no tenant
+// on a rejected token. CID-100001 is the operator tenant.
+const AUTH_SIGNAL_CID = Deno.env.get("AUTH_SIGNAL_CID") ?? "CID-100001";
+
+async function signalAuthRejected(reason: AuthRejectReason, detail: string): Promise<void> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+    await fetch(`${url}/rest/v1/rpc/cob_signal_raise`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        p_cid: AUTH_SIGNAL_CID,
+        p_key: "auth-rejected",
+        p_detail: `reason=${reason} · ${detail}`,
+        p_tool: "mcp-council",
+        p_surface: "connector:auth",
+        p_subject: reason,
+        p_link: { reason },
+      }),
+    });
+  } catch { /* the record of a failure must never become a failure */ }
+}
+
+/** Reject with a named internal reason; the caller still sees `invalid_token`. */
+function reject(reason: AuthRejectReason, detail = ""): never {
+  void signalAuthRejected(reason, detail);
+  throw new Error("invalid_token");
+}
+
+// EVIDENCE GATHERING · records the claim KEY NAMES a live token carries (never
+// values), once per issuer/client shape, so the resource gate above can be
+// written against what the AS actually mints. Fire-and-forget.
+const seenShapes = new Set<string>();
+async function recordClaimShape(payload: Record<string, unknown>): Promise<void> {
+  try {
+    const clientId = typeof payload.client_id === "string" ? payload.client_id : "(none)";
+    const iss = typeof payload.iss === "string" ? payload.iss : "(none)";
+    const shape = `${iss}|${clientId}|${Object.keys(payload).sort().join(",")}`;
+    if (seenShapes.has(shape)) return;
+    seenShapes.add(shape);
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+    const appMeta = (payload.app_metadata && typeof payload.app_metadata === "object")
+      ? payload.app_metadata as Record<string, unknown>
+      : {};
+    await fetch(`${url}/rest/v1/connector_events`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        cid: AUTH_SIGNAL_CID,
+        event: "auth_claim_shape",
+        surface: "connector:auth",
+        client_id: typeof payload.client_id === "string" ? payload.client_id : null,
+        detail: {
+          iss,
+          claim_keys: Object.keys(payload).sort(),
+          app_metadata_keys: Object.keys(appMeta).sort(),
+          // The three places an RFC 8707 resource could surface. Values, not
+          // just presence · this is the question the gate is waiting on.
+          aud: (payload as any).aud ?? null,
+          resource: (payload as any).resource ?? null,
+          app_metadata_resource: (appMeta as any).resource ?? null,
+          scope: typeof payload.scope === "string" ? payload.scope : null,
+          candidate_resource_ids: RESOURCE_IDS,
+          candidate_scope: COUNCIL_SCOPE,
+        },
+      }),
+    });
+  } catch { /* evidence gathering never breaks a request */ }
+}
 
 // ── JWKS cache (60-min TTL) ────────────────────────────────────────────────
 type Jwk = JsonWebKey & { kid?: string; alg?: string; kty: string };
@@ -88,7 +200,7 @@ export type ResolvedIdentity = {
 
 export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity> {
   const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("invalid_token");
+  if (parts.length !== 3) reject("malformed", "not three segments");
   const [h, p, s] = parts;
 
   let header: any, payload: any;
@@ -96,18 +208,23 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
     header = decodeJson(h);
     payload = decodeJson(p);
   } catch {
-    throw new Error("invalid_token");
+    reject("malformed", "header or payload not decodable json");
   }
 
   const alg: string = typeof header?.alg === "string" ? header.alg : "";
   const kid: string | undefined = typeof header?.kid === "string" ? header.kid : undefined;
   const importParams = algToImport(alg);
-  if (!importParams) throw new Error("invalid_token");
+  if (!importParams) reject("alg_unsupported", `alg=${alg || "(absent)"}`);
 
   // Signature verification
-  const keys = await fetchJwks();
+  let keys: Jwk[];
+  try {
+    keys = await fetchJwks();
+  } catch (e) {
+    reject("jwks_unavailable", e instanceof Error ? e.message : String(e));
+  }
   const candidates = keys.filter((k) => (!kid || k.kid === kid) && (!k.alg || k.alg === alg));
-  if (candidates.length === 0) throw new Error("invalid_token");
+  if (candidates.length === 0) reject("no_matching_key", `kid=${kid ?? "(absent)"} alg=${alg}`);
 
   const signingInput = new TextEncoder().encode(`${h}.${p}`);
   const sig = b64urlToBytes(s);
@@ -131,21 +248,39 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
       // try next key
     }
   }
-  if (!verified) throw new Error("invalid_token");
+  if (!verified) reject("sig_invalid", `kid=${kid ?? "(absent)"}`);
 
-  // Claim checks
+  // ── Claim checks ─────────────────────────────────────────────────────────
+  // House rule, learned the hard way: a check that only runs when the claim is
+  // present is not a check. An omitted claim must fail, not pass.
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload?.exp === "number" && payload.exp < now - 30) throw new Error("invalid_token");
-  if (typeof payload?.nbf === "number" && payload.nbf > now + 30) throw new Error("invalid_token");
-  if (ISSUER && typeof payload?.iss === "string" && payload.iss !== ISSUER) {
-    throw new Error("invalid_token");
+
+  // `exp` is REQUIRED. Absent, non-numeric, or past · all rejected. A token
+  // with no expiry would otherwise be valid forever.
+  if (typeof payload?.exp !== "number" || !Number.isFinite(payload.exp)) {
+    reject("exp_missing", "no numeric exp claim");
+  }
+  if (payload.exp < now - 30) reject("exp_past", `exp=${payload.exp} now=${now}`);
+
+  // `nbf` may legitimately be absent; when present it must not be in the future.
+  if (typeof payload?.nbf === "number" && payload.nbf > now + 30) {
+    reject("nbf_future", `nbf=${payload.nbf} now=${now}`);
   }
 
-  // NOTE: audience/scope gating intentionally removed. The Supabase AS does
-  // not let us mint a custom `aud` or custom `mcp:council` scope without
-  // breaking the /authorize step. Trust the issuer + signature + tenant
-  // claim. Resource isolation is enforced server-side via app_metadata.tenant.
+  // `iss` is REQUIRED and exact. Defence in depth behind the JWKS check ·
+  // but an optional identity check is not a check.
+  if (typeof payload?.iss !== "string" || !payload.iss) reject("iss_missing", "no iss claim");
+  if (payload.iss !== ISSUER) reject("iss_mismatch", `iss=${payload.iss}`);
+
+  // A token with no subject has no principal behind it.
+  const sub = typeof payload?.sub === "string" ? payload.sub.trim() : "";
+  if (!sub) reject("sub_missing", "empty or absent sub");
+
+  // RESOURCE BINDING · see the block at the top of this file. Not enforced;
+  // this call records what the AS actually mints so it can be.
+  void recordClaimShape(payload as Record<string, unknown>);
   const scopeStr = typeof payload?.scope === "string" ? payload.scope : "";
+
 
 
   // Tenant resolution · server-side only, never from caller input.
@@ -158,9 +293,8 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
   // tenant from the verified identity (email / provider subject) and falls back
   // to this claim only when identity-keyed resolution finds nothing.
 
-  const sub = typeof payload?.sub === "string" ? payload.sub : "";
   const clientId = typeof payload?.client_id === "string" ? payload.client_id : null;
-  const iss = typeof payload?.iss === "string" ? payload.iss : null;
+  const iss = payload.iss as string;
   const rawTenantClaim = typeof appMeta.tenant === "string" ? appMeta.tenant : null;
   const email = typeof payload?.email === "string" ? payload.email : null;
   const emailVerified = payload?.email_verified === true ||
