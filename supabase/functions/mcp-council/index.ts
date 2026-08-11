@@ -7170,6 +7170,12 @@ Deno.serve(async (req) => {
                 ? "partial"
                 : (endReasons.length ? "degraded" : res.outcome);
             const duration_ms = Date.now() - startedAt;
+            await closeSaveAttempt(
+              endAttemptId,
+              endOutcome === "ok" ? "COMPLETED" : "PARTIAL",
+              { layers: res.layers, outcome: endOutcome, reasons: endReasons, transcript_present: transcriptPresent },
+              endReasons.length ? endReasons.join(", ") : null,
+            );
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 cid: pctx.legacy_cid,
