@@ -5265,9 +5265,55 @@ Deno.serve(async (req) => {
             }
           } catch (_e) { /* attestation is additive, never fails a boot */ }
 
+          // ── HARDEN-02 · H7 · SURFACE MANIFEST CHANGES ───────────────────
+          // A tenant should never learn their capabilities changed by trying
+          // a tool and failing. The gateway records the tool set behind every
+          // version it serves, and names the difference on the first boot
+          // after a change.
+          const currentTools = TOOLS.map((t) => t.name).sort();
+          let manifestDelta: Record<string, unknown> | null = null;
+          try {
+            await supabaseAdmin
+              .from("tool_manifest_registry")
+              .upsert(
+                { version: TOOL_MANIFEST_VERSION, tools: currentTools },
+                { onConflict: "version", ignoreDuplicates: true },
+              );
+            if (priorManifestVersion && priorManifestVersion !== TOOL_MANIFEST_VERSION) {
+              const { data: priorReg } = await supabaseAdmin
+                .from("tool_manifest_registry")
+                .select("tools")
+                .eq("version", priorManifestVersion)
+                .maybeSingle();
+              const { data: currReg } = await supabaseAdmin
+                .from("tool_manifest_registry")
+                .select("renames")
+                .eq("version", TOOL_MANIFEST_VERSION)
+                .maybeSingle();
+              const priorTools: string[] = Array.isArray(priorReg?.tools) ? priorReg.tools : [];
+              const renames = (currReg?.renames ?? {}) as Record<string, string>;
+              const renamedFrom = new Set(Object.keys(renames));
+              const renamedTo = new Set(Object.values(renames));
+              const added = currentTools.filter((t) => !priorTools.includes(t) && !renamedTo.has(t));
+              const removed = priorTools.filter((t) => !currentTools.includes(t) && !renamedFrom.has(t));
+              manifestDelta = {
+                from: priorManifestVersion,
+                to: TOOL_MANIFEST_VERSION,
+                added,
+                removed,
+                renamed: Object.entries(renames).map(([from, to]) => ({ from, to })),
+                known_prior_tool_set: priorTools.length > 0,
+                note: priorTools.length === 0
+                  ? "Your tool set changed, but the previous version was never recorded, so the exact difference cannot be named."
+                  : "Your tool set changed since you last connected. These are the differences.",
+              };
+            }
+          } catch (_e) { /* the delta is additive · a boot never fails on it */ }
+
           const out = {
             session_id: sessionId,
             tenant,
+            ...(manifestDelta ? { manifest_delta: manifestDelta } : {}),
             kernel: kernelBlock,
             kernel_bytes_delivered: kernelBytesDelivered,
             kernel_verification: kernelVerification,
