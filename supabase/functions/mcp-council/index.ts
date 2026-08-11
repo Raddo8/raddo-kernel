@@ -2180,7 +2180,7 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.4";
+const TOOL_MANIFEST_VERSION = "2026.08.12.5";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3425,10 +3425,75 @@ function rpcError(id: any, code: number, message: string, status = 200): Respons
   );
 }
 
+// ── HARDEN-04 · T1 · BOUNDARY RENDERING ───────────────────────────────
+// Storage stays UTC and must not change. Presentation does not: every
+// timestamp handed to a COBCLIENT is returned twice · the instant, and a
+// pre-rendered local string in that tenant's own zone carrying the zone
+// abbreviation. Conversion never leaves this boundary, because a model
+// handed a bare UTC string will eventually present it as local.
+let ACTIVE_TZ = "America/Chicago";
+
+const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|\+00:?00)$/;
+
+function renderInZone(iso: string, tz: string): string | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    const f = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+    }).formatToParts(d);
+    const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+    return `${g("year")}-${g("month")}-${g("day")} ${g("hour")}:${g("minute")} ${g("timeZoneName")}`;
+  } catch {
+    return null;
+  }
+}
+
+function stampLocalTimes(v: any, tz: string, depth = 0): any {
+  if (depth > 8 || v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map((x) => stampLocalTimes(x, tz, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    out[k] = stampLocalTimes(val, tz, depth + 1);
+    if (typeof val === "string" && ISO_UTC_RE.test(val) && !k.endsWith("_local")) {
+      const local = renderInZone(val, tz);
+      if (local) out[`${k}_local`] = local;
+    }
+  }
+  return out;
+}
+
 function rpcResult(id: any, result: any): Response {
   // Envelope must contain ONLY jsonrpc/id/result · SDK schema rejects extra keys.
+  let payload = result;
+  try {
+    if (result && typeof result === "object" && result.structuredContent &&
+        typeof result.structuredContent === "object") {
+      const sc = {
+        ...stampLocalTimes(result.structuredContent, ACTIVE_TZ),
+        rendered_timezone: ACTIVE_TZ,
+      };
+      // The text block is re-serialized only when it is the JSON mirror of
+      // the structured block. Prose answers are never rewritten.
+      let content = result.content;
+      const one = Array.isArray(content) && content.length === 1 ? content[0] : null;
+      if (one && one.type === "text" && typeof one.text === "string") {
+        let mirrors = false;
+        try {
+          const parsed = JSON.parse(one.text);
+          mirrors = parsed && typeof parsed === "object";
+        } catch { mirrors = false; }
+        if (mirrors) content = [{ type: "text", text: JSON.stringify(sc) }];
+      }
+      payload = { ...result, structuredContent: sc, ...(content ? { content } : {}) };
+    }
+  } catch {
+    payload = result;
+  }
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result }),
+    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result: payload }),
     {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
@@ -3762,6 +3827,27 @@ Deno.serve(async (req) => {
     args: unknown,
   ): Promise<{ session_id: string | null; session_source: string }> => {
     const sid = (args as any)?.session_id;
+    if (!supabaseAdmin) return { session_id: null, session_source: "none:no_admin_client" };
+    // T2 · the live session context is the first authority on which session
+    // a call belongs to. It is written when a session opens and revoked when
+    // it closes, so it is true for calls that carry no session_id argument.
+    if (!(typeof sid === "string" && UUID_RE.test(sid))) {
+      try {
+        const { data: ctx } = await supabaseAdmin
+          .from("tenant_session_context")
+          .select("session_id, expires_at")
+          .eq("cid", cid)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString())
+          .order("established_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const ctxSid = typeof ctx?.session_id === "string" ? ctx.session_id : null;
+        if (ctxSid && UUID_RE.test(ctxSid)) {
+          return { session_id: ctxSid, session_source: "session_context" };
+        }
+      } catch { /* fall through to the open-session lookup */ }
+    }
     if (typeof sid === "string" && UUID_RE.test(sid)) {
       return { session_id: sid, session_source: "arg" };
     }
@@ -3989,15 +4075,36 @@ Deno.serve(async (req) => {
 
 
 
-  // ── ITEM 5 · SESSION CLOCK ────────────────────────────────────────────
-  // Storage stays UTC. Presentation and day-boundary reasoning are
-  // America/Chicago: a brief delivered at 22:51 Central is not "morning".
-  const SESSION_TZ = "America/Chicago";
-  const localParts = (d = new Date()) => {
+  // ── ITEM 5 · SESSION CLOCK · T1 · per tenant ──────────────────────────
+  // Storage stays UTC. Presentation and day-boundary reasoning happen in
+  // THIS tenant's zone, read from tenants.timezone. The old constant was
+  // America/Chicago for everyone, which was right for one principal by
+  // accident and wrong for every client outside that zone.
+  let _tz: string | null = null;
+  const tenantTz = async (): Promise<string> => {
+    if (_tz) return _tz;
+    try {
+      const cid = await serverCid();
+      if (cid && supabaseAdmin) {
+        const { data } = await supabaseAdmin
+          .from("tenants").select("timezone").eq("cid", cid).maybeSingle();
+        const tz = typeof data?.timezone === "string" ? data.timezone.trim() : "";
+        if (tz) {
+          _tz = tz;
+          ACTIVE_TZ = tz;
+          return _tz;
+        }
+      }
+    } catch { /* fall through to the fleet default */ }
+    _tz = "America/Chicago";
+    ACTIVE_TZ = _tz;
+    return _tz;
+  };
+  const localParts = (tz: string, d = new Date()) => {
     const f = new Intl.DateTimeFormat("en-US", {
-      timeZone: SESSION_TZ, hour12: false,
+      timeZone: tz, hour12: false,
       year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", weekday: "long",
+      hour: "2-digit", minute: "2-digit", weekday: "long", timeZoneName: "short",
     }).formatToParts(d);
     const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
     return {
@@ -4005,21 +4112,25 @@ Deno.serve(async (req) => {
       time: `${g("hour")}:${g("minute")}`,
       hour: Number(g("hour")),
       weekday: g("weekday"),
+      abbrev: g("timeZoneName"),
     };
   };
   const partOfDay = (h: number) =>
     h < 5 ? "night" : h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
-  const sessionClock = () => {
-    const p = localParts();
+  const sessionClock = async () => {
+    const tz = await tenantTz();
+    const p = localParts(tz);
     return {
-      timezone: SESSION_TZ,
+      timezone: tz,
       local_date: p.date,
       local_time: p.time,
       local_weekday: p.weekday,
+      local_now: `${p.date} ${p.time} ${p.abbrev}`,
+      zone_abbrev: p.abbrev,
       part_of_day: partOfDay(p.hour),
       greeting: `Good ${partOfDay(p.hour) === "night" ? "evening" : partOfDay(p.hour)}`,
       utc: new Date().toISOString(),
-      note: `Reason about time of day and day boundaries in ${SESSION_TZ}, not UTC.`,
+      note: `This principal's zone is ${tz}. Every timestamp you receive carries a matching _local field already rendered in it. Never convert a UTC string yourself.`,
     };
   };
 
@@ -4276,6 +4387,10 @@ Deno.serve(async (req) => {
       const pctx = await logIdentityOnce(
         typeof name === "string" && name ? `tool:${name}` : "tool",
       );
+
+      // T1 · prime this tenant's zone before any result is rendered, so the
+      // boundary renderer stamps local strings in the caller's own zone.
+      await tenantTz();
 
       // ITEM 3 · every tool leaves an identity trace, kernel path or not.
       void recordMcpUsage(supabaseAdmin, {
@@ -4989,6 +5104,28 @@ Deno.serve(async (req) => {
           }
           const sessionId = newSession.id as string;
 
+          // T2 · the session context substrate. resolve_tenant_context reads
+          // tenant_session_context whenever a session id is supplied; with the
+          // table empty that branch always returned CONTEXT_INVALID, which is
+          // why session_event.session_id was null on most rows. The row is
+          // written here, at the one moment a session opens.
+          let sessionContext: Record<string, unknown> | null = null;
+          try {
+            const { data: ctxRow, error: ctxErr } = await supabaseAdmin.rpc(
+              "open_session_context",
+              { p_session_id: sessionId, p_cid: beginCid ?? pctx.legacy_cid, p_source: "connector" },
+            );
+            if (ctxErr) {
+              outcome = outcome === "ok" ? "partial" : outcome;
+              degradedReasons.push(`session_context_not_written:${ctxErr.code ?? "unknown"}`);
+            } else {
+              sessionContext = (ctxRow ?? null) as Record<string, unknown> | null;
+            }
+          } catch (e) {
+            outcome = outcome === "ok" ? "partial" : outcome;
+            degradedReasons.push("session_context_exception");
+          }
+
           // 4 (cont). ITEM 1 · LOAD AND VERIFY. The manifest alone proves
           // nothing: begin_session now serves every part through the same
           // read path as load_kernel_part, hashes what it received, and
@@ -5370,7 +5507,7 @@ Deno.serve(async (req) => {
             kernel_verification: kernelVerification,
             state_pointer: statePointer,
             ...(bootAttestation ? { boot_attestation: bootAttestation } : {}),
-            clock: sessionClock(),
+            clock: await sessionClock(),
             directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             awaiting_confirmation: (queuedDirectives ?? []).map((d: any) => ({
@@ -5680,9 +5817,13 @@ Deno.serve(async (req) => {
             });
           }
           if (writeScope === "FLEET") {
+            // T6 · the connector reaches the database as service_role with no
+            // auth.uid(), so is_fleet_operator() can never be true on this
+            // path. Authority is resolved from the tenant instead: does this
+            // client's membership include an active fleet operator.
             let operator = false;
             try {
-              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator");
+              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator_cid", { p_cid: worldCid });
               operator = op === true;
             } catch { operator = false; }
             if (!operator) {
@@ -5706,8 +5847,12 @@ Deno.serve(async (req) => {
                 isError: true,
               });
             }
-            rpcName = "propose_doctrine_rule";
+            // The governed writer. It checks the operator claim again itself,
+            // writes the DRAFT rule with cid NULL and its matching amendment
+            // row in one transaction, and can never bypass doctrine_amendments.
+            rpcName = "propose_doctrine_rule_as_cid";
             params = {
+              p_cid: worldCid,
               p_rule_key: str(args?.title) ?? str(args?.id) ?? "unkeyed",
               p_rule_text: typeof args?.text === "string" ? args.text : "",
               p_reason: str(args?.reason),
@@ -6633,6 +6778,11 @@ Deno.serve(async (req) => {
               .select("id, closed_at, close_kind");
             const closedRow = (closedRows ?? [])[0] as any;
             const close_confirmed = Boolean(!closeErr && closedRow?.closed_at);
+            // T2 · the context row is revoked when the session closes, so a
+            // stale session id can never resolve authority after the close.
+            try {
+              await supabaseAdmin.rpc("close_session_context", { p_session_id: session_id });
+            } catch { /* best-effort · the close itself is the record */ }
             if (!close_confirmed) {
               closeConfirm.close_error = closeErr?.message ?? "no_matching_row_in_tenant";
               endReasons.push("session_close_not_confirmed");
