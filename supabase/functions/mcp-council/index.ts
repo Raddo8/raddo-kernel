@@ -26,7 +26,7 @@
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
-import { newRequestContext } from "./request-context.ts";
+import { newRequestContext, elapsedMs } from "./request-context.ts";
 import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
@@ -6423,6 +6423,33 @@ Deno.serve(async (req) => {
             const endCid = await serverCid();
             if (!endCid) endReasons.push("cid_unresolved");
             const res = await runSaveLeg(args ?? {}, "end");
+
+            // ── HARDEN-02 · H3 · TRANSCRIPT AT CLOSE ──────────────────────
+            // A clean close asserts the session is on the record. Without a
+            // transcript row for this session there is no record, so the close
+            // still happens but it is never reported clean.
+            let transcriptPresent = false;
+            let transcriptChars = 0;
+            try {
+              const { data: trRows } = await supabaseAdmin
+                .from("session_transcript")
+                .select("transcript_id, chars, fidelity")
+                .eq("session_id", session_id)
+                .eq("cid", endCid ?? "")
+                .limit(50);
+              transcriptPresent = (trRows ?? []).length > 0;
+              transcriptChars = (trRows ?? []).reduce(
+                (n: number, r: any) => n + Number(r?.chars ?? 0), 0,
+              );
+            } catch { transcriptPresent = false; }
+            if (!transcriptPresent) {
+              endReasons.push("transcript_missing");
+              void raiseSignal(
+                "session-closed-without-transcript",
+                `session=${session_id} closed with no transcript row`,
+                { session_id, surface: "connector", subject: "end_session" },
+              );
+            }
 
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
             // Every update is read back: a miss must be reported, never silently
