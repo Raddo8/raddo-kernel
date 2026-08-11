@@ -2954,6 +2954,35 @@ const TOOL_BLUEPRINT_WRITE = {
   },
 };
 
+const TOOL_RULE_WRITE = {
+  name: "rule_write",
+  title: "Rule Write",
+  description:
+    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes.",
+  annotations: { title: "Rule Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["state", "propose", "confirm", "amend", "retire", "restore", "rank"],
+        description: "Default `state`. `state` governs at once; `propose` waits for the principal.",
+      },
+      id: { type: "string", description: "Existing rule id. Required for confirm, amend, retire, restore, rank." },
+      text: { type: "string", description: "The rule itself, in the principal's own words where possible." },
+      title: { type: "string" },
+      scope: { type: "string", enum: ["LOCKED", "SITUATIONAL"] },
+      rank: { type: "number" },
+      reason: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+
+
 const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
