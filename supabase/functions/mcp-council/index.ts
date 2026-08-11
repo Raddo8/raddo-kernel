@@ -5620,11 +5620,42 @@ Deno.serve(async (req) => {
           }
 
           // 2. Upsert open_loops by (tenant, title). Loop state normalised by DB trigger.
+          // E2 · snooze_until and brief_status are accepted here. cid,
+          // surfaced_count, last_surfaced, id and the timestamps stay
+          // server-owned and are never read off the caller's payload.
+          const BRIEF_STATUSES = new Set(["open", "answered", "snoozed", "cleared"]);
+          const loopExtras = (ol: any): { snooze_until?: string; brief_status?: string } => {
+            const out: { snooze_until?: string; brief_status?: string } = {};
+            const bs = typeof ol?.brief_status === "string" ? ol.brief_status.trim().toLowerCase() : "";
+            if (bs) {
+              if (!BRIEF_STATUSES.has(bs)) {
+                throw new Error(`BRIEF_STATUS_UNKNOWN: "${bs}" (open|answered|snoozed|cleared)`);
+              }
+              out.brief_status = bs;
+            }
+            const su = typeof ol?.snooze_until === "string" ? ol.snooze_until.trim() : "";
+            if (su) {
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(su)) {
+                throw new Error(`SNOOZE_DATE_MALFORMED: "${su}" · use YYYY-MM-DD`);
+              }
+              const today = new Date().toISOString().slice(0, 10);
+              if (su < today) {
+                throw new Error(`SNOOZE_DATE_PAST: ${su} is before ${today}`);
+              }
+              out.snooze_until = su;
+            }
+            // A snooze with no date is a wish, not an instruction.
+            if (out.brief_status === "snoozed" && !out.snooze_until) {
+              throw new Error("SNOOZE_DATE_REQUIRED: say when it should come back; a snooze without a date is not stored");
+            }
+            return out;
+          };
           if (want("open_loops")) {
             let olVerified = openLoops.length > 0;
             for (const ol of openLoops) {
               L.open_loops.attempted += 1;
               try {
+                const extras = loopExtras(ol);
                 const { data: existing } = await supabaseAdmin
                   .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
                 let rowId: string;
@@ -5633,6 +5664,7 @@ Deno.serve(async (req) => {
                     trigger: ol.trigger ?? null,
                     owner: ol.owner ?? null,
                     state: ol.state ?? null,
+                    ...extras,
                     updated_at: new Date().toISOString(),
                   }).eq("id", existing.id).eq("tenant", tenant);
                   if (error) throw new Error(error.message);
@@ -5647,6 +5679,7 @@ Deno.serve(async (req) => {
                     trigger: ol.trigger ?? null,
                     owner: ol.owner ?? null,
                     state: ol.state ?? null,
+                    ...extras,
                   }).select("id").single();
                   if (error || !ins) throw new Error(error?.message ?? "unknown");
                   rowId = ins.id;
