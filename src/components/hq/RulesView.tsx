@@ -1,14 +1,16 @@
 /** RULES · the second view on /hq/memories.
  *
  * Titles and state only. One line per rule, all detail in the shared drawer.
- * The client never writes to the rules themselves: every action files a
- * request through requestAction, which records the ask and nothing more.
+ * Confirming, ranking, retiring and restoring are the client's own authority
+ * and run through hq_act on the press. Rewording a rule and sorting out an
+ * overlap need judgment, so those still go to the COB through requestAction.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { InspectorDrawer, InspectorField } from "@/components/hq/InspectorDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { requestAction } from "@/lib/hq-request-action";
+import { hqAct } from "@/lib/hq-act";
 import "@/hq-next/styles/hq-live.css";
 import "@/hq-next/styles/hq-rules.css";
 
@@ -103,6 +105,9 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
   const [sel, setSel] = useState<Selection>(null);
   const [said, setSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [nonce, setNonce] = useState(0);
+  /** Ranking asks for a number before it runs; nothing else on this view does. */
+  const [rankAsk, setRankAsk] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -119,7 +124,7 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
     return () => {
       live = false;
     };
-  }, []);
+  }, [nonce]);
 
   const mine = useMemo(() => data?.mine ?? [], [data]);
   const canon = useMemo(() => data?.canon ?? [], [data]);
@@ -170,6 +175,22 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
     },
     [],
   );
+
+  /** Confirm, retire, restore and rank are the client's own authority: they
+   *  take effect on the press. Rewording and sorting out an overlap need
+   *  judgment, so those still go to the COB as a request. */
+  const act = useCallback(
+    async (action: string, id: string, params: Record<string, unknown> = {}) => {
+      setBusy(true);
+      const res = await hqAct(action, id, params);
+      setBusy(false);
+      setRankAsk(null);
+      setSaid(res.human);
+      if (res.ok) setNonce((n) => n + 1);
+    },
+    [],
+  );
+
 
   if (failed || (data && data.ok === false)) return <>{unauthenticated}</>;
   if (!data) return <p className="plain">Opening your rules.</p>;
@@ -356,16 +377,45 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
               </>
             )}
 
-            {said === null ? (
+            {said === null && rankAsk !== null ? (
               <div className="rax">
+                <input
+                  autoFocus
+                  value={rankAsk}
+                  inputMode="numeric"
+                  placeholder="1 is the highest"
+                  aria-label="Rank"
+                  onChange={(e) => setRankAsk(e.target.value)}
+                />
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    void file("rule.confirm", { directive_id: sel.row.id }, `Confirm: ${sel.row.title}`)
-                  }
+                  disabled={busy || !rankAsk.trim() || Number.isNaN(Number(rankAsk))}
+                  onClick={() => void act("rule.rank", sel.row.id, { rank: Number(rankAsk) })}
                 >
-                  Confirm into force
+                  Set the rank
+                </button>
+                <button type="button" className="ghost" onClick={() => setRankAsk(null)}>
+                  Never mind
+                </button>
+              </div>
+            ) : said === null ? (
+              <div className="rax">
+                {sel.row.status !== "active" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void act("rule.confirm", sel.row.id)}
+                  >
+                    Confirm into force
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="ghost"
+                  disabled={busy}
+                  onClick={() => setRankAsk(String(sel.row.rank ?? ""))}
+                >
+                  Set the rank
                 </button>
                 <button
                   type="button"
@@ -377,16 +427,25 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
                 >
                   Reword this rule
                 </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    void file("rule.retire", { directive_id: sel.row.id }, `Retire: ${sel.row.title}`)
-                  }
-                >
-                  Retire this rule
-                </button>
+                {sel.row.status === "retired" ? (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => void act("rule.restore", sel.row.id)}
+                  >
+                    Bring it back
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => void act("rule.retire", sel.row.id)}
+                  >
+                    Retire this rule
+                  </button>
+                )}
               </div>
             ) : (
               <p className="rsaid">{said}</p>

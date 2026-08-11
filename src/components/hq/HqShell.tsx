@@ -32,12 +32,17 @@ interface NavItem {
  *  Items carrying a page_key only appear when the server entitles them. */
 const NAV: (NavItem & { pageKey?: string })[] = [
   { n: "01", label: "Overview", to: "/hq" },
-  { n: "02", label: "Your World", to: "/hq/world" },
-  { n: "03", label: "Your World \u00b7 records", to: "/hq/world/registers" },
-  { n: "04", label: "Memories", to: "/hq/memories" },
-  { n: "05", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
-  { n: "06", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
-  { n: "07", label: "The Boardroom", to: "/hq/boardroom", pageKey: "boardroom" },
+  { n: "02", label: "Tasks", to: "/hq/tasks" },
+  { n: "03", label: "Messages", to: "/hq/messages" },
+  { n: "04", label: "Decisions", to: "/hq/decisions" },
+  { n: "05", label: "Signals", to: "/hq/signals" },
+  { n: "06", label: "Sessions", to: "/hq/sessions" },
+  { n: "07", label: "Your World", to: "/hq/world" },
+  { n: "08", label: "Your World \u00b7 records", to: "/hq/world/registers" },
+  { n: "09", label: "Memories", to: "/hq/memories" },
+  { n: "10", label: "BOB \u00b7 Blueprints", to: "/hq/blueprints" },
+  { n: "11", label: "AID \u00b7 Agents", to: "/hq/agents", disabled: true },
+  { n: "12", label: "The Boardroom", to: "/hq/boardroom", pageKey: "boardroom" },
 ];
 
 /** Control group · only ever rendered for a server-confirmed fleet operator. */
@@ -70,6 +75,11 @@ function labelForPath(pathname: string): string {
   if (pathname.startsWith("/hq/world/brief")) return "Your World \u00b7 a subject brief";
   if (pathname.startsWith("/hq/world/registers")) return "Your World \u00b7 records";
   if (pathname.startsWith("/hq/world")) return "Your World";
+  if (pathname.startsWith("/hq/tasks")) return "Tasks";
+  if (pathname.startsWith("/hq/messages")) return "Messages";
+  if (pathname.startsWith("/hq/decisions")) return "Decisions";
+  if (pathname.startsWith("/hq/signals")) return "Signals";
+  if (pathname.startsWith("/hq/sessions")) return "Sessions";
   if (pathname.startsWith("/hq/memories")) return "Memories";
   if (pathname.startsWith("/hq/blueprints")) return "BOB \u00b7 Blueprints";
   if (pathname.startsWith("/hq/boardroom")) return "The Boardroom";

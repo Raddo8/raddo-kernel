@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.10.4";
+const TOOL_MANIFEST_VERSION = "2026.08.11.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3019,7 +3019,75 @@ const TOOL_FETCH = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+// ── CLIENT WORLD v1 · what the client asked for, and what was written back ──
+// Every register the client can see now has a page in their HQ. These three
+// tools are the COBCLIENT's side of those pages: read what is waiting, answer
+// it, and record a message truthfully.
+const TOOL_REQUEST_READ = {
+  name: "request_read",
+  title: "Read requests",
+  description:
+    "See what this client has asked for from their HQ and not yet had answered. Read this before you decide what to work on.",
+  annotations: { title: "Read requests", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: { ...MANIFEST_PROP },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_REQUEST_RESOLVE = {
+  name: "request_resolve",
+  title: "Answer a request",
+  description:
+    "Answer something the client asked for from their HQ. state is one of acknowledged, in_progress, fulfilled, declined. Declining requires a reason, and the client reads it.",
+  annotations: { title: "Answer a request", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      request_id: { type: "string", description: "The id of the request being answered." },
+      state: {
+        type: "string",
+        enum: ["acknowledged", "in_progress", "fulfilled", "declined"],
+        description: "Where the request now stands.",
+      },
+      note: { type: "string", description: "A sentence for the client. Required when declining." },
+      ...MANIFEST_PROP,
+    },
+    required: ["request_id", "state"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_COMM_WRITE = {
+  name: "comm_write",
+  title: "Write a message",
+  description:
+    "Draft a message for your principal, then record what actually happened to it. action is one of draft, mark_sent, mark_failed, archive. mark_sent is refused unless you pass external_id, the id the provider handed back: you cannot record a send you cannot point at. A draft stays drafted until something proves otherwise, and the client sees it on their Messages page either way.",
+  annotations: { title: "Write a message", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["draft", "mark_sent", "mark_failed", "archive"],
+        description: "What you are recording. Defaults to draft.",
+      },
+      id: { type: "string", description: "The comm id, when you are updating one." },
+      channel: { type: "string", description: "email, chat, or whatever carried it." },
+      to: { type: "string", description: "Who it goes to." },
+      subject: { type: "string", description: "The subject line." },
+      body_md: { type: "string", description: "The message itself, in markdown." },
+      external_id: { type: "string", description: "The id the provider handed back. Required for mark_sent." },
+      external_url: { type: "string", description: "Where the message can be opened." },
+      reason: { type: "string", description: "Why it failed, or why it was archived." },
+      ...MANIFEST_PROP,
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4943,7 +5011,8 @@ Deno.serve(async (req) => {
         name === "world_read" || name === "registers_read" ||
         name === "memory_write" || name === "narrative_write" ||
         name === "blueprint_write" || name === "rule_write" ||
-        name === "search" || name === "fetch"
+        name === "search" || name === "fetch" ||
+        name === "request_read" || name === "request_resolve" || name === "comm_write"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -4971,6 +5040,34 @@ Deno.serve(async (req) => {
         } else if (name === "fetch") {
           rpcName = "cob_fetch";
           params = { p_cid: worldCid, p_id: str(args?.id) };
+        } else if (name === "request_read") {
+          // What the client has asked for from their HQ and not had answered.
+          rpcName = "hq_open_requests";
+          params = { p_cid: worldCid };
+        } else if (name === "request_resolve") {
+          rpcName = "cob_request_resolve";
+          params = {
+            p_cid: worldCid,
+            p_request_id: str(args?.request_id),
+            p_state: str(args?.state),
+            p_note: typeof args?.note === "string" ? args.note : null,
+          };
+        } else if (name === "comm_write") {
+          // mark_sent is refused by the function unless external_id is present.
+          // That refusal is the point: a send is not recorded on a bare id.
+          rpcName = "cob_comm_write";
+          params = {
+            p_cid: worldCid,
+            p_channel: str(args?.channel),
+            p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
+            p_to: str(args?.to),
+            p_subject: str(args?.subject),
+            p_id: str(args?.id),
+            p_action: str(args?.action) ?? "draft",
+            p_external_id: str(args?.external_id),
+            p_external_url: str(args?.external_url),
+            p_reason: typeof args?.reason === "string" ? args.reason : null,
+          };
         } else if (name === "world_read") {
           rpcName = "cob_world_read";
           params = { p_cid: worldCid, p_q: str(args?.q), p_limit: num(args?.limit, 40) };

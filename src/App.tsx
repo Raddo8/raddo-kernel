@@ -59,6 +59,11 @@ import EntityBrief from "@/pages/EntityBrief";
 import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
 import HqBoardroom from "@/pages/HqBoardroom";
+import HqTasks from "@/pages/HqTasks";
+import HqDecisions from "@/pages/HqDecisions";
+import HqSignals from "@/pages/HqSignals";
+import HqSessions from "@/pages/HqSessions";
+import HqMessages from "@/pages/HqMessages";
 
 import PanelSurface from "@/pages/PanelSurface";
 import SurfacesAdmin from "@/pages/SurfacesAdmin";
@@ -149,6 +154,13 @@ const App = () => (
 
             <Route path="/hq/memories" element={<AuthGate><ClientReadinessGate><MemoryVault /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/boardroom" element={<AuthGate><ClientReadinessGate><HqBoardroom /></ClientReadinessGate></AuthGate>} />
+
+            {/* The registers · every one of these is a page you can press a button on */}
+            <Route path="/hq/tasks" element={<AuthGate><ClientReadinessGate><HqTasks /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/decisions" element={<AuthGate><ClientReadinessGate><HqDecisions /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/signals" element={<AuthGate><ClientReadinessGate><HqSignals /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/sessions" element={<AuthGate><ClientReadinessGate><HqSessions /></ClientReadinessGate></AuthGate>} />
+            <Route path="/hq/messages" element={<AuthGate><ClientReadinessGate><HqMessages /></ClientReadinessGate></AuthGate>} />
             {/* Records is admin-only; the page itself refuses a non-operator and so does its data path */}
             <Route path="/hq/records" element={<AuthGate><HqRecords /></AuthGate>} />
 
