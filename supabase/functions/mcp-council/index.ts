@@ -3730,6 +3730,53 @@ Deno.serve(async (req) => {
     } catch { /* the log line already happened; never fail on the record of a failure */ }
   };
 
+  // ── HARDEN-02 · H2 · GATEWAY SESSION EVENT LOG ───────────────────────────
+  // One row per tool call, written by the gateway on every call, for every
+  // tenant. The COBCLIENT is never asked to log and cannot suppress a row.
+  // Arguments and results are stored as SHA-256 digests only, so confidential
+  // and NPI material is never duplicated into the log.
+  const digest = async (v: unknown): Promise<string | null> => {
+    try {
+      const text = typeof v === "string" ? v : JSON.stringify(v ?? null);
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text ?? ""));
+      return Array.from(new Uint8Array(buf)).slice(0, 16)
+        .map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch { return null; }
+  };
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const logSessionEvent = async (e: {
+    tool: string;
+    ok: boolean;
+    error_code: string | null;
+    latency_ms: number;
+    args: unknown;
+    result: unknown;
+    surface: string | null;
+  }): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const cid = await serverCid();
+      if (!cid) return;
+      const sid = (e.args as any)?.session_id;
+      await supabaseAdmin.from("session_event").insert({
+        cid,
+        session_id: typeof sid === "string" && UUID_RE.test(sid) ? sid : null,
+        tool: e.tool,
+        ok: e.ok,
+        error_code: e.error_code ? String(e.error_code).slice(0, 200) : null,
+        latency_ms: Number.isFinite(e.latency_ms) ? Math.max(0, Math.floor(e.latency_ms)) : null,
+        arg_digest: await digest(e.args),
+        result_digest: await digest(e.result),
+        surface: e.surface,
+        tool_manifest_version: TOOL_MANIFEST_VERSION,
+      });
+    } catch (err) {
+      console.error("session_event_write_failed", err instanceof Error ? err.message : String(err));
+    }
+  };
+
   // UNIT 1 · CONNECTOR-SUCCESS SIGNAL. Records the first time a tenant's
   // connector completes an authenticated MCP request. Additive, keyed on
   // CID, fire-and-forget: it can never fail or slow a request.
