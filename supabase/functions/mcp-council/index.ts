@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.7";
+const TOOL_MANIFEST_VERSION = "2026.08.11.8";
 
 const MANIFEST_PROP = {
   client_manifest_version: {

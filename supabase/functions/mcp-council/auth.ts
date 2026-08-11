@@ -293,9 +293,8 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
   // tenant from the verified identity (email / provider subject) and falls back
   // to this claim only when identity-keyed resolution finds nothing.
 
-  const sub = typeof payload?.sub === "string" ? payload.sub : "";
   const clientId = typeof payload?.client_id === "string" ? payload.client_id : null;
-  const iss = typeof payload?.iss === "string" ? payload.iss : null;
+  const iss = payload.iss as string;
   const rawTenantClaim = typeof appMeta.tenant === "string" ? appMeta.tenant : null;
   const email = typeof payload?.email === "string" ? payload.email : null;
   const emailVerified = payload?.email_verified === true ||
