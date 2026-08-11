@@ -5487,19 +5487,78 @@ Deno.serve(async (req) => {
           };
         } else {
           // rule_write · `state` governs at once, `propose` waits for the yes.
-          rpcName = "cob_rule_write";
-          params = {
-            p_cid: worldCid,
-            p_action: str(args?.action) ?? "state",
-            p_id: str(args?.id),
-            p_text: typeof args?.text === "string" ? args.text : null,
-            p_title: str(args?.title),
-            // Omitted rather than nulled: the function's own default is LOCKED.
-            ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
-            p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
-              ? Math.floor(args.rank) : null,
-            p_reason: str(args?.reason),
-          };
+          //
+          // HARDEN-02 · H6 · the scope target is explicit and the receipt says
+          // which one happened. FLEET is doctrine for every client; the
+          // connector reaches the database as service_role for every tenant,
+          // which is a connection, not an authority, so FLEET is refused here
+          // and only ever runs through propose_doctrine_rule behind
+          // admin_guard's is_fleet_operator() check.
+          const writeScope = (str(args?.write_scope) ?? "LOCAL").toUpperCase();
+          if (writeScope !== "LOCAL" && writeScope !== "FLEET") {
+            const out = {
+              ok: false,
+              tool: name,
+              error: `COB_RULE_SCOPE_UNKNOWN: write_scope must be LOCAL or FLEET · got ${writeScope}`,
+              ...identityBlock(pctx),
+              ...manifestBlock(args),
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: true,
+            });
+          }
+          if (writeScope === "FLEET") {
+            let operator = false;
+            try {
+              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator");
+              operator = op === true;
+            } catch { operator = false; }
+            if (!operator) {
+              void raiseSignal(
+                "rule-write-fleet-refused",
+                `A FLEET rule was requested by a client connector · tenant=${tenant}`,
+                { surface: "connector", subject: "rule_write", link: { write_scope: "FLEET" } },
+              );
+              const out = {
+                ok: false,
+                tool: name,
+                write_scope: "FLEET",
+                error:
+                  "COB_RULE_FLEET_REQUIRES_OPERATOR: a fleet rule binds every client, so only an active fleet operator can write one. Nothing was written. If this rule is for your principal, send it again with write_scope LOCAL.",
+                ...identityBlock(pctx),
+                ...manifestBlock(args),
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: true,
+              });
+            }
+            rpcName = "propose_doctrine_rule";
+            params = {
+              p_rule_key: str(args?.title) ?? str(args?.id) ?? "unkeyed",
+              p_rule_text: typeof args?.text === "string" ? args.text : "",
+              p_reason: str(args?.reason),
+            };
+            ruleWriteScope = "FLEET";
+          } else {
+            rpcName = "cob_rule_write";
+            params = {
+              p_cid: worldCid,
+              p_action: str(args?.action) ?? "state",
+              p_id: str(args?.id),
+              p_text: typeof args?.text === "string" ? args.text : null,
+              p_title: str(args?.title),
+              // Omitted rather than nulled: the function's own default is LOCKED.
+              ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
+              p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
+                ? Math.floor(args.rank) : null,
+              p_reason: str(args?.reason),
+            };
+            ruleWriteScope = "LOCAL";
+          }
         }
 
 
