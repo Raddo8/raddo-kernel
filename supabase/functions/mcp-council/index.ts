@@ -4952,7 +4952,7 @@ Deno.serve(async (req) => {
             p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
             p_title: str(args?.title),
           };
-        } else {
+        } else if (name === "blueprint_write") {
           rpcName = "cob_blueprint_write";
           params = {
             p_cid: worldCid,
@@ -4966,7 +4966,22 @@ Deno.serve(async (req) => {
             p_loop_cadence: str(args?.loop_cadence),
             p_milestones: args?.milestones ?? null,
           };
+        } else {
+          // rule_write · `state` governs at once, `propose` waits for the yes.
+          rpcName = "cob_rule_write";
+          params = {
+            p_cid: worldCid,
+            p_action: str(args?.action) ?? "state",
+            p_id: str(args?.id),
+            p_text: typeof args?.text === "string" ? args.text : null,
+            p_title: str(args?.title),
+            p_scope: str(args?.scope),
+            p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
+              ? Math.floor(args.rank) : null,
+            p_reason: str(args?.reason),
+          };
         }
+
 
         const { data, error } = await supabaseAdmin.rpc(rpcName, params);
         if (error) {
