@@ -9372,6 +9372,30 @@ export type Database = {
           },
         ]
       }
+      vocabulary_writer_registry: {
+        Row: {
+          added_at: string
+          note: string | null
+          value: string
+          vocabulary: string
+          writer: string
+        }
+        Insert: {
+          added_at?: string
+          note?: string | null
+          value: string
+          vocabulary: string
+          writer: string
+        }
+        Update: {
+          added_at?: string
+          note?: string | null
+          value?: string
+          vocabulary?: string
+          writer?: string
+        }
+        Relationships: []
+      }
       wire_grants: {
         Row: {
           cid: string
@@ -11758,6 +11782,15 @@ export type Database = {
       verify_load_test_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
+      }
+      vocabulary_gaps: {
+        Args: never
+        Returns: {
+          value: string
+          verdict: string
+          vocabulary: string
+          writer: string
+        }[]
       }
       watchdog_health: { Args: never; Returns: number }
       work_close: {
