@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.9";
+const TOOL_MANIFEST_VERSION = "2026.08.12.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -5363,6 +5363,23 @@ Deno.serve(async (req) => {
             p_minute_id: str(args?.minute_id),
             p_supersedes: str(args?.supersedes),
             p_session_id: str(args?.session_id),
+            // H1 · a completion claim must carry its proof. The trigger on
+            // decisions refuses "executed" without a passed probe named here.
+            p_verification_state: str(args?.verification_state),
+            p_test_run_id: str(args?.test_run_id),
+          };
+        } else if (name === "record_probe") {
+          // H1 · the only writer of probe_runs. cid is server-derived.
+          rpcName = "record_probe";
+          params = {
+            p_cid: worldCid,
+            p_subject_kind: str(args?.subject_kind) ?? "decision",
+            p_subject_ref: str(args?.subject_ref) ?? "",
+            p_claim: typeof args?.claim === "string" ? args.claim : "",
+            p_method: typeof args?.method === "string" ? args.method : "",
+            p_expected: typeof args?.expected === "string" ? args.expected : "",
+            p_observed: typeof args?.observed === "string" ? args.observed : "",
+            p_passed: args?.passed === true,
           };
         } else if (name === "record_file") {
           rpcName = "cob_record_file";
