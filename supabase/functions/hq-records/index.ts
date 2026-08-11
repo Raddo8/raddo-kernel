@@ -106,6 +106,13 @@ const REGISTERS: Record<string, RegisterSpec> = {
     titleCol: "filename", bodyCol: null, catCol: "category", statusCol: "drift",
     columns: ["filename", "category", "install_version", "drift", "last_checked", "created_at"],
   },
+  // The client's own filed records. Read here; the two verbs on the row detail
+  // go through hq_act, which is tenant-scoped and never trusts this function.
+  office_record_index: {
+    table: "office_record_index", key: "cid", keyCol: "cid", dateCol: "created_at",
+    titleCol: "name", bodyCol: "note", catCol: "kind", statusCol: null,
+    columns: ["record_id", "name", "kind", "linked_entity", "record_date", "other_link", "note", "created_at"],
+  },
 };
 
 const json = (body: unknown, status = 200) =>

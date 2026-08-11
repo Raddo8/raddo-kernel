@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.1";
+const TOOL_MANIFEST_VERSION = "2026.08.11.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3087,7 +3087,79 @@ const TOOL_COMM_WRITE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOL_SIGNAL_RAISE = {
+  name: "signal_raise",
+  title: "Raise a signal",
+  description:
+    "Log that something went wrong, or went sideways, the moment you see it. Same key every time for the same pattern: the key is what rolls the sightings up, and a pattern seen three times becomes chronic on the client's Signals page. Raise it even when you recovered. A failure nobody logged is a failure that happens again.",
+  annotations: { title: "Raise a signal", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      key: { type: "string", description: "A short stable name for the pattern. Reuse it exactly for repeats." },
+      detail: { type: "string", description: "What happened, in one or two plain sentences." },
+      session_id: { type: "string", description: "The session it happened in, when there is one." },
+      tool: { type: "string", description: "The tool that was running." },
+      surface: { type: "string", description: "Where it happened." },
+      subject: { type: "string", description: "What it happened to." },
+      link: { type: "object", description: "Where to look: { kind, id } or { url }.", additionalProperties: true },
+      audience: { type: "string", description: "Who this concerns." },
+      ...MANIFEST_PROP,
+    },
+    required: ["key"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_DECISION_WRITE = {
+  name: "decision_write",
+  title: "Write a decision",
+  description:
+    "Record a decision on the client's own register, in their words, with the reasoning that produced it. Say plainly whether it can be undone. A decision that supersedes an earlier one names it, so the record reads as one line of thinking rather than two contradictions.",
+  annotations: { title: "Write a decision", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "The decision in one line." },
+      decision_md: { type: "string", description: "What was decided, in markdown." },
+      rationale_md: { type: "string", description: "Why. The reasoning, not the conclusion again." },
+      reversibility: { type: "string", description: "How easily this can be undone." },
+      decided_by: { type: "string", description: "Who decided it." },
+      minute_id: { type: "string", description: "The council minute it came out of, when it did." },
+      supersedes: { type: "string", description: "The id of the decision this replaces." },
+      session_id: { type: "string", description: "The session it was taken in." },
+      ...MANIFEST_PROP,
+    },
+    required: ["title"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_RECORD_FILE = {
+  name: "record_file",
+  title: "File a record",
+  description:
+    "Put a document on the client's record so they can find it later without asking you. Give it the name they would search for, not the name the system gave it. A link to where it actually lives beats a copy of it.",
+  annotations: { title: "File a record", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      name: { type: "string", description: "The name the client would search for." },
+      kind: { type: "string", description: "What sort of record it is." },
+      linked_entity: { type: "string", description: "Who or what it belongs to." },
+      record_date: { type: "string", description: "The date on the record itself, as YYYY-MM-DD." },
+      link: { type: "string", description: "Where the record lives." },
+      note: { type: "string", description: "A sentence on why it matters." },
+      linked_decision: { type: "string", description: "The decision it supports." },
+      source_ref: { type: "string", description: "Where it came from." },
+      ...MANIFEST_PROP,
+    },
+    required: ["name"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_DECISION_WRITE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -3532,6 +3604,34 @@ Deno.serve(async (req) => {
   const serverCid = async (): Promise<string | null> =>
     (await resolvedCid()) ?? (await activeKernel("id, cid")).cid;
 
+  // FAILURE PATHS · a console line is not a record. Everything below that used
+  // to fail only into the logs now also lands on the client's Signals page,
+  // rolled up on a stable key so the third occurrence reads as chronic rather
+  // than as three unrelated bad nights. Fire-and-forget by construction: a
+  // signal that cannot be raised must never turn a soft failure into a hard one.
+  const raiseSignal = async (
+    key: string,
+    detail: string,
+    extra: { session_id?: string | null; surface?: string | null; subject?: string | null; link?: Record<string, unknown> | null } = {},
+  ): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const cid = await serverCid();
+      if (!cid) return;
+      await supabaseAdmin.rpc("cob_signal_raise", {
+        p_cid: cid,
+        p_key: key,
+        p_detail: detail,
+        p_session_id: extra.session_id ?? null,
+        p_tool: "mcp-council",
+        p_surface: extra.surface ?? "connector",
+        p_subject: extra.subject ?? null,
+        p_link: extra.link ?? null,
+        p_audience: null,
+      });
+    } catch { /* the log line already happened; never fail on the record of a failure */ }
+  };
+
   // UNIT 1 · CONNECTOR-SUCCESS SIGNAL. Records the first time a tenant's
   // connector completes an authenticated MCP request. Additive, keyed on
   // CID, fire-and-forget: it can never fail or slow a request.
@@ -3565,6 +3665,7 @@ Deno.serve(async (req) => {
       });
     } catch (e) {
       console.error("connector_success_exception", e instanceof Error ? e.message : String(e));
+      void raiseSignal("connector_success_write_failed", e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -3637,10 +3738,15 @@ Deno.serve(async (req) => {
         p_resolved_keyed_by: a.keyed_by ?? ctx.legacy_keyed_by,
       });
 
-      if (error) { console.error("kernel_access_log_failed", error.message); return false; }
+      if (error) {
+        console.error("kernel_access_log_failed", error.message);
+        void raiseSignal("kernel_access_log_failed", error.message, { subject: a.part ?? null });
+        return false;
+      }
       return true;
     } catch (e) {
       console.error("kernel_access_log_exception", e instanceof Error ? e.message : String(e));
+      void raiseSignal("kernel_access_log_failed", e instanceof Error ? e.message : String(e));
       return false;
     }
   };
@@ -4144,6 +4250,7 @@ Deno.serve(async (req) => {
             .insert({ cid, topic, content_md: content, source });
           if (intakeErr) {
             console.error("record_intake_failed", intakeErr.message);
+            void raiseSignal("intake_save_failed", intakeErr.message, { subject: topic });
             const out = { ok: false, reason: "save-failed" };
             return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
           }
@@ -4161,6 +4268,7 @@ Deno.serve(async (req) => {
             }
           } catch (e) {
             console.error("record_intake_thread_mirror_failed", e instanceof Error ? e.message : String(e));
+            void raiseSignal("thread_mirror_failed", e instanceof Error ? e.message : String(e), { subject: topic, surface: "taylor" });
           }
         }
         let inventory: unknown = null;
@@ -4205,6 +4313,7 @@ Deno.serve(async (req) => {
           if (Array.isArray(data)) checklist = data as any;
         } catch (e) {
           console.error("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e));
+      void raiseSignal("onboarding_progress_read_failed", e instanceof Error ? e.message : String(e), { surface: "onboarding" });
         }
         const out = { ok: true, recorded: step, checklist };
         return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(out) }], structuredContent: out, isError: false });
@@ -4287,6 +4396,7 @@ Deno.serve(async (req) => {
             // The helper above already recorded its own failure row. This only
             // catches a thread-resolution fault, which is a separate cause.
             console.error("welcome_intro_thread_unresolved", e instanceof Error ? e.message : String(e));
+          void raiseSignal("welcome_intro_not_posted", e instanceof Error ? e.message : String(e), { surface: "taylor" });
           }
 
           const payload = buildWelcomePayload(client);
@@ -4504,6 +4614,11 @@ Deno.serve(async (req) => {
             console.error("kernel_tenant_mismatch", JSON.stringify({
               subject_cid: subjectCid, kernel_cid: partCid, part,
             }));
+            void raiseSignal(
+              "kernel_tenant_mismatch",
+              `a kernel part was requested for one tenant and found under another: part ${part}`,
+              { subject: String(part) },
+            );
             const mismatch = { error: "routing_error", reason: "kernel_tenant_mismatch", part, seq };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(mismatch) }],
@@ -5012,7 +5127,8 @@ Deno.serve(async (req) => {
         name === "memory_write" || name === "narrative_write" ||
         name === "blueprint_write" || name === "rule_write" ||
         name === "search" || name === "fetch" ||
-        name === "request_read" || name === "request_resolve" || name === "comm_write"
+        name === "request_read" || name === "request_resolve" || name === "comm_write" ||
+        name === "signal_raise" || name === "decision_write" || name === "record_file"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -5067,6 +5183,47 @@ Deno.serve(async (req) => {
             p_external_id: str(args?.external_id),
             p_external_url: str(args?.external_url),
             p_reason: typeof args?.reason === "string" ? args.reason : null,
+          };
+        } else if (name === "signal_raise") {
+          // Rolled up on the key. The same key twice is a repeat; three times
+          // is chronic, and the client sees it before you tell them.
+          rpcName = "cob_signal_raise";
+          params = {
+            p_cid: worldCid,
+            p_key: str(args?.key),
+            p_detail: typeof args?.detail === "string" ? args.detail : null,
+            p_session_id: str(args?.session_id),
+            p_tool: str(args?.tool),
+            p_surface: str(args?.surface),
+            p_subject: str(args?.subject),
+            p_link: args?.link && typeof args.link === "object" ? args.link : null,
+            p_audience: str(args?.audience),
+          };
+        } else if (name === "decision_write") {
+          rpcName = "cob_decision_write";
+          params = {
+            p_cid: worldCid,
+            p_title: str(args?.title),
+            p_decision_md: typeof args?.decision_md === "string" ? args.decision_md : null,
+            p_rationale_md: typeof args?.rationale_md === "string" ? args.rationale_md : null,
+            p_reversibility: str(args?.reversibility),
+            p_decided_by: str(args?.decided_by),
+            p_minute_id: str(args?.minute_id),
+            p_supersedes: str(args?.supersedes),
+            p_session_id: str(args?.session_id),
+          };
+        } else if (name === "record_file") {
+          rpcName = "cob_record_file";
+          params = {
+            p_cid: worldCid,
+            p_name: str(args?.name),
+            p_kind: str(args?.kind),
+            p_linked_entity: str(args?.linked_entity),
+            p_record_date: str(args?.record_date),
+            p_link: str(args?.link),
+            p_note: typeof args?.note === "string" ? args.note : null,
+            p_linked_decision: str(args?.linked_decision),
+            p_source_ref: str(args?.source_ref),
           };
         } else if (name === "world_read") {
           rpcName = "cob_world_read";
@@ -5918,6 +6075,10 @@ Deno.serve(async (req) => {
             } catch (e) {
               receipt_error = e instanceof Error ? e.message : String(e);
               console.error("save_receipt_write_failed", receipt_error);
+              void raiseSignal("save_receipt_write_failed", receipt_error, {
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                surface: "ritual",
+              });
             }
 
             try {

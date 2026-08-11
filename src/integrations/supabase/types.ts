@@ -3537,6 +3537,8 @@ export type Database = {
           pattern: string
           provenance: string
           recurrence: number
+          sightings: number
+          signal_key: string | null
           silent: boolean
           source_session_id: string | null
           source_subject: string | null
@@ -3558,6 +3560,8 @@ export type Database = {
           pattern: string
           provenance?: string
           recurrence?: number
+          sightings?: number
+          signal_key?: string | null
           silent?: boolean
           source_session_id?: string | null
           source_subject?: string | null
@@ -3579,6 +3583,8 @@ export type Database = {
           pattern?: string
           provenance?: string
           recurrence?: number
+          sightings?: number
+          signal_key?: string | null
           silent?: boolean
           source_session_id?: string | null
           source_subject?: string | null
@@ -7956,6 +7962,59 @@ export type Database = {
         }
         Relationships: []
       }
+      signal_sighting: {
+        Row: {
+          at: string
+          cid: string
+          detail_md: string | null
+          link: Json | null
+          raised_by: string
+          session_id: string | null
+          sighting_id: string
+          signal_id: string | null
+          signal_key: string
+          subject: string | null
+          surface: string | null
+          tool: string | null
+        }
+        Insert: {
+          at?: string
+          cid: string
+          detail_md?: string | null
+          link?: Json | null
+          raised_by?: string
+          session_id?: string | null
+          sighting_id?: string
+          signal_id?: string | null
+          signal_key: string
+          subject?: string | null
+          surface?: string | null
+          tool?: string | null
+        }
+        Update: {
+          at?: string
+          cid?: string
+          detail_md?: string | null
+          link?: Json | null
+          raised_by?: string
+          session_id?: string | null
+          sighting_id?: string
+          signal_id?: string | null
+          signal_key?: string
+          subject?: string | null
+          surface?: string | null
+          tool?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signal_sighting_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "improvement_signals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_events: {
         Row: {
           event: string
@@ -10635,6 +10694,20 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_decision_write: {
+        Args: {
+          p_cid: string
+          p_decided_by?: string
+          p_decision_md: string
+          p_minute_id?: string
+          p_rationale_md?: string
+          p_reversibility?: string
+          p_session_id?: string
+          p_supersedes?: string
+          p_title: string
+        }
+        Returns: Json
+      }
       cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_memory_write: {
@@ -10659,6 +10732,20 @@ export type Database = {
           p_kind: string
           p_lane: string
           p_title?: string
+        }
+        Returns: Json
+      }
+      cob_record_file: {
+        Args: {
+          p_cid: string
+          p_kind?: string
+          p_link?: string
+          p_linked_decision?: string
+          p_linked_entity?: string
+          p_name: string
+          p_note?: string
+          p_record_date?: string
+          p_source_ref?: string
         }
         Returns: Json
       }
@@ -10690,6 +10777,20 @@ export type Database = {
       }
       cob_search: {
         Args: { p_cid: string; p_limit?: number; p_q: string }
+        Returns: Json
+      }
+      cob_signal_raise: {
+        Args: {
+          p_audience?: string
+          p_cid: string
+          p_detail?: string
+          p_key: string
+          p_link?: Json
+          p_session_id?: string
+          p_subject?: string
+          p_surface?: string
+          p_tool?: string
+        }
         Returns: Json
       }
       cob_tenant_key: { Args: { p_cid: string }; Returns: string }
@@ -10925,6 +11026,7 @@ export type Database = {
             }[]
           }
       hq_sessions_read: { Args: { p_limit?: number }; Returns: Json }
+      hq_signals_fleet: { Args: { p_limit?: number }; Returns: Json }
       hq_signals_read: { Args: { p_limit?: number }; Returns: Json }
       hq_tasks_read: { Args: { p_limit?: number }; Returns: Json }
       ingest_budget: {
