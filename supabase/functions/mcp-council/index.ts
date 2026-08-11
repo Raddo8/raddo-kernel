@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.10.2";
+const TOOL_MANIFEST_VERSION = "2026.08.10.4";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2980,10 +2980,46 @@ const TOOL_RULE_WRITE = {
     additionalProperties: false,
   },
 };
+// ── CLIENT WORLD v1 · one question across the whole world, and the hop back ──
+// Both read-only, both CID-derived server-side. `search` wraps world_search_v1
+// (exact words, then loosened words, then closest by meaning); `fetch` resolves
+// any id from any register and returns the whole object.
+const TOOL_SEARCH = {
+  name: "search",
+  title: "Search",
+  description:
+    "Search this client's whole world in one call: memories, what is known about people and organisations, lane narratives, open loops, standing rules and blueprints. Every hit carries a register and an id. Use this before you answer anything about their world.",
+  annotations: { title: "Search", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      q: { type: "string", description: "The words to search for." },
+      limit: { type: "number", description: "Max hits (default 25)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["q"],
+    additionalProperties: false,
+  },
+};
 
+const TOOL_FETCH = {
+  name: "fetch",
+  title: "Fetch",
+  description:
+    "Read one thing in full by its id, from any register. Use it on any id a search returned.",
+  annotations: { title: "Fetch", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "The id a search returned." },
+      ...MANIFEST_PROP,
+    },
+    required: ["id"],
+    additionalProperties: false,
+  },
+};
 
-
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4906,7 +4942,8 @@ Deno.serve(async (req) => {
       if (
         name === "world_read" || name === "registers_read" ||
         name === "memory_write" || name === "narrative_write" ||
-        name === "blueprint_write" || name === "rule_write"
+        name === "blueprint_write" || name === "rule_write" ||
+        name === "search" || name === "fetch"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -4926,7 +4963,15 @@ Deno.serve(async (req) => {
 
         let rpcName: string;
         let params: Record<string, unknown>;
-        if (name === "world_read") {
+        if (name === "search") {
+          // One question across six registers. COB_SEARCH_NEEDS_WORDS comes
+          // back verbatim when `q` is empty.
+          rpcName = "cob_search";
+          params = { p_cid: worldCid, p_q: str(args?.q) ?? "", p_limit: num(args?.limit, 25) };
+        } else if (name === "fetch") {
+          rpcName = "cob_fetch";
+          params = { p_cid: worldCid, p_id: str(args?.id) };
+        } else if (name === "world_read") {
           rpcName = "cob_world_read";
           params = { p_cid: worldCid, p_q: str(args?.q), p_limit: num(args?.limit, 40) };
         } else if (name === "registers_read") {
@@ -6031,29 +6076,52 @@ Deno.serve(async (req) => {
             }
 
 
-            // 3. Close this session
-            await supabaseAdmin.from("sessions")
+            // 3. Close this session · read back. A close is not reported as
+            // closed until the row comes back closed. No id-only optimism.
+            const closeConfirm: Record<string, unknown> = {};
+            const { data: closedRows, error: closeErr } = await supabaseAdmin
+              .from("sessions")
               .update({ closed_at: nowIso, close_kind })
-              .eq("id", session_id).eq("tenant", tenant);
+              .eq("id", session_id).eq("tenant", tenant)
+              .select("id, closed_at, close_kind");
+            const closedRow = (closedRows ?? [])[0] as any;
+            const close_confirmed = Boolean(!closeErr && closedRow?.closed_at);
+            if (!close_confirmed) {
+              closeConfirm.close_error = closeErr?.message ?? "no_matching_row_in_tenant";
+              endReasons.push("session_close_not_confirmed");
+            }
             // Session title · how a principal finds this session again.
             const sessionTitle = typeof args?.title === "string" && args.title.trim()
               ? args.title.trim().slice(0, 200)
               : null;
+            let title_confirmed: boolean | null = null;
             if (sessionTitle) {
-              await supabaseAdmin.from("sessions")
+              const { data: titledRows, error: titleErr } = await supabaseAdmin
+                .from("sessions")
                 .update({ title: sessionTitle, titled_at: nowIso, titled_by: "cobclient" })
-                .eq("id", session_id).eq("tenant", tenant);
+                .eq("id", session_id).eq("tenant", tenant)
+                .select("id, title");
+              title_confirmed = Boolean(!titleErr && (titledRows ?? [])[0]?.title === sessionTitle);
+              if (!title_confirmed) {
+                closeConfirm.title_error = titleErr?.message ?? "title_not_readable_after_write";
+                endReasons.push("session_title_not_confirmed");
+              }
             }
-            // Makeup-close any other still-open sessions for this tenant
+            // Makeup-close any other still-open sessions for this tenant.
+            // Only rows that read back closed are counted as closed.
             const { data: orphans } = await supabaseAdmin
               .from("sessions").select("id").eq("tenant", tenant)
               .is("closed_at", null).neq("id", session_id);
             const makeup_closed: string[] = [];
+            const makeup_not_closed: Array<{ id: string; reason: string }> = [];
             for (const o of (orphans ?? [])) {
-              await supabaseAdmin.from("sessions")
+              const { data: mkRows, error: mkErr } = await supabaseAdmin
+                .from("sessions")
                 .update({ closed_at: nowIso, close_kind: "makeup" })
-                .eq("id", o.id).eq("tenant", tenant);
-              makeup_closed.push(o.id);
+                .eq("id", o.id).eq("tenant", tenant)
+                .select("id, closed_at");
+              if (!mkErr && (mkRows ?? [])[0]?.closed_at) makeup_closed.push(o.id);
+              else makeup_not_closed.push({ id: o.id, reason: mkErr?.message ?? "no_matching_row_in_tenant" });
             }
 
             // 4. ritual_runs
@@ -6101,8 +6169,11 @@ Deno.serve(async (req) => {
               ...(sessionTitle ? { title: sessionTitle } : { title: null }),
               close_board: closeBoard,
               close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
-              closed: { session_id, close_kind },
+              // `confirmed` means the row was read back closed, not that an
+              // update call returned without error.
+              closed: { session_id, close_kind, confirmed: close_confirmed, title_confirmed, ...closeConfirm },
               makeup_closed,
+              ...(makeup_not_closed.length ? { makeup_not_closed } : {}),
               // Whether each correction actually bound. `not_applied` is the
               // honest answer to "did my correction take?".
               directives: {
