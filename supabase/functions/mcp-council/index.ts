@@ -2180,7 +2180,7 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.4";
+const TOOL_MANIFEST_VERSION = "2026.08.12.5";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3425,10 +3425,75 @@ function rpcError(id: any, code: number, message: string, status = 200): Respons
   );
 }
 
+// ── HARDEN-04 · T1 · BOUNDARY RENDERING ───────────────────────────────
+// Storage stays UTC and must not change. Presentation does not: every
+// timestamp handed to a COBCLIENT is returned twice · the instant, and a
+// pre-rendered local string in that tenant's own zone carrying the zone
+// abbreviation. Conversion never leaves this boundary, because a model
+// handed a bare UTC string will eventually present it as local.
+let ACTIVE_TZ = "America/Chicago";
+
+const ISO_UTC_RE = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|\+00:?00)$/;
+
+function renderInZone(iso: string, tz: string): string | null {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  try {
+    const f = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz, hour12: false,
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+    }).formatToParts(d);
+    const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
+    return `${g("year")}-${g("month")}-${g("day")} ${g("hour")}:${g("minute")} ${g("timeZoneName")}`;
+  } catch {
+    return null;
+  }
+}
+
+function stampLocalTimes(v: any, tz: string, depth = 0): any {
+  if (depth > 8 || v === null || typeof v !== "object") return v;
+  if (Array.isArray(v)) return v.map((x) => stampLocalTimes(x, tz, depth + 1));
+  const out: Record<string, unknown> = {};
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    out[k] = stampLocalTimes(val, tz, depth + 1);
+    if (typeof val === "string" && ISO_UTC_RE.test(val) && !k.endsWith("_local")) {
+      const local = renderInZone(val, tz);
+      if (local) out[`${k}_local`] = local;
+    }
+  }
+  return out;
+}
+
 function rpcResult(id: any, result: any): Response {
   // Envelope must contain ONLY jsonrpc/id/result · SDK schema rejects extra keys.
+  let payload = result;
+  try {
+    if (result && typeof result === "object" && result.structuredContent &&
+        typeof result.structuredContent === "object") {
+      const sc = {
+        ...stampLocalTimes(result.structuredContent, ACTIVE_TZ),
+        rendered_timezone: ACTIVE_TZ,
+      };
+      // The text block is re-serialized only when it is the JSON mirror of
+      // the structured block. Prose answers are never rewritten.
+      let content = result.content;
+      const one = Array.isArray(content) && content.length === 1 ? content[0] : null;
+      if (one && one.type === "text" && typeof one.text === "string") {
+        let mirrors = false;
+        try {
+          const parsed = JSON.parse(one.text);
+          mirrors = parsed && typeof parsed === "object";
+        } catch { mirrors = false; }
+        if (mirrors) content = [{ type: "text", text: JSON.stringify(sc) }];
+      }
+      payload = { ...result, structuredContent: sc, ...(content ? { content } : {}) };
+    }
+  } catch {
+    payload = result;
+  }
   return new Response(
-    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result }),
+    JSON.stringify({ jsonrpc: "2.0", id: id ?? null, result: payload }),
     {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json", "X-Build-Id": BUILD_ID },
@@ -3989,15 +4054,36 @@ Deno.serve(async (req) => {
 
 
 
-  // ── ITEM 5 · SESSION CLOCK ────────────────────────────────────────────
-  // Storage stays UTC. Presentation and day-boundary reasoning are
-  // America/Chicago: a brief delivered at 22:51 Central is not "morning".
-  const SESSION_TZ = "America/Chicago";
-  const localParts = (d = new Date()) => {
+  // ── ITEM 5 · SESSION CLOCK · T1 · per tenant ──────────────────────────
+  // Storage stays UTC. Presentation and day-boundary reasoning happen in
+  // THIS tenant's zone, read from tenants.timezone. The old constant was
+  // America/Chicago for everyone, which was right for one principal by
+  // accident and wrong for every client outside that zone.
+  let _tz: string | null = null;
+  const tenantTz = async (): Promise<string> => {
+    if (_tz) return _tz;
+    try {
+      const cid = await serverCid();
+      if (cid && supabaseAdmin) {
+        const { data } = await supabaseAdmin
+          .from("tenants").select("timezone").eq("cid", cid).maybeSingle();
+        const tz = typeof data?.timezone === "string" ? data.timezone.trim() : "";
+        if (tz) {
+          _tz = tz;
+          ACTIVE_TZ = tz;
+          return _tz;
+        }
+      }
+    } catch { /* fall through to the fleet default */ }
+    _tz = "America/Chicago";
+    ACTIVE_TZ = _tz;
+    return _tz;
+  };
+  const localParts = (tz: string, d = new Date()) => {
     const f = new Intl.DateTimeFormat("en-US", {
-      timeZone: SESSION_TZ, hour12: false,
+      timeZone: tz, hour12: false,
       year: "numeric", month: "2-digit", day: "2-digit",
-      hour: "2-digit", minute: "2-digit", weekday: "long",
+      hour: "2-digit", minute: "2-digit", weekday: "long", timeZoneName: "short",
     }).formatToParts(d);
     const g = (t: string) => f.find((p) => p.type === t)?.value ?? "";
     return {
@@ -4005,21 +4091,25 @@ Deno.serve(async (req) => {
       time: `${g("hour")}:${g("minute")}`,
       hour: Number(g("hour")),
       weekday: g("weekday"),
+      abbrev: g("timeZoneName"),
     };
   };
   const partOfDay = (h: number) =>
     h < 5 ? "night" : h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
-  const sessionClock = () => {
-    const p = localParts();
+  const sessionClock = async () => {
+    const tz = await tenantTz();
+    const p = localParts(tz);
     return {
-      timezone: SESSION_TZ,
+      timezone: tz,
       local_date: p.date,
       local_time: p.time,
       local_weekday: p.weekday,
+      local_now: `${p.date} ${p.time} ${p.abbrev}`,
+      zone_abbrev: p.abbrev,
       part_of_day: partOfDay(p.hour),
       greeting: `Good ${partOfDay(p.hour) === "night" ? "evening" : partOfDay(p.hour)}`,
       utc: new Date().toISOString(),
-      note: `Reason about time of day and day boundaries in ${SESSION_TZ}, not UTC.`,
+      note: `This principal's zone is ${tz}. Every timestamp you receive carries a matching _local field already rendered in it. Never convert a UTC string yourself.`,
     };
   };
 
@@ -5370,7 +5460,7 @@ Deno.serve(async (req) => {
             kernel_verification: kernelVerification,
             state_pointer: statePointer,
             ...(bootAttestation ? { boot_attestation: bootAttestation } : {}),
-            clock: sessionClock(),
+            clock: await sessionClock(),
             directives: (activeDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             pending_confirm: (pendingDirectives ?? []).map((d: any) => ({ text: d.text, scope: d.scope, rank: d.rank })),
             awaiting_confirmation: (queuedDirectives ?? []).map((d: any) => ({
