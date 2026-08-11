@@ -6075,6 +6075,10 @@ Deno.serve(async (req) => {
             } catch (e) {
               receipt_error = e instanceof Error ? e.message : String(e);
               console.error("save_receipt_write_failed", receipt_error);
+              void raiseSignal("save_receipt_write_failed", receipt_error, {
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                surface: "ritual",
+              });
             }
 
             try {
