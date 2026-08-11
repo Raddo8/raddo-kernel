@@ -2958,7 +2958,7 @@ const TOOL_RULE_WRITE = {
   name: "rule_write",
   title: "Rule Write",
   description:
-    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes.",
+    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes. Canon outranks every rule you write here. You can narrow it for your client; you cannot switch it off. A rule that tries will be refused and told why.",
   annotations: { title: "Rule Write" },
   inputSchema: {
     type: "object",
