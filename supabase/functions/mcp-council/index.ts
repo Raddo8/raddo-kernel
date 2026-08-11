@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.2";
+const TOOL_MANIFEST_VERSION = "2026.08.11.3";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -4094,6 +4094,73 @@ Deno.serve(async (req) => {
         routing_log: { identity_trace: true, keyed_by: pctx.legacy_keyed_by, match_state: pctx.match_state },
       });
 
+      // ── FIX 3 · THE BOOT GATE ──────────────────────────────────────────
+      // Two refusals, both narrow, both fail-closed.
+      //   no_active_kernel · the tenant has no identity kernel at all. Nothing
+      //     may be written on their behalf, by anyone, ever, until one exists.
+      //   not_booted · this session never called begin_session. A COBCLIENT
+      //     that has not loaded who it is does not get to write a client's world.
+      // Reads are never gated: orientation and self-explanation stay open.
+      const BOOT_GATED_WRITES = new Set([
+        "memory_write", "rule_write", "narrative_write", "blueprint_write",
+        "comm_write", "decision_write", "record_file",
+        "save_session", "sync_session", "end_session",
+      ]);
+      if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
+        const gateCid = await serverCid();
+        const gateSession = typeof args?.session_id === "string" ? args.session_id : null;
+        const refuse = (code: string, message: string) => {
+          void raiseSignal("boot-gate-refused", `${code} · tool=${name} · session=${gateSession ?? "none"}`, {
+            session_id: gateSession,
+            surface: "connector",
+            subject: name,
+            link: { tool: name, refusal: code },
+          });
+          return rpcError(id, -32004, `${code} · ${message}`);
+        };
+
+        if (!gateCid) {
+          return refuse(
+            "no_active_kernel",
+            "This client has no identity kernel. Nothing can be written on their behalf until one is installed.",
+          );
+        }
+
+        let activeKernelRow: { id: string } | null = null;
+        try {
+          const { data } = await supabaseAdmin!
+            .from("kernels").select("id").eq("cid", gateCid).eq("status", "active").limit(1);
+          activeKernelRow = ((data ?? [])[0] ?? null) as { id: string } | null;
+        } catch { activeKernelRow = null; }
+        if (!activeKernelRow) {
+          return refuse(
+            "no_active_kernel",
+            "This client has no identity kernel. Nothing can be written on their behalf until one is installed.",
+          );
+        }
+
+        // begin_session is the only writer of a RUNTIME_LOAD on a
+        // begin_session surface, so its presence is the boot proof.
+        let booted = false;
+        try {
+          let q = supabaseAdmin!
+            .from("kernel_access_log")
+            .select("id", { count: "exact", head: true })
+            .eq("cid", gateCid)
+            .eq("access_kind", "RUNTIME_LOAD")
+            .like("surface", "begin_session%")
+            .gte("at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
+          if (gateSession) q = q.eq("session_id", gateSession);
+          const { count } = await q;
+          booted = (count ?? 0) > 0;
+        } catch { booted = false; }
+        if (!booted) {
+          return refuse(
+            "not_booted",
+            "Call begin_session first. You cannot write to a client's world before you have loaded who you are.",
+          );
+        }
+      }
 
 
       const safeErrors = new Set([
@@ -5995,12 +6062,61 @@ Deno.serve(async (req) => {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
           try {
-            // Idempotency: a prior receipt for this id decides what happens next.
-            const { data: prior } = await supabaseAdmin
+            // FIX 1 · CROSS-TENANT IDEMPOTENCY. The identity is resolved BEFORE
+            // the receipt lookup, and the lookup is scoped to it. Two tenants
+            // may legitimately send the same client_request_id; an unscoped
+            // read returned the other tenant's SUCCESS receipt and reported a
+            // save that never happened. Read and write are now symmetric.
+            const saveCid = await serverCid();
+            if (!saveCid) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "cid_unresolved",
+                reasons: ["cid_unresolved"],
+                ...manifestBlock(args),
+                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
+
+            // Idempotency: a prior receipt for this id AND this cid decides
+            // what happens next. A lookup error is never discarded — two
+            // collided rows previously fell through and re-ran the whole save.
+            const { data: prior, error: priorErr } = await supabaseAdmin
               .from("save_receipts")
               .select("save_id, overall_status")
               .eq("client_request_id", clientRequestId)
+              .eq("cid", saveCid)
               .maybeSingle();
+
+            if (priorErr) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "receipt_lookup_failed",
+                reasons: ["receipt_lookup_failed"],
+                ...manifestBlock(args),
+                note: "The prior receipt for this request id could not be read, so nothing was saved. Retry with the same client_request_id.",
+              };
+              void raiseSignal("save_receipt_lookup_failed", priorErr.message ?? String(priorErr), {
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                surface: "ritual",
+              });
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
 
             let only: Set<LayerName> | null = null;
             if (prior) {
@@ -6021,26 +6137,9 @@ Deno.serve(async (req) => {
               only = await retryableLayerSet(prior.save_id);
             }
 
-            const saveCid = await serverCid();
-            if (!saveCid) {
-              const out = {
-                session_id: args?.session_id,
-                save_id: null,
-                overall_status: null,
-                outcome: "degraded",
-                reason: "cid_unresolved",
-                reasons: ["cid_unresolved"],
-                ...manifestBlock(args),
-                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
-              };
-              return rpcResult(id, {
-                content: [{ type: "text", text: JSON.stringify(out) }],
-                structuredContent: out,
-                isError: false,
-              });
-            }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
+
 
             // The database derives the status. This file never computes one.
             let save_id: string | null = null;
@@ -7078,10 +7177,26 @@ Deno.serve(async (req) => {
       if (name === "file_to_office") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
+        const officeSessionId = typeof args?.session_id === "string" && args.session_id ? args.session_id : null;
         if (!question) return rpcError(id, -32602, "invalid_params");
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
+        // FIX 2 · Postgres is the record, Notion is a mirror. Every OFFICE
+        // minute now opens a run row before the work and is finalized after,
+        // so council_minute_fetch can retrieve it even when Notion is down.
+        const officeRunId = crypto.randomUUID();
+        const officeQhash = await hashQuestion(question);
+        await openMinuteRun(supabaseAdmin, {
+          run_id: officeRunId,
+          cid: pctx.legacy_cid ?? null,
+          tenant_label: tenant,
+          tool: "file_to_office",
+          question,
+          question_hash: officeQhash,
+          session_id: officeSessionId,
+        });
+
         try {
           // C2c · fail fast BEFORE spending. Resolve the office up-front so
           // an unconfigured tenant does not pay for a full triage +
@@ -7178,16 +7293,32 @@ Deno.serve(async (req) => {
               hops: result.routing_trace.hops,
             },
           });
-          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
+          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace, run_id: officeRunId };
+          await completeMinuteRun(supabaseAdmin, {
+            run_id: officeRunId,
+            minute: out,
+            verdict_md: scrubbedMinute.recommendation ?? null,
+            dissent_md: scrubbedMinute.dissent ?? null,
+            horizon: scrubbedMinute.anticipatory_horizon ?? null,
+            chairs: scrubbedMinute.participating_chairs ?? null,
+            lenses: Array.isArray(passes) ? { pass_count: passes.length, models: passes.map((p: any) => p.model) } : null,
+            mode: result.mode,
+            advisor: result.mode === "solo" ? result.selected_advisor : null,
+            eps: result.epsilon ?? null,
+            rho: result.rho ?? null,
+            cost_usd: aggregate(passes ?? []).total_cost_usd,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
+          await failMinuteRun(supabaseAdmin, officeRunId, e);
           return toRpc(e);
         }
       }
+
 
 
       return rpcError(id, -32601, "unknown_tool");
