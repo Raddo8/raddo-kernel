@@ -7011,6 +7011,7 @@ Deno.serve(async (req) => {
         // ══════ end_session ══════
         if (name === "end_session") {
           const startedAt = Date.now();
+          let endAttemptId: string | null = null;
           const session_id = typeof args?.session_id === "string" ? args.session_id : "";
           if (!session_id) return rpcError(id, -32602, "invalid_params");
           const close_kind = (typeof args?.close_kind === "string" && args.close_kind.trim())
@@ -7020,6 +7021,14 @@ Deno.serve(async (req) => {
             const endReasons: string[] = [];
             const endCid = await serverCid();
             if (!endCid) endReasons.push("cid_unresolved");
+            if (endCid) {
+              endAttemptId = await openSaveAttempt(
+                endCid, args ?? {}, "end",
+                typeof args?.client_request_id === "string" && args.client_request_id.trim().length >= 8
+                  ? args.client_request_id.trim()
+                  : `end:${session_id}`,
+              );
+            }
             const res = await runSaveLeg(args ?? {}, "end");
 
             // ── HARDEN-02 · H3 · TRANSCRIPT AT CLOSE ──────────────────────
