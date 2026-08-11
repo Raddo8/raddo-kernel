@@ -4942,7 +4942,8 @@ Deno.serve(async (req) => {
       if (
         name === "world_read" || name === "registers_read" ||
         name === "memory_write" || name === "narrative_write" ||
-        name === "blueprint_write" || name === "rule_write"
+        name === "blueprint_write" || name === "rule_write" ||
+        name === "search" || name === "fetch"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
