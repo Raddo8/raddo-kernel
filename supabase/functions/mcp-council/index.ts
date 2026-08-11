@@ -5816,9 +5816,13 @@ Deno.serve(async (req) => {
             });
           }
           if (writeScope === "FLEET") {
+            // T6 · the connector reaches the database as service_role with no
+            // auth.uid(), so is_fleet_operator() can never be true on this
+            // path. Authority is resolved from the tenant instead: does this
+            // client's membership include an active fleet operator.
             let operator = false;
             try {
-              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator");
+              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator_cid", { p_cid: worldCid });
               operator = op === true;
             } catch { operator = false; }
             if (!operator) {
@@ -5842,8 +5846,12 @@ Deno.serve(async (req) => {
                 isError: true,
               });
             }
-            rpcName = "propose_doctrine_rule";
+            // The governed writer. It checks the operator claim again itself,
+            // writes the DRAFT rule with cid NULL and its matching amendment
+            // row in one transaction, and can never bypass doctrine_amendments.
+            rpcName = "propose_doctrine_rule_as_cid";
             params = {
+              p_cid: worldCid,
               p_rule_key: str(args?.title) ?? str(args?.id) ?? "unkeyed",
               p_rule_text: typeof args?.text === "string" ? args.text : "",
               p_reason: str(args?.reason),
