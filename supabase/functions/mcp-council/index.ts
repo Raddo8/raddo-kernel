@@ -4128,7 +4128,7 @@ Deno.serve(async (req) => {
 
         let activeKernelRow: { id: string } | null = null;
         try {
-          const { data } = await supabaseAdmin
+          const { data } = await supabaseAdmin!
             .from("kernels").select("id").eq("cid", gateCid).eq("status", "active").limit(1);
           activeKernelRow = ((data ?? [])[0] ?? null) as { id: string } | null;
         } catch { activeKernelRow = null; }
@@ -4143,7 +4143,7 @@ Deno.serve(async (req) => {
         // begin_session surface, so its presence is the boot proof.
         let booted = false;
         try {
-          let q = supabaseAdmin
+          let q = supabaseAdmin!
             .from("kernel_access_log")
             .select("id", { count: "exact", head: true })
             .eq("cid", gateCid)
