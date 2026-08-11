@@ -11787,8 +11787,10 @@ export type Database = {
           p_source_session_id?: string
           p_source_subject?: string
           p_source_surface?: string
+          p_test_run_id?: string
           p_title: string
           p_tool_version?: string
+          p_verification_state?: string
         }
         Returns: Json
       }
