@@ -5028,6 +5028,7 @@ Deno.serve(async (req) => {
           const durationMs = Date.now() - startedAt;
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               session_id: sessionId,
               ritual: "begin",
@@ -5152,6 +5153,7 @@ Deno.serve(async (req) => {
           const msg = e instanceof Error ? e.message : String(e);
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               ritual: "begin",
               outcome: "failed",
@@ -5930,6 +5932,7 @@ Deno.serve(async (req) => {
 
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: args?.session_id,
                 ritual: "save",
@@ -5971,6 +5974,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, ritual: "save", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -6062,6 +6066,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync",
                 outcome: syncOutcome,
                 duration_ms,
@@ -6106,6 +6111,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync", outcome: "failed",
                 duration_ms: Date.now() - startedAt,
                 layers: { error: msg.slice(0, 300), degraded },
@@ -6235,6 +6241,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: endOutcome,
                 duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
@@ -6299,6 +6306,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -6556,6 +6564,7 @@ Deno.serve(async (req) => {
           try {
             if (supabaseAdmin) {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: councilSessionId,
                 ritual: "council",
