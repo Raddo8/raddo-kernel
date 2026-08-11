@@ -10710,6 +10710,7 @@ export type Database = {
       }
       cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
+      cob_identity_gaps: { Args: { p_cid: string }; Returns: Json }
       cob_memory_write: {
         Args: {
           p_action?: string
