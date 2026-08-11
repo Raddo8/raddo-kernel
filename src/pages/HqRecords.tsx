@@ -16,6 +16,7 @@ import { hqAct } from "@/lib/hq-act";
 import { FleetLive } from "@/components/hq/FleetLive";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-records.css";
+import "@/hq-next/styles/hq-registers.css";
 
 const REGISTERS = [
   "memory_entries",
@@ -744,6 +745,7 @@ function RowDetail({
   const supersedes = str("supersedes");
   const lane = str("lane");
   const entityId = str("entity_id") ?? (register === "blueprints" ? str("id") : null);
+  const recordId = register === "office_record_index" ? str("record_id") : null;
 
   return (
     <div className="detail">
@@ -835,6 +837,53 @@ function RowDetail({
           )}
         </div>
       </div>
+
+      {recordId && <RecordVerbs recordId={recordId} />}
+    </div>
+  );
+}
+
+/** The two verbs the client owns on a filed record. hq_act is tenant-scoped:
+ *  a record that is not on your own cid comes back refused, by the database. */
+function RecordVerbs({ recordId }: { recordId: string }) {
+  const [note, setNote] = useState("");
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [said, setSaid] = useState<string | null>(null);
+
+  const run = async (action: string, params: Record<string, unknown>) => {
+    setBusy(true);
+    const res = await hqAct(action, recordId, params);
+    setBusy(false);
+    setSaid(res.human);
+  };
+
+  return (
+    <div className="detail" style={{ marginTop: 12 }}>
+      <div className="detail-k">Your record &middot; note and link</div>
+      <div className="reg-prompt">
+        <input
+          value={note}
+          placeholder="A note on this record"
+          aria-label="A note on this record"
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <button type="button" disabled={busy || !note.trim()} onClick={() => void run("record.note", { note: note.trim() })}>
+          Save the note
+        </button>
+      </div>
+      <div className="reg-prompt">
+        <input
+          value={link}
+          placeholder="Where this record lives"
+          aria-label="Where this record lives"
+          onChange={(e) => setLink(e.target.value)}
+        />
+        <button type="button" disabled={busy || !link.trim()} onClick={() => void run("record.link", { link: link.trim() })}>
+          Save the link
+        </button>
+      </div>
+      {said && <p className="reg-said">{said}</p>}
     </div>
   );
 }
