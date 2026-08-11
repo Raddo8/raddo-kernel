@@ -5040,6 +5040,34 @@ Deno.serve(async (req) => {
         } else if (name === "fetch") {
           rpcName = "cob_fetch";
           params = { p_cid: worldCid, p_id: str(args?.id) };
+        } else if (name === "request_read") {
+          // What the client has asked for from their HQ and not had answered.
+          rpcName = "hq_open_requests";
+          params = { p_cid: worldCid };
+        } else if (name === "request_resolve") {
+          rpcName = "cob_request_resolve";
+          params = {
+            p_cid: worldCid,
+            p_request_id: str(args?.request_id),
+            p_state: str(args?.state),
+            p_note: typeof args?.note === "string" ? args.note : null,
+          };
+        } else if (name === "comm_write") {
+          // mark_sent is refused by the function unless external_id is present.
+          // That refusal is the point: a send is not recorded on a bare id.
+          rpcName = "cob_comm_write";
+          params = {
+            p_cid: worldCid,
+            p_channel: str(args?.channel),
+            p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
+            p_to: str(args?.to),
+            p_subject: str(args?.subject),
+            p_id: str(args?.id),
+            p_action: str(args?.action) ?? "draft",
+            p_external_id: str(args?.external_id),
+            p_external_url: str(args?.external_url),
+            p_reason: typeof args?.reason === "string" ? args.reason : null,
+          };
         } else if (name === "world_read") {
           rpcName = "cob_world_read";
           params = { p_cid: worldCid, p_q: str(args?.q), p_limit: num(args?.limit, 40) };
