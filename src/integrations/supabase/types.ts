@@ -10560,6 +10560,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_memory_write: {
         Args: {
@@ -10601,6 +10602,10 @@ export type Database = {
           p_text?: string
           p_title?: string
         }
+        Returns: Json
+      }
+      cob_search: {
+        Args: { p_cid: string; p_limit?: number; p_q: string }
         Returns: Json
       }
       cob_tenant_key: { Args: { p_cid: string }; Returns: string }
