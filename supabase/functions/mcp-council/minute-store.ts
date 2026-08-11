@@ -183,15 +183,17 @@ export async function fetchMinute(admin: Admin, a: FetchArgs): Promise<FetchResu
 /**
  * Append a note to a run without touching its status.
  * Ordering law: once a deliberation is complete, downstream failures are
- * notes, never the run's verdict.
+ * notes, never the run's verdict. `error` stays reserved for real failures.
  */
 export async function noteMinuteRun(admin: Admin, run_id: string, note: string): Promise<void> {
   if (!admin) return;
   try {
+    const { data } = await admin.from(TABLE).select("notes").eq("run_id", run_id).maybeSingle();
+    const prior = Array.isArray(data?.notes) ? data.notes : [];
     await admin.from(TABLE).update({
-      error: `note:${note}`.slice(0, 1000),
+      notes: [...prior, { at: new Date().toISOString(), detail: String(note).slice(0, 1000) }],
       updated_at: new Date().toISOString(),
-    }).eq("run_id", run_id).eq("status", "complete");
+    }).eq("run_id", run_id);
   } catch (e) {
     console.warn("minute_store_note_failed", JSON.stringify({ run_id, error: String(e).slice(0, 300) }));
   }
