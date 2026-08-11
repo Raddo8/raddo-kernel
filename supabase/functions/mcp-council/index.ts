@@ -5332,6 +5332,8 @@ Deno.serve(async (req) => {
 
         let rpcName: string;
         let params: Record<string, unknown>;
+        // H6 · set only by rule_write, so the receipt can say which scope ran.
+        let ruleWriteScope: "LOCAL" | "FLEET" | null = null;
         if (name === "search") {
           // One question across six registers. COB_SEARCH_NEEDS_WORDS comes
           // back verbatim when `q` is empty.
@@ -5595,6 +5597,14 @@ Deno.serve(async (req) => {
 
         const out = {
           ...(data && typeof data === "object" ? data as Record<string, unknown> : { result: data }),
+          ...(ruleWriteScope
+            ? {
+              write_scope: ruleWriteScope,
+              write_scope_note: ruleWriteScope === "LOCAL"
+                ? `Written as a local rule for ${tenant} only. It binds this client and no one else.`
+                : "Proposed as fleet doctrine. It binds every client once it is ratified.",
+            }
+            : {}),
           ...identityBlock(pctx),
           ...manifestBlock(args),
         };
