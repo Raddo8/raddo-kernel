@@ -148,3 +148,28 @@
   color: var(--ink);
   border-radius: 0 var(--r-s) var(--r-s) 0;
 }
+
+/* Signals · the running record of where a pattern actually happened. */
+.hqg .sig-sightings {
+  display: grid;
+  gap: 6px;
+}
+.hqg .sig-sighting {
+  display: grid;
+  grid-template-columns: minmax(80px, auto) 1fr auto;
+  gap: var(--s2);
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--t-sm);
+}
+.hqg .sig-sighting:last-child { border-bottom: 0; }
+.hqg .sig-when { color: var(--muted); font-variant-numeric: tabular-nums; }
+.hqg .sig-what { color: var(--body); }
+.hqg .sig-plain { color: var(--muted); }
+.hqg .sig-link {
+  color: var(--brass);
+  text-decoration: none;
+  border-bottom: 1px solid var(--brass);
+}
+.hqg .sig-link:hover { color: var(--ink); border-bottom-color: var(--ink); }
