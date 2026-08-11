@@ -6101,6 +6101,16 @@ Deno.serve(async (req) => {
               close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
               makeup_closed,
+              // Whether each correction actually bound. `not_applied` is the
+              // honest answer to "did my correction take?".
+              directives: {
+                requested: confirmations.length,
+                confirmed: directives_confirmed,
+                edited: directives_edited,
+                dropped: directives_dropped,
+                not_applied: directives_not_applied,
+                all_applied: directives_not_applied.length === 0,
+              },
             };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(out) }],
