@@ -6797,6 +6797,7 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            await closeSaveAttempt(saveAttemptId, "FAILED", null, msg);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 cid: pctx.legacy_cid,
