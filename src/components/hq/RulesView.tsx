@@ -103,6 +103,9 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
   const [sel, setSel] = useState<Selection>(null);
   const [said, setSaid] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [nonce, setNonce] = useState(0);
+  /** Ranking asks for a number before it runs; nothing else on this view does. */
+  const [rankAsk, setRankAsk] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
