@@ -119,7 +119,7 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
     return () => {
       live = false;
     };
-  }, []);
+  }, [nonce]);
 
   const mine = useMemo(() => data?.mine ?? [], [data]);
   const canon = useMemo(() => data?.canon ?? [], [data]);
