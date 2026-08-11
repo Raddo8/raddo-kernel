@@ -174,6 +174,22 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
     [],
   );
 
+  /** Confirm, retire, restore and rank are the client's own authority: they
+   *  take effect on the press. Rewording and sorting out an overlap need
+   *  judgment, so those still go to the COB as a request. */
+  const act = useCallback(
+    async (action: string, id: string, params: Record<string, unknown> = {}) => {
+      setBusy(true);
+      const res = await hqAct(action, id, params);
+      setBusy(false);
+      setRankAsk(null);
+      setSaid(res.human);
+      if (res.ok) setNonce((n) => n + 1);
+    },
+    [],
+  );
+
+
   if (failed || (data && data.ok === false)) return <>{unauthenticated}</>;
   if (!data) return <p className="plain">Opening your rules.</p>;
 
