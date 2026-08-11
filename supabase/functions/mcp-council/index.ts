@@ -5497,6 +5497,15 @@ Deno.serve(async (req) => {
           if (briefErr) outcome = "partial";
           const briefRows = ((boardRender as any)?.items ?? []) as any[];
 
+          // D6 · anything raised and never triaged is part of the opening
+          // picture, not a surprise at close.
+          let beginDisposition: any = null;
+          try {
+            const { data: dq } = await supabaseAdmin
+              .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+            beginDisposition = dq ?? null;
+          } catch (_e) { beginDisposition = null; }
+
           // 8. Staleness flags
           const staleness: string[] = [];
           const daysSince = (iso: string | null | undefined): number | null => {
@@ -5718,6 +5727,11 @@ Deno.serve(async (req) => {
               snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
               created_at: r.created_at,
             })),
+            // D3/D5 · the board is not a section of the boot, it is the input
+            // to the lane. Both travel together so the choice is inspectable.
+            board: boardRender ?? null,
+            disposition: beginDisposition,
+            channel_select: channelSelect(boardRender, beginDisposition),
             memory: memoryModule,
             staleness,
             makeup_close_owed,
@@ -6752,9 +6766,18 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
+            // D6 · a save that leaves items untriaged says so, by name.
+            let saveDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              saveDisposition = dq ?? null;
+            } catch (_e) { saveDisposition = null; }
+
             const out = {
               session_id: args?.session_id,
               save_id,
+              disposition: saveDisposition,
               overall_status,
               idempotent,
               ...(receipt_error ? { receipt_error } : {}),
@@ -6802,6 +6825,13 @@ Deno.serve(async (req) => {
               .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: 200 });
             if (briefErr) degraded.push("brief");
             const briefRows = ((boardRender as any)?.items ?? []) as any[];
+
+            let syncDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              syncDisposition = dq ?? null;
+            } catch (_e) { syncDisposition = null; }
 
             // Directives added since session opened
             const { data: dirs, error: dirsErr } = await supabaseAdmin
@@ -6880,6 +6910,9 @@ Deno.serve(async (req) => {
                 snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
                 created_at: r.created_at,
               })),
+              board: boardRender ?? null,
+              disposition: syncDisposition,
+              channel_select: channelSelect(boardRender, syncDisposition),
               directives: dirs ?? [],
               decisions_this_session: cps ?? [],
               staleness,
@@ -7092,11 +7125,22 @@ Deno.serve(async (req) => {
               .from("directives").select("id, text, scope, status")
               .eq("tenant_id", tenant).in("status", ["queued", "pending-confirm"]);
 
+            let endDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              endDisposition = dq ?? null;
+            } catch (_e) { endDisposition = null; }
+
             const out = {
               session_id,
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: endOutcome,
+              // D6 · closing over untriaged items is a stated fact, not a
+              // silent one. The close is not blocked; it is named.
+              disposition: endDisposition,
+              clean_disposition: endDisposition?.clean === true,
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
