@@ -3827,6 +3827,26 @@ Deno.serve(async (req) => {
     args: unknown,
   ): Promise<{ session_id: string | null; session_source: string }> => {
     const sid = (args as any)?.session_id;
+    // T2 · the live session context is the first authority on which session
+    // a call belongs to. It is written when a session opens and revoked when
+    // it closes, so it is true for calls that carry no session_id argument.
+    if (!(typeof sid === "string" && UUID_RE.test(sid))) {
+      try {
+        const { data: ctx } = await supabaseAdmin
+          .from("tenant_session_context")
+          .select("session_id, expires_at")
+          .eq("cid", cid)
+          .is("revoked_at", null)
+          .gt("expires_at", new Date().toISOString())
+          .order("established_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const ctxSid = typeof ctx?.session_id === "string" ? ctx.session_id : null;
+        if (ctxSid && UUID_RE.test(ctxSid)) {
+          return { session_id: ctxSid, session_source: "session_context" };
+        }
+      } catch { /* fall through to the open-session lookup */ }
+    }
     if (typeof sid === "string" && UUID_RE.test(sid)) {
       return { session_id: sid, session_source: "arg" };
     }
@@ -4366,6 +4386,10 @@ Deno.serve(async (req) => {
       const pctx = await logIdentityOnce(
         typeof name === "string" && name ? `tool:${name}` : "tool",
       );
+
+      // T1 · prime this tenant's zone before any result is rendered, so the
+      // boundary renderer stamps local strings in the caller's own zone.
+      await tenantTz();
 
       // ITEM 3 · every tool leaves an identity trace, kernel path or not.
       void recordMcpUsage(supabaseAdmin, {
@@ -5078,6 +5102,28 @@ Deno.serve(async (req) => {
             throw new Error("session_insert_failed");
           }
           const sessionId = newSession.id as string;
+
+          // T2 · the session context substrate. resolve_tenant_context reads
+          // tenant_session_context whenever a session id is supplied; with the
+          // table empty that branch always returned CONTEXT_INVALID, which is
+          // why session_event.session_id was null on most rows. The row is
+          // written here, at the one moment a session opens.
+          let sessionContext: Record<string, unknown> | null = null;
+          try {
+            const { data: ctxRow, error: ctxErr } = await supabaseAdmin.rpc(
+              "open_session_context",
+              { p_session_id: sessionId, p_cid: beginCid ?? pctx.legacy_cid, p_source: "connector" },
+            );
+            if (ctxErr) {
+              outcome = outcome === "ok" ? "partial" : outcome;
+              degradedReasons.push(`session_context_not_written:${ctxErr.code ?? "unknown"}`);
+            } else {
+              sessionContext = (ctxRow ?? null) as Record<string, unknown> | null;
+            }
+          } catch (e) {
+            outcome = outcome === "ok" ? "partial" : outcome;
+            degradedReasons.push("session_context_exception");
+          }
 
           // 4 (cont). ITEM 1 · LOAD AND VERIFY. The manifest alone proves
           // nothing: begin_session now serves every part through the same
@@ -6723,6 +6769,11 @@ Deno.serve(async (req) => {
               .select("id, closed_at, close_kind");
             const closedRow = (closedRows ?? [])[0] as any;
             const close_confirmed = Boolean(!closeErr && closedRow?.closed_at);
+            // T2 · the context row is revoked when the session closes, so a
+            // stale session id can never resolve authority after the close.
+            try {
+              await supabaseAdmin.rpc("close_session_context", { p_session_id: session_id });
+            } catch { /* best-effort · the close itself is the record */ }
             if (!close_confirmed) {
               closeConfirm.close_error = closeErr?.message ?? "no_matching_row_in_tenant";
               endReasons.push("session_close_not_confirmed");
