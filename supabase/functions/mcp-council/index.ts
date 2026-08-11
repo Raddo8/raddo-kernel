@@ -27,7 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
-import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./minute-store.ts";
+import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.3";
+const TOOL_MANIFEST_VERSION = "2026.08.11.5";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -7197,6 +7197,7 @@ Deno.serve(async (req) => {
           session_id: officeSessionId,
         });
 
+        let officeCompleted = false;
         try {
           // C2c · fail fast BEFORE spending. Resolve the office up-front so
           // an unconfigured tenant does not pay for a full triage +
@@ -7298,8 +7299,9 @@ Deno.serve(async (req) => {
             const reason = mirrorErr instanceof Error ? mirrorErr.message : String(mirrorErr);
             out.mirror_status = `failed · ${reason}`;
             await noteMinuteRun(supabaseAdmin, officeRunId, `mirror_failed:${reason}`);
-            await raiseSignal(supabaseAdmin, pctx.legacy_cid ?? null, "office-mirror-failed", {
-              tool: "file_to_office", run_id: officeRunId, reason,
+            void raiseSignal("office-mirror-failed", reason, {
+              session_id: officeSessionId, subject: "file_to_office",
+              link: { run_id: officeRunId },
             });
           }
 
@@ -7336,8 +7338,11 @@ Deno.serve(async (req) => {
           });
 
         } catch (e) {
-          await failMinuteRun(supabaseAdmin, officeRunId, e);
-          return toRpc(e);
+          // Only a pre-completion failure may mark the run failed. Once the
+          // deliberation is persisted the row stays complete.
+          if (!officeCompleted) await failMinuteRun(supabaseAdmin, officeRunId, e);
+          else await noteMinuteRun(supabaseAdmin, officeRunId, `post_complete:${e instanceof Error ? e.message : String(e)}`);
+          return officeCompleted ? rpcResult(id, { content: [], structuredContent: { run_id: officeRunId, status: "complete", note: "minute persisted; a later step failed" }, isError: false }) : toRpc(e);
         }
       }
 
