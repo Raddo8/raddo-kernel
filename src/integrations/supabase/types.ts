@@ -9372,6 +9372,30 @@ export type Database = {
           },
         ]
       }
+      vocabulary_writer_registry: {
+        Row: {
+          added_at: string
+          note: string | null
+          value: string
+          vocabulary: string
+          writer: string
+        }
+        Insert: {
+          added_at?: string
+          note?: string | null
+          value: string
+          vocabulary: string
+          writer: string
+        }
+        Update: {
+          added_at?: string
+          note?: string | null
+          value?: string
+          vocabulary?: string
+          writer?: string
+        }
+        Relationships: []
+      }
       wire_grants: {
         Row: {
           cid: string
