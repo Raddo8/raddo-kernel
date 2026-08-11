@@ -4765,6 +4765,7 @@ Deno.serve(async (req) => {
           const { data: newSession, error: sessErr } = await supabaseAdmin
             .from("sessions")
             .insert({
+              cid: pctx.legacy_cid,
               tenant,
               surface,
               kernel_version: kernel?.version ?? null,
