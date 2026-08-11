@@ -6552,8 +6552,11 @@ Deno.serve(async (req) => {
             }
 
             // 4. ritual_runs
+            // H3 · a close with no transcript is partial, never clean.
             const endOutcome: "ok" | "partial" | "degraded" =
-              endReasons.length ? "degraded" : res.outcome;
+              !transcriptPresent
+                ? "partial"
+                : (endReasons.length ? "degraded" : res.outcome);
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
@@ -6591,6 +6594,14 @@ Deno.serve(async (req) => {
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
+              transcript: {
+                present: transcriptPresent,
+                chars: transcriptChars,
+                clean_close: transcriptPresent,
+                note: transcriptPresent
+                  ? "The session is on the record."
+                  : "Closed partial: no transcript was written for this session, so the narrative record is missing. Write the transcript, then say so in the next session's opening.",
+              },
               layers: res.layers,
               mirror_status: res.mirror_status,
               mirror_note: res.mirror_note,
