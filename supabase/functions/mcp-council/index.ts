@@ -5312,6 +5312,7 @@ Deno.serve(async (req) => {
         name === "search" || name === "fetch" ||
         name === "request_read" || name === "request_resolve" || name === "comm_write" ||
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
+        name === "record_probe" ||
         name === "board_respond"
 
       ) {
