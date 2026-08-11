@@ -430,6 +430,7 @@ export type Database = {
           next_action: string | null
           owner: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
           title: string
           updated_at: string
@@ -448,6 +449,7 @@ export type Database = {
           next_action?: string | null
           owner?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
           title: string
           updated_at?: string
@@ -466,6 +468,7 @@ export type Database = {
           next_action?: string | null
           owner?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -491,6 +494,7 @@ export type Database = {
           kernel_version: number | null
           meta: Json | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
         }
         Insert: {
@@ -502,6 +506,7 @@ export type Database = {
           kernel_version?: number | null
           meta?: Json | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
         }
         Update: {
@@ -513,6 +518,7 @@ export type Database = {
           kernel_version?: number | null
           meta?: Json | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id?: string
         }
         Relationships: []
@@ -593,6 +599,7 @@ export type Database = {
           outcome: string
           run_id: string
           slack_ts: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           attempt_no: number
@@ -603,6 +610,7 @@ export type Database = {
           outcome: string
           run_id: string
           slack_ts?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           attempt_no?: number
@@ -613,6 +621,7 @@ export type Database = {
           outcome?: string
           run_id?: string
           slack_ts?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -642,6 +651,7 @@ export type Database = {
           status: string
           target_agent: string | null
           team_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           thread_ts: string | null
         }
         Insert: {
@@ -661,6 +671,7 @@ export type Database = {
           status?: string
           target_agent?: string | null
           team_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           thread_ts?: string | null
         }
         Update: {
@@ -680,6 +691,7 @@ export type Database = {
           status?: string
           target_agent?: string | null
           team_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           thread_ts?: string | null
         }
         Relationships: []
@@ -766,6 +778,7 @@ export type Database = {
           response_text: string | null
           run_id: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tokens_in: number | null
           tokens_out: number | null
         }
@@ -790,6 +803,7 @@ export type Database = {
           response_text?: string | null
           run_id?: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tokens_in?: number | null
           tokens_out?: number | null
         }
@@ -814,6 +828,7 @@ export type Database = {
           response_text?: string | null
           run_id?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tokens_in?: number | null
           tokens_out?: number | null
         }
@@ -874,6 +889,7 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           blueprint_id?: string | null
@@ -884,6 +900,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           blueprint_id?: string | null
@@ -894,6 +911,7 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1060,6 +1078,7 @@ export type Database = {
           priority: string
           seen: boolean
           seen_at: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           type: string
         }
@@ -1075,6 +1094,7 @@ export type Database = {
           priority?: string
           seen?: boolean
           seen_at?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           type: string
         }
@@ -1090,6 +1110,7 @@ export type Database = {
           priority?: string
           seen?: boolean
           seen_at?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string
           type?: string
         }
@@ -1135,6 +1156,7 @@ export type Database = {
           row_pk: string
           session_ref: string | null
           table_name: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Insert: {
           actor?: string | null
@@ -1153,6 +1175,7 @@ export type Database = {
           row_pk: string
           session_ref?: string | null
           table_name: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Update: {
           actor?: string | null
@@ -1171,6 +1194,7 @@ export type Database = {
           row_pk?: string
           session_ref?: string | null
           table_name?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Relationships: [
           {
@@ -1200,6 +1224,7 @@ export type Database = {
           entity_id: string | null
           id: string
           summary: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
         }
         Insert: {
@@ -1212,6 +1237,7 @@ export type Database = {
           entity_id?: string | null
           id?: string
           summary?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
         }
         Update: {
@@ -1224,6 +1250,7 @@ export type Database = {
           entity_id?: string | null
           id?: string
           summary?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id?: string
         }
         Relationships: []
@@ -1302,6 +1329,7 @@ export type Database = {
           coded_at: string
           coded_by: string
           confidence: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -1310,6 +1338,7 @@ export type Database = {
           coded_at?: string
           coded_by: string
           confidence?: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -1318,6 +1347,7 @@ export type Database = {
           coded_at?: string
           coded_by?: string
           confidence?: number | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1350,6 +1380,7 @@ export type Database = {
           created_at: string
           fingerprint: string
           source_ref: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -1357,6 +1388,7 @@ export type Database = {
           created_at?: string
           fingerprint: string
           source_ref: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -1364,6 +1396,7 @@ export type Database = {
           created_at?: string
           fingerprint?: string
           source_ref?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1389,6 +1422,7 @@ export type Database = {
           id: string
           recorded_at: string
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           topic: string
         }
         Insert: {
@@ -1397,6 +1431,7 @@ export type Database = {
           id?: string
           recorded_at?: string
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           topic: string
         }
         Update: {
@@ -1405,6 +1440,7 @@ export type Database = {
           id?: string
           recorded_at?: string
           source?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           topic?: string
         }
         Relationships: [
@@ -1438,6 +1474,7 @@ export type Database = {
           code: string
           id: string
           redeemed_at: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           auth_user_id: string
@@ -1445,6 +1482,7 @@ export type Database = {
           code: string
           id?: string
           redeemed_at?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           auth_user_id?: string
@@ -1452,6 +1490,7 @@ export type Database = {
           code?: string
           id?: string
           redeemed_at?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1497,6 +1536,7 @@ export type Database = {
           last_seen: string
           merged_into: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           theme: string | null
         }
         Insert: {
@@ -1511,6 +1551,7 @@ export type Database = {
           last_seen?: string
           merged_into?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           theme?: string | null
         }
         Update: {
@@ -1525,6 +1566,7 @@ export type Database = {
           last_seen?: string
           merged_into?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           theme?: string | null
         }
         Relationships: [
@@ -1553,6 +1595,7 @@ export type Database = {
           sent_at: string | null
           state: string
           subject: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string | null
           to_whom: string | null
           updated_at: string
@@ -1572,6 +1615,7 @@ export type Database = {
           sent_at?: string | null
           state?: string
           subject?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string | null
           to_whom?: string | null
           updated_at?: string
@@ -1591,6 +1635,7 @@ export type Database = {
           sent_at?: string | null
           state?: string
           subject?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string | null
           to_whom?: string | null
           updated_at?: string
@@ -1605,6 +1650,7 @@ export type Database = {
           grant_status: string
           id: string
           system_name: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
           usage_role: string
         }
@@ -1615,6 +1661,7 @@ export type Database = {
           grant_status?: string
           id?: string
           system_name: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           usage_role?: string
         }
@@ -1625,6 +1672,7 @@ export type Database = {
           grant_status?: string
           id?: string
           system_name?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           usage_role?: string
         }
@@ -1681,6 +1729,7 @@ export type Database = {
           event: string
           id: string
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -1690,6 +1739,7 @@ export type Database = {
           event: string
           id?: string
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -1699,6 +1749,7 @@ export type Database = {
           event?: string
           id?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1737,6 +1788,7 @@ export type Database = {
           scopes: string[]
           status: string
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Insert: {
           authorized_at?: string | null
@@ -1750,6 +1802,7 @@ export type Database = {
           scopes?: string[]
           status?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Update: {
           authorized_at?: string | null
@@ -1763,6 +1816,7 @@ export type Database = {
           scopes?: string[]
           status?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Relationships: [
           {
@@ -1950,6 +2004,7 @@ export type Database = {
           overrides_tier: number
           status: string
           target: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           at?: string
@@ -1960,6 +2015,7 @@ export type Database = {
           overrides_tier: number
           status?: string
           target: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           at?: string
@@ -1970,6 +2026,7 @@ export type Database = {
           overrides_tier?: number
           status?: string
           target?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2006,6 +2063,7 @@ export type Database = {
           session_id: string | null
           started_at: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_label: string | null
           tool: string | null
           updated_at: string
@@ -2035,6 +2093,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_label?: string | null
           tool?: string | null
           updated_at?: string
@@ -2064,6 +2123,7 @@ export type Database = {
           session_id?: string | null
           started_at?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_label?: string | null
           tool?: string | null
           updated_at?: string
@@ -2076,18 +2136,21 @@ export type Database = {
           cid: string
           kind: string
           last_value: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
           cid: string
           kind: string
           last_value?: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
           cid?: string
           kind?: string
           last_value?: number
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: []
@@ -2102,6 +2165,7 @@ export type Database = {
           outcome: string | null
           register_key: string
           released_at: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           acquired_at?: string
@@ -2112,6 +2176,7 @@ export type Database = {
           outcome?: string | null
           register_key: string
           released_at?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           acquired_at?: string
@@ -2122,6 +2187,7 @@ export type Database = {
           outcome?: string | null
           register_key?: string
           released_at?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -2143,6 +2209,7 @@ export type Database = {
           source_subject: string | null
           source_surface: string | null
           superseded_by: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id: string | null
           title: string
           tool_version: string | null
@@ -2165,6 +2232,7 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           superseded_by?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           title: string
           tool_version?: string | null
@@ -2187,6 +2255,7 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           superseded_by?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           title?: string
           tool_version?: string | null
@@ -2231,6 +2300,7 @@ export type Database = {
           id: string
           requested_by: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -2240,6 +2310,7 @@ export type Database = {
           id?: string
           requested_by: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -2249,6 +2320,7 @@ export type Database = {
           id?: string
           requested_by?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: [
@@ -2273,6 +2345,7 @@ export type Database = {
           scope_checked: boolean | null
           signature_ok: boolean | null
           snapshot: Json | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           at?: string
@@ -2285,6 +2358,7 @@ export type Database = {
           scope_checked?: boolean | null
           signature_ok?: boolean | null
           snapshot?: Json | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           at?: string
@@ -2297,6 +2371,7 @@ export type Database = {
           scope_checked?: boolean | null
           signature_ok?: boolean | null
           snapshot?: Json | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2331,6 +2406,7 @@ export type Database = {
           rank: number | null
           scope: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
           text: string
           title: string | null
@@ -2344,6 +2420,7 @@ export type Database = {
           rank?: number | null
           scope?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id: string
           text: string
           title?: string | null
@@ -2357,6 +2434,7 @@ export type Database = {
           rank?: number | null
           scope?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_id?: string
           text?: string
           title?: string | null
@@ -2458,6 +2536,7 @@ export type Database = {
           source: string
           status: string
           superseded_by: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tier: number
           version: number
         }
@@ -2476,6 +2555,7 @@ export type Database = {
           source: string
           status?: string
           superseded_by?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tier: number
           version?: number
         }
@@ -2494,6 +2574,7 @@ export type Database = {
           source?: string
           status?: string
           superseded_by?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tier?: number
           version?: number
         }
@@ -2551,6 +2632,7 @@ export type Database = {
           install_version: string | null
           last_checked: string | null
           observed_sha256: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           category?: string | null
@@ -2564,6 +2646,7 @@ export type Database = {
           install_version?: string | null
           last_checked?: string | null
           observed_sha256?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           category?: string | null
@@ -2577,6 +2660,7 @@ export type Database = {
           install_version?: string | null
           last_checked?: string | null
           observed_sha256?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2640,6 +2724,7 @@ export type Database = {
           pair_id: string | null
           reason: string | null
           survivor: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           absorbed: string
@@ -2651,6 +2736,7 @@ export type Database = {
           pair_id?: string | null
           reason?: string | null
           survivor: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           absorbed?: string
@@ -2662,6 +2748,7 @@ export type Database = {
           pair_id?: string | null
           reason?: string | null
           survivor?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -2682,6 +2769,7 @@ export type Database = {
           shared_keys: Json
           sim_name: number | null
           state: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           blocker: string
@@ -2699,6 +2787,7 @@ export type Database = {
           shared_keys?: Json
           sim_name?: number | null
           state?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           blocker?: string
@@ -2716,6 +2805,7 @@ export type Database = {
           shared_keys?: Json
           sim_name?: number | null
           state?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2791,6 +2881,7 @@ export type Database = {
           linked_by: string
           registry_id: string
           review_status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -2801,6 +2892,7 @@ export type Database = {
           linked_by: string
           registry_id: string
           review_status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -2811,6 +2903,7 @@ export type Database = {
           linked_by?: string
           registry_id?: string
           review_status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2952,6 +3045,7 @@ export type Database = {
           request_id: string
           started_at: string | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_display: string | null
           tool: string
           tool_catalogued: boolean
@@ -2980,6 +3074,7 @@ export type Database = {
           request_id: string
           started_at?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_display?: string | null
           tool: string
           tool_catalogued?: boolean
@@ -3008,6 +3103,7 @@ export type Database = {
           request_id?: string
           started_at?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_display?: string | null
           tool?: string
           tool_catalogued?: boolean
@@ -3126,6 +3222,7 @@ export type Database = {
           status: string
           supersedes: string | null
           template_version: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_scope: string
           version: string | null
         }
@@ -3150,6 +3247,7 @@ export type Database = {
           status?: string
           supersedes?: string | null
           template_version?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_scope: string
           version?: string | null
         }
@@ -3174,6 +3272,7 @@ export type Database = {
           status?: string
           supersedes?: string | null
           template_version?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant_scope?: string
           version?: string | null
         }
@@ -3244,6 +3343,7 @@ export type Database = {
           scorecard_id: string
           skill_versions: string | null
           source_ref: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Insert: {
           audit_date?: string | null
@@ -3260,6 +3360,7 @@ export type Database = {
           scorecard_id?: string
           skill_versions?: string | null
           source_ref?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Update: {
           audit_date?: string | null
@@ -3276,6 +3377,7 @@ export type Database = {
           scorecard_id?: string
           skill_versions?: string | null
           source_ref?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Relationships: []
       }
@@ -3291,6 +3393,7 @@ export type Database = {
           skill_key: string
           source_ref: string | null
           status: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           version: string | null
         }
         Insert: {
@@ -3304,6 +3407,7 @@ export type Database = {
           skill_key: string
           source_ref?: string | null
           status?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           version?: string | null
         }
         Update: {
@@ -3317,6 +3421,7 @@ export type Database = {
           skill_key?: string
           source_ref?: string | null
           status?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           version?: string | null
         }
         Relationships: []
@@ -3331,6 +3436,7 @@ export type Database = {
           priority: number | null
           status: string
           target_date: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at: string
@@ -3347,6 +3453,7 @@ export type Database = {
           priority?: number | null
           status?: string
           target_date?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at?: string
@@ -3363,6 +3470,7 @@ export type Database = {
           priority?: number | null
           status?: string
           target_date?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -3407,6 +3515,7 @@ export type Database = {
           requested_by: string | null
           state: string
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string | null
           updated_at: string
         }
@@ -3423,6 +3532,7 @@ export type Database = {
           requested_by?: string | null
           state?: string
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title?: string | null
           updated_at?: string
         }
@@ -3439,6 +3549,7 @@ export type Database = {
           requested_by?: string | null
           state?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string | null
           updated_at?: string
         }
@@ -3485,6 +3596,7 @@ export type Database = {
           reason: string | null
           set_at: string
           set_by: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -3493,6 +3605,7 @@ export type Database = {
           reason?: string | null
           set_at?: string
           set_by?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -3501,6 +3614,7 @@ export type Database = {
           reason?: string | null
           set_at?: string
           set_by?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -3640,6 +3754,7 @@ export type Database = {
           source_subject: string | null
           source_surface: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id: string | null
           tool_version: string | null
           verification_state: string | null
@@ -3663,6 +3778,7 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           tool_version?: string | null
           verification_state?: string | null
@@ -3686,6 +3802,7 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           tool_version?: string | null
           verification_state?: string | null
@@ -3731,6 +3848,7 @@ export type Database = {
           requested_layers: Json | null
           session_id: string | null
           source_available: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -3748,6 +3866,7 @@ export type Database = {
           requested_layers?: Json | null
           session_id?: string | null
           source_available?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -3765,6 +3884,7 @@ export type Database = {
           requested_layers?: Json | null
           session_id?: string | null
           source_available?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -3787,6 +3907,7 @@ export type Database = {
           rate_source: string | null
           runs_done: number
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           total_estimate_basis: string | null
           total_estimated_items: number | null
           updated_at: string
@@ -3809,6 +3930,7 @@ export type Database = {
           rate_source?: string | null
           runs_done?: number
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           total_estimate_basis?: string | null
           total_estimated_items?: number | null
           updated_at?: string
@@ -3831,6 +3953,7 @@ export type Database = {
           rate_source?: string | null
           runs_done?: number
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           total_estimate_basis?: string | null
           total_estimated_items?: number | null
           updated_at?: string
@@ -3850,6 +3973,7 @@ export type Database = {
           kind: string
           label: string
           source_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
@@ -3864,6 +3988,7 @@ export type Database = {
           kind: string
           label: string
           source_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
@@ -3878,6 +4003,7 @@ export type Database = {
           kind?: string
           label?: string
           source_key?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: [
@@ -3942,6 +4068,7 @@ export type Database = {
           program_id: string | null
           session_ref: string | null
           source_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unit_id: string | null
         }
         Insert: {
@@ -3953,6 +4080,7 @@ export type Database = {
           program_id?: string | null
           session_ref?: string | null
           source_id?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unit_id?: string | null
         }
         Update: {
@@ -3964,6 +4092,7 @@ export type Database = {
           program_id?: string | null
           session_ref?: string | null
           source_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           unit_id?: string | null
         }
         Relationships: [
@@ -3991,6 +4120,7 @@ export type Database = {
           program_id: string
           started_at: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
@@ -4007,6 +4137,7 @@ export type Database = {
           program_id?: string
           started_at?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
@@ -4023,6 +4154,7 @@ export type Database = {
           program_id?: string
           started_at?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: [
@@ -4050,6 +4182,7 @@ export type Database = {
           program_id: string | null
           receipt_id: string
           run_no: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           campaign_id: string
@@ -4065,6 +4198,7 @@ export type Database = {
           program_id?: string | null
           receipt_id?: string
           run_no: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           campaign_id?: string
@@ -4080,6 +4214,7 @@ export type Database = {
           program_id?: string | null
           receipt_id?: string
           run_no?: number
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -4105,6 +4240,7 @@ export type Database = {
           minutes: number
           state: string
           surface_key: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
           window_start: string
         }
@@ -4121,6 +4257,7 @@ export type Database = {
           minutes?: number
           state?: string
           surface_key?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           window_start?: string
         }
@@ -4137,6 +4274,7 @@ export type Database = {
           minutes?: number
           state?: string
           surface_key?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           window_start?: string
         }
@@ -4172,6 +4310,7 @@ export type Database = {
           read_attempts: number
           read_failures: number
           source_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           throttle_hits: number
         }
         Insert: {
@@ -4188,6 +4327,7 @@ export type Database = {
           read_attempts?: number
           read_failures?: number
           source_id?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           throttle_hits?: number
         }
         Update: {
@@ -4204,6 +4344,7 @@ export type Database = {
           read_attempts?: number
           read_failures?: number
           source_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           throttle_hits?: number
         }
         Relationships: [
@@ -4261,6 +4402,7 @@ export type Database = {
           seq: number | null
           source_id: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unit_id: string
         }
         Insert: {
@@ -4280,6 +4422,7 @@ export type Database = {
           seq?: number | null
           source_id?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unit_id?: string
         }
         Update: {
@@ -4299,6 +4442,7 @@ export type Database = {
           seq?: number | null
           source_id?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           unit_id?: string
         }
         Relationships: [
@@ -4330,6 +4474,7 @@ export type Database = {
           source_message_id: string | null
           source_surface: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string | null
           updated_at: string
         }
@@ -4344,6 +4489,7 @@ export type Database = {
           source_message_id?: string | null
           source_surface?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           updated_at?: string
         }
@@ -4358,6 +4504,7 @@ export type Database = {
           source_message_id?: string | null
           source_surface?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           updated_at?: string
         }
@@ -4387,6 +4534,7 @@ export type Database = {
           id: string
           section: string | null
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -4397,6 +4545,7 @@ export type Database = {
           id?: string
           section?: string | null
           source?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -4407,6 +4556,7 @@ export type Database = {
           id?: string
           section?: string | null
           source?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: [
@@ -4428,6 +4578,7 @@ export type Database = {
           kind: string
           size_bytes: number | null
           storage_path: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           uploaded_at: string
         }
@@ -4439,6 +4590,7 @@ export type Database = {
           kind: string
           size_bytes?: number | null
           storage_path: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           uploaded_at?: string
         }
@@ -4450,6 +4602,7 @@ export type Database = {
           kind?: string
           size_bytes?: number | null
           storage_path?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           uploaded_at?: string
         }
@@ -4472,6 +4625,7 @@ export type Database = {
           created_at: string
           id: string
           question_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           updated_at: string
         }
@@ -4483,6 +4637,7 @@ export type Database = {
           created_at?: string
           id?: string
           question_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           updated_at?: string
         }
@@ -4494,6 +4649,7 @@ export type Database = {
           created_at?: string
           id?: string
           question_key?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           updated_at?: string
         }
@@ -4653,6 +4809,7 @@ export type Database = {
           memory_id: string | null
           routed_at: string
           routed_by: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -4662,6 +4819,7 @@ export type Database = {
           memory_id?: string | null
           routed_at?: string
           routed_by?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -4671,6 +4829,7 @@ export type Database = {
           memory_id?: string | null
           routed_at?: string
           routed_by?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -4838,6 +4997,7 @@ export type Database = {
           seq: number | null
           session_id: string | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_claim: string | null
           token_version: string | null
         }
@@ -4857,6 +5017,7 @@ export type Database = {
           seq?: number | null
           session_id?: string | null
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_claim?: string | null
           token_version?: string | null
         }
@@ -4876,6 +5037,7 @@ export type Database = {
           seq?: number | null
           session_id?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_claim?: string | null
           token_version?: string | null
         }
@@ -4898,6 +5060,7 @@ export type Database = {
           part_manifest: Json
           receipt_id: string
           retired_kernel_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           validator_verdict: Json
           version: number
         }
@@ -4909,6 +5072,7 @@ export type Database = {
           part_manifest: Json
           receipt_id?: string
           retired_kernel_id?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           validator_verdict: Json
           version: number
         }
@@ -4920,6 +5084,7 @@ export type Database = {
           part_manifest?: Json
           receipt_id?: string
           retired_kernel_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           validator_verdict?: Json
           version?: number
         }
@@ -4952,6 +5117,7 @@ export type Database = {
           phrases: Json | null
           session_ref: string | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           attest_latency_ms?: number | null
@@ -4971,6 +5137,7 @@ export type Database = {
           phrases?: Json | null
           session_ref?: string | null
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           attest_latency_ms?: number | null
@@ -4990,6 +5157,7 @@ export type Database = {
           phrases?: Json | null
           session_ref?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -5011,6 +5179,7 @@ export type Database = {
           op: string
           part: string | null
           seq: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           at?: string
@@ -5029,6 +5198,7 @@ export type Database = {
           op: string
           part?: string | null
           seq?: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           at?: string
@@ -5047,6 +5217,7 @@ export type Database = {
           op?: string
           part?: string | null
           seq?: number | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -5092,18 +5263,21 @@ export type Database = {
         Row: {
           cid: string
           notes_md: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           cid: string
           notes_md: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           cid?: string
           notes_md?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
           updated_by?: string | null
         }
@@ -5119,6 +5293,7 @@ export type Database = {
           notes: string | null
           persona_key: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           verification_state: string | null
           version: number
@@ -5132,6 +5307,7 @@ export type Database = {
           notes?: string | null
           persona_key?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           verification_state?: string | null
           version?: number
@@ -5145,6 +5321,7 @@ export type Database = {
           notes?: string | null
           persona_key?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           verification_state?: string | null
           version?: number
@@ -5184,6 +5361,7 @@ export type Database = {
           id: string
           source: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at: string
@@ -5200,6 +5378,7 @@ export type Database = {
           id?: string
           source?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at?: string
@@ -5216,6 +5395,7 @@ export type Database = {
           id?: string
           source?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -5259,6 +5439,7 @@ export type Database = {
           model_breakdown: Json
           principal_id: string | null
           resolution_mode: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           tool: string
           total_cost_usd: number
@@ -5273,6 +5454,7 @@ export type Database = {
           model_breakdown?: Json
           principal_id?: string | null
           resolution_mode?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           tool: string
           total_cost_usd?: number
@@ -5287,6 +5469,7 @@ export type Database = {
           model_breakdown?: Json
           principal_id?: string | null
           resolution_mode?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
           tool?: string
           total_cost_usd?: number
@@ -5309,6 +5492,7 @@ export type Database = {
           session_id: string | null
           status: string
           superseded_by: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           title: string
           updated_at: string
@@ -5328,6 +5512,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           superseded_by?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           title: string
           updated_at?: string
@@ -5347,6 +5532,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           superseded_by?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
           title?: string
           updated_at?: string
@@ -5462,6 +5648,7 @@ export type Database = {
           record_date: string | null
           record_id: string
           source_ref: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           box_link?: string | null
@@ -5478,6 +5665,7 @@ export type Database = {
           record_date?: string | null
           record_id?: string
           source_ref?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           box_link?: string | null
@@ -5494,6 +5682,7 @@ export type Database = {
           record_date?: string | null
           record_id?: string
           source_ref?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -5562,6 +5751,7 @@ export type Database = {
           id: string
           reason: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -5571,6 +5761,7 @@ export type Database = {
           id?: string
           reason: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -5580,6 +5771,7 @@ export type Database = {
           id?: string
           reason?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: [
@@ -5632,6 +5824,7 @@ export type Database = {
           source: string
           status: string
           step_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
@@ -5643,6 +5836,7 @@ export type Database = {
           source: string
           status?: string
           step_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
@@ -5654,6 +5848,7 @@ export type Database = {
           source?: string
           status?: string
           step_key?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: [
@@ -5763,6 +5958,7 @@ export type Database = {
           state: Json | null
           status: string
           step0_flags: Json
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_key: string
           updated_at: string
           user_id: string
@@ -5791,6 +5987,7 @@ export type Database = {
           state?: Json | null
           status?: string
           step0_flags?: Json
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_key: string
           updated_at?: string
           user_id: string
@@ -5819,6 +6016,7 @@ export type Database = {
           state?: Json | null
           status?: string
           step0_flags?: Json
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_key?: string
           updated_at?: string
           user_id?: string
@@ -5925,6 +6123,7 @@ export type Database = {
           state: string | null
           superseded_by: string | null
           surfaced_count: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title: string
           trigger: string | null
@@ -5951,6 +6150,7 @@ export type Database = {
           state?: string | null
           superseded_by?: string | null
           surfaced_count?: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title: string
           trigger?: string | null
@@ -5977,6 +6177,7 @@ export type Database = {
           state?: string | null
           superseded_by?: string | null
           surfaced_count?: number
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           title?: string
           trigger?: string | null
@@ -6250,6 +6451,7 @@ export type Database = {
           role: string | null
           scopes: string[]
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           verified_email: string | null
         }
         Insert: {
@@ -6267,6 +6469,7 @@ export type Database = {
           role?: string | null
           scopes?: string[]
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           verified_email?: string | null
         }
         Update: {
@@ -6284,6 +6487,7 @@ export type Database = {
           role?: string | null
           scopes?: string[]
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           verified_email?: string | null
         }
         Relationships: [
@@ -6395,6 +6599,7 @@ export type Database = {
           ran_by: string
           subject_kind: string
           subject_ref: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -6408,6 +6613,7 @@ export type Database = {
           ran_by: string
           subject_kind: string
           subject_ref: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -6421,6 +6627,7 @@ export type Database = {
           ran_by?: string
           subject_kind?: string
           subject_ref?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -6663,6 +6870,7 @@ export type Database = {
           source_location: string
           source_sha1: string | null
           supersedes_artifact_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string | null
           version: number
         }
@@ -6687,6 +6895,7 @@ export type Database = {
           source_location: string
           source_sha1?: string | null
           supersedes_artifact_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string | null
           version: number
         }
@@ -6711,6 +6920,7 @@ export type Database = {
           source_location?: string
           source_sha1?: string | null
           supersedes_artifact_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string | null
           version?: number
         }
@@ -6726,6 +6936,7 @@ export type Database = {
           reason: string
           release_reason: string | null
           released_at: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           added_at?: string
@@ -6736,6 +6947,7 @@ export type Database = {
           reason: string
           release_reason?: string | null
           released_at?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           added_at?: string
@@ -6746,6 +6958,7 @@ export type Database = {
           reason?: string
           release_reason?: string | null
           released_at?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -6759,6 +6972,7 @@ export type Database = {
           program_version: string
           receipt_id: string
           request_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           action: string
@@ -6769,6 +6983,7 @@ export type Database = {
           program_version: string
           receipt_id?: string
           request_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           action?: string
@@ -6779,6 +6994,7 @@ export type Database = {
           program_version?: string
           receipt_id?: string
           request_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -6800,6 +7016,7 @@ export type Database = {
           request_id: string
           requested_at: string
           state: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           attempts?: number
@@ -6810,6 +7027,7 @@ export type Database = {
           request_id?: string
           requested_at?: string
           state?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           attempts?: number
@@ -6820,6 +7038,7 @@ export type Database = {
           request_id?: string
           requested_at?: string
           state?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -6882,6 +7101,7 @@ export type Database = {
           run_id: string
           source_count: number | null
           source_only: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unresolved: number | null
           verdict: string
         }
@@ -6896,6 +7116,7 @@ export type Database = {
           run_id?: string
           source_count?: number | null
           source_only?: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           unresolved?: number | null
           verdict: string
         }
@@ -6910,6 +7131,7 @@ export type Database = {
           run_id?: string
           source_count?: number | null
           source_only?: number | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           unresolved?: number | null
           verdict?: string
         }
@@ -6992,6 +7214,7 @@ export type Database = {
           evidence: string
           source_key: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           verified_at: string
         }
         Insert: {
@@ -6999,6 +7222,7 @@ export type Database = {
           evidence: string
           source_key: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           verified_at?: string
         }
         Update: {
@@ -7006,6 +7230,7 @@ export type Database = {
           evidence?: string
           source_key?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           verified_at?: string
         }
         Relationships: [
@@ -7072,6 +7297,7 @@ export type Database = {
           register_key: string
           rollback_method: string
           source_system: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           authority_policy: string
@@ -7088,6 +7314,7 @@ export type Database = {
           register_key: string
           rollback_method?: string
           source_system?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           authority_policy?: string
@@ -7104,6 +7331,7 @@ export type Database = {
           register_key?: string
           rollback_method?: string
           source_system?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -7286,6 +7514,7 @@ export type Database = {
           outcome: string
           ritual: string
           session_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           unsaved: Json
         }
@@ -7298,6 +7527,7 @@ export type Database = {
           outcome: string
           ritual: string
           session_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           unsaved?: Json
         }
@@ -7310,6 +7540,7 @@ export type Database = {
           outcome?: string
           ritual?: string
           session_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
           unsaved?: Json
         }
@@ -7332,6 +7563,7 @@ export type Database = {
           receipt_id: string
           register_key: string
           restored_reader: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           at?: string
@@ -7341,6 +7573,7 @@ export type Database = {
           receipt_id?: string
           register_key: string
           restored_reader: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           at?: string
@@ -7350,6 +7583,7 @@ export type Database = {
           receipt_id?: string
           register_key?: string
           restored_reader?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -7368,6 +7602,7 @@ export type Database = {
           resolved_at: string | null
           resolved_by: string | null
           state: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           votes: number
         }
         Insert: {
@@ -7384,6 +7619,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           state?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           votes: number
         }
         Update: {
@@ -7400,6 +7636,7 @@ export type Database = {
           resolved_at?: string | null
           resolved_by?: string | null
           state?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           votes?: number
         }
         Relationships: [
@@ -7499,6 +7736,7 @@ export type Database = {
           relation_id: string
           resolved_at: string | null
           state: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           a_id: string
@@ -7511,6 +7749,7 @@ export type Database = {
           relation_id?: string
           resolved_at?: string | null
           state?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           a_id?: string
@@ -7523,6 +7762,7 @@ export type Database = {
           relation_id?: string
           resolved_at?: string | null
           state?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -7566,6 +7806,7 @@ export type Database = {
           session_id: string | null
           status: string
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool_version: string | null
         }
         Insert: {
@@ -7592,6 +7833,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool_version?: string | null
         }
         Update: {
@@ -7618,6 +7860,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tool_version?: string | null
         }
         Relationships: [
@@ -7703,6 +7946,7 @@ export type Database = {
           provenance: string
           save_id: string
           session_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           watermark: string
         }
         Insert: {
@@ -7715,6 +7959,7 @@ export type Database = {
           provenance?: string
           save_id?: string
           session_id?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           watermark?: string
         }
         Update: {
@@ -7727,6 +7972,7 @@ export type Database = {
           provenance?: string
           save_id?: string
           session_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           watermark?: string
         }
         Relationships: []
@@ -7855,6 +8101,7 @@ export type Database = {
           spec_author: string | null
           spec_status: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           trigger_ref: string | null
@@ -7883,6 +8130,7 @@ export type Database = {
           spec_author?: string | null
           spec_status?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           trigger_ref?: string | null
@@ -7911,6 +8159,7 @@ export type Database = {
           spec_author?: string | null
           spec_status?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           title?: string
           trigger_ref?: string | null
@@ -7980,6 +8229,7 @@ export type Database = {
           revoked_at: string | null
           scopes: string[]
           service_principal_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           authorized_by?: string | null
@@ -7992,6 +8242,7 @@ export type Database = {
           revoked_at?: string | null
           scopes?: string[]
           service_principal_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           authorized_by?: string | null
@@ -8004,6 +8255,7 @@ export type Database = {
           revoked_at?: string | null
           scopes?: string[]
           service_principal_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -8058,6 +8310,7 @@ export type Database = {
           session_id: string | null
           staleness_flags: Json
           task_states: Json
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
         }
         Insert: {
@@ -8074,6 +8327,7 @@ export type Database = {
           session_id?: string | null
           staleness_flags?: Json
           task_states?: Json
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
         }
         Update: {
@@ -8090,6 +8344,7 @@ export type Database = {
           session_id?: string | null
           staleness_flags?: Json
           task_states?: Json
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
         }
         Relationships: [
@@ -8115,6 +8370,7 @@ export type Database = {
           session_id: string | null
           session_source: string | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool: string
           tool_manifest_version: string | null
         }
@@ -8130,6 +8386,7 @@ export type Database = {
           session_id?: string | null
           session_source?: string | null
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool: string
           tool_manifest_version?: string | null
         }
@@ -8145,6 +8402,7 @@ export type Database = {
           session_id?: string | null
           session_source?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tool?: string
           tool_manifest_version?: string | null
         }
@@ -8162,6 +8420,7 @@ export type Database = {
           scrub_note: string | null
           scrubbed: boolean
           session_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           transcript_id: string
           written_by: string | null
         }
@@ -8176,6 +8435,7 @@ export type Database = {
           scrub_note?: string | null
           scrubbed?: boolean
           session_id?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           transcript_id?: string
           written_by?: string | null
         }
@@ -8190,6 +8450,7 @@ export type Database = {
           scrub_note?: string | null
           scrubbed?: boolean
           session_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           transcript_id?: string
           written_by?: string | null
         }
@@ -8205,6 +8466,7 @@ export type Database = {
           meta: Json
           opened_at: string
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title: string | null
           titled_at: string | null
@@ -8220,6 +8482,7 @@ export type Database = {
           meta?: Json
           opened_at?: string
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title?: string | null
           titled_at?: string | null
@@ -8235,6 +8498,7 @@ export type Database = {
           meta?: Json
           opened_at?: string
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           title?: string | null
           titled_at?: string | null
@@ -8256,6 +8520,7 @@ export type Database = {
           signal_key: string
           subject: string | null
           surface: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool: string | null
         }
         Insert: {
@@ -8270,6 +8535,7 @@ export type Database = {
           signal_key: string
           subject?: string | null
           surface?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tool?: string | null
         }
         Update: {
@@ -8284,6 +8550,7 @@ export type Database = {
           signal_key?: string
           subject?: string | null
           surface?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tool?: string | null
         }
         Relationships: [
@@ -8373,6 +8640,7 @@ export type Database = {
           revision: number
           status: string
           supersedes: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
         }
         Insert: {
@@ -8391,6 +8659,7 @@ export type Database = {
           revision?: number
           status?: string
           supersedes?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
         }
         Update: {
@@ -8409,6 +8678,7 @@ export type Database = {
           revision?: number
           status?: string
           supersedes?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string
         }
         Relationships: [
@@ -8453,6 +8723,7 @@ export type Database = {
           role_summary: string | null
           scope: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string | null
           version: number
         }
@@ -8466,6 +8737,7 @@ export type Database = {
           role_summary?: string | null
           scope?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           version?: number
         }
@@ -8479,6 +8751,7 @@ export type Database = {
           role_summary?: string | null
           scope?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           version?: number
         }
@@ -8505,6 +8778,7 @@ export type Database = {
           scope: string
           sha256: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string | null
           version: string
           version_state: string | null
@@ -8529,6 +8803,7 @@ export type Database = {
           scope?: string
           sha256?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           version: string
           version_state?: string | null
@@ -8553,6 +8828,7 @@ export type Database = {
           scope?: string
           sha256?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string | null
           version?: string
           version_state?: string | null
@@ -8599,6 +8875,7 @@ export type Database = {
           pinned_at: string
           pinned_by: string | null
           surface_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           version: string
         }
         Insert: {
@@ -8607,6 +8884,7 @@ export type Database = {
           pinned_at?: string
           pinned_by?: string | null
           surface_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           version: string
         }
         Update: {
@@ -8615,6 +8893,7 @@ export type Database = {
           pinned_at?: string
           pinned_by?: string | null
           surface_key?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           version?: string
         }
         Relationships: [
@@ -8698,6 +8977,7 @@ export type Database = {
           is_synthetic: boolean
           role: string
           surface: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           thread_id: string
         }
         Insert: {
@@ -8708,6 +8988,7 @@ export type Database = {
           is_synthetic?: boolean
           role: string
           surface: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           thread_id: string
         }
         Update: {
@@ -8718,6 +8999,7 @@ export type Database = {
           is_synthetic?: boolean
           role?: string
           surface?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           thread_id?: string
         }
         Relationships: [
@@ -8741,6 +9023,7 @@ export type Database = {
           id: string
           question: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -8753,6 +9036,7 @@ export type Database = {
           id?: string
           question: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -8765,6 +9049,7 @@ export type Database = {
           id?: string
           question?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: [
@@ -8783,18 +9068,21 @@ export type Database = {
           created_at: string
           id: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
           created_at?: string
           id?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
           created_at?: string
           id?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -8809,6 +9097,7 @@ export type Database = {
           outcome: string
           question_id: string | null
           receipt_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           auth_user_id: string
@@ -8820,6 +9109,7 @@ export type Database = {
           outcome: string
           question_id?: string | null
           receipt_id?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           auth_user_id?: string
@@ -8831,6 +9121,7 @@ export type Database = {
           outcome?: string
           question_id?: string | null
           receipt_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -8899,6 +9190,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tenancy_quarantine: {
+        Row: {
+          detected_at: string
+          id: string
+          reason: string
+          resolved_at: string | null
+          table_name: string
+          total_rows: number
+          unclassified_rows: number
+        }
+        Insert: {
+          detected_at?: string
+          id?: string
+          reason: string
+          resolved_at?: string | null
+          table_name: string
+          total_rows: number
+          unclassified_rows: number
+        }
+        Update: {
+          detected_at?: string
+          id?: string
+          reason?: string
+          resolved_at?: string | null
+          table_name?: string
+          total_rows?: number
+          unclassified_rows?: number
+        }
+        Relationships: []
+      }
       tenant_alias: {
         Row: {
           alias: string
@@ -8907,6 +9228,7 @@ export type Database = {
           created_at: string
           key_space: string
           note: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Insert: {
           alias: string
@@ -8915,6 +9237,7 @@ export type Database = {
           created_at?: string
           key_space: string
           note?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Update: {
           alias?: string
@@ -8923,6 +9246,7 @@ export type Database = {
           created_at?: string
           key_space?: string
           note?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
         }
         Relationships: [
           {
@@ -8962,6 +9286,7 @@ export type Database = {
           revoked_by: string | null
           role: string
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           auth_user_id: string
@@ -8976,6 +9301,7 @@ export type Database = {
           revoked_by?: string | null
           role?: string
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           auth_user_id?: string
@@ -8990,6 +9316,7 @@ export type Database = {
           revoked_by?: string | null
           role?: string
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -9027,6 +9354,7 @@ export type Database = {
           role: string
           scopes: string[]
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           authority_receipt?: string | null
@@ -9039,6 +9367,7 @@ export type Database = {
           role?: string
           scopes?: string[]
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           authority_receipt?: string | null
@@ -9051,6 +9380,7 @@ export type Database = {
           role?: string
           scopes?: string[]
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -9096,6 +9426,7 @@ export type Database = {
           source_canon: string
           started_at: string | null
           target_canon: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -9109,6 +9440,7 @@ export type Database = {
           source_canon?: string
           started_at?: string | null
           target_canon?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -9122,6 +9454,7 @@ export type Database = {
           source_canon?: string
           started_at?: string | null
           target_canon?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -9157,6 +9490,7 @@ export type Database = {
           provider: string
           provisioned_by: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           token_ref: string | null
           updated_at: string
@@ -9170,6 +9504,7 @@ export type Database = {
           provider?: string
           provisioned_by?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           token_ref?: string | null
           updated_at?: string
@@ -9183,6 +9518,7 @@ export type Database = {
           provider?: string
           provisioned_by?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
           token_ref?: string | null
           updated_at?: string
@@ -9198,6 +9534,7 @@ export type Database = {
           revoked_at: string | null
           session_id: string
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           auth_user_id?: string | null
@@ -9207,6 +9544,7 @@ export type Database = {
           revoked_at?: string | null
           session_id: string
           source?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           auth_user_id?: string | null
@@ -9216,6 +9554,7 @@ export type Database = {
           revoked_at?: string | null
           session_id?: string
           source?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -9237,6 +9576,7 @@ export type Database = {
           notion_id: string
           status: string
           surface_key: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           updated_at: string
           write_policy: string
@@ -9250,6 +9590,7 @@ export type Database = {
           notion_id: string
           status?: string
           surface_key: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant: string
           updated_at?: string
           write_policy?: string
@@ -9263,6 +9604,7 @@ export type Database = {
           notion_id?: string
           status?: string
           surface_key?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           tenant?: string
           updated_at?: string
           write_policy?: string
@@ -9285,6 +9627,7 @@ export type Database = {
           principal: string | null
           public_ref: string | null
           status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tier: string
           timezone: string
           updated_at: string
@@ -9304,6 +9647,7 @@ export type Database = {
           principal?: string | null
           public_ref?: string | null
           status?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tier?: string
           timezone?: string
           updated_at?: string
@@ -9323,6 +9667,7 @@ export type Database = {
           principal?: string | null
           public_ref?: string | null
           status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tier?: string
           timezone?: string
           updated_at?: string
@@ -9606,6 +9951,7 @@ export type Database = {
           notes: string | null
           provider: string
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
@@ -9617,6 +9963,7 @@ export type Database = {
           notes?: string | null
           provider?: string
           source: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
@@ -9628,6 +9975,7 @@ export type Database = {
           notes?: string | null
           provider?: string
           source?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: []
@@ -9648,6 +9996,7 @@ export type Database = {
           detail: string | null
           due_date: string | null
           kind: string
+          lane: string | null
           last_surfaced: string | null
           origin: string
           owner: string | null
@@ -9660,6 +10009,7 @@ export type Database = {
           subject_id: string | null
           superseded_by: string | null
           surfaced_count: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           trigger: string | null
           updated_at: string
@@ -9681,6 +10031,7 @@ export type Database = {
           detail?: string | null
           due_date?: string | null
           kind?: string
+          lane?: string | null
           last_surfaced?: string | null
           origin: string
           owner?: string | null
@@ -9693,6 +10044,7 @@ export type Database = {
           subject_id?: string | null
           superseded_by?: string | null
           surfaced_count?: number
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           trigger?: string | null
           updated_at?: string
@@ -9714,6 +10066,7 @@ export type Database = {
           detail?: string | null
           due_date?: string | null
           kind?: string
+          lane?: string | null
           last_surfaced?: string | null
           origin?: string
           owner?: string | null
@@ -9726,6 +10079,7 @@ export type Database = {
           subject_id?: string | null
           superseded_by?: string | null
           surfaced_count?: number
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string
           trigger?: string | null
           updated_at?: string
@@ -9792,6 +10146,7 @@ export type Database = {
           ref_id: string
           registry: string
           role: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           work_id: string
         }
         Insert: {
@@ -9801,6 +10156,7 @@ export type Database = {
           ref_id: string
           registry: string
           role?: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           work_id: string
         }
         Update: {
@@ -9810,6 +10166,7 @@ export type Database = {
           ref_id?: string
           registry?: string
           role?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           work_id?: string
         }
         Relationships: [
@@ -9976,6 +10333,7 @@ export type Database = {
           name: string
           settings: Json | null
           slug: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
           updated_at: string
           workspace_kind: string
         }
@@ -9989,6 +10347,7 @@ export type Database = {
           name: string
           settings?: Json | null
           slug: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           updated_at?: string
           workspace_kind?: string
         }
@@ -10002,6 +10361,7 @@ export type Database = {
           name?: string
           settings?: Json | null
           slug?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
           updated_at?: string
           workspace_kind?: string
         }
@@ -10049,6 +10409,7 @@ export type Database = {
           subject_id: string
           supersedes: string | null
           synthetic: boolean
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           valid_from: string | null
           valid_to: string | null
           value_text: string | null
@@ -10073,6 +10434,7 @@ export type Database = {
           subject_id: string
           supersedes?: string | null
           synthetic?: boolean
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           valid_from?: string | null
           valid_to?: string | null
           value_text?: string | null
@@ -10097,6 +10459,7 @@ export type Database = {
           subject_id?: string
           supersedes?: string | null
           synthetic?: boolean
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           valid_from?: string | null
           valid_to?: string | null
           value_text?: string | null
@@ -10163,6 +10526,7 @@ export type Database = {
           id: string
           meta: Json
           src_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -10172,6 +10536,7 @@ export type Database = {
           id?: string
           meta?: Json
           src_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -10181,6 +10546,7 @@ export type Database = {
           id?: string
           meta?: Json
           src_id?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -10229,6 +10595,7 @@ export type Database = {
           sensitivity: string
           status: string
           tag: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at: string
         }
         Insert: {
@@ -10246,6 +10613,7 @@ export type Database = {
           sensitivity?: string
           status?: string
           tag?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Update: {
@@ -10263,6 +10631,7 @@ export type Database = {
           sensitivity?: string
           status?: string
           tag?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           updated_at?: string
         }
         Relationships: [
@@ -10295,6 +10664,7 @@ export type Database = {
           provenance_refs: Json
           source: string
           synthetic: boolean
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           updated_at: string
         }
@@ -10310,6 +10680,7 @@ export type Database = {
           provenance_refs?: Json
           source: string
           synthetic?: boolean
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           title: string
           updated_at?: string
         }
@@ -10325,6 +10696,7 @@ export type Database = {
           provenance_refs?: Json
           source?: string
           synthetic?: boolean
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string
           updated_at?: string
         }
@@ -10342,6 +10714,7 @@ export type Database = {
           last_wave: number
           meta: Json
           scope: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           cid: string
@@ -10354,6 +10727,7 @@ export type Database = {
           last_wave?: number
           meta?: Json
           scope?: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           cid?: string
@@ -10366,6 +10740,7 @@ export type Database = {
           last_wave?: number
           meta?: Json
           scope?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -11011,6 +11386,7 @@ export type Database = {
           status: string
           target_agent: string | null
           team_id: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           thread_ts: string | null
         }[]
         SetofOptions: {
@@ -11181,6 +11557,7 @@ export type Database = {
           p_rank?: number
           p_reason?: string
           p_scope?: string
+          p_tenancy?: string
           p_text?: string
           p_title?: string
         }
@@ -12080,6 +12457,7 @@ export type Database = {
       }
       work_dispose: {
         Args: {
+          p_date_kind?: string
           p_disposition: string
           p_lane?: string
           p_principal_acts?: boolean
@@ -12282,6 +12660,7 @@ export type Database = {
         | "approved"
         | "canceled"
       item_direction: "inbound" | "outbound" | "system"
+      tenancy_t: "FLEET" | "TENANT"
       workspace_role: "owner" | "admin" | "member" | "viewer"
     }
     CompositeTypes: {
@@ -12420,6 +12799,7 @@ export const Constants = {
         "canceled",
       ],
       item_direction: ["inbound", "outbound", "system"],
+      tenancy_t: ["FLEET", "TENANT"],
       workspace_role: ["owner", "admin", "member", "viewer"],
     },
   },
