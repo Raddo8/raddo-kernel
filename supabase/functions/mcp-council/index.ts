@@ -3465,7 +3465,7 @@ const TOOL_RECORD_FILE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_READ, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_RENDER, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_WORK_RAISE, TOOL_WORK_DISPOSITION, TOOL_WORK_DISPOSE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4616,7 +4616,8 @@ Deno.serve(async (req) => {
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
         "comm_write", "decision_write", "record_file", "board_respond",
-        "board_read", "board_update", "board_supersede",
+        "board_render", "board_read", "board_update", "board_supersede",
+        "work_raise", "work_dispose",
         "save_session", "sync_session", "end_session",
       ]);
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
@@ -5796,7 +5797,9 @@ Deno.serve(async (req) => {
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
         name === "record_probe" ||
         name === "board_respond" ||
-        name === "board_read" || name === "board_update" || name === "board_supersede"
+        name === "board_render" || name === "board_read" ||
+        name === "board_update" || name === "board_supersede" ||
+        name === "work_raise" || name === "work_disposition" || name === "work_dispose"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -5895,8 +5898,10 @@ Deno.serve(async (req) => {
             p_timezone: str(args?.timezone) ?? "UTC",
             p_cid: worldCid,
           };
-        } else if (name === "board_read") {
+        } else if (name === "board_render" || name === "board_read") {
           // F2/F3 · The three-strike rule is mechanised here, not remembered.
+          // board_read is the retired name and still dispatches, so a host
+          // holding a stale manifest keeps working.
           rpcName = "board_render";
           params = {
             p_cid: worldCid,
@@ -5910,6 +5915,33 @@ Deno.serve(async (req) => {
         } else if (name === "board_supersede") {
           rpcName = "board_supersede";
           params = { p_keep: str(args?.keep), p_duplicate: str(args?.duplicate), p_cid: worldCid };
+        } else if (name === "work_raise") {
+          // D6 · raised is not tracked. principal_acts left unset lands the
+          // item in the disposition queue rather than on the board.
+          rpcName = "session_raise";
+          params = {
+            p_cid: worldCid,
+            p_title: str(args?.title),
+            p_origin: str(args?.origin),
+            p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            p_detail: str(args?.detail),
+            p_owner: str(args?.owner),
+            p_kind: str(args?.kind) ?? "task",
+            p_due: str(args?.due),
+            p_session_id: str(args?.session_id),
+          };
+        } else if (name === "work_disposition") {
+          rpcName = "work_disposition_queue";
+          params = { p_cid: worldCid, p_limit: num(args?.limit, 50) };
+        } else if (name === "work_dispose") {
+          rpcName = "work_dispose";
+          params = {
+            p_work: str(args?.work_id),
+            p_disposition: str(args?.disposition),
+            p_reason: str(args?.reason),
+            p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            p_lane: str(args?.lane),
+          };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
           params = {
