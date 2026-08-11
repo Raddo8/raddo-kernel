@@ -4883,21 +4883,36 @@ Deno.serve(async (req) => {
             .order("rank", { ascending: true, nullsFirst: false });
           if (pendErr) outcome = "partial";
           // CHANGE 2b · queued standing rules that have never been confirmed.
-          const { data: queuedDirectives } = await supabaseAdmin
+          // A failed read must never look like an empty register.
+          const { data: queuedDirectives, error: queuedErr } = await supabaseAdmin
             .from("directives")
             .select("id, text, scope, created_at")
             .eq("tenant_id", tenant)
             .eq("status", "queued")
             .order("created_at", { ascending: true });
+          if (queuedErr) {
+            outcome = "partial";
+            degradedReasons.push("queued_directives_read_failed");
+            void raiseSignal("queued_directives_read_failed", queuedErr.message ?? String(queuedErr), {
+              surface: `begin_session:${surface}`,
+            });
+          }
 
           // CHANGE 2a · binding doctrine. Tenant scoped: fleet rules plus this
           // tenant's own, never another tenant's.
-          const { data: doctrine } = await supabaseAdmin
+          const { data: doctrine, error: doctrineErr } = await supabaseAdmin
             .from("doctrine_rules")
             .select("rule_key, rule_text, tier, scope, cid")
             .eq("status", "ACTIVE")
             .or(`cid.is.null,cid.eq.${beginCid}`)
             .order("tier", { ascending: true });
+          if (doctrineErr) {
+            outcome = "partial";
+            degradedReasons.push("doctrine_read_failed");
+            void raiseSignal("doctrine_read_failed", doctrineErr.message ?? String(doctrineErr), {
+              surface: `begin_session:${surface}`,
+            });
+          }
 
           // 6a. Last closed session · continuity reads carry its title.
           const { data: lastSessionRow } = await supabaseAdmin
