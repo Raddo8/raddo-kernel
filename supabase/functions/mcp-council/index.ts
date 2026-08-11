@@ -5995,12 +5995,61 @@ Deno.serve(async (req) => {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
           try {
-            // Idempotency: a prior receipt for this id decides what happens next.
-            const { data: prior } = await supabaseAdmin
+            // FIX 1 · CROSS-TENANT IDEMPOTENCY. The identity is resolved BEFORE
+            // the receipt lookup, and the lookup is scoped to it. Two tenants
+            // may legitimately send the same client_request_id; an unscoped
+            // read returned the other tenant's SUCCESS receipt and reported a
+            // save that never happened. Read and write are now symmetric.
+            const saveCid = await serverCid();
+            if (!saveCid) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "cid_unresolved",
+                reasons: ["cid_unresolved"],
+                ...manifestBlock(args),
+                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
+
+            // Idempotency: a prior receipt for this id AND this cid decides
+            // what happens next. A lookup error is never discarded — two
+            // collided rows previously fell through and re-ran the whole save.
+            const { data: prior, error: priorErr } = await supabaseAdmin
               .from("save_receipts")
               .select("save_id, overall_status")
               .eq("client_request_id", clientRequestId)
+              .eq("cid", saveCid)
               .maybeSingle();
+
+            if (priorErr) {
+              const out = {
+                session_id: args?.session_id,
+                save_id: null,
+                overall_status: null,
+                outcome: "degraded",
+                reason: "receipt_lookup_failed",
+                reasons: ["receipt_lookup_failed"],
+                ...manifestBlock(args),
+                note: "The prior receipt for this request id could not be read, so nothing was saved. Retry with the same client_request_id.",
+              };
+              void raiseSignal("save_receipt_lookup_failed", priorErr.message ?? String(priorErr), {
+                session_id: typeof args?.session_id === "string" ? args.session_id : null,
+                surface: "ritual",
+              });
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: false,
+              });
+            }
 
             let only: Set<LayerName> | null = null;
             if (prior) {
@@ -6021,26 +6070,9 @@ Deno.serve(async (req) => {
               only = await retryableLayerSet(prior.save_id);
             }
 
-            const saveCid = await serverCid();
-            if (!saveCid) {
-              const out = {
-                session_id: args?.session_id,
-                save_id: null,
-                overall_status: null,
-                outcome: "degraded",
-                reason: "cid_unresolved",
-                reasons: ["cid_unresolved"],
-                ...manifestBlock(args),
-                note: "No receipt could be written because your workspace identity could not be resolved. Nothing was saved.",
-              };
-              return rpcResult(id, {
-                content: [{ type: "text", text: JSON.stringify(out) }],
-                structuredContent: out,
-                isError: false,
-              });
-            }
             const res = await runSaveLeg(args ?? {}, "save", only);
             const duration_ms = Date.now() - startedAt;
+
 
             // The database derives the status. This file never computes one.
             let save_id: string | null = null;
