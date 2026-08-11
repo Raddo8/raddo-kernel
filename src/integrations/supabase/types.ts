@@ -2029,6 +2029,27 @@ export type Database = {
         }
         Relationships: []
       }
+      curn_sequence: {
+        Row: {
+          cid: string
+          kind: string
+          last_value: number
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          kind: string
+          last_value?: number
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          kind?: string
+          last_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cutover_lease: {
         Row: {
           acquired_at: string
@@ -2067,7 +2088,7 @@ export type Database = {
           authoritative: boolean
           authority_tier: string | null
           cid: string
-          curn: string | null
+          curn: string
           decided_at: string
           decided_by: string | null
           decision_md: string
@@ -2089,7 +2110,7 @@ export type Database = {
           authoritative?: boolean
           authority_tier?: string | null
           cid: string
-          curn?: string | null
+          curn: string
           decided_at?: string
           decided_by?: string | null
           decision_md: string
@@ -2111,7 +2132,7 @@ export type Database = {
           authoritative?: boolean
           authority_tier?: string | null
           cid?: string
-          curn?: string | null
+          curn?: string
           decided_at?: string
           decided_by?: string | null
           decision_md?: string
@@ -3532,7 +3553,7 @@ export type Database = {
           audience: string
           authoritative: boolean
           cid: string
-          curn: string | null
+          curn: string
           detail_md: string | null
           first_seen: string
           id: string
@@ -3555,7 +3576,7 @@ export type Database = {
           audience?: string
           authoritative?: boolean
           cid: string
-          curn?: string | null
+          curn: string
           detail_md?: string | null
           first_seen?: string
           id?: string
@@ -3578,7 +3599,7 @@ export type Database = {
           audience?: string
           authoritative?: boolean
           cid?: string
-          curn?: string | null
+          curn?: string
           detail_md?: string | null
           first_seen?: string
           id?: string
@@ -6200,6 +6221,48 @@ export type Database = {
           principal_type?: string
           revoked_at?: string | null
           status?: string
+        }
+        Relationships: []
+      }
+      probe_runs: {
+        Row: {
+          cid: string
+          claim: string
+          expected: string
+          id: string
+          method: string
+          observed: string
+          passed: boolean
+          ran_at: string
+          ran_by: string
+          subject_kind: string
+          subject_ref: string
+        }
+        Insert: {
+          cid: string
+          claim: string
+          expected: string
+          id?: string
+          method: string
+          observed: string
+          passed: boolean
+          ran_at?: string
+          ran_by: string
+          subject_kind: string
+          subject_ref: string
+        }
+        Update: {
+          cid?: string
+          claim?: string
+          expected?: string
+          id?: string
+          method?: string
+          observed?: string
+          passed?: boolean
+          ran_at?: string
+          ran_by?: string
+          subject_kind?: string
+          subject_ref?: string
         }
         Relationships: []
       }
@@ -9193,6 +9256,21 @@ export type Database = {
           },
         ]
       }
+      verification_state_alias: {
+        Row: {
+          alias: string
+          canonical: string
+        }
+        Insert: {
+          alias: string
+          canonical: string
+        }
+        Update: {
+          alias?: string
+          canonical?: string
+        }
+        Relationships: []
+      }
       vertical_packs: {
         Row: {
           config: Json
@@ -10603,6 +10681,15 @@ export type Database = {
         }
         Returns: Json
       }
+      board_respond: {
+        Args: {
+          p_cid?: string
+          p_items: Json
+          p_session_id?: string
+          p_timezone?: string
+        }
+        Returns: Json
+      }
       bridge_claim_next: {
         Args: never
         Returns: {
@@ -11311,6 +11398,7 @@ export type Database = {
       my_cob: { Args: never; Returns: Json }
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
+      next_curn: { Args: { p_cid: string; p_kind: string }; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
       observe_external_identity: {
         Args: {

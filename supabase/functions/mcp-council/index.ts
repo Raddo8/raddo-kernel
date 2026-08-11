@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.8";
+const TOOL_MANIFEST_VERSION = "2026.08.11.9";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2378,6 +2378,15 @@ const RITUAL_SAVE_PROPS = {
         trigger: { type: "string" },
         owner: { type: "string" },
         state: { type: "string" },
+        snooze_until: {
+          type: "string",
+          description: "Optional. YYYY-MM-DD. When the loop should come back on the brief. Must be today or later in the principal's timezone. A snooze without a date is refused, never guessed.",
+        },
+        brief_status: {
+          type: "string",
+          enum: ["open", "answered", "snoozed", "cleared"],
+          description: "Optional. Where the loop sits on the brief.",
+        },
       },
       required: ["title"],
       additionalProperties: false,
@@ -3106,6 +3115,46 @@ const TOOL_SIGNAL_RAISE = {
       ...MANIFEST_PROP,
     },
     required: ["key"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_BOARD_RESPOND = {
+  name: "board_respond",
+  title: "Answer the board",
+  description:
+    "Record the principal's answers to the open loops on their brief, several at once. Each item names the loop and what to do with it: answered, cleared, or snoozed until a date. A snooze must carry a date; if the principal says \"later\" without saying when, ask them when before you call this. Nothing here invents a date on their behalf.",
+  annotations: { title: "Answer the board", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        description: "One entry per loop the principal answered.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "The loop id from the brief." },
+            title: { type: "string", description: "The loop title, when you do not have the id." },
+            brief_status: {
+              type: "string",
+              enum: ["open", "answered", "snoozed", "cleared"],
+              description: "Where the loop sits after this answer.",
+            },
+            snooze_until: {
+              type: "string",
+              description: "YYYY-MM-DD. Required when the status is snoozed. Today or later.",
+            },
+            note: { type: "string", description: "What the principal said, in their words." },
+          },
+          additionalProperties: false,
+        },
+      },
+      session_id: { type: "string", description: "The session this answer came from." },
+      timezone: { type: "string", description: "The principal's timezone, so a date means their day. Defaults to UTC." },
+      ...MANIFEST_PROP,
+    },
+    required: ["items"],
     additionalProperties: false,
   },
 };
@@ -4102,7 +4151,7 @@ Deno.serve(async (req) => {
       // Reads are never gated: orientation and self-explanation stay open.
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
-        "comm_write", "decision_write", "record_file",
+        "comm_write", "decision_write", "record_file", "board_respond",
         "save_session", "sync_session", "end_session",
       ]);
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
@@ -4765,6 +4814,7 @@ Deno.serve(async (req) => {
           const { data: newSession, error: sessErr } = await supabaseAdmin
             .from("sessions")
             .insert({
+              cid: pctx.legacy_cid,
               tenant,
               surface,
               kernel_version: kernel?.version ?? null,
@@ -5028,6 +5078,7 @@ Deno.serve(async (req) => {
           const durationMs = Date.now() - startedAt;
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               session_id: sessionId,
               ritual: "begin",
@@ -5152,6 +5203,7 @@ Deno.serve(async (req) => {
           const msg = e instanceof Error ? e.message : String(e);
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               ritual: "begin",
               outcome: "failed",
@@ -5209,7 +5261,8 @@ Deno.serve(async (req) => {
         name === "blueprint_write" || name === "rule_write" ||
         name === "search" || name === "fetch" ||
         name === "request_read" || name === "request_resolve" || name === "comm_write" ||
-        name === "signal_raise" || name === "decision_write" || name === "record_file"
+        name === "signal_raise" || name === "decision_write" || name === "record_file" ||
+        name === "board_respond"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -5266,19 +5319,37 @@ Deno.serve(async (req) => {
             p_reason: typeof args?.reason === "string" ? args.reason : null,
           };
         } else if (name === "signal_raise") {
-          // Rolled up on the key. The same key twice is a repeat; three times
-          // is chronic, and the client sees it before you tell them.
-          rpcName = "cob_signal_raise";
+          // E1 · One door. record_signal() validates provenance and raises
+          // SIGNAL_BAD_PROVENANCE by name; the direct insert that bypassed it
+          // is gone, which is why callers used to see a raw constraint name.
+          // Provenance is NOT passed from a client path — the function default
+          // (CLIENT) is the honest answer for a COBCLIENT call.
+          const rawDetail = typeof args?.detail === "string" ? args.detail : null;
+          const link = args?.link && typeof args.link === "object" ? args.link : null;
+          const detail = [rawDetail, link ? `link: ${JSON.stringify(link)}` : null]
+            .filter(Boolean).join("\n") || null;
+          rpcName = "record_signal";
           params = {
+            p_title: str(args?.key),
+            p_detail_md: detail,
+            p_pattern: str(args?.key),
+            p_signal_type: str(args?.audience),
+            p_status: "open",
             p_cid: worldCid,
-            p_key: str(args?.key),
-            p_detail: typeof args?.detail === "string" ? args.detail : null,
+            p_source_session_id: str(args?.session_id),
+            p_source_subject: str(args?.subject),
+            p_source_surface: str(args?.surface),
+            p_tool_version: str(args?.tool),
+          };
+        } else if (name === "board_respond") {
+          // E2 · The principal answers the board in one submit. A snoozed item
+          // with no date is refused by name, never coerced into a default.
+          rpcName = "board_respond";
+          params = {
+            p_items: Array.isArray(args?.items) ? args.items : [],
             p_session_id: str(args?.session_id),
-            p_tool: str(args?.tool),
-            p_surface: str(args?.surface),
-            p_subject: str(args?.subject),
-            p_link: args?.link && typeof args.link === "object" ? args.link : null,
-            p_audience: str(args?.audience),
+            p_timezone: str(args?.timezone) ?? "UTC",
+            p_cid: worldCid,
           };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
@@ -5559,6 +5630,7 @@ Deno.serve(async (req) => {
             try {
               const { data: cpRow, error: cpErr } = await supabaseAdmin
                 .from("session_checkpoints").insert({
+                  cid: pctx.legacy_cid,
                   session_id,
                   tenant,
                   kind: checkpointKind,
@@ -5587,11 +5659,42 @@ Deno.serve(async (req) => {
           }
 
           // 2. Upsert open_loops by (tenant, title). Loop state normalised by DB trigger.
+          // E2 · snooze_until and brief_status are accepted here. cid,
+          // surfaced_count, last_surfaced, id and the timestamps stay
+          // server-owned and are never read off the caller's payload.
+          const BRIEF_STATUSES = new Set(["open", "answered", "snoozed", "cleared"]);
+          const loopExtras = (ol: any): { snooze_until?: string; brief_status?: string } => {
+            const out: { snooze_until?: string; brief_status?: string } = {};
+            const bs = typeof ol?.brief_status === "string" ? ol.brief_status.trim().toLowerCase() : "";
+            if (bs) {
+              if (!BRIEF_STATUSES.has(bs)) {
+                throw new Error(`BRIEF_STATUS_UNKNOWN: "${bs}" (open|answered|snoozed|cleared)`);
+              }
+              out.brief_status = bs;
+            }
+            const su = typeof ol?.snooze_until === "string" ? ol.snooze_until.trim() : "";
+            if (su) {
+              if (!/^\d{4}-\d{2}-\d{2}$/.test(su)) {
+                throw new Error(`SNOOZE_DATE_MALFORMED: "${su}" · use YYYY-MM-DD`);
+              }
+              const today = new Date().toISOString().slice(0, 10);
+              if (su < today) {
+                throw new Error(`SNOOZE_DATE_PAST: ${su} is before ${today}`);
+              }
+              out.snooze_until = su;
+            }
+            // A snooze with no date is a wish, not an instruction.
+            if (out.brief_status === "snoozed" && !out.snooze_until) {
+              throw new Error("SNOOZE_DATE_REQUIRED: say when it should come back; a snooze without a date is not stored");
+            }
+            return out;
+          };
           if (want("open_loops")) {
             let olVerified = openLoops.length > 0;
             for (const ol of openLoops) {
               L.open_loops.attempted += 1;
               try {
+                const extras = loopExtras(ol);
                 const { data: existing } = await supabaseAdmin
                   .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
                 let rowId: string;
@@ -5600,6 +5703,7 @@ Deno.serve(async (req) => {
                     trigger: ol.trigger ?? null,
                     owner: ol.owner ?? null,
                     state: ol.state ?? null,
+                    ...extras,
                     updated_at: new Date().toISOString(),
                   }).eq("id", existing.id).eq("tenant", tenant);
                   if (error) throw new Error(error.message);
@@ -5608,11 +5712,13 @@ Deno.serve(async (req) => {
                   L.open_loops.updated += 1;
                 } else {
                   const { data: ins, error } = await supabaseAdmin.from("open_loops").insert({
+                    cid: pctx.legacy_cid,
                     tenant,
                     title: ol.title,
                     trigger: ol.trigger ?? null,
                     owner: ol.owner ?? null,
                     state: ol.state ?? null,
+                    ...extras,
                   }).select("id").single();
                   if (error || !ins) throw new Error(error?.message ?? "unknown");
                   rowId = ins.id;
@@ -5638,6 +5744,7 @@ Deno.serve(async (req) => {
               L.memory.attempted += 1;
               try {
                 const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
+                  cid: pctx.legacy_cid,
                   tenant,
                   session_id,
                   category: m.category ?? null,
@@ -5930,6 +6037,7 @@ Deno.serve(async (req) => {
 
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: args?.session_id,
                 ritual: "save",
@@ -5971,6 +6079,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, ritual: "save", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -6062,6 +6171,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync",
                 outcome: syncOutcome,
                 duration_ms,
@@ -6106,6 +6216,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync", outcome: "failed",
                 duration_ms: Date.now() - startedAt,
                 layers: { error: msg.slice(0, 300), degraded },
@@ -6235,6 +6346,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: endOutcome,
                 duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
@@ -6299,6 +6411,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -6556,6 +6669,7 @@ Deno.serve(async (req) => {
           try {
             if (supabaseAdmin) {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: councilSessionId,
                 ritual: "council",

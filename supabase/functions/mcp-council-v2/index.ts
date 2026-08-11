@@ -3787,6 +3787,7 @@ Deno.serve(async (req) => {
           const { data: newSession, error: sessErr } = await supabaseAdmin
             .from("sessions")
             .insert({
+              cid: pctx.legacy_cid,
               tenant,
               surface,
               kernel_version: kernel?.version ?? null,
@@ -4032,6 +4033,7 @@ Deno.serve(async (req) => {
           const durationMs = Date.now() - startedAt;
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               session_id: sessionId,
               ritual: "begin",
@@ -4141,6 +4143,7 @@ Deno.serve(async (req) => {
           const msg = e instanceof Error ? e.message : String(e);
           try {
             await supabaseAdmin.from("ritual_runs").insert({
+              cid: pctx.legacy_cid,
               tenant,
               ritual: "begin",
               outcome: "failed",
@@ -4409,6 +4412,7 @@ Deno.serve(async (req) => {
             try {
               const { data: cpRow, error: cpErr } = await supabaseAdmin
                 .from("session_checkpoints").insert({
+                  cid: pctx.legacy_cid,
                   session_id,
                   tenant,
                   kind: checkpointKind,
@@ -4458,6 +4462,7 @@ Deno.serve(async (req) => {
                   L.open_loops.updated += 1;
                 } else {
                   const { data: ins, error } = await supabaseAdmin.from("open_loops").insert({
+                    cid: pctx.legacy_cid,
                     tenant,
                     title: ol.title,
                     trigger: ol.trigger ?? null,
@@ -4488,6 +4493,7 @@ Deno.serve(async (req) => {
               L.memory.attempted += 1;
               try {
                 const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
+                  cid: pctx.legacy_cid,
                   tenant,
                   session_id,
                   category: m.category ?? null,
@@ -4903,6 +4909,7 @@ Deno.serve(async (req) => {
 
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: args?.session_id,
                 ritual: "save",
@@ -4944,6 +4951,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, ritual: "save", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -5035,6 +5043,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync",
                 outcome: syncOutcome,
                 duration_ms,
@@ -5079,6 +5088,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "sync", outcome: "failed",
                 duration_ms: Date.now() - startedAt,
                 layers: { error: msg.slice(0, 300), degraded },
@@ -5154,6 +5164,7 @@ Deno.serve(async (req) => {
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: endOutcome,
                 duration_ms, layers: { ...res.saved, makeup_closed: makeup_closed.length, scrub: res.scrub },
                 unsaved: res.unsaved,
@@ -5205,6 +5216,7 @@ Deno.serve(async (req) => {
             const msg = e instanceof Error ? e.message : String(e);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant, session_id, ritual: "end", outcome: "failed",
                 duration_ms: Date.now() - startedAt, layers: { error: msg },
               });
@@ -5445,6 +5457,7 @@ Deno.serve(async (req) => {
           try {
             if (supabaseAdmin) {
               await supabaseAdmin.from("ritual_runs").insert({
+                cid: pctx.legacy_cid,
                 tenant,
                 session_id: councilSessionId,
                 ritual: "council",
