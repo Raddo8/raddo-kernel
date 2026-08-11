@@ -2180,7 +2180,11 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.6";
+// 2026.08.12.7 · HARDEN-05. board_read is renamed board_render (the old name
+// still dispatches). Three work-register tools are exposed. Every session
+// ritual now returns the board, the lane chosen from it, and the disposition
+// queue of anything raised but not yet triaged.
+const TOOL_MANIFEST_VERSION = "2026.08.12.7";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
