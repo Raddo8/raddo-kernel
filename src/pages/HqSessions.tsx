@@ -52,9 +52,15 @@ const spec: RegisterSpec<SessionRow> = {
     { k: "Closed", v: r.closed_at ? when(r.closed_at) : "not yet" },
     { k: "Where", v: r.surface ?? "not stated" },
   ],
-  // Sessions are a record of what happened. Nothing here is the client's to
-  // change after the fact, so the drawer reads and does not act.
-  verbs: [],
+  // Sessions are a record of what happened. What happened does not change;
+  // only the name it goes by, so the client can find it again.
+  verbs: [
+    {
+      action: "session.retitle",
+      label: "Rename it",
+      ask: { key: "title", label: "A name you will find it by", placeholder: "A name you will find it by" },
+    },
+  ],
   haystack: (r) => `${r.title ?? ""} ${r.surface ?? ""} ${r.close_kind ?? ""}`,
   emptyWords: "No sittings on record yet.",
 };
