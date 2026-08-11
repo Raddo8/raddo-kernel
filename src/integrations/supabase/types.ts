@@ -11198,6 +11198,7 @@ export type Database = {
       }
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
+      fleet_surfacing_health: { Args: never; Returns: Json }
       get_action_response_status: {
         Args: { p_action_id: string }
         Returns: Json
