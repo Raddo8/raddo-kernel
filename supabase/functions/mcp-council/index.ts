@@ -4975,7 +4975,8 @@ Deno.serve(async (req) => {
             p_id: str(args?.id),
             p_text: typeof args?.text === "string" ? args.text : null,
             p_title: str(args?.title),
-            p_scope: str(args?.scope),
+            // Omitted rather than nulled: the function's own default is LOCKED.
+            ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
             p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
               ? Math.floor(args.rank) : null,
             p_reason: str(args?.reason),
