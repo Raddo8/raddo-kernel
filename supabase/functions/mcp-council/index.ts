@@ -3187,12 +3187,14 @@ const TOOL_BOARD_RESPOND = {
 // F1 · Titles are not identity. A title can be rewritten by the redaction
 // layer between the read and the write, so matching on it forks the row
 // instead of updating it. These three work on ids.
-const TOOL_BOARD_READ = {
-  name: "board_read",
-  title: "Read the board",
+const TOOL_BOARD_RENDER = {
+  // D2 · the tool is named for the function it calls. board_read implied a
+  // passive look; the call counts a surfacing and can raise a signal.
+  name: "board_render",
+  title: "Render the board",
   description:
-    "Render the principal's open loops with their ids, how many times each has been shown, and the actions on offer for each. An item shown three times without action comes back flagged, with snooze, rewrite and escalate offered on it: showing the same line a fourth time unchanged is not one of the choices. An item shown eight or more times raises a signal against the surfacing itself, not against the principal. Anything urgent, or carrying a hard deadline, stays visible regardless of count and is never auto-deferred. Use the ids from here in board_update.",
-  annotations: { title: "Read the board", readOnlyHint: false },
+    "Render the principal's open loops with their ids, how many times each has been shown, and the actions on offer for each. Only what the principal must personally act on reaches the board; everything else comes back under withheld with the reason it was held. An item shown three times without action comes back flagged, with snooze, rewrite and escalate offered on it: showing the same line a fourth time unchanged is not one of the choices. An item shown eight or more times raises a signal against the surfacing itself, not against the principal. Anything urgent, or carrying a hard deadline, stays visible regardless of count and is never auto-deferred. An empty board always says why it is empty. Use the ids from here in board_update.",
+  annotations: { title: "Render the board", readOnlyHint: false },
   inputSchema: {
     type: "object",
     properties: {
