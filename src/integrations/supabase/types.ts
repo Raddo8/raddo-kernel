@@ -6203,6 +6203,48 @@ export type Database = {
         }
         Relationships: []
       }
+      probe_runs: {
+        Row: {
+          cid: string
+          claim: string
+          expected: string
+          id: string
+          method: string
+          observed: string
+          passed: boolean
+          ran_at: string
+          ran_by: string
+          subject_kind: string
+          subject_ref: string
+        }
+        Insert: {
+          cid: string
+          claim: string
+          expected: string
+          id?: string
+          method: string
+          observed: string
+          passed: boolean
+          ran_at?: string
+          ran_by: string
+          subject_kind: string
+          subject_ref: string
+        }
+        Update: {
+          cid?: string
+          claim?: string
+          expected?: string
+          id?: string
+          method?: string
+          observed?: string
+          passed?: boolean
+          ran_at?: string
+          ran_by?: string
+          subject_kind?: string
+          subject_ref?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -9192,6 +9234,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      verification_state_alias: {
+        Row: {
+          alias: string
+          canonical: string
+        }
+        Insert: {
+          alias: string
+          canonical: string
+        }
+        Update: {
+          alias?: string
+          canonical?: string
+        }
+        Relationships: []
       }
       vertical_packs: {
         Row: {
