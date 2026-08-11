@@ -418,6 +418,8 @@ export type Database = {
       }
       blueprints: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           current_state: string | null
           goal_id: string | null
@@ -434,6 +436,8 @@ export type Database = {
           version: number
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           current_state?: string | null
           goal_id?: string | null
@@ -450,6 +454,8 @@ export type Database = {
           version?: number
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           current_state?: string | null
           goal_id?: string | null
@@ -478,6 +484,8 @@ export type Database = {
       boot_log: {
         Row: {
           booted_at: string
+          cid: string | null
+          cid_quarantine_reason: string | null
           fallback_used: boolean
           id: string
           kernel_version: number | null
@@ -487,6 +495,8 @@ export type Database = {
         }
         Insert: {
           booted_at?: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           fallback_used?: boolean
           id?: string
           kernel_version?: number | null
@@ -496,6 +506,8 @@ export type Database = {
         }
         Update: {
           booted_at?: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           fallback_used?: boolean
           id?: string
           kernel_version?: number | null
@@ -1182,6 +1194,8 @@ export type Database = {
           actor: string | null
           at: string
           change: string
+          cid: string | null
+          cid_quarantine_reason: string | null
           entity: string
           entity_id: string | null
           id: string
@@ -1192,6 +1206,8 @@ export type Database = {
           actor?: string | null
           at?: string
           change: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           entity: string
           entity_id?: string | null
           id?: string
@@ -1202,6 +1218,8 @@ export type Database = {
           actor?: string | null
           at?: string
           change?: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           entity?: string
           entity_id?: string | null
           id?: string
@@ -2183,6 +2201,8 @@ export type Database = {
       }
       deletion_requests: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           id: string
           requested_by: string
@@ -2190,6 +2210,8 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           requested_by: string
@@ -2197,6 +2219,8 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           requested_by?: string
@@ -4308,6 +4332,8 @@ export type Database = {
       }
       intake_facts: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           fact: string
           id: string
@@ -4316,6 +4342,8 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           fact: string
           id?: string
@@ -4324,6 +4352,8 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           fact?: string
           id?: string
@@ -4343,6 +4373,8 @@ export type Database = {
       }
       intake_files: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           file_name: string
           id: string
           kind: string
@@ -4352,6 +4384,8 @@ export type Database = {
           uploaded_at: string
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           file_name: string
           id?: string
           kind: string
@@ -4361,6 +4395,8 @@ export type Database = {
           uploaded_at?: string
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           file_name?: string
           id?: string
           kind?: string
@@ -4383,6 +4419,8 @@ export type Database = {
         Row: {
           answer: string | null
           chapter: number
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           id: string
           question_key: string
@@ -4392,6 +4430,8 @@ export type Database = {
         Insert: {
           answer?: string | null
           chapter: number
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           question_key: string
@@ -4401,6 +4441,8 @@ export type Database = {
         Update: {
           answer?: string | null
           chapter?: number
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           question_key?: string
@@ -5086,6 +5128,8 @@ export type Database = {
       knowledge_files: {
         Row: {
           category: string
+          cid: string | null
+          cid_quarantine_reason: string | null
           confidence: number | null
           content_md: string | null
           created_at: string
@@ -5100,6 +5144,8 @@ export type Database = {
         }
         Insert: {
           category: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           confidence?: number | null
           content_md?: string | null
           created_at?: string
@@ -5114,6 +5160,8 @@ export type Database = {
         }
         Update: {
           category?: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           confidence?: number | null
           content_md?: string | null
           created_at?: string
@@ -5460,6 +5508,8 @@ export type Database = {
       }
       onboarding_escalations: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           id: string
           reason: string
@@ -5467,6 +5517,8 @@ export type Database = {
           tenant_id: string
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           reason: string
@@ -5474,6 +5526,8 @@ export type Database = {
           tenant_id: string
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           reason?: string
@@ -5808,6 +5862,7 @@ export type Database = {
         Row: {
           brief_status: string
           cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           id: string
           last_surfaced: string | null
@@ -5824,6 +5879,7 @@ export type Database = {
         Insert: {
           brief_status?: string
           cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           last_surfaced?: string | null
@@ -5840,6 +5896,7 @@ export type Database = {
         Update: {
           brief_status?: string
           cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           last_surfaced?: string | null
@@ -7678,6 +7735,8 @@ export type Database = {
           blueprint_id: string | null
           build_spec: string | null
           cadence: string | null
+          cid: string | null
+          cid_quarantine_reason: string | null
           completed_at: string | null
           created_at: string
           detail: string | null
@@ -7704,6 +7763,8 @@ export type Database = {
           blueprint_id?: string | null
           build_spec?: string | null
           cadence?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           completed_at?: string | null
           created_at?: string
           detail?: string | null
@@ -7730,6 +7791,8 @@ export type Database = {
           blueprint_id?: string | null
           build_spec?: string | null
           cadence?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           completed_at?: string | null
           created_at?: string
           detail?: string | null
@@ -8280,6 +8343,8 @@ export type Database = {
       }
       study_agents: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           id: string
           name: string
@@ -8291,6 +8356,8 @@ export type Database = {
           version: number
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           name: string
@@ -8302,6 +8369,8 @@ export type Database = {
           version?: number
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           id?: string
           name?: string
@@ -8319,6 +8388,8 @@ export type Database = {
           body_md: string | null
           category: string
           changelog: string | null
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           distribution_status: string
           id: string
@@ -8341,6 +8412,8 @@ export type Database = {
           body_md?: string | null
           category: string
           changelog?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           distribution_status?: string
           id?: string
@@ -8363,6 +8436,8 @@ export type Database = {
           body_md?: string | null
           category?: string
           changelog?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           distribution_status?: string
           id?: string
@@ -8558,6 +8633,8 @@ export type Database = {
         Row: {
           answer: string | null
           answered_at: string | null
+          cid: string | null
+          cid_quarantine_reason: string | null
           context: string
           created_at: string
           id: string
@@ -8568,6 +8645,8 @@ export type Database = {
         Insert: {
           answer?: string | null
           answered_at?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           context?: string
           created_at?: string
           id?: string
@@ -8578,6 +8657,8 @@ export type Database = {
         Update: {
           answer?: string | null
           answered_at?: string | null
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           context?: string
           created_at?: string
           id?: string
@@ -8968,6 +9049,8 @@ export type Database = {
       tenant_offices: {
         Row: {
           boardroom_db: string
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           label: string | null
           provider: string
@@ -8979,6 +9062,8 @@ export type Database = {
         }
         Insert: {
           boardroom_db: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           label?: string | null
           provider?: string
@@ -8990,6 +9075,8 @@ export type Database = {
         }
         Update: {
           boardroom_db?: string
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           label?: string | null
           provider?: string
@@ -9041,6 +9128,8 @@ export type Database = {
       }
       tenant_surfaces: {
         Row: {
+          cid: string | null
+          cid_quarantine_reason: string | null
           created_at: string
           kind: string
           label: string | null
@@ -9052,6 +9141,8 @@ export type Database = {
           write_policy: string
         }
         Insert: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           kind: string
           label?: string | null
@@ -9063,6 +9154,8 @@ export type Database = {
           write_policy?: string
         }
         Update: {
+          cid?: string | null
+          cid_quarantine_reason?: string | null
           created_at?: string
           kind?: string
           label?: string | null
@@ -11665,6 +11758,15 @@ export type Database = {
         Returns: Json
       }
       register_silence_watchdog: { Args: never; Returns: number }
+      rekey_status: {
+        Args: never
+        Returns: {
+          attributed: number
+          quarantined: number
+          table_name: string
+          total: number
+        }[]
+      }
       resolve_cid: { Args: { k: string }; Returns: string }
       resolve_hq_authority_v1: {
         Args: { p_auth_user_id: string; p_session_id?: string }
@@ -11767,6 +11869,15 @@ export type Database = {
         }
         Returns: Json
       }
+      sweep_unreachable: {
+        Args: { p_raise?: boolean }
+        Returns: {
+          detail: string
+          finding_kind: string
+          object_name: string
+        }[]
+      }
+      sweep_unreachable_raise: { Args: { p_cid?: string }; Returns: number }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }

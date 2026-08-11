@@ -1,0 +1,1 @@
+ALTER FUNCTION public.sweep_unreachable_raise(text) SET role = 'service_role';

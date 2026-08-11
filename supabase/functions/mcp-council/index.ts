@@ -2161,7 +2161,11 @@ const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_INFO = {
   name: "the-council",
   title: "The Council",
-  version: "0.3.0",
+  // A1 · hosts key their cached tool manifest on serverInfo.version. A server
+  // that never moves this string is a server whose new tools stay invisible,
+  // which is exactly what COB-HQ saw: 43 tools across three deploys that each
+  // listed 44. Bump this whenever TOOL_MANIFEST_VERSION moves.
+  version: "0.4.0",
   icons: [
     {
       src: "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png",
@@ -2176,7 +2180,7 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.3";
+const TOOL_MANIFEST_VERSION = "2026.08.12.4";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -4223,7 +4227,7 @@ Deno.serve(async (req) => {
     if (method === "initialize") {
       return rpcResult(id, {
         protocolVersion: PROTOCOL_VERSION,
-        capabilities: { tools: {}, resources: { listChanged: false } },
+        capabilities: { tools: { listChanged: true }, resources: { listChanged: false } },
         serverInfo: SERVER_INFO,
       });
     }
