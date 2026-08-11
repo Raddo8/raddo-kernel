@@ -1,0 +1,2 @@
+ALTER TABLE public.council_minutes ADD COLUMN IF NOT EXISTS notes jsonb NOT NULL DEFAULT '[]'::jsonb;
+COMMENT ON COLUMN public.council_minutes.notes IS 'Append-only notes about a run (e.g. downstream mirror failures, recovery provenance). The error column is reserved for actual run failures.';
