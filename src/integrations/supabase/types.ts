@@ -14,24 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _g2_probe_log: {
-        Row: {
-          at: string | null
-          id: number
-          note: string | null
-        }
-        Insert: {
-          at?: string | null
-          id?: number
-          note?: string | null
-        }
-        Update: {
-          at?: string | null
-          id?: number
-          note?: string | null
-        }
-        Relationships: []
-      }
       _grant_rollback_20260729: {
         Row: {
           stmt: string | null
@@ -11504,6 +11486,15 @@ export type Database = {
         Args: { p_cid?: string; p_session_id?: string }
         Returns: Json
       }
+      close_save_attempt: {
+        Args: {
+          p_failure_stage?: string
+          p_layer_results?: Json
+          p_save_attempt_id: string
+          p_status: string
+        }
+        Returns: Json
+      }
       close_session_context: { Args: { p_session_id: string }; Returns: Json }
       cob_blueprint_write: {
         Args: {
@@ -12183,19 +12174,33 @@ export type Database = {
         }
         Returns: Json
       }
-      open_save_attempt: {
-        Args: {
-          p_cid: string
-          p_client_request_id: string
-          p_external_identity_id?: string
-          p_payload: Json
-          p_principal_id?: string
-          p_session_id: string
-          p_surface: string
-          p_tool_version: string
-        }
-        Returns: Json
-      }
+      open_save_attempt:
+        | {
+            Args: {
+              p_cid: string
+              p_client_request_id: string
+              p_payload_hash?: string
+              p_requested_layer_counts: Json
+              p_ritual: string
+              p_session_id: string
+              p_surface?: string
+              p_tool_version?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_cid: string
+              p_client_request_id: string
+              p_external_identity_id?: string
+              p_payload: Json
+              p_principal_id?: string
+              p_session_id: string
+              p_surface: string
+              p_tool_version: string
+            }
+            Returns: Json
+          }
       open_save_attempt_v2: {
         Args: {
           p_aad?: string
@@ -12427,6 +12432,15 @@ export type Database = {
         }[]
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
+      save_attempts_in_flight: {
+        Args: { p_older_than_minutes?: number }
+        Returns: {
+          cid: string
+          in_flight: number
+          oldest: string
+          ritual: string
+        }[]
+      }
       save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
       session_context_purge: { Args: never; Returns: number }
       session_id_for_context: {
