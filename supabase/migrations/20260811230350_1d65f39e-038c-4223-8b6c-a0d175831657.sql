@@ -1,0 +1,1 @@
+select cron.schedule('sync-tool-catalog-hourly', '7 * * * *', $$select public.sync_tool_catalog()$$);

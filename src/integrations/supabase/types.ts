@@ -3738,7 +3738,9 @@ export type Database = {
         Row: {
           audience: string
           authoritative: boolean
+          caller: string | null
           cid: string
+          classification: string | null
           curn: string
           detail_md: string | null
           first_seen: string
@@ -3762,7 +3764,9 @@ export type Database = {
         Insert: {
           audience?: string
           authoritative?: boolean
+          caller?: string | null
           cid: string
+          classification?: string | null
           curn: string
           detail_md?: string | null
           first_seen?: string
@@ -3786,7 +3790,9 @@ export type Database = {
         Update: {
           audience?: string
           authoritative?: boolean
+          caller?: string | null
           cid?: string
+          classification?: string | null
           curn?: string
           detail_md?: string | null
           first_seen?: string
@@ -8178,48 +8184,6 @@ export type Database = {
           },
         ]
       }
-      scores: {
-        Row: {
-          account_id: string | null
-          computed_at: string
-          id: string
-          item_id: string | null
-          score_type: string
-          value: number
-        }
-        Insert: {
-          account_id?: string | null
-          computed_at?: string
-          id?: string
-          item_id?: string | null
-          score_type: string
-          value?: number
-        }
-        Update: {
-          account_id?: string | null
-          computed_at?: string
-          id?: string
-          item_id?: string | null
-          score_type?: string
-          value?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scores_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scores_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       service_delegations: {
         Row: {
           authorized_by: string | null
@@ -10306,6 +10270,57 @@ export type Database = {
           },
         ]
       }
+      work_reschedule_receipt: {
+        Row: {
+          cid: string
+          created_at: string
+          date_kind: string | null
+          direction: string
+          from_due: string | null
+          id: string
+          moved_by: string
+          reason: string
+          surface: string | null
+          title: string | null
+          to_due: string
+          urgency_after: number | null
+          urgency_before: number | null
+          work_id: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          date_kind?: string | null
+          direction: string
+          from_due?: string | null
+          id?: string
+          moved_by: string
+          reason: string
+          surface?: string | null
+          title?: string | null
+          to_due: string
+          urgency_after?: number | null
+          urgency_before?: number | null
+          work_id: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          date_kind?: string | null
+          direction?: string
+          from_due?: string | null
+          id?: string
+          moved_by?: string
+          reason?: string
+          surface?: string | null
+          title?: string | null
+          to_due?: string
+          urgency_after?: number | null
+          urgency_before?: number | null
+          work_id?: string
+        }
+        Relationships: []
+      }
       workspace_billing: {
         Row: {
           created_at: string
@@ -11670,6 +11685,15 @@ export type Database = {
         Args: { p_cid: string; p_limit?: number; p_q?: string }
         Returns: Json
       }
+      code_claim: {
+        Args: {
+          p_cid?: string
+          p_claim: string
+          p_code: string
+          p_confidence?: number
+        }
+        Returns: Json
+      }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
@@ -12241,6 +12265,10 @@ export type Database = {
         }
         Returns: Json
       }
+      probe_method_is_entry_point: {
+        Args: { p_method: string }
+        Returns: boolean
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -12436,6 +12464,10 @@ export type Database = {
         }[]
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
+      save_attempt_status: {
+        Args: { p_completed_at: string; p_layer_results: Json }
+        Returns: string
+      }
       save_attempts_in_flight: {
         Args: { p_older_than_minutes?: number }
         Returns: {
@@ -12513,6 +12545,7 @@ export type Database = {
         }[]
       }
       sweep_unreachable_raise: { Args: { p_cid?: string }; Returns: number }
+      sync_tool_catalog: { Args: { p_version?: string }; Returns: Json }
       tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       tenant_timezone: { Args: { p_cid: string }; Returns: string }
@@ -12592,6 +12625,16 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      work_reschedule: {
+        Args: {
+          p_cid?: string
+          p_date_kind?: string
+          p_new_due: string
+          p_reason: string
+          p_work: string
+        }
+        Returns: Json
       }
       work_rescore: { Args: { p_cid: string }; Returns: number }
       work_score: { Args: { p_cid: string }; Returns: number }
