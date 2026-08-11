@@ -7938,6 +7938,51 @@ export type Database = {
           },
         ]
       }
+      session_event: {
+        Row: {
+          arg_digest: string | null
+          cid: string
+          created_at: string
+          error_code: string | null
+          event_id: string
+          latency_ms: number | null
+          ok: boolean
+          result_digest: string | null
+          session_id: string | null
+          surface: string | null
+          tool: string
+          tool_manifest_version: string | null
+        }
+        Insert: {
+          arg_digest?: string | null
+          cid: string
+          created_at?: string
+          error_code?: string | null
+          event_id?: string
+          latency_ms?: number | null
+          ok: boolean
+          result_digest?: string | null
+          session_id?: string | null
+          surface?: string | null
+          tool: string
+          tool_manifest_version?: string | null
+        }
+        Update: {
+          arg_digest?: string | null
+          cid?: string
+          created_at?: string
+          error_code?: string | null
+          event_id?: string
+          latency_ms?: number | null
+          ok?: boolean
+          result_digest?: string | null
+          session_id?: string | null
+          surface?: string | null
+          tool?: string
+          tool_manifest_version?: string | null
+        }
+        Relationships: []
+      }
       session_transcript: {
         Row: {
           body_md: string
@@ -7997,6 +8042,7 @@ export type Database = {
           title: string | null
           titled_at: string | null
           titled_by: string | null
+          tool_manifest_version: string | null
         }
         Insert: {
           cid?: string | null
@@ -8011,6 +8057,7 @@ export type Database = {
           title?: string | null
           titled_at?: string | null
           titled_by?: string | null
+          tool_manifest_version?: string | null
         }
         Update: {
           cid?: string | null
@@ -8025,6 +8072,7 @@ export type Database = {
           title?: string | null
           titled_at?: string | null
           titled_by?: string | null
+          tool_manifest_version?: string | null
         }
         Relationships: []
       }
@@ -9199,6 +9247,27 @@ export type Database = {
           verified_at?: string | null
           verified_how?: string | null
           writes?: string | null
+        }
+        Relationships: []
+      }
+      tool_manifest_registry: {
+        Row: {
+          first_seen_at: string
+          renames: Json
+          tools: string[]
+          version: string
+        }
+        Insert: {
+          first_seen_at?: string
+          renames?: Json
+          tools: string[]
+          version: string
+        }
+        Update: {
+          first_seen_at?: string
+          renames?: Json
+          tools?: string[]
+          version?: string
         }
         Relationships: []
       }
@@ -10784,20 +10853,37 @@ export type Database = {
         }
         Returns: Json
       }
-      cob_decision_write: {
-        Args: {
-          p_cid: string
-          p_decided_by?: string
-          p_decision_md: string
-          p_minute_id?: string
-          p_rationale_md?: string
-          p_reversibility?: string
-          p_session_id?: string
-          p_supersedes?: string
-          p_title: string
-        }
-        Returns: Json
-      }
+      cob_decision_write:
+        | {
+            Args: {
+              p_cid: string
+              p_decided_by?: string
+              p_decision_md: string
+              p_minute_id?: string
+              p_rationale_md?: string
+              p_reversibility?: string
+              p_session_id?: string
+              p_supersedes?: string
+              p_title: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cid: string
+              p_decided_by?: string
+              p_decision_md: string
+              p_minute_id?: string
+              p_rationale_md?: string
+              p_reversibility?: string
+              p_session_id?: string
+              p_supersedes?: string
+              p_test_run_id?: string
+              p_title: string
+              p_verification_state?: string
+            }
+            Returns: Json
+          }
       cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_identity_gaps: { Args: { p_cid: string }; Returns: Json }
@@ -11493,6 +11579,19 @@ export type Database = {
           p_source_surface?: string
           p_title: string
           p_tool_version?: string
+        }
+        Returns: Json
+      }
+      record_probe: {
+        Args: {
+          p_cid?: string
+          p_claim: string
+          p_expected: string
+          p_method: string
+          p_observed: string
+          p_passed: boolean
+          p_subject_kind: string
+          p_subject_ref: string
         }
         Returns: Json
       }
