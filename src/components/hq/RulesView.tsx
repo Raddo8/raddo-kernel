@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { InspectorDrawer, InspectorField } from "@/components/hq/InspectorDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { requestAction } from "@/lib/hq-request-action";
+import { hqAct } from "@/lib/hq-act";
 import "@/hq-next/styles/hq-live.css";
 import "@/hq-next/styles/hq-rules.css";
 
