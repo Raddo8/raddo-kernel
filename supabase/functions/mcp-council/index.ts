@@ -2180,7 +2180,7 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.5";
+const TOOL_MANIFEST_VERSION = "2026.08.12.6";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2381,6 +2381,10 @@ const RITUAL_SAVE_PROPS = {
     items: {
       type: "object",
       properties: {
+        id: {
+          type: "string",
+          description: "The loop id, when you are updating one that already exists. When present the id is authoritative and the title is ignored for matching, so a title carrying a masked account number still updates in place instead of forking a duplicate. Omit it only for a genuinely new loop.",
+        },
         title: { type: "string" },
         trigger: { type: "string" },
         owner: { type: "string" },
@@ -3176,6 +3180,83 @@ const TOOL_BOARD_RESPOND = {
   },
 };
 
+// F1 · Titles are not identity. A title can be rewritten by the redaction
+// layer between the read and the write, so matching on it forks the row
+// instead of updating it. These three work on ids.
+const TOOL_BOARD_READ = {
+  name: "board_read",
+  title: "Read the board",
+  description:
+    "Render the principal's open loops with their ids, how many times each has been shown, and the actions on offer for each. An item shown three times without action comes back flagged, with snooze, rewrite and escalate offered on it: showing the same line a fourth time unchanged is not one of the choices. An item shown eight or more times raises a signal against the surfacing itself, not against the principal. Anything urgent, or carrying a hard deadline, stays visible regardless of count and is never auto-deferred. Use the ids from here in board_update.",
+  annotations: { title: "Read the board", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      bump: { type: "boolean", description: "Default true. Counts this render as a surfacing. Pass false to look without counting." },
+      limit: { type: "number", description: "How many loops to render. Default 200." },
+      ...MANIFEST_PROP,
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_BOARD_UPDATE = {
+  name: "board_update",
+  title: "Update the board by id",
+  description:
+    "Triage the whole board in one call, keyed on loop ids from board_read. Each item may change the title, trigger, owner, state, brief status, snooze date, or mark the loop urgent with a hard deadline. The id is authoritative: the title is never used for matching, so a loop whose title carries a masked account number updates in place instead of forking a duplicate. A snooze must carry a date.",
+  annotations: { title: "Update the board by id", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        description: "One entry per loop, each carrying its id.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "The loop id. Required." },
+            title: { type: "string", description: "A rewritten title, when the line itself is the problem." },
+            trigger: { type: "string" },
+            owner: { type: "string" },
+            state: { type: "string", description: "open | blocked | waiting | done | dropped" },
+            brief_status: { type: "string", enum: ["open", "answered", "snoozed", "cleared"] },
+            snooze_until: { type: "string", description: "YYYY-MM-DD. Required when the status is snoozed." },
+            urgent: { type: "boolean", description: "True when there is legal exposure, money at risk, or an external party waiting. Urgent loops are never auto-deferred." },
+            urgent_reason: { type: "string" },
+            hard_deadline: { type: "string", description: "YYYY-MM-DD. An external date that does not move." },
+          },
+          required: ["id"],
+          additionalProperties: false,
+        },
+      },
+      ...MANIFEST_PROP,
+    },
+    required: ["items"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_BOARD_SUPERSEDE = {
+  name: "board_supersede",
+  title: "Retire a duplicate loop",
+  description:
+    "Two rows are the same loop. Keep the older one, retire the newer, and record that the newer was superseded by the older. Nothing is deleted; the retired row keeps its history and points at the row that survived.",
+  annotations: { title: "Retire a duplicate loop", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      keep: { type: "string", description: "The id of the row that survives." },
+      duplicate: { type: "string", description: "The id of the row being retired." },
+      ...MANIFEST_PROP,
+    },
+    required: ["keep", "duplicate"],
+    additionalProperties: false,
+  },
+};
+
+
+
 const TOOL_DECISION_WRITE = {
   name: "decision_write",
   title: "Write a decision",
@@ -3264,7 +3345,7 @@ const TOOL_RECORD_FILE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_READ, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4415,6 +4496,7 @@ Deno.serve(async (req) => {
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
         "comm_write", "decision_write", "record_file", "board_respond",
+        "board_read", "board_update", "board_supersede",
         "save_session", "sync_session", "end_session",
       ]);
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
@@ -5285,30 +5367,14 @@ Deno.serve(async (req) => {
           if (cpErr) outcome = "partial";
 
           // 7. Brief — open loops not snoozed past today; bump surfaced_count.
-          const today = new Date().toISOString().slice(0, 10);
-          const { data: brief, error: briefErr } = await supabaseAdmin
-            .from("open_loops")
-            .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
-            .eq("tenant", tenant)
-            .eq("brief_status", "open")
-            .or(`snooze_until.is.null,snooze_until.lte.${today}`)
-            .order("state", { ascending: true })
-            .order("created_at", { ascending: true });
+          // F2/F3 · The board is rendered by the governed writer, which counts
+          // the surfacing, flags a third unanswered showing, raises a signal
+          // against the mechanism past eight, and offers snooze at the moment
+          // it is warranted. Urgent loops are exempt from every deferral.
+          const { data: boardRender, error: briefErr } = await supabaseAdmin
+            .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: 200 });
           if (briefErr) outcome = "partial";
-          const briefRows = (brief ?? []) as any[];
-          if (briefRows.length > 0) {
-            const nowIso = new Date().toISOString();
-            for (const row of briefRows) {
-              const { error: bumpErr } = await supabaseAdmin
-                .from("open_loops")
-                .update({
-                  surfaced_count: (row.surfaced_count ?? 0) + 1,
-                  last_surfaced: nowIso,
-                })
-                .eq("id", row.id);
-              if (bumpErr) outcome = "partial";
-            }
-          }
+          const briefRows = ((boardRender as any)?.items ?? []) as any[];
 
           // 8. Staleness flags
           const staleness: string[] = [];
@@ -5609,7 +5675,8 @@ Deno.serve(async (req) => {
         name === "request_read" || name === "request_resolve" || name === "comm_write" ||
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
         name === "record_probe" ||
-        name === "board_respond"
+        name === "board_respond" ||
+        name === "board_read" || name === "board_update" || name === "board_supersede"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -5708,6 +5775,21 @@ Deno.serve(async (req) => {
             p_timezone: str(args?.timezone) ?? "UTC",
             p_cid: worldCid,
           };
+        } else if (name === "board_read") {
+          // F2/F3 · The three-strike rule is mechanised here, not remembered.
+          rpcName = "board_render";
+          params = {
+            p_cid: worldCid,
+            p_bump: args?.bump === false ? false : true,
+            p_limit: num(args?.limit, 200),
+          };
+        } else if (name === "board_update") {
+          // F1 · id-authoritative. Title is never used for matching.
+          rpcName = "board_update";
+          params = { p_items: Array.isArray(args?.items) ? args.items : [], p_cid: worldCid };
+        } else if (name === "board_supersede") {
+          rpcName = "board_supersede";
+          params = { p_keep: str(args?.keep), p_duplicate: str(args?.duplicate), p_cid: worldCid };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
           params = {
@@ -6032,7 +6114,7 @@ Deno.serve(async (req) => {
           const session_id = typeof argsIn?.session_id === "string" ? argsIn.session_id : "";
           if (!session_id) throw new Error("session_id required");
           const decisions = (Array.isArray(argsIn?.decisions) ? argsIn.decisions : []).filter((d: any) => d?.title);
-          const openLoops = (Array.isArray(argsIn?.open_loops) ? argsIn.open_loops : []).filter((o: any) => o?.title);
+          const openLoops = (Array.isArray(argsIn?.open_loops) ? argsIn.open_loops : []).filter((o: any) => o?.title || o?.id);
           const signals = (Array.isArray(argsIn?.signals) ? argsIn.signals : []).filter((s: any) => s?.title);
           const memory = (Array.isArray(argsIn?.memory) ? argsIn.memory : []).filter((m: any) => m?.title && m?.body_md);
           const rules = (Array.isArray(argsIn?.rules_captured) ? argsIn.rules_captured : []).filter((r: any) => r?.text && r?.scope);
@@ -6144,11 +6226,25 @@ Deno.serve(async (req) => {
               L.open_loops.attempted += 1;
               try {
                 const extras = loopExtras(ol);
-                const { data: existing } = await supabaseAdmin
-                  .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
+                // F1 · An id, when given, is the match. Titles are rewritten
+                // by the redaction layer between read and write, so matching on
+                // them forks the row rather than updating it.
+                const givenId = typeof ol?.id === "string" && ol.id.trim() ? ol.id.trim() : null;
+                let existing: { id: string } | null = null;
+                if (givenId) {
+                  const { data: byId } = await supabaseAdmin
+                    .from("open_loops").select("id").eq("id", givenId).eq("tenant", tenant).maybeSingle();
+                  if (!byId) throw new Error(`OPEN_LOOP_ID_NOT_FOUND: ${givenId}`);
+                  existing = byId as { id: string };
+                } else {
+                  const { data: byTitle } = await supabaseAdmin
+                    .from("open_loops").select("id").eq("tenant", tenant).eq("title", ol.title).maybeSingle();
+                  existing = (byTitle ?? null) as { id: string } | null;
+                }
                 let rowId: string;
                 if (existing) {
                   const { error } = await supabaseAdmin.from("open_loops").update({
+                    ...(givenId && ol.title ? { title: ol.title } : {}),
                     trigger: ol.trigger ?? null,
                     owner: ol.owner ?? null,
                     state: ol.state ?? null,
@@ -6550,22 +6646,10 @@ Deno.serve(async (req) => {
             if (!sess || sess.tenant !== tenant) return rpcError(id, -32602, "session_not_found");
 
             // Brief with surfaced_count bump
-            const today = new Date().toISOString().slice(0, 10);
-            const { data: brief, error: briefErr } = await supabaseAdmin
-              .from("open_loops")
-              .select("id, title, trigger, owner, state, surfaced_count, last_surfaced, snooze_until, brief_status, notion_page_id, created_at")
-              .eq("tenant", tenant).eq("brief_status", "open")
-              .or(`snooze_until.is.null,snooze_until.lte.${today}`)
-              .order("state", { ascending: true }).order("created_at", { ascending: true });
+            const { data: boardRender, error: briefErr } = await supabaseAdmin
+              .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: 200 });
             if (briefErr) degraded.push("brief");
-            const briefRows = (brief ?? []) as any[];
-            const nowIso = new Date().toISOString();
-            for (const row of briefRows) {
-              await supabaseAdmin.from("open_loops").update({
-                surfaced_count: (row.surfaced_count ?? 0) + 1,
-                last_surfaced: nowIso,
-              }).eq("id", row.id);
-            }
+            const briefRows = ((boardRender as any)?.items ?? []) as any[];
 
             // Directives added since session opened
             const { data: dirs, error: dirsErr } = await supabaseAdmin

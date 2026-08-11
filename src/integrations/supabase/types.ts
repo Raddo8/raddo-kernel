@@ -5891,53 +5891,82 @@ export type Database = {
           cid: string | null
           cid_quarantine_reason: string | null
           created_at: string
+          escalated_at: string | null
+          escalation_state: string | null
+          hard_deadline: string | null
           id: string
+          last_action_at: string | null
           last_surfaced: string | null
           notion_page_id: string | null
           owner: string | null
           snooze_until: string | null
           state: string | null
+          superseded_by: string | null
           surfaced_count: number
           tenant: string
           title: string
           trigger: string | null
           updated_at: string
+          urgent: boolean
+          urgent_reason: string | null
         }
         Insert: {
           brief_status?: string
           cid?: string | null
           cid_quarantine_reason?: string | null
           created_at?: string
+          escalated_at?: string | null
+          escalation_state?: string | null
+          hard_deadline?: string | null
           id?: string
+          last_action_at?: string | null
           last_surfaced?: string | null
           notion_page_id?: string | null
           owner?: string | null
           snooze_until?: string | null
           state?: string | null
+          superseded_by?: string | null
           surfaced_count?: number
           tenant: string
           title: string
           trigger?: string | null
           updated_at?: string
+          urgent?: boolean
+          urgent_reason?: string | null
         }
         Update: {
           brief_status?: string
           cid?: string | null
           cid_quarantine_reason?: string | null
           created_at?: string
+          escalated_at?: string | null
+          escalation_state?: string | null
+          hard_deadline?: string | null
           id?: string
+          last_action_at?: string | null
           last_surfaced?: string | null
           notion_page_id?: string | null
           owner?: string | null
           snooze_until?: string | null
           state?: string | null
+          superseded_by?: string | null
           surfaced_count?: number
           tenant?: string
           title?: string
           trigger?: string | null
           updated_at?: string
+          urgent?: boolean
+          urgent_reason?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "open_loops_superseded_by_fkey"
+            columns: ["superseded_by"]
+            isOneToOne: false
+            referencedRelation: "open_loops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       playbook_steps: {
         Row: {
@@ -10900,6 +10929,10 @@ export type Database = {
         }
         Returns: Json
       }
+      board_render: {
+        Args: { p_bump?: boolean; p_cid?: string; p_limit?: number }
+        Returns: Json
+      }
       board_respond: {
         Args: {
           p_cid?: string
@@ -10909,6 +10942,11 @@ export type Database = {
         }
         Returns: Json
       }
+      board_supersede: {
+        Args: { p_cid?: string; p_duplicate: string; p_keep: string }
+        Returns: Json
+      }
+      board_update: { Args: { p_cid?: string; p_items: Json }; Returns: Json }
       bridge_claim_next: {
         Args: never
         Returns: {
