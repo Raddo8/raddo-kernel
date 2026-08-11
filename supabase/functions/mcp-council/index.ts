@@ -2980,10 +2980,46 @@ const TOOL_RULE_WRITE = {
     additionalProperties: false,
   },
 };
+// ── CLIENT WORLD v1 · one question across the whole world, and the hop back ──
+// Both read-only, both CID-derived server-side. `search` wraps world_search_v1
+// (exact words, then loosened words, then closest by meaning); `fetch` resolves
+// any id from any register and returns the whole object.
+const TOOL_SEARCH = {
+  name: "search",
+  title: "Search",
+  description:
+    "Search this client's whole world in one call: memories, what is known about people and organisations, lane narratives, open loops, standing rules and blueprints. Every hit carries a register and an id. Use this before you answer anything about their world.",
+  annotations: { title: "Search", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      q: { type: "string", description: "The words to search for." },
+      limit: { type: "number", description: "Max hits (default 25)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["q"],
+    additionalProperties: false,
+  },
+};
 
+const TOOL_FETCH = {
+  name: "fetch",
+  title: "Fetch",
+  description:
+    "Read one thing in full by its id, from any register. Use it on any id a search returned.",
+  annotations: { title: "Fetch", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      id: { type: "string", description: "The id a search returned." },
+      ...MANIFEST_PROP,
+    },
+    required: ["id"],
+    additionalProperties: false,
+  },
+};
 
-
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
