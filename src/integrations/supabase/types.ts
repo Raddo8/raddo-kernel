@@ -10186,6 +10186,60 @@ export type Database = {
           },
         ]
       }
+      work_merge_receipt: {
+        Row: {
+          cid: string
+          created_at: string
+          decision: string
+          discarded: Json
+          incoming_fingerprint: string | null
+          incoming_title: string
+          kept_fingerprint: string | null
+          kept_title: string | null
+          kept_work_id: string | null
+          merge_receipt_id: string
+          refusal_reason: string | null
+          signature_incoming: Json
+          signature_kept: Json
+          similarity_score: number | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          decision: string
+          discarded?: Json
+          incoming_fingerprint?: string | null
+          incoming_title: string
+          kept_fingerprint?: string | null
+          kept_title?: string | null
+          kept_work_id?: string | null
+          merge_receipt_id?: string
+          refusal_reason?: string | null
+          signature_incoming?: Json
+          signature_kept?: Json
+          similarity_score?: number | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          decision?: string
+          discarded?: Json
+          incoming_fingerprint?: string | null
+          incoming_title?: string
+          kept_fingerprint?: string | null
+          kept_title?: string | null
+          kept_work_id?: string | null
+          merge_receipt_id?: string
+          refusal_reason?: string | null
+          signature_incoming?: Json
+          signature_kept?: Json
+          similarity_score?: number | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Relationships: []
+      }
       work_orders: {
         Row: {
           claimed_at: string | null
@@ -12218,6 +12272,15 @@ export type Database = {
         }
         Returns: Json
       }
+      record_fleet_write_denial: {
+        Args: {
+          p_cid?: string
+          p_identity: Json
+          p_principal: string
+          p_table: string
+        }
+        Returns: string
+      }
       record_probe: {
         Args: {
           p_cid?: string
@@ -12497,6 +12560,7 @@ export type Database = {
       work_rescore: { Args: { p_cid: string }; Returns: number }
       work_score: { Args: { p_cid: string }; Returns: number }
       work_sync_loops: { Args: { p_cid: string }; Returns: Json }
+      work_title_signature: { Args: { p_title: string }; Returns: Json }
       work_unassessed: {
         Args: { p_cid: string; p_limit?: number }
         Returns: {
