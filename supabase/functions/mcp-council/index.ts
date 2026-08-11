@@ -3119,7 +3119,45 @@ const TOOL_SIGNAL_RAISE = {
   },
 };
 
-const TOOL_DECISION_WRITE = {
+const TOOL_BOARD_RESPOND = {
+  name: "board_respond",
+  title: "Answer the board",
+  description:
+    "Record the principal's answers to the open loops on their brief, several at once. Each item names the loop and what to do with it: answered, cleared, or snoozed until a date. A snooze must carry a date; if the principal says \"later\" without saying when, ask them when before you call this. Nothing here invents a date on their behalf.",
+  annotations: { title: "Answer the board", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        description: "One entry per loop the principal answered.",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string", description: "The loop id from the brief." },
+            title: { type: "string", description: "The loop title, when you do not have the id." },
+            brief_status: {
+              type: "string",
+              enum: ["open", "answered", "snoozed", "cleared"],
+              description: "Where the loop sits after this answer.",
+            },
+            snooze_until: {
+              type: "string",
+              description: "YYYY-MM-DD. Required when the status is snoozed. Today or later.",
+            },
+            note: { type: "string", description: "What the principal said, in their words." },
+          },
+          additionalProperties: false,
+        },
+      },
+      session_id: { type: "string", description: "The session this answer came from." },
+      timezone: { type: "string", description: "The principal's timezone, so a date means their day. Defaults to UTC." },
+      ...MANIFEST_PROP,
+    },
+    required: ["items"],
+    additionalProperties: false,
+  },
+};
   name: "decision_write",
   title: "Write a decision",
   description:
