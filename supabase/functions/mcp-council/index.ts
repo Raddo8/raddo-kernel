@@ -6620,9 +6620,58 @@ Deno.serve(async (req) => {
           return out;
         };
 
+        // G3 · a save leaves a trace before it does any work. The attempt row is
+        // opened first and closed with the outcome, so a save that dies mid-flight
+        // is still visible as an open attempt with no outcome.
+        const requestedCounts = (a: any): Record<string, number> => {
+          const out: Record<string, number> = {};
+          for (const [k, v] of Object.entries(a ?? {})) {
+            if (Array.isArray(v)) out[k] = v.length;
+          }
+          return out;
+        };
+        const openSaveAttempt = async (
+          cid: string, a: any, ritual: string, clientRequestId: string,
+        ): Promise<string | null> => {
+          try {
+            const { data, error } = await supabaseAdmin.rpc("open_save_attempt", {
+              p_cid: cid,
+              p_session_id: typeof a?.session_id === "string" ? a.session_id : null,
+              p_client_request_id: clientRequestId,
+              p_ritual: ritual,
+              p_requested_layer_counts: requestedCounts(a),
+              p_surface: "connector",
+              p_tool_version: TOOL_MANIFEST_VERSION,
+              p_payload_hash: null,
+            });
+            if (error) throw new Error(error.message);
+            return (data as string) ?? null;
+          } catch (e) {
+            console.error("save_attempt_open_failed", e);
+            return null;
+          }
+        };
+        const closeSaveAttempt = async (
+          attemptId: string | null, status: "COMPLETED" | "PARTIAL" | "FAILED",
+          layerResults: unknown, failureStage: string | null,
+        ): Promise<void> => {
+          if (!attemptId) return;
+          try {
+            await supabaseAdmin.rpc("close_save_attempt", {
+              p_save_attempt_id: attemptId,
+              p_status: status,
+              p_layer_results: layerResults ?? null,
+              p_failure_stage: failureStage,
+            });
+          } catch (e) {
+            console.error("save_attempt_close_failed", e);
+          }
+        };
+
         // ══════ save_session ══════
         if (name === "save_session") {
           const startedAt = Date.now();
+          let saveAttemptId: string | null = null;
           const clientRequestId = typeof args?.client_request_id === "string" ? args.client_request_id.trim() : "";
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
