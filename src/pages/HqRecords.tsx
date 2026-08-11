@@ -12,6 +12,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import ReactMarkdown from "react-markdown";
 
 import HqShell, { useIsOperator } from "@/components/hq/HqShell";
+import { hqAct } from "@/lib/hq-act";
 import { FleetLive } from "@/components/hq/FleetLive";
 import { supabase } from "@/integrations/supabase/client";
 import "@/hq-next/styles/hq-records.css";
@@ -33,6 +34,7 @@ const REGISTERS = [
   "goals",
   "storyline",
   "document_registry",
+  "office_record_index",
 ] as const;
 
 type Register = (typeof REGISTERS)[number];
@@ -54,6 +56,7 @@ const REGISTER_LABEL: Record<Register, string> = {
   goals: "goals",
   storyline: "storyline",
   document_registry: "documents",
+  office_record_index: "your records",
 };
 
 type Row = Record<string, unknown>;
