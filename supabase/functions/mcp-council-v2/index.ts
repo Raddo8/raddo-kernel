@@ -4411,6 +4411,7 @@ Deno.serve(async (req) => {
             try {
               const { data: cpRow, error: cpErr } = await supabaseAdmin
                 .from("session_checkpoints").insert({
+                  cid: pctx.legacy_cid,
                   session_id,
                   cid: pctx.legacy_cid,
                   tenant,
