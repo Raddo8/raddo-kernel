@@ -1270,6 +1270,30 @@ export type Database = {
         }
         Relationships: []
       }
+      cid_t_apply_log: {
+        Row: {
+          applied: boolean
+          at: string
+          detail: string | null
+          id: number
+          table_name: string
+        }
+        Insert: {
+          applied: boolean
+          at?: string
+          detail?: string | null
+          id?: number
+          table_name: string
+        }
+        Update: {
+          applied?: boolean
+          at?: string
+          detail?: string | null
+          id?: number
+          table_name?: string
+        }
+        Relationships: []
+      }
       claim_code: {
         Row: {
           cid: string
@@ -2348,6 +2372,7 @@ export type Database = {
           at: string
           from_tier: number | null
           from_version: number | null
+          provenance: string
           reason: string
           receipt: string | null
           rule_key: string | null
@@ -2361,6 +2386,7 @@ export type Database = {
           at?: string
           from_tier?: number | null
           from_version?: number | null
+          provenance?: string
           reason: string
           receipt?: string | null
           rule_key?: string | null
@@ -2374,6 +2400,7 @@ export type Database = {
           at?: string
           from_tier?: number | null
           from_version?: number | null
+          provenance?: string
           reason?: string
           receipt?: string | null
           rule_key?: string | null
@@ -9090,7 +9117,7 @@ export type Database = {
       }
       tenant_session_context: {
         Row: {
-          auth_user_id: string
+          auth_user_id: string | null
           cid: string
           established_at: string
           expires_at: string | null
@@ -9099,7 +9126,7 @@ export type Database = {
           source: string
         }
         Insert: {
-          auth_user_id: string
+          auth_user_id?: string | null
           cid: string
           established_at?: string
           expires_at?: string | null
@@ -9108,7 +9135,7 @@ export type Database = {
           source?: string
         }
         Update: {
-          auth_user_id?: string
+          auth_user_id?: string | null
           cid?: string
           established_at?: string
           expires_at?: string | null
@@ -9185,6 +9212,7 @@ export type Database = {
           public_ref: string | null
           status: string
           tier: string
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -9203,6 +9231,7 @@ export type Database = {
           public_ref?: string | null
           status?: string
           tier?: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -9221,6 +9250,7 @@ export type Database = {
           public_ref?: string | null
           status?: string
           tier?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -10943,6 +10973,7 @@ export type Database = {
         Args: { p_cid?: string; p_session_id?: string }
         Returns: Json
       }
+      close_session_context: { Args: { p_session_id: string }; Returns: Json }
       cob_blueprint_write: {
         Args: {
           p_cid: string
@@ -11450,6 +11481,7 @@ export type Database = {
       }
       is_cob_operator: { Args: never; Returns: boolean }
       is_fleet_operator: { Args: never; Returns: boolean }
+      is_fleet_operator_cid: { Args: { p_cid: string }; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_workspace_member: {
@@ -11657,6 +11689,16 @@ export type Database = {
         }
         Returns: Json
       }
+      open_session_context: {
+        Args: {
+          p_auth_user_id?: string
+          p_cid: string
+          p_session_id: string
+          p_source?: string
+          p_ttl?: string
+        }
+        Returns: Json
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -11666,6 +11708,16 @@ export type Database = {
           p_scope?: string
           p_source: string
           p_tier: number
+        }
+        Returns: Json
+      }
+      propose_doctrine_rule_as_cid: {
+        Args: {
+          p_cid: string
+          p_reason?: string
+          p_rule_key: string
+          p_rule_text: string
+          p_tier?: number
         }
         Returns: Json
       }
@@ -11767,6 +11819,7 @@ export type Database = {
           total: number
         }[]
       }
+      render_local: { Args: { p_cid: string; p_ts: string }; Returns: Json }
       resolve_cid: { Args: { k: string }; Returns: string }
       resolve_hq_authority_v1: {
         Args: { p_auth_user_id: string; p_session_id?: string }
@@ -11830,6 +11883,11 @@ export type Database = {
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
       save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
+      session_context_purge: { Args: never; Returns: number }
+      session_id_for_context: {
+        Args: { p_session_id: string }
+        Returns: string
+      }
       session_title_rule: { Args: never; Returns: string }
       session_transcript_read: { Args: { p_session_id: string }; Returns: Json }
       session_transcript_write: {
@@ -11878,7 +11936,9 @@ export type Database = {
         }[]
       }
       sweep_unreachable_raise: { Args: { p_cid?: string }; Returns: number }
+      tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
+      tenant_timezone: { Args: { p_cid: string }; Returns: string }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
