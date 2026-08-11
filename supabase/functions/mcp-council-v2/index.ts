@@ -4414,7 +4414,6 @@ Deno.serve(async (req) => {
                 .from("session_checkpoints").insert({
                   cid: pctx.legacy_cid,
                   session_id,
-                  cid: pctx.legacy_cid,
                   tenant,
                   kind: checkpointKind,
                   open_loops: checkpoint.open_loops ?? [],
