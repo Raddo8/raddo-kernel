@@ -3738,7 +3738,9 @@ export type Database = {
         Row: {
           audience: string
           authoritative: boolean
+          caller: string | null
           cid: string
+          classification: string | null
           curn: string
           detail_md: string | null
           first_seen: string
@@ -3762,7 +3764,9 @@ export type Database = {
         Insert: {
           audience?: string
           authoritative?: boolean
+          caller?: string | null
           cid: string
+          classification?: string | null
           curn: string
           detail_md?: string | null
           first_seen?: string
@@ -3786,7 +3790,9 @@ export type Database = {
         Update: {
           audience?: string
           authoritative?: boolean
+          caller?: string | null
           cid?: string
+          classification?: string | null
           curn?: string
           detail_md?: string | null
           first_seen?: string
@@ -8178,48 +8184,6 @@ export type Database = {
           },
         ]
       }
-      scores: {
-        Row: {
-          account_id: string | null
-          computed_at: string
-          id: string
-          item_id: string | null
-          score_type: string
-          value: number
-        }
-        Insert: {
-          account_id?: string | null
-          computed_at?: string
-          id?: string
-          item_id?: string | null
-          score_type: string
-          value?: number
-        }
-        Update: {
-          account_id?: string | null
-          computed_at?: string
-          id?: string
-          item_id?: string | null
-          score_type?: string
-          value?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "scores_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "scores_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       service_delegations: {
         Row: {
           authorized_by: string | null
@@ -11721,6 +11685,15 @@ export type Database = {
         Args: { p_cid: string; p_limit?: number; p_q?: string }
         Returns: Json
       }
+      code_claim: {
+        Args: {
+          p_cid?: string
+          p_claim: string
+          p_code: string
+          p_confidence?: number
+        }
+        Returns: Json
+      }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
@@ -12572,6 +12545,7 @@ export type Database = {
         }[]
       }
       sweep_unreachable_raise: { Args: { p_cid?: string }; Returns: number }
+      sync_tool_catalog: { Args: { p_version?: string }; Returns: Json }
       tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       tenant_timezone: { Args: { p_cid: string }; Returns: string }
