@@ -26,7 +26,7 @@
 import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
-import { newRequestContext } from "./request-context.ts";
+import { newRequestContext, elapsedMs } from "./request-context.ts";
 import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.9";
+const TOOL_MANIFEST_VERSION = "2026.08.12.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2966,7 +2966,7 @@ const TOOL_RULE_WRITE = {
   name: "rule_write",
   title: "Rule Write",
   description:
-    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes. Canon outranks every rule you write here. You can narrow it for your client; you cannot switch it off. A rule that tries will be refused and told why.",
+    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes. Canon outranks every rule you write here. You can narrow it for your client; you cannot switch it off. A rule that tries will be refused and told why. `write_scope` says who the rule is for: `LOCAL` is this client only, which is the default and almost always right; `FLEET` is doctrine for every client and is reserved to a fleet operator. The receipt tells you in words which one happened.",
   annotations: { title: "Rule Write" },
   inputSchema: {
     type: "object",
@@ -2976,10 +2976,20 @@ const TOOL_RULE_WRITE = {
         enum: ["state", "propose", "confirm", "amend", "retire", "restore", "rank"],
         description: "Default `state`. `state` governs at once; `propose` waits for the principal.",
       },
+      write_scope: {
+        type: "string",
+        enum: ["LOCAL", "FLEET"],
+        description:
+          "Who the rule binds. Default `LOCAL` (this client only). `FLEET` routes to fleet doctrine and is refused unless you are an active fleet operator.",
+      },
       id: { type: "string", description: "Existing rule id. Required for confirm, amend, retire, restore, rank." },
       text: { type: "string", description: "The rule itself, in the principal's own words where possible." },
       title: { type: "string" },
-      scope: { type: "string", enum: ["LOCKED", "SITUATIONAL"] },
+      scope: {
+        type: "string",
+        enum: ["LOCKED", "SITUATIONAL"],
+        description: "How hard the rule binds. Not who it applies to · that is `write_scope`.",
+      },
       rank: { type: "number" },
       reason: { type: "string" },
       ...MANIFEST_PROP,
@@ -3176,9 +3186,49 @@ const TOOL_DECISION_WRITE = {
       minute_id: { type: "string", description: "The council minute it came out of, when it did." },
       supersedes: { type: "string", description: "The id of the decision this replaces." },
       session_id: { type: "string", description: "The session it was taken in." },
+      verification_state: {
+        type: "string",
+        enum: ["recorded", "probe_passed", "verified"],
+        description:
+          "Default `recorded`. A decision that says the work is executed, shipped, done, live, fixed or deployed must be `probe_passed` or `verified` and must name the probe in `test_run_id`, or it will be refused.",
+      },
+      test_run_id: {
+        type: "string",
+        description: "The probe id returned by `record_probe`. Required for any completion claim.",
+      },
       ...MANIFEST_PROP,
     },
     required: ["title"],
+    additionalProperties: false,
+  },
+};
+
+// ── HARDEN-02 · H1 · the only writer of probe_runs ──────────────────────────
+// A completion claim in a decision is refused unless it names a probe here
+// that passed. cid is resolved on the server; it is never a tool argument.
+const TOOL_RECORD_PROBE = {
+  name: "record_probe",
+  title: "Record a probe",
+  description:
+    "Record a check you actually ran: what was claimed, how you checked it, what you expected, what you observed, and whether it passed. Returns a probe id. Before you write a decision that says something is executed, done, shipped, live, fixed or deployed, run the check, record it here, and put the returned id in `test_run_id`. A claim without a passing probe is refused.",
+  annotations: { title: "Record a probe", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      subject_kind: {
+        type: "string",
+        enum: ["decision", "migration", "function", "cron", "register"],
+        description: "What sort of thing you checked. Default `decision`.",
+      },
+      subject_ref: { type: "string", description: "Which one: an id, a name, or a path." },
+      claim: { type: "string", description: "The claim being tested, in one line." },
+      method: { type: "string", description: "How you checked it." },
+      expected: { type: "string", description: "What a pass looks like." },
+      observed: { type: "string", description: "What you actually saw." },
+      passed: { type: "boolean", description: "True only if observed matches expected." },
+      ...MANIFEST_PROP,
+    },
+    required: ["subject_ref", "claim", "method", "expected", "observed", "passed"],
     additionalProperties: false,
   },
 };
@@ -3207,7 +3257,7 @@ const TOOL_RECORD_FILE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_DECISION_WRITE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -3678,6 +3728,53 @@ Deno.serve(async (req) => {
         p_audience: null,
       });
     } catch { /* the log line already happened; never fail on the record of a failure */ }
+  };
+
+  // ── HARDEN-02 · H2 · GATEWAY SESSION EVENT LOG ───────────────────────────
+  // One row per tool call, written by the gateway on every call, for every
+  // tenant. The COBCLIENT is never asked to log and cannot suppress a row.
+  // Arguments and results are stored as SHA-256 digests only, so confidential
+  // and NPI material is never duplicated into the log.
+  const digest = async (v: unknown): Promise<string | null> => {
+    try {
+      const text = typeof v === "string" ? v : JSON.stringify(v ?? null);
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text ?? ""));
+      return Array.from(new Uint8Array(buf)).slice(0, 16)
+        .map((b) => b.toString(16).padStart(2, "0")).join("");
+    } catch { return null; }
+  };
+
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const logSessionEvent = async (e: {
+    tool: string;
+    ok: boolean;
+    error_code: string | null;
+    latency_ms: number;
+    args: unknown;
+    result: unknown;
+    surface: string | null;
+  }): Promise<void> => {
+    if (!supabaseAdmin) return;
+    try {
+      const cid = await serverCid();
+      if (!cid) return;
+      const sid = (e.args as any)?.session_id;
+      await supabaseAdmin.from("session_event").insert({
+        cid,
+        session_id: typeof sid === "string" && UUID_RE.test(sid) ? sid : null,
+        tool: e.tool,
+        ok: e.ok,
+        error_code: e.error_code ? String(e.error_code).slice(0, 200) : null,
+        latency_ms: Number.isFinite(e.latency_ms) ? Math.max(0, Math.floor(e.latency_ms)) : null,
+        arg_digest: await digest(e.args),
+        result_digest: await digest(e.result),
+        surface: e.surface,
+        tool_manifest_version: TOOL_MANIFEST_VERSION,
+      });
+    } catch (err) {
+      console.error("session_event_write_failed", err instanceof Error ? err.message : String(err));
+    }
   };
 
   // UNIT 1 · CONNECTOR-SUCCESS SIGNAL. Records the first time a tenant's
@@ -4810,6 +4907,20 @@ Deno.serve(async (req) => {
           if (!beginCid) degradedReasons.push("cid_unresolved");
           if (kernelErr) outcome = "partial";
 
+          // H7 · what this tenant booted with last time, read BEFORE the new
+          // session row exists, so the comparison is against the prior boot.
+          let priorManifestVersion: string | null = null;
+          try {
+            const { data: priorRows } = await supabaseAdmin
+              .from("sessions")
+              .select("tool_manifest_version, opened_at")
+              .eq("tenant", tenant)
+              .not("tool_manifest_version", "is", null)
+              .order("opened_at", { ascending: false })
+              .limit(1);
+            priorManifestVersion = (priorRows ?? [])[0]?.tool_manifest_version ?? null;
+          } catch { priorManifestVersion = null; }
+
           // 3. Insert new session row
           const { data: newSession, error: sessErr } = await supabaseAdmin
             .from("sessions")
@@ -4817,6 +4928,7 @@ Deno.serve(async (req) => {
               cid: pctx.legacy_cid,
               tenant,
               surface,
+              tool_manifest_version: TOOL_MANIFEST_VERSION,
               kernel_version: kernel?.version ?? null,
             })
             .select("id")
@@ -5153,9 +5265,55 @@ Deno.serve(async (req) => {
             }
           } catch (_e) { /* attestation is additive, never fails a boot */ }
 
+          // ── HARDEN-02 · H7 · SURFACE MANIFEST CHANGES ───────────────────
+          // A tenant should never learn their capabilities changed by trying
+          // a tool and failing. The gateway records the tool set behind every
+          // version it serves, and names the difference on the first boot
+          // after a change.
+          const currentTools = TOOLS.map((t) => t.name).sort();
+          let manifestDelta: Record<string, unknown> | null = null;
+          try {
+            await supabaseAdmin
+              .from("tool_manifest_registry")
+              .upsert(
+                { version: TOOL_MANIFEST_VERSION, tools: currentTools },
+                { onConflict: "version", ignoreDuplicates: true },
+              );
+            if (priorManifestVersion && priorManifestVersion !== TOOL_MANIFEST_VERSION) {
+              const { data: priorReg } = await supabaseAdmin
+                .from("tool_manifest_registry")
+                .select("tools")
+                .eq("version", priorManifestVersion)
+                .maybeSingle();
+              const { data: currReg } = await supabaseAdmin
+                .from("tool_manifest_registry")
+                .select("renames")
+                .eq("version", TOOL_MANIFEST_VERSION)
+                .maybeSingle();
+              const priorTools: string[] = Array.isArray(priorReg?.tools) ? priorReg.tools : [];
+              const renames = (currReg?.renames ?? {}) as Record<string, string>;
+              const renamedFrom = new Set(Object.keys(renames));
+              const renamedTo = new Set(Object.values(renames));
+              const added = currentTools.filter((t) => !priorTools.includes(t) && !renamedTo.has(t));
+              const removed = priorTools.filter((t) => !currentTools.includes(t) && !renamedFrom.has(t));
+              manifestDelta = {
+                from: priorManifestVersion,
+                to: TOOL_MANIFEST_VERSION,
+                added,
+                removed,
+                renamed: Object.entries(renames).map(([from, to]) => ({ from, to })),
+                known_prior_tool_set: priorTools.length > 0,
+                note: priorTools.length === 0
+                  ? "Your tool set changed, but the previous version was never recorded, so the exact difference cannot be named."
+                  : "Your tool set changed since you last connected. These are the differences.",
+              };
+            }
+          } catch (_e) { /* the delta is additive · a boot never fails on it */ }
+
           const out = {
             session_id: sessionId,
             tenant,
+            ...(manifestDelta ? { manifest_delta: manifestDelta } : {}),
             kernel: kernelBlock,
             kernel_bytes_delivered: kernelBytesDelivered,
             kernel_verification: kernelVerification,
@@ -5262,6 +5420,7 @@ Deno.serve(async (req) => {
         name === "search" || name === "fetch" ||
         name === "request_read" || name === "request_resolve" || name === "comm_write" ||
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
+        name === "record_probe" ||
         name === "board_respond"
 
       ) {
@@ -5282,6 +5441,8 @@ Deno.serve(async (req) => {
 
         let rpcName: string;
         let params: Record<string, unknown>;
+        // H6 · set only by rule_write, so the receipt can say which scope ran.
+        let ruleWriteScope: "LOCAL" | "FLEET" | null = null;
         if (name === "search") {
           // One question across six registers. COB_SEARCH_NEEDS_WORDS comes
           // back verbatim when `q` is empty.
@@ -5363,6 +5524,23 @@ Deno.serve(async (req) => {
             p_minute_id: str(args?.minute_id),
             p_supersedes: str(args?.supersedes),
             p_session_id: str(args?.session_id),
+            // H1 · a completion claim must carry its proof. The trigger on
+            // decisions refuses "executed" without a passed probe named here.
+            p_verification_state: str(args?.verification_state),
+            p_test_run_id: str(args?.test_run_id),
+          };
+        } else if (name === "record_probe") {
+          // H1 · the only writer of probe_runs. cid is server-derived.
+          rpcName = "record_probe";
+          params = {
+            p_cid: worldCid,
+            p_subject_kind: str(args?.subject_kind) ?? "decision",
+            p_subject_ref: str(args?.subject_ref) ?? "",
+            p_claim: typeof args?.claim === "string" ? args.claim : "",
+            p_method: typeof args?.method === "string" ? args.method : "",
+            p_expected: typeof args?.expected === "string" ? args.expected : "",
+            p_observed: typeof args?.observed === "string" ? args.observed : "",
+            p_passed: args?.passed === true,
           };
         } else if (name === "record_file") {
           rpcName = "cob_record_file";
@@ -5420,19 +5598,78 @@ Deno.serve(async (req) => {
           };
         } else {
           // rule_write · `state` governs at once, `propose` waits for the yes.
-          rpcName = "cob_rule_write";
-          params = {
-            p_cid: worldCid,
-            p_action: str(args?.action) ?? "state",
-            p_id: str(args?.id),
-            p_text: typeof args?.text === "string" ? args.text : null,
-            p_title: str(args?.title),
-            // Omitted rather than nulled: the function's own default is LOCKED.
-            ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
-            p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
-              ? Math.floor(args.rank) : null,
-            p_reason: str(args?.reason),
-          };
+          //
+          // HARDEN-02 · H6 · the scope target is explicit and the receipt says
+          // which one happened. FLEET is doctrine for every client; the
+          // connector reaches the database as service_role for every tenant,
+          // which is a connection, not an authority, so FLEET is refused here
+          // and only ever runs through propose_doctrine_rule behind
+          // admin_guard's is_fleet_operator() check.
+          const writeScope = (str(args?.write_scope) ?? "LOCAL").toUpperCase();
+          if (writeScope !== "LOCAL" && writeScope !== "FLEET") {
+            const out = {
+              ok: false,
+              tool: name,
+              error: `COB_RULE_SCOPE_UNKNOWN: write_scope must be LOCAL or FLEET · got ${writeScope}`,
+              ...identityBlock(pctx),
+              ...manifestBlock(args),
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: true,
+            });
+          }
+          if (writeScope === "FLEET") {
+            let operator = false;
+            try {
+              const { data: op } = await supabaseAdmin.rpc("is_fleet_operator");
+              operator = op === true;
+            } catch { operator = false; }
+            if (!operator) {
+              void raiseSignal(
+                "rule-write-fleet-refused",
+                `A FLEET rule was requested by a client connector · tenant=${tenant}`,
+                { surface: "connector", subject: "rule_write", link: { write_scope: "FLEET" } },
+              );
+              const out = {
+                ok: false,
+                tool: name,
+                write_scope: "FLEET",
+                error:
+                  "COB_RULE_FLEET_REQUIRES_OPERATOR: a fleet rule binds every client, so only an active fleet operator can write one. Nothing was written. If this rule is for your principal, send it again with write_scope LOCAL.",
+                ...identityBlock(pctx),
+                ...manifestBlock(args),
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: true,
+              });
+            }
+            rpcName = "propose_doctrine_rule";
+            params = {
+              p_rule_key: str(args?.title) ?? str(args?.id) ?? "unkeyed",
+              p_rule_text: typeof args?.text === "string" ? args.text : "",
+              p_reason: str(args?.reason),
+            };
+            ruleWriteScope = "FLEET";
+          } else {
+            rpcName = "cob_rule_write";
+            params = {
+              p_cid: worldCid,
+              p_action: str(args?.action) ?? "state",
+              p_id: str(args?.id),
+              p_text: typeof args?.text === "string" ? args.text : null,
+              p_title: str(args?.title),
+              // Omitted rather than nulled: the function's own default is LOCKED.
+              ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
+              p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
+                ? Math.floor(args.rank) : null,
+              p_reason: str(args?.reason),
+            };
+            ruleWriteScope = "LOCAL";
+          }
         }
 
 
@@ -5469,6 +5706,14 @@ Deno.serve(async (req) => {
 
         const out = {
           ...(data && typeof data === "object" ? data as Record<string, unknown> : { result: data }),
+          ...(ruleWriteScope
+            ? {
+              write_scope: ruleWriteScope,
+              write_scope_note: ruleWriteScope === "LOCAL"
+                ? `Written as a local rule for ${tenant} only. It binds this client and no one else.`
+                : "Proposed as fleet doctrine. It binds every client once it is ratified.",
+            }
+            : {}),
           ...identityBlock(pctx),
           ...manifestBlock(args),
         };
@@ -6240,6 +6485,33 @@ Deno.serve(async (req) => {
             if (!endCid) endReasons.push("cid_unresolved");
             const res = await runSaveLeg(args ?? {}, "end");
 
+            // ── HARDEN-02 · H3 · TRANSCRIPT AT CLOSE ──────────────────────
+            // A clean close asserts the session is on the record. Without a
+            // transcript row for this session there is no record, so the close
+            // still happens but it is never reported clean.
+            let transcriptPresent = false;
+            let transcriptChars = 0;
+            try {
+              const { data: trRows } = await supabaseAdmin
+                .from("session_transcript")
+                .select("transcript_id, chars, fidelity")
+                .eq("session_id", session_id)
+                .eq("cid", endCid ?? "")
+                .limit(50);
+              transcriptPresent = (trRows ?? []).length > 0;
+              transcriptChars = (trRows ?? []).reduce(
+                (n: number, r: any) => n + Number(r?.chars ?? 0), 0,
+              );
+            } catch { transcriptPresent = false; }
+            if (!transcriptPresent) {
+              endReasons.push("transcript_missing");
+              void raiseSignal(
+                "session-closed-without-transcript",
+                `session=${session_id} closed with no transcript row`,
+                { session_id, surface: "connector", subject: "end_session" },
+              );
+            }
+
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
             // Every update is read back: a miss must be reported, never silently
             // reported as clean. A queued correction that did not bind is the
@@ -6341,8 +6613,11 @@ Deno.serve(async (req) => {
             }
 
             // 4. ritual_runs
+            // H3 · a close with no transcript is partial, never clean.
             const endOutcome: "ok" | "partial" | "degraded" =
-              endReasons.length ? "degraded" : res.outcome;
+              !transcriptPresent
+                ? "partial"
+                : (endReasons.length ? "degraded" : res.outcome);
             const duration_ms = Date.now() - startedAt;
             try {
               await supabaseAdmin.from("ritual_runs").insert({
@@ -6380,6 +6655,14 @@ Deno.serve(async (req) => {
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
+              transcript: {
+                present: transcriptPresent,
+                chars: transcriptChars,
+                clean_close: transcriptPresent,
+                note: transcriptPresent
+                  ? "The session is on the record."
+                  : "Closed partial: no transcript was written for this session, so the narrative record is missing. Write the transcript, then say so in the next session's opening.",
+              },
               layers: res.layers,
               mirror_status: res.mirror_status,
               mirror_note: res.mirror_note,
@@ -7180,13 +7463,21 @@ Deno.serve(async (req) => {
         releaseConcurrency(tenant);
       }
       })();
+        // H2 · one session_event row per call, written here so no tool path
+        // and no client can skip it. Digest only, never a raw body.
+        let __eventOk = true;
+        let __eventError: string | null = null;
+        let __eventResult: unknown = null;
         try {
           const ct = __dispatchResponse.headers.get("content-type") ?? "";
           if (ct.includes("application/json")) {
             const j = await __dispatchResponse.clone().json();
+            __eventResult = j?.result ?? j?.error ?? null;
             if (j?.error) {
               __receiptOutcome = "error";
               __receiptErrorClass = String(j.error?.message ?? "error");
+              __eventOk = false;
+              __eventError = String(j.error?.message ?? "error");
             } else {
               const sc = j?.result?.structuredContent;
               const degraded = sc && (
@@ -7195,13 +7486,36 @@ Deno.serve(async (req) => {
                 (Array.isArray(sc.degradedReasons) && sc.degradedReasons.length > 0)
               );
               if (degraded) __receiptOutcome = "degraded";
+              // A tool that answered with isError:true is a failed call.
+              if (j?.result?.isError === true) {
+                __eventOk = false;
+                __eventError = typeof sc?.error === "string" ? sc.error : "tool_error";
+              }
             }
           }
         } catch (_e) { /* receipt classification is best-effort */ }
+        void logSessionEvent({
+          tool: typeof name === "string" ? name : "unknown",
+          ok: __eventOk,
+          error_code: __eventError,
+          latency_ms: elapsedMs(__receiptCtx),
+          args,
+          result: __eventResult,
+          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+        });
         return __dispatchResponse;
       } catch (e) {
         __receiptOutcome = "error";
         __receiptErrorClass = e instanceof Error ? e.message : String(e);
+        void logSessionEvent({
+          tool: typeof name === "string" ? name : "unknown",
+          ok: false,
+          error_code: e instanceof Error ? e.message : String(e),
+          latency_ms: elapsedMs(__receiptCtx),
+          args,
+          result: null,
+          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+        });
         throw e;
       } finally {
         await recordExecutionReceipt(supabaseAdmin, {
