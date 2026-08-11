@@ -1,8 +1,9 @@
 /** RULES · the second view on /hq/memories.
  *
  * Titles and state only. One line per rule, all detail in the shared drawer.
- * The client never writes to the rules themselves: every action files a
- * request through requestAction, which records the ask and nothing more.
+ * Confirming, ranking, retiring and restoring are the client's own authority
+ * and run through hq_act on the press. Rewording a rule and sorting out an
+ * overlap need judgment, so those still go to the COB through requestAction.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 

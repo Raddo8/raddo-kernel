@@ -145,3 +145,12 @@
 }
 .hqg .insp .rax button.ghost { background: transparent; color: var(--ink); border-color: var(--edge, #E5E3DE); }
 .hqg .insp .rsaid { margin-top: var(--s3); font-size: var(--t-sm); color: var(--ash); line-height: 1.6; }
+.hqg .insp .rax input {
+  flex: 1 1 140px;
+  padding: 8px 10px;
+  border: 1px solid var(--edge, #E5E3DE);
+  border-radius: var(--r-s);
+  background: var(--white, #fff);
+  color: var(--charcoal, #2C2C2A);
+  font-size: var(--t-sm);
+}
