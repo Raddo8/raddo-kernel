@@ -4963,7 +4963,15 @@ Deno.serve(async (req) => {
 
         let rpcName: string;
         let params: Record<string, unknown>;
-        if (name === "world_read") {
+        if (name === "search") {
+          // One question across six registers. COB_SEARCH_NEEDS_WORDS comes
+          // back verbatim when `q` is empty.
+          rpcName = "cob_search";
+          params = { p_cid: worldCid, p_q: str(args?.q) ?? "", p_limit: num(args?.limit, 25) };
+        } else if (name === "fetch") {
+          rpcName = "cob_fetch";
+          params = { p_cid: worldCid, p_id: str(args?.id) };
+        } else if (name === "world_read") {
           rpcName = "cob_world_read";
           params = { p_cid: worldCid, p_q: str(args?.q), p_limit: num(args?.limit, 40) };
         } else if (name === "registers_read") {
