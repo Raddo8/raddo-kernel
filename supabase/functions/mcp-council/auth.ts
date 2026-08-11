@@ -200,7 +200,7 @@ export type ResolvedIdentity = {
 
 export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity> {
   const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("invalid_token");
+  if (parts.length !== 3) reject("malformed", "not three segments");
   const [h, p, s] = parts;
 
   let header: any, payload: any;
@@ -208,18 +208,23 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
     header = decodeJson(h);
     payload = decodeJson(p);
   } catch {
-    throw new Error("invalid_token");
+    reject("malformed", "header or payload not decodable json");
   }
 
   const alg: string = typeof header?.alg === "string" ? header.alg : "";
   const kid: string | undefined = typeof header?.kid === "string" ? header.kid : undefined;
   const importParams = algToImport(alg);
-  if (!importParams) throw new Error("invalid_token");
+  if (!importParams) reject("alg_unsupported", `alg=${alg || "(absent)"}`);
 
   // Signature verification
-  const keys = await fetchJwks();
+  let keys: Jwk[];
+  try {
+    keys = await fetchJwks();
+  } catch (e) {
+    reject("jwks_unavailable", e instanceof Error ? e.message : String(e));
+  }
   const candidates = keys.filter((k) => (!kid || k.kid === kid) && (!k.alg || k.alg === alg));
-  if (candidates.length === 0) throw new Error("invalid_token");
+  if (candidates.length === 0) reject("no_matching_key", `kid=${kid ?? "(absent)"} alg=${alg}`);
 
   const signingInput = new TextEncoder().encode(`${h}.${p}`);
   const sig = b64urlToBytes(s);
@@ -243,21 +248,39 @@ export async function verifySupabaseJwt(token: string): Promise<ResolvedIdentity
       // try next key
     }
   }
-  if (!verified) throw new Error("invalid_token");
+  if (!verified) reject("sig_invalid", `kid=${kid ?? "(absent)"}`);
 
-  // Claim checks
+  // ── Claim checks ─────────────────────────────────────────────────────────
+  // House rule, learned the hard way: a check that only runs when the claim is
+  // present is not a check. An omitted claim must fail, not pass.
   const now = Math.floor(Date.now() / 1000);
-  if (typeof payload?.exp === "number" && payload.exp < now - 30) throw new Error("invalid_token");
-  if (typeof payload?.nbf === "number" && payload.nbf > now + 30) throw new Error("invalid_token");
-  if (ISSUER && typeof payload?.iss === "string" && payload.iss !== ISSUER) {
-    throw new Error("invalid_token");
+
+  // `exp` is REQUIRED. Absent, non-numeric, or past · all rejected. A token
+  // with no expiry would otherwise be valid forever.
+  if (typeof payload?.exp !== "number" || !Number.isFinite(payload.exp)) {
+    reject("exp_missing", "no numeric exp claim");
+  }
+  if (payload.exp < now - 30) reject("exp_past", `exp=${payload.exp} now=${now}`);
+
+  // `nbf` may legitimately be absent; when present it must not be in the future.
+  if (typeof payload?.nbf === "number" && payload.nbf > now + 30) {
+    reject("nbf_future", `nbf=${payload.nbf} now=${now}`);
   }
 
-  // NOTE: audience/scope gating intentionally removed. The Supabase AS does
-  // not let us mint a custom `aud` or custom `mcp:council` scope without
-  // breaking the /authorize step. Trust the issuer + signature + tenant
-  // claim. Resource isolation is enforced server-side via app_metadata.tenant.
+  // `iss` is REQUIRED and exact. Defence in depth behind the JWKS check ·
+  // but an optional identity check is not a check.
+  if (typeof payload?.iss !== "string" || !payload.iss) reject("iss_missing", "no iss claim");
+  if (payload.iss !== ISSUER) reject("iss_mismatch", `iss=${payload.iss}`);
+
+  // A token with no subject has no principal behind it.
+  const sub = typeof payload?.sub === "string" ? payload.sub.trim() : "";
+  if (!sub) reject("sub_missing", "empty or absent sub");
+
+  // RESOURCE BINDING · see the block at the top of this file. Not enforced;
+  // this call records what the AS actually mints so it can be.
+  void recordClaimShape(payload as Record<string, unknown>);
   const scopeStr = typeof payload?.scope === "string" ? payload.scope : "";
+
 
 
   // Tenant resolution · server-side only, never from caller input.
