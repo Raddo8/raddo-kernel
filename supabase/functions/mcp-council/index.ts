@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.6";
+const TOOL_MANIFEST_VERSION = "2026.08.11.7";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -5020,7 +5020,9 @@ Deno.serve(async (req) => {
           if (briefErr) degradedReasons.push("empty_brief");
           if (dirErr || pendErr) degradedReasons.push("no_directives_surface");
           if (cpErr) degradedReasons.push("no_checkpoint");
-          if (degradedReasons.length > 0) outcome = "degraded";
+          // A named read failure already set outcome to "partial" · do not
+          // soften it back down to "degraded".
+          if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
 
           // 10. Ritual run
           const durationMs = Date.now() - startedAt;
@@ -5053,7 +5055,7 @@ Deno.serve(async (req) => {
           const memoryCid = beginCid ?? pctx.legacy_cid ?? null;
           if (memoryCid) {
             const { data: memData, error: memErr } = await supabaseAdmin
-              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 40 });
+              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 60 });
             if (memErr) { outcome = "partial"; degradedReasons.push("memory_read_failed"); }
             else memoryModule = memData ?? null;
           } else {
