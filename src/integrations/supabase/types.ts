@@ -10681,6 +10681,15 @@ export type Database = {
         }
         Returns: Json
       }
+      board_respond: {
+        Args: {
+          p_cid?: string
+          p_items: Json
+          p_session_id?: string
+          p_timezone?: string
+        }
+        Returns: Json
+      }
       bridge_claim_next: {
         Args: never
         Returns: {
