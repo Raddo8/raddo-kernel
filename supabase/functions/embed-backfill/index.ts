@@ -187,8 +187,20 @@ Deno.serve(async (req) => {
   if (!admin) return fail("admin_client_unavailable", 503);
   if (!openaiKey) return fail("openai_key_unset", 503, { hint: "set OPENAI_API_KEY as an edge secret" });
 
+  // Auth · either the service-role bearer (manual runs) or the cron HMAC pair
+  // minted by public.get_cron_headers() (the scheduled run).
   const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
-  if (!token || token !== serviceRole) return fail("forbidden", 403);
+  let authorized = Boolean(token) && token === serviceRole;
+  if (!authorized) {
+    const ts = req.headers.get("x-cron-timestamp");
+    const ct = req.headers.get("x-cron-token");
+    if (ts && ct) {
+      const { data: ok } = await admin.rpc("verify_cron_token", { p_timestamp: ts, p_token: ct });
+      authorized = ok === true;
+    }
+  }
+  if (!authorized) return fail("forbidden", 403);
+
 
   let body: Record<string, unknown> = {};
   if (req.headers.get("content-length") !== "0") {
