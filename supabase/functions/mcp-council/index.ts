@@ -6766,6 +6766,16 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
+            // G3 · the attempt row opened before any work now carries its outcome.
+            await closeSaveAttempt(
+              saveAttemptId,
+              receipt_error ? "FAILED" : (res.outcome === "complete" ? "COMPLETED" : "PARTIAL"),
+              { layers: res.layers, save_id, overall_status, outcome: res.outcome },
+              receipt_error
+                ? `receipt_write:${receipt_error}`
+                : (res.layers.filter((l: any) => l.error_code).map((l: any) => `${l.layer}:${l.error_code}`).join(", ") || null),
+            );
+
             // D6 · a save that leaves items untriaged says so, by name.
             let saveDisposition: any = null;
             try {
@@ -6773,6 +6783,7 @@ Deno.serve(async (req) => {
                 .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
               saveDisposition = dq ?? null;
             } catch (_e) { saveDisposition = null; }
+
 
             const out = {
               session_id: args?.session_id,
