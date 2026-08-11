@@ -12277,6 +12277,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reconcile_kernel_absent_signals: { Args: never; Returns: number }
       record_decision: {
         Args: {
           p_authority_tier?: string
