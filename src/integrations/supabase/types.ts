@@ -10306,6 +10306,57 @@ export type Database = {
           },
         ]
       }
+      work_reschedule_receipt: {
+        Row: {
+          cid: string
+          created_at: string
+          date_kind: string | null
+          direction: string
+          from_due: string | null
+          id: string
+          moved_by: string
+          reason: string
+          surface: string | null
+          title: string | null
+          to_due: string
+          urgency_after: number | null
+          urgency_before: number | null
+          work_id: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          date_kind?: string | null
+          direction: string
+          from_due?: string | null
+          id?: string
+          moved_by: string
+          reason: string
+          surface?: string | null
+          title?: string | null
+          to_due: string
+          urgency_after?: number | null
+          urgency_before?: number | null
+          work_id: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          date_kind?: string | null
+          direction?: string
+          from_due?: string | null
+          id?: string
+          moved_by?: string
+          reason?: string
+          surface?: string | null
+          title?: string | null
+          to_due?: string
+          urgency_after?: number | null
+          urgency_before?: number | null
+          work_id?: string
+        }
+        Relationships: []
+      }
       workspace_billing: {
         Row: {
           created_at: string
@@ -12241,6 +12292,10 @@ export type Database = {
         }
         Returns: Json
       }
+      probe_method_is_entry_point: {
+        Args: { p_method: string }
+        Returns: boolean
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -12436,6 +12491,10 @@ export type Database = {
         }[]
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
+      save_attempt_status: {
+        Args: { p_completed_at: string; p_layer_results: Json }
+        Returns: string
+      }
       save_attempts_in_flight: {
         Args: { p_older_than_minutes?: number }
         Returns: {
@@ -12592,6 +12651,16 @@ export type Database = {
           p_title: string
         }
         Returns: string
+      }
+      work_reschedule: {
+        Args: {
+          p_cid?: string
+          p_date_kind?: string
+          p_new_due: string
+          p_reason: string
+          p_work: string
+        }
+        Returns: Json
       }
       work_rescore: { Args: { p_cid: string }; Returns: number }
       work_score: { Args: { p_cid: string }; Returns: number }
