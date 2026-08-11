@@ -7364,13 +7364,21 @@ Deno.serve(async (req) => {
         releaseConcurrency(tenant);
       }
       })();
+        // H2 · one session_event row per call, written here so no tool path
+        // and no client can skip it. Digest only, never a raw body.
+        let __eventOk = true;
+        let __eventError: string | null = null;
+        let __eventResult: unknown = null;
         try {
           const ct = __dispatchResponse.headers.get("content-type") ?? "";
           if (ct.includes("application/json")) {
             const j = await __dispatchResponse.clone().json();
+            __eventResult = j?.result ?? j?.error ?? null;
             if (j?.error) {
               __receiptOutcome = "error";
               __receiptErrorClass = String(j.error?.message ?? "error");
+              __eventOk = false;
+              __eventError = String(j.error?.message ?? "error");
             } else {
               const sc = j?.result?.structuredContent;
               const degraded = sc && (
@@ -7379,13 +7387,36 @@ Deno.serve(async (req) => {
                 (Array.isArray(sc.degradedReasons) && sc.degradedReasons.length > 0)
               );
               if (degraded) __receiptOutcome = "degraded";
+              // A tool that answered with isError:true is a failed call.
+              if (j?.result?.isError === true) {
+                __eventOk = false;
+                __eventError = typeof sc?.error === "string" ? sc.error : "tool_error";
+              }
             }
           }
         } catch (_e) { /* receipt classification is best-effort */ }
+        void logSessionEvent({
+          tool: typeof name === "string" ? name : "unknown",
+          ok: __eventOk,
+          error_code: __eventError,
+          latency_ms: elapsedMs(__receiptCtx),
+          args,
+          result: __eventResult,
+          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+        });
         return __dispatchResponse;
       } catch (e) {
         __receiptOutcome = "error";
         __receiptErrorClass = e instanceof Error ? e.message : String(e);
+        void logSessionEvent({
+          tool: typeof name === "string" ? name : "unknown",
+          ok: false,
+          error_code: e instanceof Error ? e.message : String(e),
+          latency_ms: elapsedMs(__receiptCtx),
+          args,
+          result: null,
+          surface: typeof args?.surface === "string" ? args.surface.slice(0, 64) : "connector",
+        });
         throw e;
       } finally {
         await recordExecutionReceipt(supabaseAdmin, {
