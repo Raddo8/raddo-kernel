@@ -179,3 +179,20 @@ export async function fetchMinute(admin: Admin, a: FetchArgs): Promise<FetchResu
     completed_at: data.completed_at ?? null,
   };
 }
+
+/**
+ * Append a note to a run without touching its status.
+ * Ordering law: once a deliberation is complete, downstream failures are
+ * notes, never the run's verdict.
+ */
+export async function noteMinuteRun(admin: Admin, run_id: string, note: string): Promise<void> {
+  if (!admin) return;
+  try {
+    await admin.from(TABLE).update({
+      error: `note:${note}`.slice(0, 1000),
+      updated_at: new Date().toISOString(),
+    }).eq("run_id", run_id).eq("status", "complete");
+  } catch (e) {
+    console.warn("minute_store_note_failed", JSON.stringify({ run_id, error: String(e).slice(0, 300) }));
+  }
+}

@@ -27,7 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
 import { newRequestContext } from "./request-context.ts";
-import { openMinuteRun, completeMinuteRun, failMinuteRun, fetchMinute } from "./minute-store.ts";
+import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.3";
+const TOOL_MANIFEST_VERSION = "2026.08.11.5";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -7197,6 +7197,7 @@ Deno.serve(async (req) => {
           session_id: officeSessionId,
         });
 
+        let officeCompleted = false;
         try {
           // C2c · fail fast BEFORE spending. Resolve the office up-front so
           // an unconfigured tenant does not pay for a full triage +
@@ -7262,11 +7263,48 @@ Deno.serve(async (req) => {
           };
           const scrubbedQuestion = scrubPii(question);
 
-          const { url: notion_url } = await writeMinuteToNotion(
-            scrubbedMinute,
-            scrubbedQuestion,
-            { token: target.token, dbId: target.dbId, tenant },
-          );
+          // ORDERING LAW · the minute is persisted the moment it exists.
+          // Nothing external may mark a completed deliberation as failed.
+          const out: Record<string, unknown> = {
+            minute: scrubbedMinute,
+            routing_trace: result.routing_trace,
+            run_id: officeRunId,
+          };
+          await completeMinuteRun(supabaseAdmin, {
+            run_id: officeRunId,
+            minute: out,
+            verdict_md: scrubbedMinute.recommendation ?? null,
+            dissent_md: scrubbedMinute.dissent ?? null,
+            horizon: scrubbedMinute.anticipatory_horizon ?? null,
+            chairs: scrubbedMinute.participating_chairs ?? null,
+            lenses: Array.isArray(passes) ? { pass_count: passes.length, models: passes.map((p: any) => p.model) } : null,
+            mode: result.mode,
+            advisor: result.mode === "solo" ? result.selected_advisor : null,
+            eps: result.epsilon ?? null,
+            rho: result.rho ?? null,
+            cost_usd: aggregate(passes ?? []).total_cost_usd,
+          });
+          officeCompleted = true;
+
+          // Mirror leg · retiring. A mirror failure is a note on the row,
+          // never the run's status.
+          try {
+            const { url: notion_url } = await writeMinuteToNotion(
+              scrubbedMinute,
+              scrubbedQuestion,
+              { token: target.token, dbId: target.dbId, tenant },
+            );
+            if (notion_url) out.notion_url = notion_url;
+          } catch (mirrorErr) {
+            const reason = mirrorErr instanceof Error ? mirrorErr.message : String(mirrorErr);
+            out.mirror_status = `failed · ${reason}`;
+            await noteMinuteRun(supabaseAdmin, officeRunId, `mirror_failed:${reason}`);
+            void raiseSignal("office-mirror-failed", reason, {
+              session_id: officeSessionId, subject: "file_to_office",
+              link: { run_id: officeRunId },
+            });
+          }
+
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
@@ -7293,29 +7331,18 @@ Deno.serve(async (req) => {
               hops: result.routing_trace.hops,
             },
           });
-          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace, run_id: officeRunId };
-          await completeMinuteRun(supabaseAdmin, {
-            run_id: officeRunId,
-            minute: out,
-            verdict_md: scrubbedMinute.recommendation ?? null,
-            dissent_md: scrubbedMinute.dissent ?? null,
-            horizon: scrubbedMinute.anticipatory_horizon ?? null,
-            chairs: scrubbedMinute.participating_chairs ?? null,
-            lenses: Array.isArray(passes) ? { pass_count: passes.length, models: passes.map((p: any) => p.model) } : null,
-            mode: result.mode,
-            advisor: result.mode === "solo" ? result.selected_advisor : null,
-            eps: result.epsilon ?? null,
-            rho: result.rho ?? null,
-            cost_usd: aggregate(passes ?? []).total_cost_usd,
-          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
           });
+
         } catch (e) {
-          await failMinuteRun(supabaseAdmin, officeRunId, e);
-          return toRpc(e);
+          // Only a pre-completion failure may mark the run failed. Once the
+          // deliberation is persisted the row stays complete.
+          if (!officeCompleted) await failMinuteRun(supabaseAdmin, officeRunId, e);
+          else await noteMinuteRun(supabaseAdmin, officeRunId, `post_complete:${e instanceof Error ? e.message : String(e)}`);
+          return officeCompleted ? rpcResult(id, { content: [], structuredContent: { run_id: officeRunId, status: "complete", note: "minute persisted; a later step failed" }, isError: false }) : toRpc(e);
         }
       }
 
