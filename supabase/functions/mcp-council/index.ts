@@ -5562,6 +5562,7 @@ Deno.serve(async (req) => {
               const { data: cpRow, error: cpErr } = await supabaseAdmin
                 .from("session_checkpoints").insert({
                   session_id,
+                  cid: pctx.legacy_cid,
                   tenant,
                   kind: checkpointKind,
                   open_loops: checkpoint.open_loops ?? [],
@@ -5610,6 +5611,7 @@ Deno.serve(async (req) => {
                   L.open_loops.updated += 1;
                 } else {
                   const { data: ins, error } = await supabaseAdmin.from("open_loops").insert({
+                    cid: pctx.legacy_cid,
                     tenant,
                     title: ol.title,
                     trigger: ol.trigger ?? null,
@@ -5640,6 +5642,7 @@ Deno.serve(async (req) => {
               L.memory.attempted += 1;
               try {
                 const { data: mrow, error } = await supabaseAdmin.from("memory_entries").insert({
+                  cid: pctx.legacy_cid,
                   tenant,
                   session_id,
                   category: m.category ?? null,
