@@ -4988,6 +4988,8 @@ Deno.serve(async (req) => {
         const { data, error } = await supabaseAdmin.rpc(rpcName, params);
         if (error) {
           // Verbatim Postgres message: it names the bad value and the allowed set.
+          // Includes COB_RULE_CONFLICTS_WITH_KERNEL (42501) from cob_canon_check ·
+          // its text tells the COBCLIENT how to reword, so it must not be rephrased.
           const out = {
             ok: false,
             tool: name,
