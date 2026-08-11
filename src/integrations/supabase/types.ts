@@ -2029,6 +2029,27 @@ export type Database = {
         }
         Relationships: []
       }
+      curn_sequence: {
+        Row: {
+          cid: string
+          kind: string
+          last_value: number
+          updated_at: string
+        }
+        Insert: {
+          cid: string
+          kind: string
+          last_value?: number
+          updated_at?: string
+        }
+        Update: {
+          cid?: string
+          kind?: string
+          last_value?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cutover_lease: {
         Row: {
           acquired_at: string
@@ -2067,7 +2088,7 @@ export type Database = {
           authoritative: boolean
           authority_tier: string | null
           cid: string
-          curn: string | null
+          curn: string
           decided_at: string
           decided_by: string | null
           decision_md: string
@@ -2089,7 +2110,7 @@ export type Database = {
           authoritative?: boolean
           authority_tier?: string | null
           cid: string
-          curn?: string | null
+          curn: string
           decided_at?: string
           decided_by?: string | null
           decision_md: string
@@ -2111,7 +2132,7 @@ export type Database = {
           authoritative?: boolean
           authority_tier?: string | null
           cid?: string
-          curn?: string | null
+          curn?: string
           decided_at?: string
           decided_by?: string | null
           decision_md?: string
@@ -3532,7 +3553,7 @@ export type Database = {
           audience: string
           authoritative: boolean
           cid: string
-          curn: string | null
+          curn: string
           detail_md: string | null
           first_seen: string
           id: string
@@ -3555,7 +3576,7 @@ export type Database = {
           audience?: string
           authoritative?: boolean
           cid: string
-          curn?: string | null
+          curn: string
           detail_md?: string | null
           first_seen?: string
           id?: string
@@ -3578,7 +3599,7 @@ export type Database = {
           audience?: string
           authoritative?: boolean
           cid?: string
-          curn?: string | null
+          curn?: string
           detail_md?: string | null
           first_seen?: string
           id?: string
@@ -11368,6 +11389,7 @@ export type Database = {
       my_cob: { Args: never; Returns: Json }
       my_tenant: { Args: never; Returns: Json }
       next_cid: { Args: never; Returns: string }
+      next_curn: { Args: { p_cid: string; p_kind: string }; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
       observe_external_identity: {
         Args: {
