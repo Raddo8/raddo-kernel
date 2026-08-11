@@ -376,16 +376,45 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
               </>
             )}
 
-            {said === null ? (
+            {said === null && rankAsk !== null ? (
               <div className="rax">
+                <input
+                  autoFocus
+                  value={rankAsk}
+                  inputMode="numeric"
+                  placeholder="1 is the highest"
+                  aria-label="Rank"
+                  onChange={(e) => setRankAsk(e.target.value)}
+                />
                 <button
                   type="button"
-                  disabled={busy}
-                  onClick={() =>
-                    void file("rule.confirm", { directive_id: sel.row.id }, `Confirm: ${sel.row.title}`)
-                  }
+                  disabled={busy || !rankAsk.trim() || Number.isNaN(Number(rankAsk))}
+                  onClick={() => void act("rule.rank", sel.row.id, { rank: Number(rankAsk) })}
                 >
-                  Confirm into force
+                  Set the rank
+                </button>
+                <button type="button" className="ghost" onClick={() => setRankAsk(null)}>
+                  Never mind
+                </button>
+              </div>
+            ) : said === null ? (
+              <div className="rax">
+                {sel.row.status !== "active" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void act("rule.confirm", sel.row.id)}
+                  >
+                    Confirm into force
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="ghost"
+                  disabled={busy}
+                  onClick={() => setRankAsk(String(sel.row.rank ?? ""))}
+                >
+                  Set the rank
                 </button>
                 <button
                   type="button"
@@ -397,16 +426,25 @@ export function RulesView({ unauthenticated }: { unauthenticated: React.ReactNod
                 >
                   Reword this rule
                 </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  disabled={busy}
-                  onClick={() =>
-                    void file("rule.retire", { directive_id: sel.row.id }, `Retire: ${sel.row.title}`)
-                  }
-                >
-                  Retire this rule
-                </button>
+                {sel.row.status === "retired" ? (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => void act("rule.restore", sel.row.id)}
+                  >
+                    Bring it back
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ghost"
+                    disabled={busy}
+                    onClick={() => void act("rule.retire", sel.row.id)}
+                  >
+                    Retire this rule
+                  </button>
+                )}
               </div>
             ) : (
               <p className="rsaid">{said}</p>
