@@ -2184,7 +2184,7 @@ const SERVER_INFO = {
 // still dispatches). Three work-register tools are exposed. Every session
 // ritual now returns the board, the lane chosen from it, and the disposition
 // queue of anything raised but not yet triaged.
-const TOOL_MANIFEST_VERSION = "2026.08.12.7";
+const TOOL_MANIFEST_VERSION = "2026.08.12.8";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -6620,9 +6620,58 @@ Deno.serve(async (req) => {
           return out;
         };
 
+        // G3 · a save leaves a trace before it does any work. The attempt row is
+        // opened first and closed with the outcome, so a save that dies mid-flight
+        // is still visible as an open attempt with no outcome.
+        const requestedCounts = (a: any): Record<string, number> => {
+          const out: Record<string, number> = {};
+          for (const [k, v] of Object.entries(a ?? {})) {
+            if (Array.isArray(v)) out[k] = v.length;
+          }
+          return out;
+        };
+        const openSaveAttempt = async (
+          cid: string, a: any, ritual: string, clientRequestId: string,
+        ): Promise<string | null> => {
+          try {
+            const { data, error } = await supabaseAdmin.rpc("open_save_attempt", {
+              p_cid: cid,
+              p_session_id: typeof a?.session_id === "string" ? a.session_id : null,
+              p_client_request_id: clientRequestId,
+              p_ritual: ritual,
+              p_requested_layer_counts: requestedCounts(a),
+              p_surface: "connector",
+              p_tool_version: TOOL_MANIFEST_VERSION,
+              p_payload_hash: null,
+            });
+            if (error) throw new Error(error.message);
+            return (data as string) ?? null;
+          } catch (e) {
+            console.error("save_attempt_open_failed", e);
+            return null;
+          }
+        };
+        const closeSaveAttempt = async (
+          attemptId: string | null, status: "COMPLETED" | "PARTIAL" | "FAILED",
+          layerResults: unknown, failureStage: string | null,
+        ): Promise<void> => {
+          if (!attemptId) return;
+          try {
+            await supabaseAdmin.rpc("close_save_attempt", {
+              p_save_attempt_id: attemptId,
+              p_status: status,
+              p_layer_results: layerResults ?? null,
+              p_failure_stage: failureStage,
+            });
+          } catch (e) {
+            console.error("save_attempt_close_failed", e);
+          }
+        };
+
         // ══════ save_session ══════
         if (name === "save_session") {
           const startedAt = Date.now();
+          let saveAttemptId: string | null = null;
           const clientRequestId = typeof args?.client_request_id === "string" ? args.client_request_id.trim() : "";
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
@@ -6684,9 +6733,12 @@ Deno.serve(async (req) => {
               });
             }
 
+            saveAttemptId = await openSaveAttempt(saveCid, args ?? {}, "save", clientRequestId);
+
             let only: Set<LayerName> | null = null;
             if (prior) {
               if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
+                await closeSaveAttempt(saveAttemptId, "COMPLETED", { idempotent: true, save_id: prior.save_id }, null);
                 const out = {
                   session_id: args?.session_id,
                   save_id: prior.save_id,
@@ -6766,6 +6818,16 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
+            // G3 · the attempt row opened before any work now carries its outcome.
+            await closeSaveAttempt(
+              saveAttemptId,
+              receipt_error ? "FAILED" : (res.outcome === "complete" ? "COMPLETED" : "PARTIAL"),
+              { layers: res.layers, save_id, overall_status, outcome: res.outcome },
+              receipt_error
+                ? `receipt_write:${receipt_error}`
+                : (res.layers.filter((l: any) => l.error_code).map((l: any) => `${l.layer}:${l.error_code}`).join(", ") || null),
+            );
+
             // D6 · a save that leaves items untriaged says so, by name.
             let saveDisposition: any = null;
             try {
@@ -6773,6 +6835,7 @@ Deno.serve(async (req) => {
                 .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
               saveDisposition = dq ?? null;
             } catch (_e) { saveDisposition = null; }
+
 
             const out = {
               session_id: args?.session_id,
@@ -6797,6 +6860,7 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            await closeSaveAttempt(saveAttemptId, "FAILED", null, msg);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 cid: pctx.legacy_cid,
@@ -6947,6 +7011,7 @@ Deno.serve(async (req) => {
         // ══════ end_session ══════
         if (name === "end_session") {
           const startedAt = Date.now();
+          let endAttemptId: string | null = null;
           const session_id = typeof args?.session_id === "string" ? args.session_id : "";
           if (!session_id) return rpcError(id, -32602, "invalid_params");
           const close_kind = (typeof args?.close_kind === "string" && args.close_kind.trim())
@@ -6956,6 +7021,14 @@ Deno.serve(async (req) => {
             const endReasons: string[] = [];
             const endCid = await serverCid();
             if (!endCid) endReasons.push("cid_unresolved");
+            if (endCid) {
+              endAttemptId = await openSaveAttempt(
+                endCid, args ?? {}, "end",
+                typeof args?.client_request_id === "string" && args.client_request_id.trim().length >= 8
+                  ? args.client_request_id.trim()
+                  : `end:${session_id}`,
+              );
+            }
             const res = await runSaveLeg(args ?? {}, "end");
 
             // ── HARDEN-02 · H3 · TRANSCRIPT AT CLOSE ──────────────────────
@@ -7097,6 +7170,12 @@ Deno.serve(async (req) => {
                 ? "partial"
                 : (endReasons.length ? "degraded" : res.outcome);
             const duration_ms = Date.now() - startedAt;
+            await closeSaveAttempt(
+              endAttemptId,
+              endOutcome === "ok" ? "COMPLETED" : "PARTIAL",
+              { layers: res.layers, outcome: endOutcome, reasons: endReasons, transcript_present: transcriptPresent },
+              endReasons.length ? endReasons.join(", ") : null,
+            );
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 cid: pctx.legacy_cid,
@@ -7181,6 +7260,7 @@ Deno.serve(async (req) => {
             });
           } catch (e) {
             const msg = e instanceof Error ? e.message : String(e);
+            await closeSaveAttempt(endAttemptId, "FAILED", null, msg);
             try {
               await supabaseAdmin.from("ritual_runs").insert({
                 cid: pctx.legacy_cid,
