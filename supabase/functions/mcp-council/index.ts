@@ -7226,16 +7226,32 @@ Deno.serve(async (req) => {
               hops: result.routing_trace.hops,
             },
           });
-          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace };
+          const out = { minute: scrubbedMinute, notion_url, routing_trace: result.routing_trace, run_id: officeRunId };
+          await completeMinuteRun(supabaseAdmin, {
+            run_id: officeRunId,
+            minute: out,
+            verdict_md: scrubbedMinute.recommendation ?? null,
+            dissent_md: scrubbedMinute.dissent ?? null,
+            horizon: scrubbedMinute.anticipatory_horizon ?? null,
+            chairs: scrubbedMinute.participating_chairs ?? null,
+            lenses: Array.isArray(passes) ? { pass_count: passes.length, models: passes.map((p: any) => p.model) } : null,
+            mode: result.mode,
+            advisor: result.mode === "solo" ? result.selected_advisor : null,
+            eps: result.epsilon ?? null,
+            rho: result.rho ?? null,
+            cost_usd: aggregate(passes ?? []).total_cost_usd,
+          });
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(stampBuildId(out as any)) }],
             structuredContent: stampBuildId(out as any),
             isError: false,
           });
         } catch (e) {
+          await failMinuteRun(supabaseAdmin, officeRunId, e);
           return toRpc(e);
         }
       }
+
 
 
       return rpcError(id, -32601, "unknown_tool");
