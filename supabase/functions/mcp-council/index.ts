@@ -4094,6 +4094,73 @@ Deno.serve(async (req) => {
         routing_log: { identity_trace: true, keyed_by: pctx.legacy_keyed_by, match_state: pctx.match_state },
       });
 
+      // ── FIX 3 · THE BOOT GATE ──────────────────────────────────────────
+      // Two refusals, both narrow, both fail-closed.
+      //   no_active_kernel · the tenant has no identity kernel at all. Nothing
+      //     may be written on their behalf, by anyone, ever, until one exists.
+      //   not_booted · this session never called begin_session. A COBCLIENT
+      //     that has not loaded who it is does not get to write a client's world.
+      // Reads are never gated: orientation and self-explanation stay open.
+      const BOOT_GATED_WRITES = new Set([
+        "memory_write", "rule_write", "narrative_write", "blueprint_write",
+        "comm_write", "decision_write", "record_file",
+        "save_session", "sync_session", "end_session",
+      ]);
+      if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
+        const gateCid = await serverCid();
+        const gateSession = typeof args?.session_id === "string" ? args.session_id : null;
+        const refuse = (code: string, message: string) => {
+          void raiseSignal("boot-gate-refused", `${code} · tool=${name} · session=${gateSession ?? "none"}`, {
+            session_id: gateSession,
+            surface: "connector",
+            subject: name,
+            link: { tool: name, refusal: code },
+          });
+          return rpcError(id, -32004, `${code} · ${message}`);
+        };
+
+        if (!gateCid) {
+          return refuse(
+            "no_active_kernel",
+            "This client has no identity kernel. Nothing can be written on their behalf until one is installed.",
+          );
+        }
+
+        let activeKernelRow: { id: string } | null = null;
+        try {
+          const { data } = await supabaseAdmin
+            .from("kernels").select("id").eq("cid", gateCid).eq("status", "active").limit(1);
+          activeKernelRow = ((data ?? [])[0] ?? null) as { id: string } | null;
+        } catch { activeKernelRow = null; }
+        if (!activeKernelRow) {
+          return refuse(
+            "no_active_kernel",
+            "This client has no identity kernel. Nothing can be written on their behalf until one is installed.",
+          );
+        }
+
+        // begin_session is the only writer of a RUNTIME_LOAD on a
+        // begin_session surface, so its presence is the boot proof.
+        let booted = false;
+        try {
+          let q = supabaseAdmin
+            .from("kernel_access_log")
+            .select("id", { count: "exact", head: true })
+            .eq("cid", gateCid)
+            .eq("access_kind", "RUNTIME_LOAD")
+            .like("surface", "begin_session%")
+            .gte("at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
+          if (gateSession) q = q.eq("session_id", gateSession);
+          const { count } = await q;
+          booted = (count ?? 0) > 0;
+        } catch { booted = false; }
+        if (!booted) {
+          return refuse(
+            "not_booted",
+            "Call begin_session first. You cannot write to a client's world before you have loaded who you are.",
+          );
+        }
+      }
 
 
       const safeErrors = new Set([
