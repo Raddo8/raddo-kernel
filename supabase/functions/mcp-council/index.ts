@@ -2184,7 +2184,7 @@ const SERVER_INFO = {
 // still dispatches). Three work-register tools are exposed. Every session
 // ritual now returns the board, the lane chosen from it, and the disposition
 // queue of anything raised but not yet triaged.
-const TOOL_MANIFEST_VERSION = "2026.08.12.7";
+const TOOL_MANIFEST_VERSION = "2026.08.12.8";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
