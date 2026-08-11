@@ -5478,7 +5478,15 @@ Deno.serve(async (req) => {
         try {
           worldCid = await tenantCid(tenant);
         } catch (e) {
-          return rpcError(id, -32004, e instanceof Error ? e.message : String(e));
+          // F2 · record_probe is evidence about the system, not a write into a
+          // client's world. It needs an authenticated identity and a resolved
+          // cid; it must not need an installed kernel, because the first thing
+          // worth proving is often that the kernel path itself works.
+          const fallback = name === "record_probe" ? await serverCid() : null;
+          if (!fallback) {
+            return rpcError(id, -32004, e instanceof Error ? e.message : String(e));
+          }
+          worldCid = fallback;
         }
 
         const num = (v: unknown, def: number): number =>
