@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.8";
+const TOOL_MANIFEST_VERSION = "2026.08.11.9";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2378,6 +2378,15 @@ const RITUAL_SAVE_PROPS = {
         trigger: { type: "string" },
         owner: { type: "string" },
         state: { type: "string" },
+        snooze_until: {
+          type: "string",
+          description: "Optional. YYYY-MM-DD. When the loop should come back on the brief. Must be today or later in the principal's timezone. A snooze without a date is refused, never guessed.",
+        },
+        brief_status: {
+          type: "string",
+          enum: ["open", "answered", "snoozed", "cleared"],
+          description: "Optional. Where the loop sits on the brief.",
+        },
       },
       required: ["title"],
       additionalProperties: false,
@@ -4102,7 +4111,7 @@ Deno.serve(async (req) => {
       // Reads are never gated: orientation and self-explanation stay open.
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
-        "comm_write", "decision_write", "record_file",
+        "comm_write", "decision_write", "record_file", "board_respond",
         "save_session", "sync_session", "end_session",
       ]);
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
