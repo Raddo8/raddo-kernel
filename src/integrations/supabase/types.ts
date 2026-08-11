@@ -1495,6 +1495,66 @@ export type Database = {
           },
         ]
       }
+      comms: {
+        Row: {
+          approved_at: string | null
+          body_md: string
+          channel: string
+          cid: string
+          comm_id: string
+          created_at: string
+          direction: string
+          external_id: string | null
+          external_url: string | null
+          failed_reason: string | null
+          prepared_by: string | null
+          sent_at: string | null
+          state: string
+          subject: string | null
+          tenant: string | null
+          to_whom: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          body_md: string
+          channel: string
+          cid: string
+          comm_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          external_url?: string | null
+          failed_reason?: string | null
+          prepared_by?: string | null
+          sent_at?: string | null
+          state?: string
+          subject?: string | null
+          tenant?: string | null
+          to_whom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          body_md?: string
+          channel?: string
+          cid?: string
+          comm_id?: string
+          created_at?: string
+          direction?: string
+          external_id?: string | null
+          external_url?: string | null
+          failed_reason?: string | null
+          prepared_by?: string | null
+          sent_at?: string | null
+          state?: string
+          subject?: string | null
+          tenant?: string | null
+          to_whom?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       connection_inventory: {
         Row: {
           category: string
@@ -10560,6 +10620,21 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_comm_write: {
+        Args: {
+          p_action?: string
+          p_body_md: string
+          p_channel: string
+          p_cid: string
+          p_external_id?: string
+          p_external_url?: string
+          p_id?: string
+          p_reason?: string
+          p_subject?: string
+          p_to?: string
+        }
+        Returns: Json
+      }
       cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_memory_write: {
@@ -10589,6 +10664,15 @@ export type Database = {
       }
       cob_registers_read: {
         Args: { p_cid: string; p_limit?: number }
+        Returns: Json
+      }
+      cob_request_resolve: {
+        Args: {
+          p_cid: string
+          p_note?: string
+          p_request_id: string
+          p_state: string
+        }
         Returns: Json
       }
       cob_rule_write: {
@@ -10639,6 +10723,10 @@ export type Database = {
       get_cron_headers: { Args: never; Returns: Json }
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
+      hq_act: {
+        Args: { p_action: string; p_id?: string; p_params?: Json }
+        Returns: Json
+      }
       hq_blueprints_read:
         | {
             Args: never
@@ -10692,6 +10780,8 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json
       }
+      hq_comms_read: { Args: { p_limit?: number }; Returns: Json }
+      hq_decisions_read: { Args: { p_limit?: number }; Returns: Json }
       hq_memory_counts: { Args: never; Returns: Json }
       hq_memory_lineage: {
         Args: { p_limit?: number }
@@ -10834,6 +10924,9 @@ export type Database = {
               title: string
             }[]
           }
+      hq_sessions_read: { Args: { p_limit?: number }; Returns: Json }
+      hq_signals_read: { Args: { p_limit?: number }; Returns: Json }
+      hq_tasks_read: { Args: { p_limit?: number }; Returns: Json }
       ingest_budget: {
         Args: {
           p_envelope_left: number
