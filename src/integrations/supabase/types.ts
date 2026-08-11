@@ -10797,6 +10797,21 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_signal_raise_internal: {
+        Args: {
+          p_audience?: string
+          p_cid: string
+          p_detail?: string
+          p_key: string
+          p_link?: Json
+          p_raised_by?: string
+          p_session_id?: string
+          p_subject?: string
+          p_surface?: string
+          p_tool?: string
+        }
+        Returns: string
+      }
       cob_tenant_key: { Args: { p_cid: string }; Returns: string }
       cob_tenant_key_or_cid: { Args: { p_cid: string }; Returns: string }
       cob_tenant_labels: { Args: { p_cid: string }; Returns: string[] }

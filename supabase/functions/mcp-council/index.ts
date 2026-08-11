@@ -2173,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.6";
+const TOOL_MANIFEST_VERSION = "2026.08.11.7";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -4883,21 +4883,36 @@ Deno.serve(async (req) => {
             .order("rank", { ascending: true, nullsFirst: false });
           if (pendErr) outcome = "partial";
           // CHANGE 2b · queued standing rules that have never been confirmed.
-          const { data: queuedDirectives } = await supabaseAdmin
+          // A failed read must never look like an empty register.
+          const { data: queuedDirectives, error: queuedErr } = await supabaseAdmin
             .from("directives")
             .select("id, text, scope, created_at")
             .eq("tenant_id", tenant)
             .eq("status", "queued")
             .order("created_at", { ascending: true });
+          if (queuedErr) {
+            outcome = "partial";
+            degradedReasons.push("queued_directives_read_failed");
+            void raiseSignal("queued_directives_read_failed", queuedErr.message ?? String(queuedErr), {
+              surface: `begin_session:${surface}`,
+            });
+          }
 
           // CHANGE 2a · binding doctrine. Tenant scoped: fleet rules plus this
           // tenant's own, never another tenant's.
-          const { data: doctrine } = await supabaseAdmin
+          const { data: doctrine, error: doctrineErr } = await supabaseAdmin
             .from("doctrine_rules")
             .select("rule_key, rule_text, tier, scope, cid")
             .eq("status", "ACTIVE")
             .or(`cid.is.null,cid.eq.${beginCid}`)
             .order("tier", { ascending: true });
+          if (doctrineErr) {
+            outcome = "partial";
+            degradedReasons.push("doctrine_read_failed");
+            void raiseSignal("doctrine_read_failed", doctrineErr.message ?? String(doctrineErr), {
+              surface: `begin_session:${surface}`,
+            });
+          }
 
           // 6a. Last closed session · continuity reads carry its title.
           const { data: lastSessionRow } = await supabaseAdmin
@@ -5005,7 +5020,9 @@ Deno.serve(async (req) => {
           if (briefErr) degradedReasons.push("empty_brief");
           if (dirErr || pendErr) degradedReasons.push("no_directives_surface");
           if (cpErr) degradedReasons.push("no_checkpoint");
-          if (degradedReasons.length > 0) outcome = "degraded";
+          // A named read failure already set outcome to "partial" · do not
+          // soften it back down to "degraded".
+          if (degradedReasons.length > 0 && outcome === "ok") outcome = "degraded";
 
           // 10. Ritual run
           const durationMs = Date.now() - startedAt;
@@ -5038,7 +5055,7 @@ Deno.serve(async (req) => {
           const memoryCid = beginCid ?? pctx.legacy_cid ?? null;
           if (memoryCid) {
             const { data: memData, error: memErr } = await supabaseAdmin
-              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 40 });
+              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 60 });
             if (memErr) { outcome = "partial"; degradedReasons.push("memory_read_failed"); }
             else memoryModule = memData ?? null;
           } else {
