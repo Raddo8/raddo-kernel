@@ -7967,8 +7967,12 @@ export type Database = {
           grade: string
           id: string
           kind: string
+          lane: string | null
           period_end: string | null
           period_start: string | null
+          revision: number
+          status: string
+          supersedes: string | null
           title: string
         }
         Insert: {
@@ -7981,8 +7985,12 @@ export type Database = {
           grade?: string
           id?: string
           kind: string
+          lane?: string | null
           period_end?: string | null
           period_start?: string | null
+          revision?: number
+          status?: string
+          supersedes?: string | null
           title: string
         }
         Update: {
@@ -7995,8 +8003,12 @@ export type Database = {
           grade?: string
           id?: string
           kind?: string
+          lane?: string | null
           period_end?: string | null
           period_start?: string | null
+          revision?: number
+          status?: string
+          supersedes?: string | null
           title?: string
         }
         Relationships: [
@@ -8020,6 +8032,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tenants"
             referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "storyline_supersedes_fkey"
+            columns: ["supersedes"]
+            isOneToOne: false
+            referencedRelation: "storyline"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -10560,6 +10579,7 @@ export type Database = {
         Args: {
           p_body_md: string
           p_cid: string
+          p_expected_revision?: number
           p_kind: string
           p_lane: string
           p_title?: string
@@ -10568,6 +10588,19 @@ export type Database = {
       }
       cob_registers_read: {
         Args: { p_cid: string; p_limit?: number }
+        Returns: Json
+      }
+      cob_rule_write: {
+        Args: {
+          p_action?: string
+          p_cid: string
+          p_id?: string
+          p_rank?: number
+          p_reason?: string
+          p_scope?: string
+          p_text?: string
+          p_title?: string
+        }
         Returns: Json
       }
       cob_tenant_key: { Args: { p_cid: string }; Returns: string }

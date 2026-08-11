@@ -2174,7 +2174,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.10.1";
+const TOOL_MANIFEST_VERSION = "2026.08.10.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2954,7 +2954,36 @@ const TOOL_BLUEPRINT_WRITE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOL_RULE_WRITE = {
+  name: "rule_write",
+  title: "Rule Write",
+  description:
+    "Write or change a standing rule. Use `state` when your principal tells you how to behave · it governs immediately. Use `propose` when you worked it out yourself · it waits for their yes. Retiring never deletes.",
+  annotations: { title: "Rule Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["state", "propose", "confirm", "amend", "retire", "restore", "rank"],
+        description: "Default `state`. `state` governs at once; `propose` waits for the principal.",
+      },
+      id: { type: "string", description: "Existing rule id. Required for confirm, amend, retire, restore, rank." },
+      text: { type: "string", description: "The rule itself, in the principal's own words where possible." },
+      title: { type: "string" },
+      scope: { type: "string", enum: ["LOCKED", "SITUATIONAL"] },
+      rank: { type: "number" },
+      reason: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: [],
+    additionalProperties: false,
+  },
+};
+
+
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4877,7 +4906,8 @@ Deno.serve(async (req) => {
       if (
         name === "world_read" || name === "registers_read" ||
         name === "memory_write" || name === "narrative_write" ||
-        name === "blueprint_write"
+        name === "blueprint_write" || name === "rule_write"
+
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
@@ -4923,7 +4953,7 @@ Deno.serve(async (req) => {
             p_body_md: typeof args?.body_md === "string" ? args.body_md : null,
             p_title: str(args?.title),
           };
-        } else {
+        } else if (name === "blueprint_write") {
           rpcName = "cob_blueprint_write";
           params = {
             p_cid: worldCid,
@@ -4937,7 +4967,23 @@ Deno.serve(async (req) => {
             p_loop_cadence: str(args?.loop_cadence),
             p_milestones: args?.milestones ?? null,
           };
+        } else {
+          // rule_write · `state` governs at once, `propose` waits for the yes.
+          rpcName = "cob_rule_write";
+          params = {
+            p_cid: worldCid,
+            p_action: str(args?.action) ?? "state",
+            p_id: str(args?.id),
+            p_text: typeof args?.text === "string" ? args.text : null,
+            p_title: str(args?.title),
+            // Omitted rather than nulled: the function's own default is LOCKED.
+            ...(str(args?.scope) ? { p_scope: str(args?.scope) } : {}),
+            p_rank: typeof args?.rank === "number" && Number.isFinite(args.rank)
+              ? Math.floor(args.rank) : null,
+            p_reason: str(args?.reason),
+          };
         }
+
 
         const { data, error } = await supabaseAdmin.rpc(rpcName, params);
         if (error) {
@@ -5932,25 +5978,56 @@ Deno.serve(async (req) => {
             const res = await runSaveLeg(args ?? {}, "end");
 
             // 2. Confirm directives — ONLY path to active. Tenant-scoped.
+            // Every update is read back: a miss must be reported, never silently
+            // reported as clean. A queued correction that did not bind is the
+            // whole failure this reports on.
             const confirmations = Array.isArray(args?.confirm_directives) ? args.confirm_directives : [];
             const nowIso = new Date().toISOString();
+            const directives_confirmed: string[] = [];
+            const directives_edited: string[] = [];
+            const directives_dropped: string[] = [];
+            const directives_not_applied: Array<{ id: string; action: string; reason: string }> = [];
+            const applyDirective = async (
+              c: any,
+              action: string,
+              patch: Record<string, unknown>,
+              landed: string[],
+            ) => {
+              const { data: rows, error: upErr } = await supabaseAdmin.from("directives")
+                .update(patch)
+                .eq("id", c.id).eq("tenant_id", tenant)
+                .select("id");
+              if (upErr) {
+                directives_not_applied.push({ id: String(c.id), action, reason: upErr.message });
+                return;
+              }
+              if (!rows || rows.length === 0) {
+                directives_not_applied.push({ id: String(c.id), action, reason: "no_matching_row_in_tenant" });
+                return;
+              }
+              landed.push(String(c.id));
+            };
             for (const c of confirmations) {
               if (!c?.id || !c?.action) continue;
               if (c.action === "confirm") {
-                await supabaseAdmin.from("directives")
-                  .update({ status: "active", confirmed_at: nowIso })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                await applyDirective(c, "confirm", { status: "active", confirmed_at: nowIso }, directives_confirmed);
               } else if (c.action === "edit") {
-                if (typeof c.text !== "string" || !c.text.trim()) continue;
-                await supabaseAdmin.from("directives")
-                  .update({ text: c.text, status: "active", confirmed_at: nowIso })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                if (typeof c.text !== "string" || !c.text.trim()) {
+                  directives_not_applied.push({ id: String(c.id), action: "edit", reason: "empty_text" });
+                  continue;
+                }
+                await applyDirective(
+                  c, "edit",
+                  { text: c.text, status: "active", confirmed_at: nowIso },
+                  directives_edited,
+                );
               } else if (c.action === "drop") {
-                await supabaseAdmin.from("directives")
-                  .update({ status: "retired" })
-                  .eq("id", c.id).eq("tenant_id", tenant);
+                await applyDirective(c, "drop", { status: "retired" }, directives_dropped);
+              } else {
+                directives_not_applied.push({ id: String(c.id), action: String(c.action), reason: "unknown_action" });
               }
             }
+
 
             // 3. Close this session
             await supabaseAdmin.from("sessions")
@@ -6024,6 +6101,16 @@ Deno.serve(async (req) => {
               close_board_all: (board ?? []).map((d: any) => ({ id: d.id, text: d.text, scope: d.scope, status: d.status })),
               closed: { session_id, close_kind },
               makeup_closed,
+              // Whether each correction actually bound. `not_applied` is the
+              // honest answer to "did my correction take?".
+              directives: {
+                requested: confirmations.length,
+                confirmed: directives_confirmed,
+                edited: directives_edited,
+                dropped: directives_dropped,
+                not_applied: directives_not_applied,
+                all_applied: directives_not_applied.length === 0,
+              },
             };
             return rpcResult(id, {
               content: [{ type: "text", text: JSON.stringify(out) }],
