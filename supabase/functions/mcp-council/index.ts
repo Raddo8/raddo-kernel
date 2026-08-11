@@ -4906,7 +4906,8 @@ Deno.serve(async (req) => {
       if (
         name === "world_read" || name === "registers_read" ||
         name === "memory_write" || name === "narrative_write" ||
-        name === "blueprint_write"
+        name === "blueprint_write" || name === "rule_write"
+
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
