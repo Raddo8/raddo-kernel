@@ -1956,6 +1956,7 @@ export type Database = {
           lenses: Json | null
           minute: Json | null
           mode: string | null
+          notes: Json
           question: string | null
           question_hash: string | null
           rho: number | null
@@ -1984,6 +1985,7 @@ export type Database = {
           lenses?: Json | null
           minute?: Json | null
           mode?: string | null
+          notes?: Json
           question?: string | null
           question_hash?: string | null
           rho?: number | null
@@ -2012,6 +2014,7 @@ export type Database = {
           lenses?: Json | null
           minute?: Json | null
           mode?: string | null
+          notes?: Json
           question?: string | null
           question_hash?: string | null
           rho?: number | null

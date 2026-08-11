@@ -32,7 +32,6 @@ import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
 import { classifyOnboardingEntry, returningWelcomePayload } from "../_shared/onboarding-routing.ts";
-import { writeMinuteToNotion } from "./notion.ts";
 import { withRetry, isRetryable } from "./retry.ts";
 import { breakerIsOpen, breakerRecord, acquireConcurrency, releaseConcurrency } from "./breaker.ts";
 import { detectInjection, sanitizeText, INJECTION_REFUSAL_MINUTE } from "./injection.ts";
@@ -121,7 +120,7 @@ import {
   findEnabledAgent,
   listSeatedAgentsPublic,
 } from "./agents/manifest.ts";
-import { getTenantContext, computeKnoxPosture, getNotionTarget, getNotionTargetAsync, resolveNotionTarget, type TenantContext } from "./tenants.ts";
+import { getTenantContext, computeKnoxPosture, type TenantContext } from "./tenants.ts";
 
 // Standing synchronous convene roster · 6 chairs (Aims, Leo, Lucius, Knox,
 // Marcus, Alfred). Knox is added separately as `legalChair` inside
@@ -2174,7 +2173,7 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.11.5";
+const TOOL_MANIFEST_VERSION = "2026.08.11.6";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -2449,7 +2448,7 @@ const TOOL_SAVE_SESSION = {
   name: "save_session",
   title: "Save Session",
   description:
-    "Persist a session save-point: append checkpoint, upsert open loops, insert memory deltas, queue captured rules, and write verified rows to Notion (decisions, tasks, signals, session log, memory page). Every layer with a failure is returned in `unsaved`.",
+    "Persist a session save-point: append checkpoint, upsert open loops, insert memory deltas, queue captured rules, and write decisions and signals to the register. Every write is read back before it is reported saved, and every layer with a failure is returned in `unsaved`.",
   annotations: { title: "Save Session", readOnlyHint: false },
   inputSchema: {
     type: "object",
@@ -4170,8 +4169,6 @@ Deno.serve(async (req) => {
         "upstream_failed",
         "upstream_unavailable",
         "upstream_empty",
-        "notion_write_failed",
-        "notion_not_configured",
         "panel_too_small",
         "stage1_total_failure",
         // harden-v1
@@ -5404,106 +5401,6 @@ Deno.serve(async (req) => {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
         if (!supabaseAdmin) return rpcError(id, -32003, "no_admin_client");
 
-        // ── getSurface ──
-        const getSurface = async (
-          surface_key: string,
-        ): Promise<{ kind: string; notion_id: string } | null> => {
-          const { data } = await supabaseAdmin
-            .from("tenant_surfaces")
-            .select("kind, notion_id")
-            .eq("tenant", tenant)
-            .eq("surface_key", surface_key)
-            .eq("status", "active")
-            .maybeSingle();
-          return data ? { kind: data.kind, notion_id: data.notion_id } : null;
-        };
-
-        // ── notionWriteVerified · WRITE → READ-BACK → RETRY ONCE ──
-        const notionHeaders = (token: string) => ({
-          "Authorization": `Bearer ${token}`,
-          "Notion-Version": "2022-06-28",
-          "Content-Type": "application/json",
-        });
-
-        const doNotionWrite = async (
-          token: string,
-          kind: string,
-          notion_id: string,
-          payload: any,
-        ): Promise<{ ok: boolean; id?: string; blockId?: string; reason?: string }> => {
-          try {
-            if (kind === "data_source") {
-              const body = {
-                parent: { type: "data_source_id", data_source_id: notion_id },
-                properties: payload?.properties ?? {},
-                ...(Array.isArray(payload?.children) ? { children: payload.children } : {}),
-              };
-              const r = await fetch("https://api.notion.com/v1/pages", {
-                method: "POST",
-                headers: notionHeaders(token),
-                body: JSON.stringify(body),
-              });
-              if (!r.ok) return { ok: false, reason: `notion_write_${r.status}` };
-              const j = await r.json();
-              return { ok: true, id: j.id };
-            }
-            if (kind === "page") {
-              const body = { children: payload?.children ?? [] };
-              const r = await fetch(`https://api.notion.com/v1/blocks/${notion_id}/children`, {
-                method: "PATCH",
-                headers: notionHeaders(token),
-                body: JSON.stringify(body),
-              });
-              if (!r.ok) return { ok: false, reason: `notion_append_${r.status}` };
-              const j = await r.json();
-              const first = Array.isArray(j?.results) && j.results.length ? j.results[0] : null;
-              if (!first?.id) return { ok: false, reason: "notion_append_no_id" };
-              return { ok: true, id: first.id, blockId: first.id };
-            }
-            return { ok: false, reason: `unknown_kind:${kind}` };
-          } catch (e) {
-            return { ok: false, reason: `notion_exception:${e instanceof Error ? e.message : String(e)}` };
-          }
-        };
-
-        const readBack = async (token: string, kind: string, id: string): Promise<boolean> => {
-          try {
-            const url = kind === "page"
-              ? `https://api.notion.com/v1/blocks/${id}`
-              : `https://api.notion.com/v1/pages/${id}`;
-            const r = await fetch(url, { headers: notionHeaders(token) });
-            if (r.status === 404 || !r.ok) return false;
-            const j = await r.json();
-            return typeof j?.id === "string" && j.id.replace(/-/g, "") === id.replace(/-/g, "");
-          } catch { return false; }
-        };
-
-        const notionWriteVerified = async (
-          token: string,
-          kind: string,
-          notion_id: string,
-          payload: any,
-        ): Promise<{ ok: boolean; id?: string; reason?: string }> => {
-          const first = await doNotionWrite(token, kind, notion_id, payload);
-          if (first.ok && first.id && await readBack(token, kind, first.id)) {
-            return { ok: true, id: first.id };
-          }
-          // Retry ONCE
-          const second = await doNotionWrite(token, kind, notion_id, payload);
-          if (second.ok && second.id && await readBack(token, kind, second.id)) {
-            return { ok: true, id: second.id };
-          }
-          return { ok: false, reason: second.reason ?? first.reason ?? "notion_unverified" };
-        };
-
-        // ── Notion property helpers ──
-        const richText = (s: any) => (typeof s === "string" && s.length)
-          ? [{ type: "text", text: { content: s.slice(0, 2000) } }] : [];
-        const title = (s: any) => ({ title: richText(s ?? "") });
-        const rt = (s: any) => ({ rich_text: richText(s ?? "") });
-        const sel = (s: any) => (typeof s === "string" && s.length)
-          ? { select: { name: s.slice(0, 100) } } : { select: null };
-        const dateProp = () => ({ date: { start: new Date().toISOString().slice(0, 10) } });
 
         // ── Register empty helper (used by sync_session) ──
         const computeRegistersEmpty = async (): Promise<string[]> => {
@@ -5530,13 +5427,14 @@ Deno.serve(async (req) => {
         // ══════════════════════════════════════════════════════════════
         type LayerName =
           | "checkpoint" | "open_loops" | "memory"
-          | "decisions" | "signals" | "rules_captured" | "notion_mirror";
+          | "decisions" | "signals" | "rules_captured";
+        // The Notion mirror is retired. Postgres is the only store of record.
         const MIRROR_NOTE =
-          "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.";
+          "Notion mirroring is retired · the register is the only store of record.";
 
         const ALL_LAYERS: LayerName[] = [
           "checkpoint", "open_loops", "memory",
-          "decisions", "signals", "rules_captured", "notion_mirror",
+          "decisions", "signals", "rules_captured",
         ];
 
         type LayerAcc = {
@@ -5589,7 +5487,7 @@ Deno.serve(async (req) => {
           layers: LayerAcc[];
           totalRequested: number;
         }> => {
-          // SCRUB-BEFORE-HQ · screen the whole ritual payload before ANY store or Notion leg.
+          // SCRUB-BEFORE-HQ · screen the whole ritual payload before ANY store leg.
           // This must be the first statement in the body — every destructure below reads argsIn.
           const { payload: scrubbedArgs, report: scrubReport } = scrubRitualArgs(argsIn);
           argsIn = scrubbedArgs;
@@ -5604,11 +5502,6 @@ Deno.serve(async (req) => {
           const checkpoint = (argsIn?.checkpoint && typeof argsIn.checkpoint === "object") ? argsIn.checkpoint : null;
           const checkpointRequested = checkpoint && Object.keys(checkpoint).length > 0 ? 1 : 0;
 
-          // Notion write intents — one per row we would mirror.
-          const notionIntents =
-            decisions.length + openLoops.length + signals.length +
-            (memory.length > 0 ? 1 : 0) + checkpointRequested;
-
           const L: Record<LayerName, LayerAcc> = {
             checkpoint: newLayer("checkpoint", checkpointRequested),
             open_loops: newLayer("open_loops", openLoops.length),
@@ -5616,12 +5509,9 @@ Deno.serve(async (req) => {
             decisions: newLayer("decisions", decisions.length),
             signals: newLayer("signals", signals.length),
             rules_captured: newLayer("rules_captured", rules.length),
-            notion_mirror: newLayer("notion_mirror", notionIntents),
           };
           const want = (l: LayerName) => !only || only.has(l);
-          const totalRequested = ALL_LAYERS
-            .filter((l) => l !== "notion_mirror")
-            .reduce((s, l) => s + L[l].requested, 0);
+          const totalRequested = ALL_LAYERS.reduce((s, l) => s + L[l].requested, 0);
 
           // Session must belong to tenant.
           const { data: sess } = await supabaseAdmin
@@ -5779,8 +5669,7 @@ Deno.serve(async (req) => {
           } else if (rules.length) { L.rules_captured.layer_state = "SKIPPED"; }
 
           // ── ITEM 4 · CANONICAL WRITES for decisions and signals ──────
-          // Postgres is now the store of record. Notion is a mirror: a 401
-          // there marks notion_mirror failed and nothing else.
+          // Postgres is the store of record. There is no mirror leg.
           const saveCid = await serverCid();
           const sourceMeta = {
             p_provenance: "CLIENT",
@@ -5852,171 +5741,14 @@ Deno.serve(async (req) => {
             L.signals.verified = sVerified;
           } else if (signals.length) { L.signals.layer_state = "SKIPPED"; }
 
-          // ── NOTION LEGS · mirror only. A mirror failure is recorded on
-          // notion_mirror and never on the canonical decision/signal layers.
-          const resolvedTarget = await resolveNotionTarget(tenant, supabaseAdmin);
-          const target = resolvedTarget.target;
-          const notionOk = { decisions: 0, open_loops: 0, signals: 0, memory: 0, checkpoint: 0 };
-          const mirrorReasons: string[] = [];
-
-          if (!target) {
-            unsaved.push({ layer: "notion", reason: resolvedTarget.reason });
-            L.notion_mirror.layer_state = "UNAVAILABLE";
-            L.notion_mirror.error_code = "notion_target_unresolved";
-            L.notion_mirror.error_message = resolvedTarget.reason;
-            L.notion_mirror.retryable = true;
-          } else {
-            const token = target.token;
-
-            const mirror = async (
-              surfaceKey: string,
-              payload: any,
-              onOk: (pageId: string) => Promise<void> | void,
-              layerForCount?: LayerAcc,
-            ) => {
-              L.notion_mirror.attempted += 1;
-              layerForCount && (layerForCount.attempted += 1);
-              const surface = await getSurface(surfaceKey);
-              if (!surface) {
-                unsaved.push({ layer: surfaceKey, reason: "surface_not_configured" });
-                mirrorReasons.push(`${surfaceKey}:surface_not_configured`);
-                L.notion_mirror.failed += 1;
-                layerForCount && noteFailure(layerForCount, "surface_not_configured", `${surfaceKey} surface not configured`, false);
-                return;
-              }
-              const w = await notionWriteVerified(token, surface.kind, surface.notion_id, payload);
-              if (w.ok && w.id) {
-                L.notion_mirror.saved += 1;
-                L.notion_mirror.record_ids.push(w.id);
-                if (layerForCount) {
-                  layerForCount.saved += 1;
-                  layerForCount.record_ids.push(w.id);
-                  layerForCount.verified = true;
-                }
-                await onOk(w.id);
-              } else {
-                const reason = w.reason ?? "unverified";
-                unsaved.push({ layer: surfaceKey, reason });
-                mirrorReasons.push(`${surfaceKey}:${reason}`);
-                L.notion_mirror.failed += 1;
-                layerForCount && noteFailure(layerForCount, "notion_write_unverified", reason, true);
-              }
-            };
-
-            // decisions → surface `decisions`
-            for (const d of decisions) {
-              await mirror("decisions", {
-                properties: {
-                  "Decision": title(d.title),
-                  "Date": dateProp(),
-                  "Rationale": rt(d.rationale),
-                  "Decision Owner": rt(d.decision_owner),
-                  "Execution Owner": rt(d.execution_owner),
-                  "Reversible": sel(d.reversible),
-                },
-              }, () => { notionOk.decisions += 1; });
-            }
-
-            // open_loops → surface `tasks` (also store returned page id back on the DB row)
-            for (const ol of openLoops) {
-              await mirror("tasks", {
-                properties: {
-                  "Task": title(ol.title),
-                  "Trigger": rt(ol.trigger),
-                  "Owner": rt(ol.owner),
-                  "State": sel(ol.state),
-                },
-              }, async (pageId) => {
-                notionOk.open_loops += 1;
-                await supabaseAdmin.from("open_loops")
-                  .update({ notion_page_id: pageId })
-                  .eq("tenant", tenant).eq("title", ol.title);
-              });
-            }
-
-            // signals → surface `signals`
-            for (const s of signals) {
-              await mirror("signals", {
-                properties: {
-                  "Signal": title(s.title),
-                  "Description": rt(s.description),
-                  "Implication": rt(s.implication),
-                  "Type": sel(s.type),
-                  "Status": sel(s.status),
-                },
-              }, () => { notionOk.signals += 1; });
-            }
-
-            // checkpoint → surface `session_log`
-            if (checkpointId) {
-              const summarize = (v: any): string => {
-                if (v == null) return "";
-                if (typeof v === "string") return v;
-                try { return JSON.stringify(v).slice(0, 1900); } catch { return String(v); }
-              };
-              await mirror("session_log", {
-                properties: {
-                  "Session": title(`Session ${new Date().toISOString().slice(0, 10)}`),
-                  "Date": dateProp(),
-                  "Type": sel(checkpointKind),
-                  "Open Loops": rt(summarize(checkpoint?.open_loops)),
-                  "Decisions": rt(summarize(checkpoint?.decisions_pending)),
-                  "Deferrals": rt(summarize(checkpoint?.deferrals)),
-                  "Principal State": rt(checkpoint?.principal_state),
-                  "Financial Residue": rt(checkpoint?.financial_residue),
-                  "Task States": rt(summarize(checkpoint?.task_states)),
-                },
-              }, async (pageId) => {
-                notionOk.checkpoint += 1;
-                await supabaseAdmin.from("session_checkpoints")
-                  .update({ notion_page_id: pageId }).eq("id", checkpointId);
-              });
-            }
-
-            // memory → surface `memory` (page append · one block for the delta)
-            if (memory.length > 0) {
-              const children: any[] = [
-                {
-                  object: "block",
-                  type: "heading_2",
-                  heading_2: { rich_text: richText(`Memory delta · ${new Date().toISOString().slice(0, 10)}`) },
-                },
-                ...memory.map((m: any) => ({
-                  object: "block",
-                  type: "paragraph",
-                  paragraph: { rich_text: richText(`${m.title}: ${m.body_md}`) },
-                })),
-              ];
-              await mirror("memory", { children }, async (blockId) => {
-                notionOk.memory += 1;
-                for (const mid of memoryIds) {
-                  await supabaseAdmin.from("memory_entries")
-                    .update({ notion_block_ref: blockId }).eq("id", mid);
-                }
-              });
-            }
-
-            if (mirrorReasons.length) {
-              L.notion_mirror.error_code = "notion_partial";
-              L.notion_mirror.error_message = mirrorReasons.join(" · ").slice(0, 500);
-              L.notion_mirror.retryable = true;
-            }
-            L.notion_mirror.verified = L.notion_mirror.attempted > 0 && L.notion_mirror.failed === 0;
-          }
 
           const layers = ALL_LAYERS.map((l) => L[l]);
-          // Outcome is computed from CANONICAL layers only. Notion is a
-          // write-only mirror being retired: its failures are reported, never
-          // allowed to downgrade a close whose canonical layers all verified.
-          const canonicalLayers = layers.filter((x) => x.layer !== "notion_mirror");
-          const anyFailed = canonicalLayers.some((x) => x.failed > 0);
-          const anyEmptyUnexpected = canonicalLayers.some(
+          const anyFailed = layers.some((x) => x.failed > 0);
+          const anyEmptyUnexpected = layers.some(
             (x) => x.requested > 0 && x.saved + x.updated === 0,
           );
-          const mirrorStatus: "ok" | "failed" | "skipped" =
-            L.notion_mirror.attempted === 0
-              ? "skipped"
-              : (L.notion_mirror.failed > 0 ? "failed" : "ok");
+          // Retained for wire compatibility: there is no mirror left to run.
+          const mirrorStatus: "ok" | "failed" | "skipped" = "skipped";
 
           return {
             checkpointId,
@@ -6027,7 +5759,6 @@ Deno.serve(async (req) => {
               memory: L.memory.saved,
               rules_captured: L.rules_captured.saved,
               checkpoint_id: checkpointId,
-              notion: notionOk,
             },
             unsaved,
             outcome: anyEmptyUnexpected ? "degraded" : (anyFailed ? "partial" : "ok"),
@@ -6344,7 +6075,7 @@ Deno.serve(async (req) => {
               outcome: syncOutcome,
               mirror_status: "skipped" as const,
               mirror_note:
-                "Notion is a write-only mirror and is being retired. A mirror failure never means the save failed.",
+                "Notion mirroring is retired · the register is the only store of record.",
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(syncReasons.length ? { reason: syncReasons[0], reasons: syncReasons } : {}),
@@ -7182,9 +6913,8 @@ Deno.serve(async (req) => {
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
-        // FIX 2 · Postgres is the record, Notion is a mirror. Every OFFICE
-        // minute now opens a run row before the work and is finalized after,
-        // so council_minute_fetch can retrieve it even when Notion is down.
+        // Postgres is the record. Every OFFICE minute opens a run row before
+        // the work and is finalized the moment the minute exists.
         const officeRunId = crypto.randomUUID();
         const officeQhash = await hashQuestion(question);
         await openMinuteRun(supabaseAdmin, {
@@ -7199,29 +6929,14 @@ Deno.serve(async (req) => {
 
         let officeCompleted = false;
         try {
-          // C2c · fail fast BEFORE spending. Resolve the office up-front so
-          // an unconfigured tenant does not pay for a full triage +
-          // deliberation + minute assembly (30-60s of LLM spend) before
-          // discovering there is nowhere to file.
-          const resolved = await resolveNotionTarget(tenant, supabaseAdmin);
-          const target = resolved.target;
-          if (!target) {
-            await recordMcpUsage(supabaseAdmin, {
-              cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
-              tenant, tool: "file_to_office", agent_id: null, passes: [],
-              routing_log: { outcome: resolved.reason },
-            });
-            throw new Error(resolved.reason);
-          }
-
           // file_to_office runs the same triage → mode pipeline so OFFICE
           // entries reflect the actual deliberation that happened.
           const { result, passes } = await runSummonBestAdvisor({
             question, context, clientContext, tenant, routingHintIgnored: false,
           });
           // Only minutes with a council-shape (recommendation + dissent +
-          // horizon) file cleanly to Notion. Single-advisor minutes get
-          // wrapped into a council-shape envelope so the OFFICE write works.
+          // horizon) file cleanly. Single-advisor minutes get wrapped into a
+          // council-shape envelope so the OFFICE record is uniform.
           const m: any = result.minute;
           const filedMinute: MinuteShape = (m.dissent && m.anticipatory_horizon)
             ? m as MinuteShape
@@ -7239,14 +6954,14 @@ Deno.serve(async (req) => {
                 signature: "— COB_COUNCIL",
               };
 
-          const notionPayloadText = [
+          const filedPayloadText = [
             question,
             filedMinute.recommendation,
             filedMinute.dissent,
             filedMinute.anticipatory_horizon.join(" · "),
             filedMinute.participating_chairs.join(" · "),
           ].join("\n");
-          if (hasBoundaryViolation(notionPayloadText)) {
+          if (hasBoundaryViolation(filedPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
               cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes,
@@ -7285,25 +7000,6 @@ Deno.serve(async (req) => {
             cost_usd: aggregate(passes ?? []).total_cost_usd,
           });
           officeCompleted = true;
-
-          // Mirror leg · retiring. A mirror failure is a note on the row,
-          // never the run's status.
-          try {
-            const { url: notion_url } = await writeMinuteToNotion(
-              scrubbedMinute,
-              scrubbedQuestion,
-              { token: target.token, dbId: target.dbId, tenant },
-            );
-            if (notion_url) out.notion_url = notion_url;
-          } catch (mirrorErr) {
-            const reason = mirrorErr instanceof Error ? mirrorErr.message : String(mirrorErr);
-            out.mirror_status = `failed · ${reason}`;
-            await noteMinuteRun(supabaseAdmin, officeRunId, `mirror_failed:${reason}`);
-            void raiseSignal("office-mirror-failed", reason, {
-              session_id: officeSessionId, subject: "file_to_office",
-              link: { run_id: officeRunId },
-            });
-          }
 
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
