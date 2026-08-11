@@ -7789,6 +7789,7 @@ export type Database = {
           completed_at: string | null
           external_identity_id: string | null
           failure_stage: string | null
+          layer_results: Json | null
           payload_hash: string
           payload_hash_algorithm: string | null
           payload_hash_key_version: string | null
@@ -7816,6 +7817,7 @@ export type Database = {
           completed_at?: string | null
           external_identity_id?: string | null
           failure_stage?: string | null
+          layer_results?: Json | null
           payload_hash: string
           payload_hash_algorithm?: string | null
           payload_hash_key_version?: string | null
@@ -7843,6 +7845,7 @@ export type Database = {
           completed_at?: string | null
           external_identity_id?: string | null
           failure_stage?: string | null
+          layer_results?: Json | null
           payload_hash?: string
           payload_hash_algorithm?: string | null
           payload_hash_key_version?: string | null
