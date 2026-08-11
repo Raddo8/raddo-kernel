@@ -3158,6 +3158,8 @@ const TOOL_BOARD_RESPOND = {
     additionalProperties: false,
   },
 };
+
+const TOOL_DECISION_WRITE = {
   name: "decision_write",
   title: "Write a decision",
   description:
