@@ -3827,6 +3827,7 @@ Deno.serve(async (req) => {
     args: unknown,
   ): Promise<{ session_id: string | null; session_source: string }> => {
     const sid = (args as any)?.session_id;
+    if (!supabaseAdmin) return { session_id: null, session_source: "none:no_admin_client" };
     // T2 · the live session context is the first authority on which session
     // a call belongs to. It is written when a session opens and revoked when
     // it closes, so it is true for calls that carry no session_id argument.
