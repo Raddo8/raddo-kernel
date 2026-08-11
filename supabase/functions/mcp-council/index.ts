@@ -7110,10 +7110,26 @@ Deno.serve(async (req) => {
       if (name === "file_to_office") {
         const question = typeof args?.question === "string" ? args.question.trim() : "";
         const context = typeof args?.context === "string" ? args.context : "";
+        const officeSessionId = typeof args?.session_id === "string" && args.session_id ? args.session_id : null;
         if (!question) return rpcError(id, -32602, "invalid_params");
         if (question.length > 4000 || context.length > 8000) {
           return rpcError(id, -32602, "invalid_params");
         }
+        // FIX 2 · Postgres is the record, Notion is a mirror. Every OFFICE
+        // minute now opens a run row before the work and is finalized after,
+        // so council_minute_fetch can retrieve it even when Notion is down.
+        const officeRunId = crypto.randomUUID();
+        const officeQhash = await hashQuestion(question);
+        await openMinuteRun(supabaseAdmin, {
+          run_id: officeRunId,
+          cid: pctx.legacy_cid ?? null,
+          tenant_label: tenant,
+          tool: "file_to_office",
+          question,
+          question_hash: officeQhash,
+          session_id: officeSessionId,
+        });
+
         try {
           // C2c · fail fast BEFORE spending. Resolve the office up-front so
           // an unconfigured tenant does not pay for a full triage +
