@@ -6684,9 +6684,12 @@ Deno.serve(async (req) => {
               });
             }
 
+            saveAttemptId = await openSaveAttempt(saveCid, args ?? {}, "save", clientRequestId);
+
             let only: Set<LayerName> | null = null;
             if (prior) {
               if (prior.overall_status === "SUCCESS" || prior.overall_status === "NOOP") {
+                await closeSaveAttempt(saveAttemptId, "COMPLETED", { idempotent: true, save_id: prior.save_id }, null);
                 const out = {
                   session_id: args?.session_id,
                   save_id: prior.save_id,
