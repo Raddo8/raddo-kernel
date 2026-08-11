@@ -2173,7 +2173,10 @@ const SERVER_INFO = {
 
 // Lane 1 · ITEM 4 · tool/schema manifest version. Bump whenever ANY tool's
 // input schema changes so a stale connector can detect its own staleness.
-const TOOL_MANIFEST_VERSION = "2026.08.12.1";
+// 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
+// never deployed, so record_probe, the session_event writer and the rule_write
+// scope target existed in source and nowhere a caller could reach them.
+const TOOL_MANIFEST_VERSION = "2026.08.12.2";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
