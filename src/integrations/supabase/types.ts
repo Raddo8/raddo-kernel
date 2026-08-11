@@ -3372,6 +3372,27 @@ export type Database = {
         }
         Relationships: []
       }
+      harden05_probe: {
+        Row: {
+          observed: string
+          passed: boolean
+          probe: string
+          ran_at: string
+        }
+        Insert: {
+          observed: string
+          passed: boolean
+          probe: string
+          ran_at?: string
+        }
+        Update: {
+          observed?: string
+          passed?: boolean
+          probe?: string
+          ran_at?: string
+        }
+        Relationships: []
+      }
       hq_action_request: {
         Row: {
           ack_at: string | null
@@ -5899,6 +5920,7 @@ export type Database = {
           last_surfaced: string | null
           notion_page_id: string | null
           owner: string | null
+          principal_acts: boolean | null
           snooze_until: string | null
           state: string | null
           superseded_by: string | null
@@ -5909,6 +5931,7 @@ export type Database = {
           updated_at: string
           urgent: boolean
           urgent_reason: string | null
+          work_id: string | null
         }
         Insert: {
           brief_status?: string
@@ -5923,6 +5946,7 @@ export type Database = {
           last_surfaced?: string | null
           notion_page_id?: string | null
           owner?: string | null
+          principal_acts?: boolean | null
           snooze_until?: string | null
           state?: string | null
           superseded_by?: string | null
@@ -5933,6 +5957,7 @@ export type Database = {
           updated_at?: string
           urgent?: boolean
           urgent_reason?: string | null
+          work_id?: string | null
         }
         Update: {
           brief_status?: string
@@ -5947,6 +5972,7 @@ export type Database = {
           last_surfaced?: string | null
           notion_page_id?: string | null
           owner?: string | null
+          principal_acts?: boolean | null
           snooze_until?: string | null
           state?: string | null
           superseded_by?: string | null
@@ -5957,6 +5983,7 @@ export type Database = {
           updated_at?: string
           urgent?: boolean
           urgent_reason?: string | null
+          work_id?: string | null
         }
         Relationships: [
           {
@@ -5967,6 +5994,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      owner_alias: {
+        Row: {
+          alias: string
+          canonical: string
+          created_at: string
+        }
+        Insert: {
+          alias: string
+          canonical: string
+          created_at?: string
+        }
+        Update: {
+          alias?: string
+          canonical?: string
+          created_at?: string
+        }
+        Relationships: []
       }
       playbook_steps: {
         Row: {
@@ -11198,6 +11243,7 @@ export type Database = {
       }
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
+      fleet_surfacing_health: { Args: never; Returns: Json }
       get_action_response_status: {
         Args: { p_action_id: string }
         Returns: Json
@@ -11676,6 +11722,7 @@ export type Database = {
       next_cid: { Args: never; Returns: string }
       next_curn: { Args: { p_cid: string; p_kind: string }; Returns: string }
       next_invoice_number: { Args: { p_workspace_id: string }; Returns: string }
+      normalize_owner_label: { Args: { p_owner: string }; Returns: string }
       observe_external_identity: {
         Args: {
           p_issuer: string
@@ -11787,8 +11834,10 @@ export type Database = {
           p_source_session_id?: string
           p_source_subject?: string
           p_source_surface?: string
+          p_test_run_id?: string
           p_title: string
           p_tool_version?: string
+          p_verification_state?: string
         }
         Returns: Json
       }
@@ -11926,6 +11975,20 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: string
       }
+      session_raise: {
+        Args: {
+          p_cid: string
+          p_detail?: string
+          p_due?: string
+          p_kind?: string
+          p_origin: string
+          p_owner?: string
+          p_principal_acts?: boolean
+          p_session_id?: string
+          p_title: string
+        }
+        Returns: Json
+      }
       session_title_rule: { Args: never; Returns: string }
       session_transcript_read: { Args: { p_session_id: string }; Returns: Json }
       session_transcript_write: {
@@ -12015,6 +12078,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      work_dispose: {
+        Args: {
+          p_disposition: string
+          p_lane?: string
+          p_principal_acts?: boolean
+          p_reason?: string
+          p_work: string
+        }
+        Returns: Json
+      }
+      work_disposition_queue: {
+        Args: { p_cid: string; p_limit?: number }
+        Returns: Json
+      }
       work_extract_dates: {
         Args: { p_cid: string }
         Returns: {
@@ -12041,6 +12118,7 @@ export type Database = {
       }
       work_rescore: { Args: { p_cid: string }; Returns: number }
       work_score: { Args: { p_cid: string }; Returns: number }
+      work_sync_loops: { Args: { p_cid: string }; Returns: Json }
       work_unassessed: {
         Args: { p_cid: string; p_limit?: number }
         Returns: {

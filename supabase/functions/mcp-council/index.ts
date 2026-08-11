@@ -2180,7 +2180,11 @@ const SERVER_INFO = {
 // 2026.08.12.2 · HARDEN-02 reached the fleet. The .1 build was written but
 // never deployed, so record_probe, the session_event writer and the rule_write
 // scope target existed in source and nowhere a caller could reach them.
-const TOOL_MANIFEST_VERSION = "2026.08.12.6";
+// 2026.08.12.7 · HARDEN-05. board_read is renamed board_render (the old name
+// still dispatches). Three work-register tools are exposed. Every session
+// ritual now returns the board, the lane chosen from it, and the disposition
+// queue of anything raised but not yet triaged.
+const TOOL_MANIFEST_VERSION = "2026.08.12.7";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3183,12 +3187,14 @@ const TOOL_BOARD_RESPOND = {
 // F1 · Titles are not identity. A title can be rewritten by the redaction
 // layer between the read and the write, so matching on it forks the row
 // instead of updating it. These three work on ids.
-const TOOL_BOARD_READ = {
-  name: "board_read",
-  title: "Read the board",
+const TOOL_BOARD_RENDER = {
+  // D2 · the tool is named for the function it calls. board_read implied a
+  // passive look; the call counts a surfacing and can raise a signal.
+  name: "board_render",
+  title: "Render the board",
   description:
-    "Render the principal's open loops with their ids, how many times each has been shown, and the actions on offer for each. An item shown three times without action comes back flagged, with snooze, rewrite and escalate offered on it: showing the same line a fourth time unchanged is not one of the choices. An item shown eight or more times raises a signal against the surfacing itself, not against the principal. Anything urgent, or carrying a hard deadline, stays visible regardless of count and is never auto-deferred. Use the ids from here in board_update.",
-  annotations: { title: "Read the board", readOnlyHint: false },
+    "Render the principal's open loops with their ids, how many times each has been shown, and the actions on offer for each. Only what the principal must personally act on reaches the board; everything else comes back under withheld with the reason it was held. An item shown three times without action comes back flagged, with snooze, rewrite and escalate offered on it: showing the same line a fourth time unchanged is not one of the choices. An item shown eight or more times raises a signal against the surfacing itself, not against the principal. Anything urgent, or carrying a hard deadline, stays visible regardless of count and is never auto-deferred. An empty board always says why it is empty. Use the ids from here in board_update.",
+  annotations: { title: "Render the board", readOnlyHint: false },
   inputSchema: {
     type: "object",
     properties: {
@@ -3255,6 +3261,120 @@ const TOOL_BOARD_SUPERSEDE = {
   },
 };
 
+// D6 · the work register is the operational position; the board is what it
+// projects. Anything raised mid-session goes through here and is triaged.
+// Nothing becomes tracked work by the act of being mentioned.
+const TOOL_WORK_RAISE = {
+  name: "work_raise",
+  title: "Raise something mid-session",
+  description:
+    "Record something that came up during a session. It is not tracked work yet. Say who must move on it: pass principal_acts true when the principal personally has to act, false when someone else owns it. Leave it unset and it waits in the disposition queue until it is either tracked or forgotten with a reason. Only an item the principal must act on reaches their board. Origin is required, because an item with no origin cannot be triaged later.",
+  annotations: { title: "Raise something mid-session", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      title: { type: "string", description: "The item in one line." },
+      origin: { type: "string", enum: ["mined", "conversation", "audit", "scheduled", "client", "operator"], description: "What raised it." },
+      principal_acts: { type: "boolean", description: "True when the principal is the one who must move. Leave unset to defer the call to the disposition queue." },
+      detail: { type: "string" },
+      owner: { type: "string" },
+      kind: { type: "string", description: "task | question | risk | commitment. Default task." },
+      due: { type: "string", description: "YYYY-MM-DD." },
+      session_id: { type: "string" },
+      ...MANIFEST_PROP,
+    },
+    required: ["title", "origin"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_WORK_DISPOSITION = {
+  name: "work_disposition",
+  title: "What has been raised but not triaged",
+  description:
+    "List everything raised that has not yet been disposed of: no call made on whether the principal acts, or no lane set. Each entry names what is missing and offers track or forget. A session that closes with entries here closed over an open question.",
+  annotations: { title: "What has been raised but not triaged", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      limit: { type: "number", description: "Default 50." },
+      ...MANIFEST_PROP,
+    },
+    additionalProperties: false,
+  },
+};
+
+const TOOL_WORK_DISPOSE = {
+  name: "work_dispose",
+  title: "Track it or forget it",
+  description:
+    "Settle a raised item. Tracking it requires saying whether the principal is the one who must move, and puts it on the board when they are. Forgetting it requires a reason: forgotten is a state with a reason on it, never a quiet disappearance, and a forgotten item stays retrievable.",
+  annotations: { title: "Track it or forget it", readOnlyHint: false },
+  inputSchema: {
+    type: "object",
+    properties: {
+      work_id: { type: "string", description: "The id from work_disposition or work_raise." },
+      disposition: { type: "string", enum: ["tracked", "forgotten"] },
+      principal_acts: { type: "boolean", description: "Required when tracking." },
+      lane: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this carries." },
+      reason: { type: "string", description: "Required when forgetting." },
+      ...MANIFEST_PROP,
+    },
+    required: ["work_id", "disposition"],
+    additionalProperties: false,
+  },
+};
+
+// D3/D5 · the lane is chosen from the board, never from a mood. The board is
+// the input to the choice, so a session cannot open on open ground while an
+// item sits at its eighth unanswered showing.
+function channelSelect(board: any, disposition: any) {
+  const items: any[] = Array.isArray(board?.items) ? board.items : [];
+  const mech = items.filter((i) => i?.escalation_state === "mechanism_review");
+  const flagged = items.filter((i) => i?.escalation_state === "flagged");
+  const urgent = items.filter((i) => i?.urgent === true);
+  const undisposed = Number(disposition?.undisposed ?? board?.undisposed_count ?? 0);
+
+  let lane: string;
+  let because: string;
+  if (mech.length > 0) {
+    lane = "repair_the_surfacing";
+    because = `${mech.length} item(s) have been shown eight or more times without resolution. The surfacing is the defect. Rewrite or escalate them before anything else.`;
+  } else if (urgent.length > 0) {
+    lane = "work_the_urgent";
+    because = `${urgent.length} item(s) carry a hard deadline or external exposure and are exempt from deferral.`;
+  } else if (undisposed > 0) {
+    lane = "triage_what_was_raised";
+    because = `${undisposed} item(s) were raised and never disposed of. Track each one or forget it with a reason before opening new ground.`;
+  } else if (flagged.length > 0) {
+    lane = "unstick_the_flagged";
+    because = `${flagged.length} item(s) have been shown three or more times with no action. Showing them again unchanged is not one of the choices.`;
+  } else if (items.length > 0) {
+    lane = "work_the_board";
+    because = `${items.length} open item(s) the principal must act on.`;
+  } else {
+    lane = "open_ground";
+    because = typeof board?.empty_reason === "string" && board.empty_reason
+      ? board.empty_reason
+      : "Nothing is open on the board and nothing is awaiting triage.";
+  }
+
+  return {
+    lane,
+    because,
+    counts: {
+      rendered: items.length,
+      urgent: urgent.length,
+      flagged: flagged.length,
+      mechanism_review: mech.length,
+      undisposed,
+      withheld: Array.isArray(board?.withheld) ? board.withheld.length : 0,
+    },
+    // The choice is a recommendation with the board behind it, not a lock.
+    alternatives: ["work_the_board", "triage_what_was_raised", "open_ground"]
+      .filter((l) => l !== lane),
+  };
+}
 
 
 const TOOL_DECISION_WRITE = {
@@ -3345,7 +3465,7 @@ const TOOL_RECORD_FILE = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_READ, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_RENDER, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_WORK_RAISE, TOOL_WORK_DISPOSITION, TOOL_WORK_DISPOSE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -4496,7 +4616,8 @@ Deno.serve(async (req) => {
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
         "comm_write", "decision_write", "record_file", "board_respond",
-        "board_read", "board_update", "board_supersede",
+        "board_render", "board_read", "board_update", "board_supersede",
+        "work_raise", "work_dispose",
         "save_session", "sync_session", "end_session",
       ]);
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
@@ -5376,6 +5497,15 @@ Deno.serve(async (req) => {
           if (briefErr) outcome = "partial";
           const briefRows = ((boardRender as any)?.items ?? []) as any[];
 
+          // D6 · anything raised and never triaged is part of the opening
+          // picture, not a surprise at close.
+          let beginDisposition: any = null;
+          try {
+            const { data: dq } = await supabaseAdmin
+              .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+            beginDisposition = dq ?? null;
+          } catch (_e) { beginDisposition = null; }
+
           // 8. Staleness flags
           const staleness: string[] = [];
           const daysSince = (iso: string | null | undefined): number | null => {
@@ -5597,6 +5727,11 @@ Deno.serve(async (req) => {
               snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
               created_at: r.created_at,
             })),
+            // D3/D5 · the board is not a section of the boot, it is the input
+            // to the lane. Both travel together so the choice is inspectable.
+            board: boardRender ?? null,
+            disposition: beginDisposition,
+            channel_select: channelSelect(boardRender, beginDisposition),
             memory: memoryModule,
             staleness,
             makeup_close_owed,
@@ -5676,7 +5811,9 @@ Deno.serve(async (req) => {
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
         name === "record_probe" ||
         name === "board_respond" ||
-        name === "board_read" || name === "board_update" || name === "board_supersede"
+        name === "board_render" || name === "board_read" ||
+        name === "board_update" || name === "board_supersede" ||
+        name === "work_raise" || name === "work_disposition" || name === "work_dispose"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -5775,8 +5912,10 @@ Deno.serve(async (req) => {
             p_timezone: str(args?.timezone) ?? "UTC",
             p_cid: worldCid,
           };
-        } else if (name === "board_read") {
+        } else if (name === "board_render" || name === "board_read") {
           // F2/F3 · The three-strike rule is mechanised here, not remembered.
+          // board_read is the retired name and still dispatches, so a host
+          // holding a stale manifest keeps working.
           rpcName = "board_render";
           params = {
             p_cid: worldCid,
@@ -5790,6 +5929,33 @@ Deno.serve(async (req) => {
         } else if (name === "board_supersede") {
           rpcName = "board_supersede";
           params = { p_keep: str(args?.keep), p_duplicate: str(args?.duplicate), p_cid: worldCid };
+        } else if (name === "work_raise") {
+          // D6 · raised is not tracked. principal_acts left unset lands the
+          // item in the disposition queue rather than on the board.
+          rpcName = "session_raise";
+          params = {
+            p_cid: worldCid,
+            p_title: str(args?.title),
+            p_origin: str(args?.origin),
+            p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            p_detail: str(args?.detail),
+            p_owner: str(args?.owner),
+            p_kind: str(args?.kind) ?? "task",
+            p_due: str(args?.due),
+            p_session_id: str(args?.session_id),
+          };
+        } else if (name === "work_disposition") {
+          rpcName = "work_disposition_queue";
+          params = { p_cid: worldCid, p_limit: num(args?.limit, 50) };
+        } else if (name === "work_dispose") {
+          rpcName = "work_dispose";
+          params = {
+            p_work: str(args?.work_id),
+            p_disposition: str(args?.disposition),
+            p_reason: str(args?.reason),
+            p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            p_lane: str(args?.lane),
+          };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
           params = {
@@ -6600,9 +6766,18 @@ Deno.serve(async (req) => {
               });
             } catch { /* best-effort */ }
 
+            // D6 · a save that leaves items untriaged says so, by name.
+            let saveDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              saveDisposition = dq ?? null;
+            } catch (_e) { saveDisposition = null; }
+
             const out = {
               session_id: args?.session_id,
               save_id,
+              disposition: saveDisposition,
               overall_status,
               idempotent,
               ...(receipt_error ? { receipt_error } : {}),
@@ -6650,6 +6825,13 @@ Deno.serve(async (req) => {
               .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: 200 });
             if (briefErr) degraded.push("brief");
             const briefRows = ((boardRender as any)?.items ?? []) as any[];
+
+            let syncDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              syncDisposition = dq ?? null;
+            } catch (_e) { syncDisposition = null; }
 
             // Directives added since session opened
             const { data: dirs, error: dirsErr } = await supabaseAdmin
@@ -6728,6 +6910,9 @@ Deno.serve(async (req) => {
                 snooze_until: r.snooze_until, notion_page_id: r.notion_page_id,
                 created_at: r.created_at,
               })),
+              board: boardRender ?? null,
+              disposition: syncDisposition,
+              channel_select: channelSelect(boardRender, syncDisposition),
               directives: dirs ?? [],
               decisions_this_session: cps ?? [],
               staleness,
@@ -6940,11 +7125,22 @@ Deno.serve(async (req) => {
               .from("directives").select("id, text, scope, status")
               .eq("tenant_id", tenant).in("status", ["queued", "pending-confirm"]);
 
+            let endDisposition: any = null;
+            try {
+              const { data: dq } = await supabaseAdmin
+                .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              endDisposition = dq ?? null;
+            } catch (_e) { endDisposition = null; }
+
             const out = {
               session_id,
               saved: res.saved,
               unsaved: res.unsaved,
               outcome: endOutcome,
+              // D6 · closing over untriaged items is a stated fact, not a
+              // silent one. The close is not blocked; it is named.
+              disposition: endDisposition,
+              clean_disposition: endDisposition?.clean === true,
               ...identityBlock(pctx),
               ...manifestBlock(args),
               ...(endReasons.length ? { reason: endReasons[0], reasons: endReasons } : {}),
