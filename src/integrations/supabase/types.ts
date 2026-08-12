@@ -12341,34 +12341,20 @@ export type Database = {
         }
         Returns: string
       }
-      record_probe:
-        | {
-            Args: {
-              p_cid?: string
-              p_claim: string
-              p_expected: string
-              p_method: string
-              p_observed: string
-              p_passed: boolean
-              p_subject_kind: string
-              p_subject_ref: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_cid?: string
-              p_claim: string
-              p_expected: string
-              p_method: string
-              p_observed: string
-              p_passed: boolean
-              p_probe_kind?: string
-              p_subject_kind: string
-              p_subject_ref: string
-            }
-            Returns: Json
-          }
+      record_probe: {
+        Args: {
+          p_cid?: string
+          p_claim: string
+          p_expected: string
+          p_method: string
+          p_observed: string
+          p_passed: boolean
+          p_probe_kind?: string
+          p_subject_kind: string
+          p_subject_ref: string
+        }
+        Returns: Json
+      }
       record_save_receipt: {
         Args: {
           p_cid?: string
