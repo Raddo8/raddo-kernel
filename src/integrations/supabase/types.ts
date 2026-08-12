@@ -430,7 +430,7 @@ export type Database = {
           next_action: string | null
           owner: string | null
           status: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at: string
@@ -449,7 +449,7 @@ export type Database = {
           next_action?: string | null
           owner?: string | null
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           title: string
           updated_at?: string
@@ -468,7 +468,7 @@ export type Database = {
           next_action?: string | null
           owner?: string | null
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           title?: string
           updated_at?: string
@@ -494,7 +494,7 @@ export type Database = {
           kernel_version: number | null
           meta: Json | null
           surface: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -506,7 +506,7 @@ export type Database = {
           kernel_version?: number | null
           meta?: Json | null
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -518,7 +518,7 @@ export type Database = {
           kernel_version?: number | null
           meta?: Json | null
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: []
@@ -1156,7 +1156,7 @@ export type Database = {
           row_pk: string
           session_ref: string | null
           table_name: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           actor?: string | null
@@ -1175,7 +1175,7 @@ export type Database = {
           row_pk: string
           session_ref?: string | null
           table_name: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           actor?: string | null
@@ -1194,7 +1194,7 @@ export type Database = {
           row_pk?: string
           session_ref?: string | null
           table_name?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -1224,7 +1224,7 @@ export type Database = {
           entity_id: string | null
           id: string
           summary: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Insert: {
@@ -1237,7 +1237,7 @@ export type Database = {
           entity_id?: string | null
           id?: string
           summary?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
         }
         Update: {
@@ -1250,7 +1250,7 @@ export type Database = {
           entity_id?: string | null
           id?: string
           summary?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
         }
         Relationships: []
@@ -1642,42 +1642,6 @@ export type Database = {
         }
         Relationships: []
       }
-      connection_inventory: {
-        Row: {
-          category: string
-          cid: string
-          created_at: string
-          grant_status: string
-          id: string
-          system_name: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"]
-          updated_at: string
-          usage_role: string
-        }
-        Insert: {
-          category?: string
-          cid: string
-          created_at?: string
-          grant_status?: string
-          id?: string
-          system_name: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"]
-          updated_at?: string
-          usage_role?: string
-        }
-        Update: {
-          category?: string
-          cid?: string
-          created_at?: string
-          grant_status?: string
-          id?: string
-          system_name?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"]
-          updated_at?: string
-          usage_role?: string
-        }
-        Relationships: []
-      }
       connector_accounts: {
         Row: {
           account_id: string
@@ -1788,7 +1752,7 @@ export type Database = {
           scopes: string[]
           status: string
           surface: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           authorized_at?: string | null
@@ -1802,7 +1766,7 @@ export type Database = {
           scopes?: string[]
           status?: string
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           authorized_at?: string | null
@@ -1816,7 +1780,7 @@ export type Database = {
           scopes?: string[]
           status?: string
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -2406,7 +2370,7 @@ export type Database = {
           rank: number | null
           scope: string
           status: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           text: string
           title: string | null
@@ -2420,7 +2384,7 @@ export type Database = {
           rank?: number | null
           scope?: string
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_id: string
           text: string
           title?: string | null
@@ -2434,7 +2398,7 @@ export type Database = {
           rank?: number | null
           scope?: string
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_id?: string
           text?: string
           title?: string | null
@@ -3045,7 +3009,7 @@ export type Database = {
           request_id: string
           started_at: string | null
           surface: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_display: string | null
           tool: string
           tool_catalogued: boolean
@@ -3074,7 +3038,7 @@ export type Database = {
           request_id: string
           started_at?: string | null
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_display?: string | null
           tool: string
           tool_catalogued?: boolean
@@ -3103,7 +3067,7 @@ export type Database = {
           request_id?: string
           started_at?: string | null
           surface?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_display?: string | null
           tool?: string
           tool_catalogued?: boolean
@@ -3222,7 +3186,7 @@ export type Database = {
           status: string
           supersedes: string | null
           template_version: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_scope: string
           version: string | null
         }
@@ -3247,7 +3211,7 @@ export type Database = {
           status?: string
           supersedes?: string | null
           template_version?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant_scope: string
           version?: string | null
         }
@@ -3272,7 +3236,7 @@ export type Database = {
           status?: string
           supersedes?: string | null
           template_version?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant_scope?: string
           version?: string | null
         }
@@ -3343,7 +3307,7 @@ export type Database = {
           scorecard_id: string
           skill_versions: string | null
           source_ref: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           audit_date?: string | null
@@ -3360,7 +3324,7 @@ export type Database = {
           scorecard_id?: string
           skill_versions?: string | null
           source_ref?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           audit_date?: string | null
@@ -3377,7 +3341,7 @@ export type Database = {
           scorecard_id?: string
           skill_versions?: string | null
           source_ref?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: []
       }
@@ -3393,7 +3357,7 @@ export type Database = {
           skill_key: string
           source_ref: string | null
           status: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           version: string | null
         }
         Insert: {
@@ -3407,7 +3371,7 @@ export type Database = {
           skill_key: string
           source_ref?: string | null
           status?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           version?: string | null
         }
         Update: {
@@ -3421,7 +3385,7 @@ export type Database = {
           skill_key?: string
           source_ref?: string | null
           status?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           version?: string | null
         }
         Relationships: []
@@ -5445,7 +5409,7 @@ export type Database = {
           model_breakdown: Json
           principal_id: string | null
           resolution_mode: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           tool: string
           total_cost_usd: number
@@ -5460,7 +5424,7 @@ export type Database = {
           model_breakdown?: Json
           principal_id?: string | null
           resolution_mode?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           tool: string
           total_cost_usd?: number
@@ -5475,7 +5439,7 @@ export type Database = {
           model_breakdown?: Json
           principal_id?: string | null
           resolution_mode?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           tool?: string
           total_cost_usd?: number
@@ -5498,7 +5462,7 @@ export type Database = {
           session_id: string | null
           status: string
           superseded_by: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title: string
           updated_at: string
@@ -5518,7 +5482,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           superseded_by?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           title: string
           updated_at?: string
@@ -5538,7 +5502,7 @@ export type Database = {
           session_id?: string | null
           status?: string
           superseded_by?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           title?: string
           updated_at?: string
@@ -6601,6 +6565,7 @@ export type Database = {
           method: string
           observed: string
           passed: boolean
+          probe_kind: string
           ran_at: string
           ran_by: string
           subject_kind: string
@@ -6615,6 +6580,7 @@ export type Database = {
           method: string
           observed: string
           passed: boolean
+          probe_kind?: string
           ran_at?: string
           ran_by: string
           subject_kind: string
@@ -6629,6 +6595,7 @@ export type Database = {
           method?: string
           observed?: string
           passed?: boolean
+          probe_kind?: string
           ran_at?: string
           ran_by?: string
           subject_kind?: string
@@ -6876,7 +6843,7 @@ export type Database = {
           source_location: string
           source_sha1: string | null
           supersedes_artifact_id: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string | null
           version: number
         }
@@ -6901,7 +6868,7 @@ export type Database = {
           source_location: string
           source_sha1?: string | null
           supersedes_artifact_id?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string | null
           version: number
         }
@@ -6926,7 +6893,7 @@ export type Database = {
           source_location?: string
           source_sha1?: string | null
           supersedes_artifact_id?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string | null
           version?: number
         }
@@ -7520,7 +7487,7 @@ export type Database = {
           outcome: string
           ritual: string
           session_id: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           unsaved: Json
         }
@@ -7533,7 +7500,7 @@ export type Database = {
           outcome: string
           ritual: string
           session_id?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           unsaved?: Json
         }
@@ -7546,7 +7513,7 @@ export type Database = {
           outcome?: string
           ritual?: string
           session_id?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           unsaved?: Json
         }
@@ -8277,7 +8244,7 @@ export type Database = {
           session_id: string | null
           staleness_flags: Json
           task_states: Json
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
         }
         Insert: {
@@ -8294,7 +8261,7 @@ export type Database = {
           session_id?: string | null
           staleness_flags?: Json
           task_states?: Json
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
         }
         Update: {
@@ -8311,7 +8278,7 @@ export type Database = {
           session_id?: string | null
           staleness_flags?: Json
           task_states?: Json
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
         }
         Relationships: [
@@ -9187,6 +9154,33 @@ export type Database = {
         }
         Relationships: []
       }
+      tenancy_quarantine_row: {
+        Row: {
+          id: string
+          quarantined_at: string
+          reason: string
+          row_json: Json
+          row_pk: string | null
+          table_name: string
+        }
+        Insert: {
+          id?: string
+          quarantined_at?: string
+          reason: string
+          row_json: Json
+          row_pk?: string | null
+          table_name: string
+        }
+        Update: {
+          id?: string
+          quarantined_at?: string
+          reason?: string
+          row_json?: Json
+          row_pk?: string | null
+          table_name?: string
+        }
+        Relationships: []
+      }
       tenant_alias: {
         Row: {
           alias: string
@@ -9195,7 +9189,7 @@ export type Database = {
           created_at: string
           key_space: string
           note: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Insert: {
           alias: string
@@ -9204,7 +9198,7 @@ export type Database = {
           created_at?: string
           key_space: string
           note?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
         Update: {
           alias?: string
@@ -9213,7 +9207,7 @@ export type Database = {
           created_at?: string
           key_space?: string
           note?: string | null
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
         Relationships: [
           {
@@ -9457,7 +9451,7 @@ export type Database = {
           provider: string
           provisioned_by: string | null
           status: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           token_ref: string | null
           updated_at: string
@@ -9471,7 +9465,7 @@ export type Database = {
           provider?: string
           provisioned_by?: string | null
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           token_ref?: string | null
           updated_at?: string
@@ -9485,7 +9479,7 @@ export type Database = {
           provider?: string
           provisioned_by?: string | null
           status?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           token_ref?: string | null
           updated_at?: string
@@ -9543,7 +9537,7 @@ export type Database = {
           notion_id: string
           status: string
           surface_key: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           updated_at: string
           write_policy: string
@@ -9557,7 +9551,7 @@ export type Database = {
           notion_id: string
           status?: string
           surface_key: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenant: string
           updated_at?: string
           write_policy?: string
@@ -9571,7 +9565,7 @@ export type Database = {
           notion_id?: string
           status?: string
           surface_key?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenant?: string
           updated_at?: string
           write_policy?: string
@@ -10406,6 +10400,7 @@ export type Database = {
           settings: Json | null
           slug: string
           tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy_quarantine_reason: string | null
           updated_at: string
           workspace_kind: string
         }
@@ -10420,6 +10415,7 @@ export type Database = {
           settings?: Json | null
           slug: string
           tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy_quarantine_reason?: string | null
           updated_at?: string
           workspace_kind?: string
         }
@@ -10434,6 +10430,7 @@ export type Database = {
           settings?: Json | null
           slug?: string
           tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy_quarantine_reason?: string | null
           updated_at?: string
           workspace_kind?: string
         }
@@ -12269,6 +12266,14 @@ export type Database = {
         Args: { p_method: string }
         Returns: boolean
       }
+      probe_method_is_observation: {
+        Args: { p_method: string }
+        Returns: boolean
+      }
+      probe_method_writes_subject: {
+        Args: { p_method: string; p_subject_ref: string }
+        Returns: boolean
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -12336,19 +12341,34 @@ export type Database = {
         }
         Returns: string
       }
-      record_probe: {
-        Args: {
-          p_cid?: string
-          p_claim: string
-          p_expected: string
-          p_method: string
-          p_observed: string
-          p_passed: boolean
-          p_subject_kind: string
-          p_subject_ref: string
-        }
-        Returns: Json
-      }
+      record_probe:
+        | {
+            Args: {
+              p_cid?: string
+              p_claim: string
+              p_expected: string
+              p_method: string
+              p_observed: string
+              p_passed: boolean
+              p_subject_kind: string
+              p_subject_ref: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cid?: string
+              p_claim: string
+              p_expected: string
+              p_method: string
+              p_observed: string
+              p_passed: boolean
+              p_probe_kind?: string
+              p_subject_kind: string
+              p_subject_ref: string
+            }
+            Returns: Json
+          }
       record_save_receipt: {
         Args: {
           p_cid?: string
