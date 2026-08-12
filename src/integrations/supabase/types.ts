@@ -10399,7 +10399,7 @@ export type Database = {
           name: string
           settings: Json | null
           slug: string
-          tenancy: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenancy_quarantine_reason: string | null
           updated_at: string
           workspace_kind: string
@@ -10414,7 +10414,7 @@ export type Database = {
           name: string
           settings?: Json | null
           slug: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
           tenancy_quarantine_reason?: string | null
           updated_at?: string
           workspace_kind?: string
@@ -10429,7 +10429,7 @@ export type Database = {
           name?: string
           settings?: Json | null
           slug?: string
-          tenancy?: Database["public"]["Enums"]["tenancy_t"] | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           tenancy_quarantine_reason?: string | null
           updated_at?: string
           workspace_kind?: string
