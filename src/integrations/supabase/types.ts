@@ -12409,6 +12409,7 @@ export type Database = {
       }
       render_local: { Args: { p_cid: string; p_ts: string }; Returns: Json }
       resolve_cid: { Args: { k: string }; Returns: string }
+      resolve_cid_strict: { Args: { k: string }; Returns: string }
       resolve_hq_authority_v1: {
         Args: { p_auth_user_id: string; p_session_id?: string }
         Returns: Json
