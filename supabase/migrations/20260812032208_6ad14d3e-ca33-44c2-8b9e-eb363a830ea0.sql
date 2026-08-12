@@ -1,0 +1,1 @@
+ALTER TABLE public.workspaces ALTER COLUMN tenancy SET NOT NULL;
