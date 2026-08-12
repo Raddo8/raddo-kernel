@@ -8055,11 +8055,15 @@ export type Database = {
       }
       scheduled_actions: {
         Row: {
+          attempts: number
           blueprint_id: string | null
           build_spec: string | null
           cadence: string | null
           cid: string | null
           cid_quarantine_reason: string | null
+          claim_expires_at: string | null
+          claimed_at: string | null
+          claimed_by: string | null
           completed_at: string | null
           created_at: string
           detail: string | null
@@ -8067,6 +8071,8 @@ export type Database = {
           gates_passed: number | null
           gates_total: number | null
           id: string
+          last_error: string | null
+          last_receipt: Json | null
           outcome: string | null
           owner: string
           program: string | null
@@ -8084,11 +8090,15 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attempts?: number
           blueprint_id?: string | null
           build_spec?: string | null
           cadence?: string | null
           cid?: string | null
           cid_quarantine_reason?: string | null
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           completed_at?: string | null
           created_at?: string
           detail?: string | null
@@ -8096,6 +8106,8 @@ export type Database = {
           gates_passed?: number | null
           gates_total?: number | null
           id?: string
+          last_error?: string | null
+          last_receipt?: Json | null
           outcome?: string | null
           owner?: string
           program?: string | null
@@ -8113,11 +8125,15 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attempts?: number
           blueprint_id?: string | null
           build_spec?: string | null
           cadence?: string | null
           cid?: string | null
           cid_quarantine_reason?: string | null
+          claim_expires_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           completed_at?: string | null
           created_at?: string
           detail?: string | null
@@ -8125,6 +8141,8 @@ export type Database = {
           gates_passed?: number | null
           gates_total?: number | null
           id?: string
+          last_error?: string | null
+          last_receipt?: Json | null
           outcome?: string | null
           owner?: string
           program?: string | null
@@ -12310,6 +12328,7 @@ export type Database = {
         }
         Returns: Json
       }
+      reap_stale_action_claims: { Args: never; Returns: number }
       reconcile_kernel_absent_signals: { Args: never; Returns: number }
       record_decision: {
         Args: {
@@ -12341,34 +12360,20 @@ export type Database = {
         }
         Returns: string
       }
-      record_probe:
-        | {
-            Args: {
-              p_cid?: string
-              p_claim: string
-              p_expected: string
-              p_method: string
-              p_observed: string
-              p_passed: boolean
-              p_subject_kind: string
-              p_subject_ref: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_cid?: string
-              p_claim: string
-              p_expected: string
-              p_method: string
-              p_observed: string
-              p_passed: boolean
-              p_probe_kind?: string
-              p_subject_kind: string
-              p_subject_ref: string
-            }
-            Returns: Json
-          }
+      record_probe: {
+        Args: {
+          p_cid?: string
+          p_claim: string
+          p_expected: string
+          p_method: string
+          p_observed: string
+          p_passed: boolean
+          p_probe_kind?: string
+          p_subject_kind: string
+          p_subject_ref: string
+        }
+        Returns: Json
+      }
       record_save_receipt: {
         Args: {
           p_cid?: string
@@ -12423,6 +12428,7 @@ export type Database = {
       }
       render_local: { Args: { p_cid: string; p_ts: string }; Returns: Json }
       resolve_cid: { Args: { k: string }; Returns: string }
+      resolve_cid_strict: { Args: { k: string }; Returns: string }
       resolve_hq_authority_v1: {
         Args: { p_auth_user_id: string; p_session_id?: string }
         Returns: Json
@@ -12484,6 +12490,7 @@ export type Database = {
         }[]
       }
       route_resolve_audit: { Args: { p_cid: string }; Returns: Json }
+      run_scheduled_actions: { Args: { p_limit?: number }; Returns: Json }
       save_attempt_status: {
         Args: { p_completed_at: string; p_layer_results: Json }
         Returns: string
@@ -12498,6 +12505,18 @@ export type Database = {
         }[]
       }
       save_health: { Args: { p_cid: string; p_last?: number }; Returns: Json }
+      scheduled_action_hold_reason: {
+        Args: { r: Database["public"]["Tables"]["scheduled_actions"]["Row"] }
+        Returns: string
+      }
+      scheduled_action_receipt: {
+        Args: {
+          p_detail: Json
+          p_phase: string
+          p_row: Database["public"]["Tables"]["scheduled_actions"]["Row"]
+        }
+        Returns: undefined
+      }
       session_context_purge: { Args: never; Returns: number }
       session_id_for_context: {
         Args: { p_session_id: string }
