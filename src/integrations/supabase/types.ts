@@ -1075,6 +1075,7 @@ export type Database = {
           effective: string | null
           expires: string | null
           id: string
+          occurred_at: string | null
           priority: string
           seen: boolean
           seen_at: string | null
@@ -1091,6 +1092,7 @@ export type Database = {
           effective?: string | null
           expires?: string | null
           id?: string
+          occurred_at?: string | null
           priority?: string
           seen?: boolean
           seen_at?: string | null
@@ -1107,6 +1109,7 @@ export type Database = {
           effective?: string | null
           expires?: string | null
           id?: string
+          occurred_at?: string | null
           priority?: string
           seen?: boolean
           seen_at?: string | null
@@ -1591,6 +1594,7 @@ export type Database = {
           external_id: string | null
           external_url: string | null
           failed_reason: string | null
+          occurred_at: string | null
           prepared_by: string | null
           sent_at: string | null
           state: string
@@ -1611,6 +1615,7 @@ export type Database = {
           external_id?: string | null
           external_url?: string | null
           failed_reason?: string | null
+          occurred_at?: string | null
           prepared_by?: string | null
           sent_at?: string | null
           state?: string
@@ -1631,6 +1636,7 @@ export type Database = {
           external_id?: string | null
           external_url?: string | null
           failed_reason?: string | null
+          occurred_at?: string | null
           prepared_by?: string | null
           sent_at?: string | null
           state?: string
@@ -2367,6 +2373,7 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           id: string
+          occurred_at: string | null
           rank: number | null
           scope: string
           status: string
@@ -2381,6 +2388,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           id?: string
+          occurred_at?: string | null
           rank?: number | null
           scope?: string
           status?: string
@@ -2395,6 +2403,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           id?: string
+          occurred_at?: string | null
           rank?: number | null
           scope?: string
           status?: string
@@ -2654,6 +2663,7 @@ export type Database = {
         Row: {
           definition: string
           domain_key: string
+          keywords: string[]
           label: string
           lights_with: string | null
           ordinal: number
@@ -2662,6 +2672,7 @@ export type Database = {
         Insert: {
           definition: string
           domain_key: string
+          keywords?: string[]
           label: string
           lights_with?: string | null
           ordinal: number
@@ -2670,6 +2681,7 @@ export type Database = {
         Update: {
           definition?: string
           domain_key?: string
+          keywords?: string[]
           label?: string
           lights_with?: string | null
           ordinal?: number
@@ -4780,6 +4792,7 @@ export type Database = {
           routed_at: string
           routed_by: string
           tenancy: Database["public"]["Enums"]["tenancy_t"]
+          world_item_id: string | null
         }
         Insert: {
           cid: string
@@ -4790,6 +4803,7 @@ export type Database = {
           routed_at?: string
           routed_by?: string
           tenancy: Database["public"]["Enums"]["tenancy_t"]
+          world_item_id?: string | null
         }
         Update: {
           cid?: string
@@ -4800,6 +4814,7 @@ export type Database = {
           routed_at?: string
           routed_by?: string
           tenancy?: Database["public"]["Enums"]["tenancy_t"]
+          world_item_id?: string | null
         }
         Relationships: [
           {
@@ -4828,6 +4843,13 @@ export type Database = {
             columns: ["memory_id"]
             isOneToOne: false
             referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_domain_world_item_id_fkey"
+            columns: ["world_item_id"]
+            isOneToOne: false
+            referencedRelation: "world_items"
             referencedColumns: ["id"]
           },
         ]
@@ -5194,6 +5216,7 @@ export type Database = {
       kernel_parts: {
         Row: {
           bytes: number
+          cid: string | null
           content_md: string
           id: string
           kernel_id: string
@@ -5203,6 +5226,7 @@ export type Database = {
         }
         Insert: {
           bytes: number
+          cid?: string | null
           content_md: string
           id?: string
           kernel_id: string
@@ -5212,6 +5236,7 @@ export type Database = {
         }
         Update: {
           bytes?: number
+          cid?: string | null
           content_md?: string
           id?: string
           kernel_id?: string
@@ -5446,6 +5471,67 @@ export type Database = {
         }
         Relationships: []
       }
+      memory_entity_link: {
+        Row: {
+          cid: string
+          confidence: number
+          entity_id: string
+          link_id: string
+          linked_at: string
+          linked_by: string | null
+          match_mode: string
+          memory_id: string
+          review_status: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Insert: {
+          cid: string
+          confidence?: number
+          entity_id: string
+          link_id?: string
+          linked_at?: string
+          linked_by?: string | null
+          match_mode?: string
+          memory_id: string
+          review_status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Update: {
+          cid?: string
+          confidence?: number
+          entity_id?: string
+          link_id?: string
+          linked_at?: string
+          linked_by?: string | null
+          match_mode?: string
+          memory_id?: string
+          review_status?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "memory_entity_link_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "entity_resolvable"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_entity_link_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "world_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "memory_entity_link_memory_id_fkey"
+            columns: ["memory_id"]
+            isOneToOne: false
+            referencedRelation: "memory_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       memory_entries: {
         Row: {
           body_md: string
@@ -5459,6 +5545,7 @@ export type Database = {
           id: string
           lane: string | null
           notion_block_ref: string | null
+          occurred_at: string | null
           session_id: string | null
           status: string
           superseded_by: string | null
@@ -5479,6 +5566,7 @@ export type Database = {
           id?: string
           lane?: string | null
           notion_block_ref?: string | null
+          occurred_at?: string | null
           session_id?: string | null
           status?: string
           superseded_by?: string | null
@@ -5499,6 +5587,7 @@ export type Database = {
           id?: string
           lane?: string | null
           notion_block_ref?: string | null
+          occurred_at?: string | null
           session_id?: string | null
           status?: string
           superseded_by?: string | null
@@ -5614,6 +5703,7 @@ export type Database = {
           migrated_from: string | null
           name: string
           note: string | null
+          occurred_at: string | null
           other_link: string | null
           record_date: string | null
           record_id: string
@@ -5631,6 +5721,7 @@ export type Database = {
           migrated_from?: string | null
           name: string
           note?: string | null
+          occurred_at?: string | null
           other_link?: string | null
           record_date?: string | null
           record_id?: string
@@ -5648,6 +5739,7 @@ export type Database = {
           migrated_from?: string | null
           name?: string
           note?: string | null
+          occurred_at?: string | null
           other_link?: string | null
           record_date?: string | null
           record_id?: string
@@ -6087,6 +6179,7 @@ export type Database = {
           last_action_at: string | null
           last_surfaced: string | null
           notion_page_id: string | null
+          occurred_at: string | null
           owner: string | null
           principal_acts: boolean | null
           snooze_until: string | null
@@ -6114,6 +6207,7 @@ export type Database = {
           last_action_at?: string | null
           last_surfaced?: string | null
           notion_page_id?: string | null
+          occurred_at?: string | null
           owner?: string | null
           principal_acts?: boolean | null
           snooze_until?: string | null
@@ -6141,6 +6235,7 @@ export type Database = {
           last_action_at?: string | null
           last_surfaced?: string | null
           notion_page_id?: string | null
+          occurred_at?: string | null
           owner?: string | null
           principal_acts?: boolean | null
           snooze_until?: string | null
@@ -8367,6 +8462,7 @@ export type Database = {
           cid: string
           created_at: string
           fidelity: string
+          occurred_at: string | null
           part: number
           parts_total: number
           scrub_note: string | null
@@ -8382,6 +8478,7 @@ export type Database = {
           cid: string
           created_at?: string
           fidelity: string
+          occurred_at?: string | null
           part?: number
           parts_total?: number
           scrub_note?: string | null
@@ -8397,6 +8494,7 @@ export type Database = {
           cid?: string
           created_at?: string
           fidelity?: string
+          occurred_at?: string | null
           part?: number
           parts_total?: number
           scrub_note?: string | null
@@ -10677,6 +10775,7 @@ export type Database = {
           merged_into: string | null
           meta: Json
           name: string
+          occurred_at: string | null
           origin_date: string | null
           resolution_keys: Json
           sensitivity: string
@@ -10695,6 +10794,7 @@ export type Database = {
           merged_into?: string | null
           meta?: Json
           name: string
+          occurred_at?: string | null
           origin_date?: string | null
           resolution_keys?: Json
           sensitivity?: string
@@ -10713,6 +10813,7 @@ export type Database = {
           merged_into?: string | null
           meta?: Json
           name?: string
+          occurred_at?: string | null
           origin_date?: string | null
           resolution_keys?: Json
           sensitivity?: string
@@ -10744,11 +10845,14 @@ export type Database = {
           cid: string
           confidence: number | null
           created_at: string
+          domain_key: string | null
           first_seen: string
           id: string
           item_type: string
+          occurred_at: string | null
           provenance: Json
           provenance_refs: Json
+          sensitivity: string
           source: string
           synthetic: boolean
           tenancy: Database["public"]["Enums"]["tenancy_t"]
@@ -10760,11 +10864,14 @@ export type Database = {
           cid: string
           confidence?: number | null
           created_at?: string
+          domain_key?: string | null
           first_seen?: string
           id?: string
           item_type: string
+          occurred_at?: string | null
           provenance?: Json
           provenance_refs?: Json
+          sensitivity?: string
           source: string
           synthetic?: boolean
           tenancy: Database["public"]["Enums"]["tenancy_t"]
@@ -10776,18 +10883,29 @@ export type Database = {
           cid?: string
           confidence?: number | null
           created_at?: string
+          domain_key?: string | null
           first_seen?: string
           id?: string
           item_type?: string
+          occurred_at?: string | null
           provenance?: Json
           provenance_refs?: Json
+          sensitivity?: string
           source?: string
           synthetic?: boolean
           tenancy?: Database["public"]["Enums"]["tenancy_t"]
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "world_items_domain_key_fkey"
+            columns: ["domain_key"]
+            isOneToOne: false
+            referencedRelation: "domain_taxonomy"
+            referencedColumns: ["domain_key"]
+          },
+        ]
       }
       world_sources: {
         Row: {
@@ -11590,6 +11708,10 @@ export type Database = {
             }
             Returns: Json
           }
+      cob_domain_suggest: {
+        Args: { p_scope?: string; p_text: string }
+        Returns: Json
+      }
       cob_fetch: { Args: { p_cid: string; p_id: string }; Returns: Json }
       cob_guard: { Args: { p_cid: string }; Returns: string }
       cob_identity_gaps: { Args: { p_cid: string }; Returns: Json }
@@ -11615,6 +11737,17 @@ export type Database = {
           p_kind: string
           p_lane: string
           p_title?: string
+        }
+        Returns: Json
+      }
+      cob_recall: {
+        Args: {
+          p_cid: string
+          p_limit?: number
+          p_max_entities?: number
+          p_per_entity?: number
+          p_qvec?: string
+          p_text: string
         }
         Returns: Json
       }
@@ -12132,6 +12265,10 @@ export type Database = {
           p_id: string
           p_title?: string
         }
+        Returns: Json
+      }
+      memory_entity_relink: {
+        Args: { p_cid: string; p_memory_id?: string }
         Returns: Json
       }
       memory_module_read: {
