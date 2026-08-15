@@ -60,6 +60,7 @@ import MemoryVault from "@/pages/MemoryVault";
 import HqRecords from "@/pages/HqRecords";
 import HqBoardroom from "@/pages/HqBoardroom";
 import HqTasks from "@/pages/HqTasks";
+import HqBoard from "@/pages/HqBoard";
 import HqDecisions from "@/pages/HqDecisions";
 import HqSignals from "@/pages/HqSignals";
 import HqSessions from "@/pages/HqSessions";
@@ -156,6 +157,7 @@ const App = () => (
             <Route path="/hq/boardroom" element={<AuthGate><ClientReadinessGate><HqBoardroom /></ClientReadinessGate></AuthGate>} />
 
             {/* The registers · every one of these is a page you can press a button on */}
+            <Route path="/hq/board" element={<AuthGate><ClientReadinessGate><HqBoard /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/tasks" element={<AuthGate><ClientReadinessGate><HqTasks /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/decisions" element={<AuthGate><ClientReadinessGate><HqDecisions /></ClientReadinessGate></AuthGate>} />
             <Route path="/hq/signals" element={<AuthGate><ClientReadinessGate><HqSignals /></ClientReadinessGate></AuthGate>} />
