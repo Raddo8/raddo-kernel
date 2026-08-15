@@ -7370,21 +7370,30 @@ export type Database = {
       register_layer: {
         Row: {
           assigned_at: string
+          evidence: string | null
           layer: Database["public"]["Enums"]["register_layer_t"] | null
           rationale: string
           register: string
+          source: string
+          status: string
         }
         Insert: {
           assigned_at?: string
+          evidence?: string | null
           layer?: Database["public"]["Enums"]["register_layer_t"] | null
           rationale: string
           register: string
+          source?: string
+          status?: string
         }
         Update: {
           assigned_at?: string
+          evidence?: string | null
           layer?: Database["public"]["Enums"]["register_layer_t"] | null
           rationale?: string
           register?: string
+          source?: string
+          status?: string
         }
         Relationships: []
       }
@@ -11714,7 +11723,8 @@ export type Database = {
         Returns: string
       }
       board_update: { Args: { p_cid?: string; p_items: Json }; Returns: Json }
-      boot_layer_plan: { Args: { p_cid: string }; Returns: Json }
+      boot_layer_plan: { Args: { p_cid?: string }; Returns: Json }
+      boot_payload_measure: { Args: { p_cid: string }; Returns: Json }
       bridge_claim_next: {
         Args: never
         Returns: {
@@ -12709,7 +12719,9 @@ export type Database = {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
       }
+      register_layer_evidence_pass: { Args: never; Returns: Json }
       register_layer_report: { Args: never; Returns: Json }
+      register_layer_sync: { Args: never; Returns: Json }
       register_silence_watchdog: { Args: never; Returns: number }
       rekey_status: {
         Args: never
