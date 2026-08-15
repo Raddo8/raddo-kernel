@@ -2415,6 +2415,24 @@ export type Database = {
         }
         Relationships: []
       }
+      display_name_allowlist: {
+        Row: {
+          added_at: string
+          fn_name: string
+          reason: string
+        }
+        Insert: {
+          added_at?: string
+          fn_name: string
+          reason: string
+        }
+        Update: {
+          added_at?: string
+          fn_name?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       doctrine_amendments: {
         Row: {
           action: string
@@ -7349,6 +7367,27 @@ export type Database = {
         }
         Relationships: []
       }
+      register_layer: {
+        Row: {
+          assigned_at: string
+          layer: Database["public"]["Enums"]["register_layer_t"] | null
+          rationale: string
+          register: string
+        }
+        Insert: {
+          assigned_at?: string
+          layer?: Database["public"]["Enums"]["register_layer_t"] | null
+          rationale: string
+          register: string
+        }
+        Update: {
+          assigned_at?: string
+          layer?: Database["public"]["Enums"]["register_layer_t"] | null
+          rationale?: string
+          register?: string
+        }
+        Relationships: []
+      }
       register_migration_contract: {
         Row: {
           authority_policy: string
@@ -9872,6 +9911,101 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_contract_mode: {
+        Row: {
+          changed_at: string
+          mode: string
+          only_row: boolean
+          reason: string | null
+        }
+        Insert: {
+          changed_at?: string
+          mode?: string
+          only_row?: boolean
+          reason?: string | null
+        }
+        Update: {
+          changed_at?: string
+          mode?: string
+          only_row?: boolean
+          reason?: string | null
+        }
+        Relationships: []
+      }
+      tool_contract_violation: {
+        Row: {
+          actor: string | null
+          at: string
+          cid: string | null
+          declared_writes: string | null
+          id: number
+          ledger_id: number | null
+          mode: string
+          op: string | null
+          register: string
+          tool_key: string | null
+        }
+        Insert: {
+          actor?: string | null
+          at?: string
+          cid?: string | null
+          declared_writes?: string | null
+          id?: number
+          ledger_id?: number | null
+          mode: string
+          op?: string | null
+          register: string
+          tool_key?: string | null
+        }
+        Update: {
+          actor?: string | null
+          at?: string
+          cid?: string | null
+          declared_writes?: string | null
+          id?: number
+          ledger_id?: number | null
+          mode?: string
+          op?: string | null
+          register?: string
+          tool_key?: string | null
+        }
+        Relationships: []
+      }
+      tool_function_map: {
+        Row: {
+          created_at: string
+          edge_function: string | null
+          fn_name: string | null
+          note: string | null
+          tool_key: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edge_function?: string | null
+          fn_name?: string | null
+          note?: string | null
+          tool_key: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edge_function?: string | null
+          fn_name?: string | null
+          note?: string | null
+          tool_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tool_function_map_tool_key_fkey"
+            columns: ["tool_key"]
+            isOneToOne: true
+            referencedRelation: "tool_catalog"
+            referencedColumns: ["tool_key"]
+          },
+        ]
+      }
       tool_manifest_registry: {
         Row: {
           first_seen_at: string
@@ -11554,6 +11688,10 @@ export type Database = {
         }
         Returns: Json
       }
+      board_configuration_leak_check: {
+        Args: { p_cid?: string }
+        Returns: Json
+      }
       board_render: {
         Args: { p_bump?: boolean; p_cid?: string; p_limit?: number }
         Returns: Json
@@ -11571,7 +11709,12 @@ export type Database = {
         Args: { p_cid?: string; p_duplicate: string; p_keep: string }
         Returns: Json
       }
+      board_title_writethrough: {
+        Args: { p_cid: string; p_loop_id: string; p_title: string }
+        Returns: string
+      }
       board_update: { Args: { p_cid?: string; p_items: Json }; Returns: Json }
+      boot_layer_plan: { Args: { p_cid: string }; Returns: Json }
       bridge_claim_next: {
         Args: never
         Returns: {
@@ -11848,6 +11991,7 @@ export type Database = {
         Returns: Json
       }
       current_cid: { Args: never; Returns: string }
+      derive_tool_contract: { Args: never; Returns: Json }
       entity_block: {
         Args: { p_cid: string; p_threshold?: number }
         Returns: number
@@ -11859,6 +12003,11 @@ export type Database = {
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
       fleet_surfacing_health: { Args: never; Returns: Json }
+      fn_degraded_sentence: { Args: { p_fn: string }; Returns: string }
+      fn_tables_touched: {
+        Args: { p_fn: string; p_mode: string }
+        Returns: string[]
+      }
       get_action_response_status: {
         Args: { p_action_id: string }
         Returns: Json
@@ -11866,6 +12015,13 @@ export type Database = {
       get_cron_headers: { Args: never; Returns: Json }
       get_load_test_headers: { Args: never; Returns: Json }
       get_scheduler_health: { Args: { p_workspace_id: string }; Returns: Json }
+      guard_names_are_never_keys: {
+        Args: never
+        Returns: {
+          evidence: string
+          fn_name: string
+        }[]
+      }
       hq_act: {
         Args: { p_action: string; p_id?: string; p_params?: Json }
         Returns: Json
@@ -12553,6 +12709,7 @@ export type Database = {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
       }
+      register_layer_report: { Args: never; Returns: Json }
       register_silence_watchdog: { Args: never; Returns: number }
       rekey_status: {
         Args: never
@@ -12722,9 +12879,11 @@ export type Database = {
       }
       sweep_unreachable_raise: { Args: { p_cid?: string }; Returns: number }
       sync_tool_catalog: { Args: { p_version?: string }; Returns: Json }
+      sync_tool_contract_edge: { Args: { p_payload: Json }; Returns: Json }
       tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       tenant_timezone: { Args: { p_cid: string }; Returns: string }
+      tool_manifest_descriptions: { Args: never; Returns: Json }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
@@ -12979,6 +13138,7 @@ export type Database = {
         | "approved"
         | "canceled"
       item_direction: "inbound" | "outbound" | "system"
+      register_layer_t: "CONFIGURATION" | "PRODUCTION"
       tenancy_t: "FLEET" | "TENANT"
       workspace_role: "owner" | "admin" | "member" | "viewer"
     }
@@ -13118,6 +13278,7 @@ export const Constants = {
         "canceled",
       ],
       item_direction: ["inbound", "outbound", "system"],
+      register_layer_t: ["CONFIGURATION", "PRODUCTION"],
       tenancy_t: ["FLEET", "TENANT"],
       workspace_role: ["owner", "admin", "member", "viewer"],
     },

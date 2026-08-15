@@ -4575,8 +4575,27 @@ Deno.serve(async (req) => {
     }
 
     if (method === "tools/list") {
-      return rpcResult(id, { tools: TOOLS });
+      // HARDEN-10 · K3(c) · the description is generated from the catalog row,
+      // so a published tool cannot describe itself differently from the
+      // contract it is held to. The hand-written text is the fallback only.
+      let served = TOOLS;
+      if (supabaseAdmin) {
+        try {
+          const { data: descriptions } = await supabaseAdmin.rpc("tool_manifest_descriptions");
+          if (descriptions && typeof descriptions === "object") {
+            served = TOOLS.map((t: any) => {
+              const generated = (descriptions as Record<string, string>)[t.name];
+              return generated ? { ...t, description: generated } : t;
+            });
+          }
+        } catch (_e) {
+          // Serving the authored description is degraded, not broken.
+          console.error("tool_manifest_descriptions_unavailable");
+        }
+      }
+      return rpcResult(id, { tools: served });
     }
+
 
     if (method === "resources/list") {
       return rpcResult(id, { resources: UI_RESOURCES });
