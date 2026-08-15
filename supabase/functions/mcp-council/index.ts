@@ -2204,6 +2204,45 @@ const SERVER_INFO = {
 // 2026.08.12.9 · HARDEN-08. work_reschedule is exposed: a date moves by an
 // act that carries a reason, updates the board and the register together, and
 // leaves a receipt. Later is a legitimate direction.
+
+// ── L2c · async acknowledgement for long deliberations ──────────────────
+// A tool whose only mode is a long synchronous wait loses to every client
+// timeout in existence. {async: true} hands back a run handle immediately
+// and the deliberation finishes on the server.
+function councilAck(a: {
+  run_id: string; tool: string; expected_seconds: number;
+  in_flight?: boolean; started_at?: string | null;
+}) {
+  const body = {
+    status: "running",
+    accepted: true,
+    council_run_id: a.run_id,
+    run_id: a.run_id,
+    tool: a.tool,
+    expected_seconds: a.expected_seconds,
+    already_running: a.in_flight === true,
+    started_at: a.started_at ?? null,
+    collect_with: "council_minute_fetch",
+    collect_args: { run_id: a.run_id },
+    note: a.in_flight
+      ? "This exact question is already being deliberated under the run id returned here. Nothing new was started · a retry would have been a second full deliberation at full cost. Collect the minute with council_minute_fetch using this run_id."
+      : "The deliberation is running on the server and will be finalized whether or not this connection survives. Collect the minute with council_minute_fetch using this run_id. Do not call again · a second call starts a second full deliberation.",
+  };
+  return {
+    content: [{ type: "text", text: JSON.stringify(body) }],
+    structuredContent: body,
+    isError: false,
+  };
+}
+
+function runInBackground(p: Promise<unknown>) {
+  const guarded = p.catch((e) => {
+    console.error("council_background_run_failed", e instanceof Error ? e.message : String(e));
+  });
+  try { (globalThis as any).EdgeRuntime?.waitUntil?.(guarded); } catch { /* not available */ }
+  return guarded;
+}
+
 const TOOL_MANIFEST_VERSION = "2026.08.12.9";
 
 const MANIFEST_PROP = {
@@ -7441,8 +7480,19 @@ Deno.serve(async (req) => {
         // fetch mid-run reports still_running honestly, and the finished
         // minute survives a client that hung up at its 60s cap.
         const conveneAdvisory = await bootAdvisory(pctx.legacy_cid);
+        const conveneAsync = args?.async === true || args?.async === "true";
         const runId = crypto.randomUUID();
         const runQhash = await hashQuestion(question);
+        // L2d · a retry against a question already in flight returns that run.
+        const conveneInFlight = await findInFlightRun(supabaseAdmin, {
+          cid: pctx.legacy_cid ?? null, question_hash: runQhash, tool: "convene_council",
+        });
+        if (conveneInFlight) {
+          return rpcResult(id, councilAck({
+            run_id: conveneInFlight.run_id, tool: "convene_council", expected_seconds: 120,
+            in_flight: true, started_at: conveneInFlight.started_at,
+          }));
+        }
         await openMinuteRun(supabaseAdmin, {
           run_id: runId,
           cid: pctx.legacy_cid ?? null,
@@ -7682,6 +7732,10 @@ Deno.serve(async (req) => {
             throw e;
           }
         };
+        if (conveneAsync) {
+          runInBackground(produce(() => {}));
+          return rpcResult(id, councilAck({ run_id: runId, tool: "convene_council", expected_seconds: 120 }));
+        }
         if (progressToken !== undefined) {
           return rpcStreamingResult(id, progressToken, produce, toRpcParts);
         }
@@ -7830,8 +7884,18 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         const summonAdvisory = await bootAdvisory(pctx.legacy_cid);
+        const summonAsync = args?.async === true || args?.async === "true";
         const summonRunId = crypto.randomUUID();
         const summonQhash = await hashQuestion(question);
+        const summonInFlight = await findInFlightRun(supabaseAdmin, {
+          cid: pctx.legacy_cid ?? null, question_hash: summonQhash, tool: "summon_best_advisor",
+        });
+        if (summonInFlight) {
+          return rpcResult(id, councilAck({
+            run_id: summonInFlight.run_id, tool: "summon_best_advisor", expected_seconds: 95,
+            in_flight: true, started_at: summonInFlight.started_at,
+          }));
+        }
         await openMinuteRun(supabaseAdmin, {
           run_id: summonRunId,
           cid: pctx.legacy_cid ?? null,
@@ -7970,6 +8034,10 @@ Deno.serve(async (req) => {
             throw e;
           }
         };
+        if (summonAsync) {
+          runInBackground(summonProduce(() => {}));
+          return rpcResult(id, councilAck({ run_id: summonRunId, tool: "summon_best_advisor", expected_seconds: 95 }));
+        }
         if (progressToken !== undefined) {
           return rpcStreamingResult(id, progressToken, summonProduce, toRpcParts);
         }
