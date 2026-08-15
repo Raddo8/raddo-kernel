@@ -416,6 +416,105 @@ export type Database = {
           },
         ]
       }
+      authority_access_receipts: {
+        Row: {
+          action: string
+          caller_auth_user_id: string | null
+          caller_label: string
+          decision: string
+          first_seen_at: string
+          last_seen_at: string
+          ledger_fleet_role: string | null
+          ledger_granted_at: string | null
+          ledger_present: boolean
+          ledger_status: string | null
+          reason: string | null
+          receipt_id: string
+          sightings: number
+          target_cid: string
+        }
+        Insert: {
+          action: string
+          caller_auth_user_id?: string | null
+          caller_label: string
+          decision: string
+          first_seen_at?: string
+          last_seen_at?: string
+          ledger_fleet_role?: string | null
+          ledger_granted_at?: string | null
+          ledger_present: boolean
+          ledger_status?: string | null
+          reason?: string | null
+          receipt_id?: string
+          sightings?: number
+          target_cid: string
+        }
+        Update: {
+          action?: string
+          caller_auth_user_id?: string | null
+          caller_label?: string
+          decision?: string
+          first_seen_at?: string
+          last_seen_at?: string
+          ledger_fleet_role?: string | null
+          ledger_granted_at?: string | null
+          ledger_present?: boolean
+          ledger_status?: string | null
+          reason?: string | null
+          receipt_id?: string
+          sightings?: number
+          target_cid?: string
+        }
+        Relationships: []
+      }
+      authority_secdef_register: {
+        Row: {
+          bucket: string
+          callers: string | null
+          classified_at: string
+          deferred_reason: string | null
+          fn_args: string
+          fn_name: string
+          reachable_anon: boolean | null
+          reachable_auth: boolean | null
+          reason: string | null
+          remediated: boolean
+          remediation: string | null
+          synced_at: string
+          trigger_bound: boolean | null
+        }
+        Insert: {
+          bucket?: string
+          callers?: string | null
+          classified_at?: string
+          deferred_reason?: string | null
+          fn_args: string
+          fn_name: string
+          reachable_anon?: boolean | null
+          reachable_auth?: boolean | null
+          reason?: string | null
+          remediated?: boolean
+          remediation?: string | null
+          synced_at?: string
+          trigger_bound?: boolean | null
+        }
+        Update: {
+          bucket?: string
+          callers?: string | null
+          classified_at?: string
+          deferred_reason?: string | null
+          fn_args?: string
+          fn_name?: string
+          reachable_anon?: boolean | null
+          reachable_auth?: boolean | null
+          reason?: string | null
+          remediated?: boolean
+          remediation?: string | null
+          synced_at?: string
+          trigger_bound?: boolean | null
+        }
+        Relationships: []
+      }
       blueprints: {
         Row: {
           cid: string | null
@@ -11661,6 +11760,10 @@ export type Database = {
       admin_fleet_board: { Args: never; Returns: Json }
       admin_fleet_live: { Args: { p_since?: string }; Returns: Json }
       admin_guard: { Args: never; Returns: undefined }
+      admin_guard_action: {
+        Args: { p_action: string; p_target_cid?: string; p_write?: boolean }
+        Returns: undefined
+      }
       admin_set_page: {
         Args: {
           p_cid: string
@@ -11703,6 +11806,28 @@ export type Database = {
           total: number
         }[]
       }
+      authority_receipt: {
+        Args: {
+          p_action: string
+          p_decision: string
+          p_reason?: string
+          p_target_cid: string
+        }
+        Returns: undefined
+      }
+      authority_secdef_candidates: {
+        Args: never
+        Returns: {
+          callers: string
+          fn_args: string
+          fn_name: string
+          reachable_anon: boolean
+          reachable_auth: boolean
+          trigger_bound: boolean
+        }[]
+      }
+      authority_secdef_report: { Args: never; Returns: Json }
+      authority_secdef_sync: { Args: never; Returns: Json }
       authorize_identity_observation: {
         Args: {
           p_authorized_by: string
@@ -12040,6 +12165,7 @@ export type Database = {
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
       escalation_rank: { Args: { p_state: string }; Returns: number }
+      fleet_authority: { Args: never; Returns: Json }
       fleet_surfacing_health: { Args: never; Returns: Json }
       fn_degraded_sentence: { Args: { p_fn: string }; Returns: string }
       fn_tables_touched: {
@@ -12375,6 +12501,7 @@ export type Database = {
       is_cob_operator: { Args: never; Returns: boolean }
       is_fleet_operator: { Args: never; Returns: boolean }
       is_fleet_operator_cid: { Args: { p_cid: string }; Returns: boolean }
+      is_fleet_operator_write: { Args: never; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
       is_tool_problem_signal: {
@@ -12614,6 +12741,10 @@ export type Database = {
           p_ttl?: string
         }
         Returns: Json
+      }
+      operator_read_guard: {
+        Args: { p_action: string; p_target_cid: string }
+        Returns: boolean
       }
       probe_method_is_entry_point: {
         Args: { p_method: string }
