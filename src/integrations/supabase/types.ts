@@ -12012,6 +12012,7 @@ export type Database = {
       }
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
+      escalation_rank: { Args: { p_state: string }; Returns: number }
       fleet_surfacing_health: { Args: never; Returns: Json }
       fn_degraded_sentence: { Args: { p_fn: string }; Returns: string }
       fn_tables_touched: {
