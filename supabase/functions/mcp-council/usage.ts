@@ -91,6 +91,9 @@ export async function recordMcpUsage(
     principal_id?: string | null;
     external_identity_id?: string | null;
     resolution_mode?: string | null;
+    // L2a · wall-clock duration of the tool call. Nothing is backfilled;
+    // a null here means the call was made before latency was measured.
+    duration_ms?: number | null;
     // Optional routing ledger payload (confidence-gated routing).
     // Hashed/redacted only — never raw question text.
     routing_log?: Record<string, unknown>;
@@ -113,6 +116,7 @@ export async function recordMcpUsage(
       principal_id: args.principal_id ?? null,
       external_identity_id: args.external_identity_id ?? null,
       resolution_mode: args.resolution_mode ?? null,
+      duration_ms: Number.isFinite(Number(args.duration_ms)) ? Math.round(Number(args.duration_ms)) : null,
     });
     if (error) console.error("usage_write_failed", error.message);
 

@@ -5213,6 +5213,7 @@ Deno.serve(async (req) => {
         if (attestErr) return rpcError(id, -32003, "attest_failed");
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             tool: "kernel_attest",
             agent_id: null,
@@ -5655,6 +5656,7 @@ Deno.serve(async (req) => {
           // 11. Ledger the invocation (zero LLM spend).
           try {
             await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
               tenant,
               cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tool: "begin_session",
@@ -5868,6 +5870,7 @@ Deno.serve(async (req) => {
         if (error) return rpcError(id, -32603, `memory_search_failed:${error.message}`);
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id,
             external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
@@ -6249,6 +6252,7 @@ Deno.serve(async (req) => {
 
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id,
             external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
@@ -6915,6 +6919,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "save_session", agent_id: null, passes: [],
                 routing_log: { session_id: args?.session_id, outcome: res.outcome, overall_status, save_id, duration_ms },
@@ -7062,6 +7067,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "sync_session", agent_id: null, passes: [],
                 routing_log: { session_id, duration_ms, outcome: syncOutcome },
@@ -7289,6 +7295,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "end_session", agent_id: null, passes: [],
                 routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
@@ -7589,6 +7596,7 @@ Deno.serve(async (req) => {
           }));
 
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
@@ -7867,6 +7875,7 @@ Deno.serve(async (req) => {
             minuteAny.refer_to = gap.refer_to;
           }
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
@@ -8049,6 +8058,7 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(filedPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
               cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes,
             });
@@ -8089,6 +8099,7 @@ Deno.serve(async (req) => {
 
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "file_to_office",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
