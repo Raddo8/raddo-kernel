@@ -2217,7 +2217,7 @@ const TOOL_RUN_COUNCIL = {
   name: "convene_council",
   title: "Convene the Council",
   description:
-    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor). This deliberation runs 90 to 130 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor). This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Convene the Council" },
   inputSchema: {
     type: "object",
@@ -2225,6 +2225,7 @@ const TOOL_RUN_COUNCIL = {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
       session_id: { type: "string", description: "Optional. The current session id, so the council run is recorded against the session." },
+      async: { type: "boolean", description: "Optional. When true, the call returns a council_run_id and an expected_seconds estimate immediately and the deliberation continues on the server. Collect the minute with council_minute_fetch using that run_id. A second async call carrying the same question while the first is still running returns the in-flight run rather than starting a second deliberation." },
     },
     required: ["question"],
   },
@@ -2243,13 +2244,14 @@ const TOOL_SUMMON_BEST_ADVISOR = {
   name: "summon_best_advisor",
   title: "Summon the Best Advisor",
   description:
-    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question. This deliberation runs 60 to 95 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question. This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Summon the Best Advisor" },
   inputSchema: {
     type: "object",
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the advisor or panel should weigh." },
+      async: { type: "boolean", description: "Optional. When true, the call returns a council_run_id and an expected_seconds estimate immediately and the deliberation continues on the server. Collect the minute with council_minute_fetch using that run_id. A second async call carrying the same question while the first is still running returns the in-flight run rather than starting a second deliberation." },
     },
     required: ["question"],
   },
@@ -2278,7 +2280,7 @@ const TOOL_ABE_WEIGHING_IN = {
   name: "abe_weighing_in",
   title: "Abe weighing in",
   description:
-    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them. This deliberation runs 60 to 110 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them. This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Abe weighing in" },
   inputSchema: {
     type: "object",
