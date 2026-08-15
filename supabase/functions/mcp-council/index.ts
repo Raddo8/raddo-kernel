@@ -2060,10 +2060,13 @@ function laneToChairId(lane: string): string | null {
   if (l === "strategy") return "leo";
   if (l === "growth") return "felix";
   if (l === "vision") return "aims";
+  // Subdomain names that now have a seat (HARDEN · 2026-08-15).
+  if (l === "marketing") return "claire";
+  if (l === "quant-modeling") return "quant";
   if (
     l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
     l === "marcus" || l === "felix" || l === "aims" ||
-           l === "claire" || l === "quant"
+    l === "claire" || l === "quant"
   ) return l;
   return null;
 }
