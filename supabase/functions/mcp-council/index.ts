@@ -5554,8 +5554,13 @@ Deno.serve(async (req) => {
           // the surfacing, flags a third unanswered showing, raises a signal
           // against the mechanism past eight, and offers snooze at the moment
           // it is warranted. Urgent loops are exempt from every deferral.
+          // K5 · PRODUCTION loads scoped. Configuration (kernel, doctrine,
+          // directives) still loads in full below · it governs, so it cannot
+          // be sampled. Production accumulates, so it is capped and the cap
+          // is declared in the payload rather than hidden.
+          const BOARD_SCOPE = 40, MEMORY_SCOPE = 25, DISPOSITION_SCOPE = 25;
           const { data: boardRender, error: briefErr } = await supabaseAdmin
-            .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: 200 });
+            .rpc("board_render", { p_cid: pctx.legacy_cid, p_bump: true, p_limit: BOARD_SCOPE });
           if (briefErr) outcome = "partial";
           const briefRows = ((boardRender as any)?.items ?? []) as any[];
 
@@ -5564,9 +5569,10 @@ Deno.serve(async (req) => {
           let beginDisposition: any = null;
           try {
             const { data: dq } = await supabaseAdmin
-              .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: 50 });
+              .rpc("work_disposition_queue", { p_cid: pctx.legacy_cid, p_limit: DISPOSITION_SCOPE });
             beginDisposition = dq ?? null;
           } catch (_e) { beginDisposition = null; }
+
 
           // 8. Staleness flags
           const staleness: string[] = [];
@@ -5664,7 +5670,7 @@ Deno.serve(async (req) => {
           const memoryCid = beginCid ?? pctx.legacy_cid ?? null;
           if (memoryCid) {
             const { data: memData, error: memErr } = await supabaseAdmin
-              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: 60 });
+              .rpc("memory_module_read", { p_cid: memoryCid, p_limit: MEMORY_SCOPE });
             if (memErr) { outcome = "partial"; degradedReasons.push("memory_read_failed"); }
             else memoryModule = memData ?? null;
           } else {
@@ -5756,7 +5762,16 @@ Deno.serve(async (req) => {
             }
           } catch (_e) { /* the delta is additive · a boot never fails on it */ }
 
-          const out = {
+          // K5(a) · the layer plan travels with the boot so a reader can see
+          // what was loaded in full, what was capped, and what is undecided.
+          let layerPlan: any = null;
+          try {
+            const { data: lp } = await supabaseAdmin
+              .rpc("boot_layer_plan", { p_cid: beginCid ?? pctx.legacy_cid });
+            layerPlan = lp ?? null;
+          } catch (_e) { layerPlan = null; }
+
+          const out: Record<string, unknown> = {
             session_id: sessionId,
             tenant,
             ...(manifestDelta ? { manifest_delta: manifestDelta } : {}),
@@ -5798,16 +5813,31 @@ Deno.serve(async (req) => {
             staleness,
             makeup_close_owed,
             registers_empty,
+            register_layers: {
+              plan: layerPlan,
+              configuration_delivery: "full",
+              production_delivery: "scoped",
+              scoped_caps: {
+                board_rows: BOARD_SCOPE,
+                memory_rows: MEMORY_SCOPE,
+                disposition_rows: DISPOSITION_SCOPE,
+              },
+              note:
+                "Configuration loaded in full · it governs and cannot be sampled. Production loaded to the caps above · ask for more by register rather than assuming this is everything.",
+            },
             outcome,
             ...identityBlock(pctx),
             ...manifestBlock(args),
             ...(degradedReasons.length ? { reason: degradedReasons[0], reasons: degradedReasons } : {}),
           };
+          // Measured, not estimated: the size of what this boot actually sent.
+          out.payload_bytes = new TextEncoder().encode(JSON.stringify(out)).length;
           return rpcResult(id, {
             content: [{ type: "text", text: JSON.stringify(out) }],
             structuredContent: out,
             isError: false,
           });
+
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           try {
