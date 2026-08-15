@@ -1975,6 +1975,10 @@ async function runSummonBestAdvisor(args: {
           l === "strategy" ? "leo" :
           l === "growth" ? "felix" :
           l === "vision" ? "aims" :
+          // Subdomain names that now have a seat (HARDEN · 2026-08-15).
+          l === "marketing" ? "claire" :
+          l === "quant-modeling" ? "quant" :
+
           // Direct chair id fallthrough · missing_lanes may name a chair id
           // (e.g., "lucius" from Felix pricing co-sign · "leo" from Aims handoff).
           (l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
