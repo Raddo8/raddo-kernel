@@ -3737,6 +3737,8 @@ export type Database = {
           classification: string | null
           curn: string
           detail_md: string | null
+          elapsed_seconds: number | null
+          failure_mode: string | null
           first_seen: string
           id: string
           last_seen: string
@@ -3750,9 +3752,11 @@ export type Database = {
           source_subject: string | null
           source_surface: string | null
           status: string
+          subject_tool: string | null
           tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id: string | null
           tool_version: string | null
+          transport_detail: string | null
           verification_state: string | null
         }
         Insert: {
@@ -3763,6 +3767,8 @@ export type Database = {
           classification?: string | null
           curn: string
           detail_md?: string | null
+          elapsed_seconds?: number | null
+          failure_mode?: string | null
           first_seen?: string
           id?: string
           last_seen?: string
@@ -3776,9 +3782,11 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           status?: string
+          subject_tool?: string | null
           tenancy: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           tool_version?: string | null
+          transport_detail?: string | null
           verification_state?: string | null
         }
         Update: {
@@ -3789,6 +3797,8 @@ export type Database = {
           classification?: string | null
           curn?: string
           detail_md?: string | null
+          elapsed_seconds?: number | null
+          failure_mode?: string | null
           first_seen?: string
           id?: string
           last_seen?: string
@@ -3802,9 +3812,11 @@ export type Database = {
           source_subject?: string | null
           source_surface?: string | null
           status?: string
+          subject_tool?: string | null
           tenancy?: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           tool_version?: string | null
+          transport_detail?: string | null
           verification_state?: string | null
         }
         Relationships: [
@@ -5446,6 +5458,7 @@ export type Database = {
           agent_id: string | null
           cid: string | null
           created_at: string
+          duration_ms: number | null
           external_identity_id: string | null
           id: string
           metadata: Json
@@ -5461,6 +5474,7 @@ export type Database = {
           agent_id?: string | null
           cid?: string | null
           created_at?: string
+          duration_ms?: number | null
           external_identity_id?: string | null
           id?: string
           metadata?: Json
@@ -5476,6 +5490,7 @@ export type Database = {
           agent_id?: string | null
           cid?: string | null
           created_at?: string
+          duration_ms?: number | null
           external_identity_id?: string | null
           id?: string
           metadata?: Json
@@ -11982,6 +11997,18 @@ export type Database = {
       cob_tenant_key_or_cid: { Args: { p_cid: string }; Returns: string }
       cob_tenant_labels: { Args: { p_cid: string }; Returns: string[] }
       cob_text_overlap: { Args: { a: string; b: string }; Returns: number }
+      cob_tool_problem_raise: {
+        Args: {
+          p_cid: string
+          p_detail: string
+          p_elapsed_seconds?: number
+          p_failure_mode: string
+          p_surface?: string
+          p_tool: string
+          p_transport_detail?: string
+        }
+        Returns: Json
+      }
       cob_world_read: {
         Args: { p_cid: string; p_limit?: number; p_q?: string }
         Returns: Json
@@ -12012,6 +12039,7 @@ export type Database = {
       }
       entity_norm: { Args: { p_name: string }; Returns: string }
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
+      escalation_rank: { Args: { p_state: string }; Returns: number }
       fleet_surfacing_health: { Args: never; Returns: Json }
       fn_degraded_sentence: { Args: { p_fn: string }; Returns: string }
       fn_tables_touched: {
@@ -12349,6 +12377,10 @@ export type Database = {
       is_fleet_operator_cid: { Args: { p_cid: string }; Returns: boolean }
       is_onboarding_admin: { Args: never; Returns: boolean }
       is_operator: { Args: { _user_id: string }; Returns: boolean }
+      is_tool_problem_signal: {
+        Args: { p_detail: string; p_key: string; p_pattern: string }
+        Returns: boolean
+      }
       is_workspace_member: {
         Args: { _user_id: string; _workspace_id: string }
         Returns: boolean
@@ -12895,7 +12927,12 @@ export type Database = {
       tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
       tenant_timezone: { Args: { p_cid: string }; Returns: string }
+      tool_latency_report: {
+        Args: { p_min_calls?: number; p_tools?: string[] }
+        Returns: Json
+      }
       tool_manifest_descriptions: { Args: never; Returns: Json }
+      tool_problem_report: { Args: { p_cid?: string }; Returns: Json }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean

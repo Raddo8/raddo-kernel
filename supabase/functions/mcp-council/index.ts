@@ -27,7 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
 import { newRequestContext, elapsedMs } from "./request-context.ts";
-import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
+import { findInFlightRun, openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";
@@ -2204,6 +2204,45 @@ const SERVER_INFO = {
 // 2026.08.12.9 · HARDEN-08. work_reschedule is exposed: a date moves by an
 // act that carries a reason, updates the board and the register together, and
 // leaves a receipt. Later is a legitimate direction.
+
+// ── L2c · async acknowledgement for long deliberations ──────────────────
+// A tool whose only mode is a long synchronous wait loses to every client
+// timeout in existence. {async: true} hands back a run handle immediately
+// and the deliberation finishes on the server.
+function councilAck(a: {
+  run_id: string; tool: string; expected_seconds: number;
+  in_flight?: boolean; started_at?: string | null;
+}) {
+  const body = {
+    status: "running",
+    accepted: true,
+    council_run_id: a.run_id,
+    run_id: a.run_id,
+    tool: a.tool,
+    expected_seconds: a.expected_seconds,
+    already_running: a.in_flight === true,
+    started_at: a.started_at ?? null,
+    collect_with: "council_minute_fetch",
+    collect_args: { run_id: a.run_id },
+    note: a.in_flight
+      ? "This exact question is already being deliberated under the run id returned here. Nothing new was started · a retry would have been a second full deliberation at full cost. Collect the minute with council_minute_fetch using this run_id."
+      : "The deliberation is running on the server and will be finalized whether or not this connection survives. Collect the minute with council_minute_fetch using this run_id. Do not call again · a second call starts a second full deliberation.",
+  };
+  return {
+    content: [{ type: "text", text: JSON.stringify(body) }],
+    structuredContent: body,
+    isError: false,
+  };
+}
+
+function runInBackground(p: Promise<unknown>) {
+  const guarded = p.catch((e) => {
+    console.error("council_background_run_failed", e instanceof Error ? e.message : String(e));
+  });
+  try { (globalThis as any).EdgeRuntime?.waitUntil?.(guarded); } catch { /* not available */ }
+  return guarded;
+}
+
 const TOOL_MANIFEST_VERSION = "2026.08.12.9";
 
 const MANIFEST_PROP = {
@@ -2217,7 +2256,7 @@ const TOOL_RUN_COUNCIL = {
   name: "convene_council",
   title: "Convene the Council",
   description:
-    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor). This deliberation runs 90 to 130 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Convene the Council on a business question. Returns a structured minute with a recommendation, attributed dissent from a dissenting advisor, an anticipatory horizon, and two confidence axes (epistemic, rigor). This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Convene the Council" },
   inputSchema: {
     type: "object",
@@ -2225,6 +2264,7 @@ const TOOL_RUN_COUNCIL = {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the principal wants the Council to weigh." },
       session_id: { type: "string", description: "Optional. The current session id, so the council run is recorded against the session." },
+      async: { type: "boolean", description: "Optional. When true, the call returns a council_run_id and an expected_seconds estimate immediately and the deliberation continues on the server. Collect the minute with council_minute_fetch using that run_id. A second async call carrying the same question while the first is still running returns the in-flight run rather than starting a second deliberation." },
     },
     required: ["question"],
   },
@@ -2243,13 +2283,14 @@ const TOOL_SUMMON_BEST_ADVISOR = {
   name: "summon_best_advisor",
   title: "Summon the Best Advisor",
   description:
-    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question. This deliberation runs 60 to 95 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Summon the best-fit advisor (or panel, or full council) for the principal's question. The gateway triages the question, picks the right specialist or chairs, runs a confidence-completion loop, and auto-escalates a mis-route. The COB does NOT name advisors — just asks the question. This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Summon the Best Advisor" },
   inputSchema: {
     type: "object",
     properties: {
       question: { type: "string", description: "The principal's question. Decision-shaped if possible." },
       context: { type: "string", description: "Optional context the advisor or panel should weigh." },
+      async: { type: "boolean", description: "Optional. When true, the call returns a council_run_id and an expected_seconds estimate immediately and the deliberation continues on the server. Collect the minute with council_minute_fetch using that run_id. A second async call carrying the same question while the first is still running returns the in-flight run rather than starting a second deliberation." },
     },
     required: ["question"],
   },
@@ -2278,7 +2319,7 @@ const TOOL_ABE_WEIGHING_IN = {
   name: "abe_weighing_in",
   title: "Abe weighing in",
   description:
-    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them. This deliberation runs 60 to 110 seconds, which is longer than most clients will hold a request open. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
+    "Abe weighs in on a FINISHED Council minute · the loyal-dissent pass on the strongest reasoning model available. Returns a steelman, the cheapest falsification test, and the failure mode the in-room chairs would miss · attached as a dissenting opinion, never overwriting the minute. Use AFTER convene_council / summon_best_advisor / file_to_office, not in place of them. This deliberation routinely runs 90 to 120 seconds because it is a genuine multi-advisor deliberation, not a lookup. The caller must WAIT rather than retry. A retry does not resume the first deliberation · it starts a second full one, at full cost. The run is persisted the moment it opens and is finalized on the server whether or not the connection survives. If your client cannot hold a two-minute call, pass {async: true}: you get a council_run_id and an expected_seconds estimate immediately, then collect the minute with council_minute_fetch using that run_id. If this call times out, do NOT report a failure and do NOT convene again. Call council_minute_fetch with {latest: true}, or with the run_id if you hold one. The minute is there.",
   annotations: { title: "Abe weighing in" },
   inputSchema: {
     type: "object",
@@ -5213,6 +5254,7 @@ Deno.serve(async (req) => {
         if (attestErr) return rpcError(id, -32003, "attest_failed");
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             tool: "kernel_attest",
             agent_id: null,
@@ -5655,6 +5697,7 @@ Deno.serve(async (req) => {
           // 11. Ledger the invocation (zero LLM spend).
           try {
             await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
               tenant,
               cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tool: "begin_session",
@@ -5868,6 +5911,7 @@ Deno.serve(async (req) => {
         if (error) return rpcError(id, -32603, `memory_search_failed:${error.message}`);
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id,
             external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
@@ -6249,6 +6293,7 @@ Deno.serve(async (req) => {
 
         try {
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             tenant,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id,
             external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
@@ -6915,6 +6960,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "save_session", agent_id: null, passes: [],
                 routing_log: { session_id: args?.session_id, outcome: res.outcome, overall_status, save_id, duration_ms },
@@ -7062,6 +7108,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "sync_session", agent_id: null, passes: [],
                 routing_log: { session_id, duration_ms, outcome: syncOutcome },
@@ -7289,6 +7336,7 @@ Deno.serve(async (req) => {
             } catch { /* best-effort */ }
             try {
               await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
                 cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
                 tenant, tool: "end_session", agent_id: null, passes: [],
                 routing_log: { session_id, close_kind, outcome: endOutcome, duration_ms },
@@ -7432,8 +7480,19 @@ Deno.serve(async (req) => {
         // fetch mid-run reports still_running honestly, and the finished
         // minute survives a client that hung up at its 60s cap.
         const conveneAdvisory = await bootAdvisory(pctx.legacy_cid);
+        const conveneAsync = args?.async === true || args?.async === "true";
         const runId = crypto.randomUUID();
         const runQhash = await hashQuestion(question);
+        // L2d · a retry against a question already in flight returns that run.
+        const conveneInFlight = await findInFlightRun(supabaseAdmin, {
+          cid: pctx.legacy_cid ?? null, question_hash: runQhash, tool: "convene_council",
+        });
+        if (conveneInFlight) {
+          return rpcResult(id, councilAck({
+            run_id: conveneInFlight.run_id, tool: "convene_council", expected_seconds: 120,
+            in_flight: true, started_at: conveneInFlight.started_at,
+          }));
+        }
         await openMinuteRun(supabaseAdmin, {
           run_id: runId,
           cid: pctx.legacy_cid ?? null,
@@ -7589,6 +7648,7 @@ Deno.serve(async (req) => {
           }));
 
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "convene_council", agent_id: null, passes,
             routing_log: {
@@ -7672,6 +7732,10 @@ Deno.serve(async (req) => {
             throw e;
           }
         };
+        if (conveneAsync) {
+          runInBackground(produce(() => {}));
+          return rpcResult(id, councilAck({ run_id: runId, tool: "convene_council", expected_seconds: 120 }));
+        }
         if (progressToken !== undefined) {
           return rpcStreamingResult(id, progressToken, produce, toRpcParts);
         }
@@ -7820,8 +7884,18 @@ Deno.serve(async (req) => {
           return rpcError(id, -32602, "invalid_params");
         }
         const summonAdvisory = await bootAdvisory(pctx.legacy_cid);
+        const summonAsync = args?.async === true || args?.async === "true";
         const summonRunId = crypto.randomUUID();
         const summonQhash = await hashQuestion(question);
+        const summonInFlight = await findInFlightRun(supabaseAdmin, {
+          cid: pctx.legacy_cid ?? null, question_hash: summonQhash, tool: "summon_best_advisor",
+        });
+        if (summonInFlight) {
+          return rpcResult(id, councilAck({
+            run_id: summonInFlight.run_id, tool: "summon_best_advisor", expected_seconds: 95,
+            in_flight: true, started_at: summonInFlight.started_at,
+          }));
+        }
         await openMinuteRun(supabaseAdmin, {
           run_id: summonRunId,
           cid: pctx.legacy_cid ?? null,
@@ -7867,6 +7941,7 @@ Deno.serve(async (req) => {
             minuteAny.refer_to = gap.refer_to;
           }
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "summon_best_advisor",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
@@ -7959,6 +8034,10 @@ Deno.serve(async (req) => {
             throw e;
           }
         };
+        if (summonAsync) {
+          runInBackground(summonProduce(() => {}));
+          return rpcResult(id, councilAck({ run_id: summonRunId, tool: "summon_best_advisor", expected_seconds: 95 }));
+        }
         if (progressToken !== undefined) {
           return rpcStreamingResult(id, progressToken, summonProduce, toRpcParts);
         }
@@ -8049,6 +8128,7 @@ Deno.serve(async (req) => {
           ].join("\n");
           if (hasBoundaryViolation(filedPayloadText)) {
             await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
               cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
               tenant, tool: "file_to_office", agent_id: null, passes,
             });
@@ -8089,6 +8169,7 @@ Deno.serve(async (req) => {
 
           const qhash = await hashQuestion(question);
           await recordMcpUsage(supabaseAdmin, {
+            duration_ms: Date.now() - __receiptCtx.started_ms,
             cid: pctx.legacy_cid, principal_id: pctx.principal_id, external_identity_id: pctx.external_identity_id, resolution_mode: pctx.resolution_mode,
             tenant, tool: "file_to_office",
             agent_id: result.mode === "solo" ? result.selected_advisor : null,
