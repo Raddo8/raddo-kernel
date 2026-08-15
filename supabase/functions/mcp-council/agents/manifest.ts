@@ -99,6 +99,34 @@ export const AGENT_MANIFEST: { agents: AgentEntry[] } = {
       kind: "single",
     },
     {
+      // Claire · standing copy lens. Seated 2026-08-15 (operator-approved).
+      // Owns language aimed at a reader; Felix keeps spend / channel /
+      // acquisition economics. Tiebreak: language → Claire, number or plan
+      // → Felix.
+      id: "claire",
+      name: "Claire",
+      lens: "Copywriting & conversion craft",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
+      tags: ["copy", "marketing"],
+    },
+    {
+      // Quant · sub-specialist under Finance. Seated 2026-08-15
+      // (operator-approved). Receives the "the Quant" referrals that
+      // lucius / felix / aims already emit. Tiebreak against Lucius: a
+      // number, a range or a model → Quant; a judgment about the money
+      // → Lucius.
+      id: "quant",
+      name: "Quant",
+      lens: "Quantitative modeling & valuation",
+      tier_min: "any",
+      enabled: true,
+      kind: "single",
+      tags: ["modeling", "valuation"],
+    },
+    {
+
       // Abe is the deferred loyal-dissent pass reached only via
       // abe_weighing_in, never a synchronous chair. Kind "deferred" keeps
       // him out of summon_best_advisor and the convene fan-out (see
