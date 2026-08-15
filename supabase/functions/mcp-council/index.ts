@@ -112,6 +112,8 @@ import ALFRED_AGENT_MD from "./agents/alfred.ts";
 import MARCUS_AGENT_MD from "./agents/marcus.ts";
 import FELIX_AGENT_MD from "./agents/felix.ts";
 import AIMS_AGENT_MD from "./agents/aims.ts";
+import CLAIRE_AGENT_MD from "./agents/claire.ts";
+import QUANT_AGENT_MD from "./agents/quant.ts";
 
 
 
@@ -234,6 +236,8 @@ function loadAgent(
     marcus: MARCUS_AGENT_MD,
     felix: FELIX_AGENT_MD,
     aims: AIMS_AGENT_MD,
+    claire: CLAIRE_AGENT_MD,
+    quant: QUANT_AGENT_MD,
   };
 
 
@@ -1290,6 +1294,8 @@ function chairForSpecialistId(
     marcus: MARCUS_AGENT_MD,
     felix: FELIX_AGENT_MD,
     aims: AIMS_AGENT_MD,
+    claire: CLAIRE_AGENT_MD,
+    quant: QUANT_AGENT_MD,
   };
   const body = SINGLE_BODIES[id];
   if (!body) return null;
@@ -1307,6 +1313,8 @@ function chairForSpecialistId(
     id === "knox" ? "Knox" :
     id === "felix" ? "Felix" :
     id === "aims" ? "Aims" :
+    id === "claire" ? "Claire" :
+    id === "quant" ? "Quant" :
     id.toUpperCase();
 
   return {
@@ -1970,7 +1978,8 @@ async function runSummonBestAdvisor(args: {
           // Direct chair id fallthrough · missing_lanes may name a chair id
           // (e.g., "lucius" from Felix pricing co-sign · "leo" from Aims handoff).
           (l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
-           l === "marcus" || l === "felix" || l === "aims") ? l : null)
+           l === "marcus" || l === "felix" || l === "aims" ||
+           l === "claire" || l === "quant") ? l : null)
 
         .filter((x): x is NonNullable<typeof x> => x !== null)];
       if (panelIds.length >= 2) {
@@ -2053,7 +2062,8 @@ function laneToChairId(lane: string): string | null {
   if (l === "vision") return "aims";
   if (
     l === "knox" || l === "lucius" || l === "leo" || l === "alfred" ||
-    l === "marcus" || l === "felix" || l === "aims"
+    l === "marcus" || l === "felix" || l === "aims" ||
+           l === "claire" || l === "quant"
   ) return l;
   return null;
 }
