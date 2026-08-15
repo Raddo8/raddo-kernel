@@ -157,6 +157,76 @@ function laneToId(lane: Lane, _tenant: string): string {
   }
 }
 
+// ── Seated sub-specialist routing (HARDEN · 2026-08-15) ───────────────────
+// Two subdomains that used to fall through as `missing_lanes` now have a
+// chair. Claire owns language aimed at a reader; Quant owns the computation.
+// The overrides below are deterministic (regex on the question + context) and
+// run alongside the model's own lane call, so a triage miss still lands.
+
+// Object of the request is the WORDS themselves → Claire.
+const CLAIRE_OBJECT_RE =
+  /\b(copy|copywrit\w*|copy ?teardown|teardown|headline|sub-?head\w*|subject lines?|landing pages?|sales pages?|email copy|ad copy|ads? copy|scripts?|vsl|naming|tagline|slogan|brand voice|tone of voice|messaging|value prop\w*|write|rewrite|re-?word\w*|draft the (copy|email|page|ad)|wording)\b/i;
+
+// Object of the request is spend / channel / funnel / acquisition economics
+// → Felix keeps it, even when copy words appear.
+const FELIX_ECONOMICS_RE =
+  /\b(spend|budget|cac|ltv|payback|roas|cpa|cpc|cpm|media mix|channel mix|channels?|funnel|pipeline|acquisition (cost|economics)|attribution|paid (search|social|ads))\b/i;
+
+// Modeling / valuation COMPUTATION → Quant.
+const QUANT_OBJECT_RE =
+  /\b(dcf|discounted cash ?flow|valuation|valu(e|ing) the (business|company)|scenario (analysis|model|planning)|monte ?carlo|sensitivity( analysis)?|break-?even|unit econ\w* (math|model)|cash-?flow (projection|model|forecast)|pricing math|financial model|model (this|it|the numbers)|run the numbers|npv|irr|comparables?|comps)\b/i;
+
+// Judgment about what to do with the money stays with Lucius.
+const LUCIUS_JUDGMENT_RE =
+  /\b(should we (spend|invest|raise|buy|allocate)|worth it|allocate the|capital allocation|do we take the (deal|money|round))\b/i;
+
+export type SeatedSpecialist = "claire" | "quant";
+
+// Returns the seated sub-specialist this question belongs to, or null.
+// Exported so the gateway (and tests) can assert the mapping without a
+// model call.
+export function specialistOverride(
+  text: string,
+  detected_subdomain: string | null,
+  primary_lane: Lane,
+): SeatedSpecialist | null {
+  const t = text ?? "";
+
+  // Explicit subdomain signals from the classifier take precedence.
+  if (detected_subdomain === "marketing") {
+    // Tiebreak: language is Claire, a number or a plan is Felix.
+    if (FELIX_ECONOMICS_RE.test(t) && !CLAIRE_OBJECT_RE.test(t)) return null;
+    return "claire";
+  }
+  if (detected_subdomain === "quant-modeling") return "quant";
+
+  // Computation beats judgment: a number, a range or a model is Quant · a
+  // judgment about what to do with the money is Lucius.
+  if (QUANT_OBJECT_RE.test(t)) {
+    if (LUCIUS_JUDGMENT_RE.test(t) && !QUANT_OBJECT_RE.test(t)) return null;
+    return "quant";
+  }
+
+  // Deliverable is language → Claire, unless the object is clearly spend /
+  // channel / funnel / acquisition economics.
+  if (CLAIRE_OBJECT_RE.test(t) && !FELIX_ECONOMICS_RE.test(t)) return "claire";
+
+  // A growth-lane question whose object is still the words themselves.
+  if (primary_lane === "growth" && CLAIRE_OBJECT_RE.test(t) &&
+      !FELIX_ECONOMICS_RE.test(t)) {
+    return "claire";
+  }
+
+  return null;
+}
+
+// Subdomains that are now seated · once routed, they are no longer a
+// capability gap and must not be reported as missing_lanes.
+const SEATED_SUBDOMAINS: Record<string, SeatedSpecialist> = {
+  "marketing": "claire",
+  "quant-modeling": "quant",
+};
+
 const FULL_BOARD_IDS = ["leo", "abe", "lucius", "alfred", "marcus", "felix", "aims"];
 
 function fullBoardWithLegal(_tenant: string): string[] {
@@ -243,7 +313,7 @@ export async function triage(
       detected_subdomain: null,
       gap_reason: null,
       reasoning: "triage_unparseable_default",
-    }, tenant);
+    }, tenant, null);
   }
 
   const primary = normalizeLane(parsed.primary_lane) ?? "ops";
@@ -274,10 +344,20 @@ export async function triage(
   }
   const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 240) : "";
 
+  // Seated sub-specialist override. When the question belongs to Claire or
+  // Quant, the subdomain is no longer a capability gap · clearing it stops
+  // the gateway reporting missing_lanes for a lane that now has a chair.
+  const forced = specialistOverride(
+    `${question}\n${context ?? ""}`, detected_subdomain, primary);
+  if (forced && detected_subdomain && SEATED_SUBDOMAINS[detected_subdomain] === forced) {
+    detected_subdomain = null;
+    gap_reason = null;
+  }
+
   return applyGates({
     primary_lane: primary, lane_confidence, secondary_lanes,
     one_way_door, stakes, detected_subdomain, gap_reason, reasoning,
-  }, tenant);
+  }, tenant, forced);
 }
 
 function applyGates(
@@ -292,6 +372,7 @@ function applyGates(
     reasoning: string;
   },
   tenant: string,
+  forced: SeatedSpecialist | null = null,
 ): TriageDecision {
   const distinctLanes = new Set<Lane>([cls.primary_lane, ...cls.secondary_lanes]);
   const gates_fired: string[] = [];
@@ -353,6 +434,17 @@ function applyGates(
     chairs = [laneToId(cls.primary_lane, tenant)];
   }
 
+
+  // A seated sub-specialist always gets the seat. Solo hands the chair over
+  // outright · panel and council keep their assembly and add the specialist.
+  if (forced) {
+    if (mode === "solo") {
+      chairs = [forced];
+    } else if (!chairs.includes(forced)) {
+      chairs = [forced, ...chairs];
+    }
+    gates_fired.push("S");
+  }
 
   return {
     ...cls,
