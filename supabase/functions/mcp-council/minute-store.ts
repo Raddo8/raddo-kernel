@@ -211,16 +211,16 @@ export async function findInFlightRun(
   if (!admin || !a.question_hash) return null;
   try {
     const since = new Date(Date.now() - (a.max_age_seconds ?? 600) * 1000).toISOString();
-    let q = admin.from(TABLE).select("run_id, tool, created_at")
+    let q = admin.from(TABLE).select("run_id, tool, started_at")
       .eq("status", "running")
       .eq("question_hash", a.question_hash)
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
+      .gte("started_at", since)
+      .order("started_at", { ascending: false })
       .limit(1);
     q = a.cid ? q.eq("cid", a.cid) : q.is("cid", null);
     const { data, error } = await q;
     if (error || !data || data.length === 0) return null;
-    return { run_id: data[0].run_id, started_at: data[0].created_at ?? null, tool: data[0].tool ?? a.tool };
+    return { run_id: data[0].run_id, started_at: data[0].started_at ?? null, tool: data[0].tool ?? a.tool };
   } catch (_e) {
     return null;
   }
