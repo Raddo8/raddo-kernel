@@ -27,7 +27,7 @@ import { checkRateLimitDb, getClientIp } from "../_shared/rate-limit.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { readUsage, recordMcpUsage, aggregate, type Pass } from "./usage.ts";
 import { newRequestContext, elapsedMs } from "./request-context.ts";
-import { openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
+import { findInFlightRun, openMinuteRun, completeMinuteRun, failMinuteRun, noteMinuteRun, fetchMinute } from "./minute-store.ts";
 import { recordExecutionReceipt } from "./execution-receipts.ts";
 import { resolveEffectiveIdentity, cidOrNull, type IdentityResolution } from "./effective-identity.ts";
 import { resolveIdentityKeyed, type KeyedResolution } from "../_shared/identity-keyed.ts";

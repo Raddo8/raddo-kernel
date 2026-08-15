@@ -198,3 +198,30 @@ export async function noteMinuteRun(admin: Admin, run_id: string, note: string):
     console.warn("minute_store_note_failed", JSON.stringify({ run_id, error: String(e).slice(0, 300) }));
   }
 }
+
+/**
+ * L2c/L2d · find a deliberation that is still running for this caller and
+ * this exact question. A retry must return the in-flight run, never start a
+ * second full deliberation at full cost.
+ */
+export async function findInFlightRun(
+  admin: Admin,
+  a: { cid: string | null; question_hash: string | null; tool: string; max_age_seconds?: number },
+): Promise<{ run_id: string; started_at: string | null; tool: string } | null> {
+  if (!admin || !a.question_hash) return null;
+  try {
+    const since = new Date(Date.now() - (a.max_age_seconds ?? 600) * 1000).toISOString();
+    let q = admin.from(TABLE).select("run_id, tool, created_at")
+      .eq("status", "running")
+      .eq("question_hash", a.question_hash)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    q = a.cid ? q.eq("cid", a.cid) : q.is("cid", null);
+    const { data, error } = await q;
+    if (error || !data || data.length === 0) return null;
+    return { run_id: data[0].run_id, started_at: data[0].created_at ?? null, tool: data[0].tool ?? a.tool };
+  } catch (_e) {
+    return null;
+  }
+}
