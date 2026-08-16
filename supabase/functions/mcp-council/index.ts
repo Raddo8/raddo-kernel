@@ -4607,8 +4607,9 @@ Deno.serve(async (req) => {
         principal_id: ctx.principal_id,
         token_version: ctx.token_version,
         ...(canonicalOk ? {} : {
-          note: "identity not yet canonical; serving on the legacy path",
+          note: "identity not yet canonical; serving on the legacy path. Recorded as an unbound principal · the exit is an operator bind_principal, which is our provisioning defect to close, not yours.",
         }),
+
       },
     };
   };
