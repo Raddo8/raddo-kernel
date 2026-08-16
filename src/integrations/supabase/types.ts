@@ -12103,6 +12103,7 @@ export type Database = {
       }
       campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
       canary_assert_no_regression: { Args: { p_label: string }; Returns: Json }
+      canary_by_design_refusal: { Args: { p_msg: string }; Returns: boolean }
       change_actor: { Args: never; Returns: string }
       change_feed: {
         Args: { p_cid?: string; p_limit?: number; p_since?: string }
