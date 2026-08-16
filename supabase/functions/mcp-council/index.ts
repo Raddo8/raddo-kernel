@@ -4563,8 +4563,38 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.error("identity_shadow_exception", e instanceof Error ? e.message : String(e));
     }
+
+    // HARDEN-13 N2(a) · a principal transacting without a membership row is
+    // recorded ONCE per principal per tenant with a sightings counter, never
+    // once per call. This is a record, not a gate: nothing here refuses the
+    // request. The exit is bind_principal, and the remedy is surfaced to the
+    // operator by unbound_principals_report().
+    const canonicalOk = ctx.resolution_mode === "OK" || ctx.resolution_mode === "OK_DELEGATED";
+    if (!canonicalOk && ctx.provider_subject) {
+      try {
+        const { data, error } = await supabaseAdmin.rpc("record_unbound_principal", {
+          p_issuer: ctx.issuer,
+          p_provider_subject: ctx.provider_subject,
+          p_resolution_mode: ctx.resolution_mode,
+          p_cid: ctx.canonical_cid ?? ctx.legacy_cid,
+          p_tenant_claim: ctx.tenant_claim,
+          p_principal_id: ctx.principal_id,
+        });
+        if (error) console.error("unbound_principal_record_failed", error.message);
+        else if (data?.newly_seen === true) {
+          console.error("unbound_principal_first_seen", JSON.stringify({
+            cid: ctx.canonical_cid ?? ctx.legacy_cid,
+            resolution_mode: ctx.resolution_mode,
+            remedy: "bind_principal",
+          }));
+        }
+      } catch (e) {
+        console.error("unbound_principal_record_exception", e instanceof Error ? e.message : String(e));
+      }
+    }
     return ctx;
   };
+
 
   // ITEM 5 · compact, honest identity block for the session tools.
   const identityBlock = (ctx: PrincipalCtx): Record<string, unknown> => {
@@ -4577,8 +4607,9 @@ Deno.serve(async (req) => {
         principal_id: ctx.principal_id,
         token_version: ctx.token_version,
         ...(canonicalOk ? {} : {
-          note: "identity not yet canonical; serving on the legacy path",
+          note: "identity not yet canonical; serving on the legacy path. Recorded as an unbound principal · the exit is an operator bind_principal, which is our provisioning defect to close, not yours.",
         }),
+
       },
     };
   };
