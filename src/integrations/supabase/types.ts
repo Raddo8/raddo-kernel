@@ -1517,6 +1517,89 @@ export type Database = {
           },
         ]
       }
+      client_access_canary_result: {
+        Row: {
+          boot_detail: string | null
+          boot_status: string
+          checked_at: string
+          cid: string
+          cob_name: string | null
+          result_id: string
+          run_id: string
+          transact_detail: string | null
+          transact_status: string
+        }
+        Insert: {
+          boot_detail?: string | null
+          boot_status: string
+          checked_at?: string
+          cid: string
+          cob_name?: string | null
+          result_id?: string
+          run_id: string
+          transact_detail?: string | null
+          transact_status: string
+        }
+        Update: {
+          boot_detail?: string | null
+          boot_status?: string
+          checked_at?: string
+          cid?: string
+          cob_name?: string | null
+          result_id?: string
+          run_id?: string
+          transact_detail?: string | null
+          transact_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_access_canary_result_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_canary_run"
+            referencedColumns: ["run_id"]
+          },
+        ]
+      }
+      client_access_canary_run: {
+        Row: {
+          boot_ok: number
+          failed: number
+          label: string | null
+          notes: string | null
+          phase: string
+          ran_at: string
+          run_id: string
+          tenants_total: number
+          transact_ok: number
+          unverified: number
+        }
+        Insert: {
+          boot_ok?: number
+          failed?: number
+          label?: string | null
+          notes?: string | null
+          phase: string
+          ran_at?: string
+          run_id?: string
+          tenants_total?: number
+          transact_ok?: number
+          unverified?: number
+        }
+        Update: {
+          boot_ok?: number
+          failed?: number
+          label?: string | null
+          notes?: string | null
+          phase?: string
+          ran_at?: string
+          run_id?: string
+          tenants_total?: number
+          transact_ok?: number
+          unverified?: number
+        }
+        Relationships: []
+      }
       client_intake: {
         Row: {
           cid: string
@@ -7734,6 +7817,42 @@ export type Database = {
           },
         ]
       }
+      revocation_audit: {
+        Row: {
+          audited_at: string
+          caller_role: string
+          dispatch: string
+          function_name: string
+          id: string
+          real_callers: string
+          reason: string
+          revoked_from: string
+          verdict: string
+        }
+        Insert: {
+          audited_at?: string
+          caller_role: string
+          dispatch: string
+          function_name: string
+          id?: string
+          real_callers: string
+          reason: string
+          revoked_from: string
+          verdict: string
+        }
+        Update: {
+          audited_at?: string
+          caller_role?: string
+          dispatch?: string
+          function_name?: string
+          id?: string
+          real_callers?: string
+          reason?: string
+          revoked_from?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       ritual_runs: {
         Row: {
           cid: string | null
@@ -10150,6 +10269,69 @@ export type Database = {
         }
         Relationships: []
       }
+      unbound_principals: {
+        Row: {
+          bound_at: string | null
+          bound_by: string | null
+          cid: string | null
+          created_at: string
+          escalated_at: string | null
+          escalation_curn: string | null
+          evidence_needed: string
+          first_seen_at: string
+          id: string
+          issuer: string | null
+          last_seen_at: string
+          principal_id: string | null
+          provider_subject: string
+          resolution_mode: string
+          sightings: number
+          status: string
+          tenant_claim: string | null
+          updated_at: string
+        }
+        Insert: {
+          bound_at?: string | null
+          bound_by?: string | null
+          cid?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          escalation_curn?: string | null
+          evidence_needed?: string
+          first_seen_at?: string
+          id?: string
+          issuer?: string | null
+          last_seen_at?: string
+          principal_id?: string | null
+          provider_subject: string
+          resolution_mode: string
+          sightings?: number
+          status?: string
+          tenant_claim?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bound_at?: string | null
+          bound_by?: string | null
+          cid?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          escalation_curn?: string | null
+          evidence_needed?: string
+          first_seen_at?: string
+          id?: string
+          issuer?: string | null
+          last_seen_at?: string
+          principal_id?: string | null
+          provider_subject?: string
+          resolution_mode?: string
+          sightings?: number
+          status?: string
+          tenant_claim?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       usage_events: {
         Row: {
           action_id: string
@@ -11837,6 +12019,15 @@ export type Database = {
         }
         Returns: Json
       }
+      bind_principal: {
+        Args: {
+          p_auth_user_id: string
+          p_cid: string
+          p_evidence?: Json
+          p_role?: string
+        }
+        Returns: Json
+      }
       board_configuration_leak_check: {
         Args: { p_cid?: string }
         Returns: Json
@@ -11911,6 +12102,7 @@ export type Database = {
         }[]
       }
       campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
+      canary_assert_no_regression: { Args: { p_label: string }; Returns: Json }
       change_actor: { Args: never; Returns: string }
       change_feed: {
         Args: { p_cid?: string; p_limit?: number; p_since?: string }
@@ -11926,6 +12118,11 @@ export type Database = {
       }
       cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
+      client_access_canary: {
+        Args: { p_label?: string; p_phase?: string }
+        Returns: Json
+      }
+      client_access_canary_tick: { Args: never; Returns: Json }
       close_board_v2: {
         Args: { p_cid?: string; p_session_id?: string }
         Returns: Json
@@ -12878,6 +13075,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_unbound_principal: {
+        Args: {
+          p_cid?: string
+          p_issuer: string
+          p_principal_id?: string
+          p_provider_subject: string
+          p_resolution_mode: string
+          p_tenant_claim?: string
+        }
+        Returns: Json
+      }
       redeem_access_code: {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
@@ -13064,6 +13272,8 @@ export type Database = {
       }
       tool_manifest_descriptions: { Args: never; Returns: Json }
       tool_problem_report: { Args: { p_cid?: string }; Returns: Json }
+      unbound_principal_escalate: { Args: never; Returns: Json }
+      unbound_principals_report: { Args: never; Returns: Json }
       verify_cron_token: {
         Args: { p_timestamp: string; p_token: string }
         Returns: boolean
