@@ -6123,7 +6123,12 @@ Deno.serve(async (req) => {
             p_reason: str(args?.reason),
             p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
             p_lane: str(args?.lane),
+            // HARDEN-15 Q1 · the connector runs as service_role, so auth.uid()
+            // is null and current_cid() cannot resolve. Declare the tenant the
+            // same way every other governed writer does.
+            p_cid: worldCid,
           };
+
         } else if (name === "work_reschedule") {
           // H2 · reason-bearing, tenant-scoped, receipted.
           rpcName = "work_reschedule";
