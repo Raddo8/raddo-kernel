@@ -4789,21 +4789,16 @@ Deno.serve(async (req) => {
           );
         }
 
-        // begin_session is the only writer of a RUNTIME_LOAD on a
-        // begin_session surface, so its presence is the boot proof.
+        // HARDEN-15 R2 · boot truth is the live tenant_session_context row,
+        // the same row the SQL writers resolve through. The old proxy read
+        // kernel_access_log, which stayed true for twelve hours after a
+        // session had already been un-booted by a reconnect.
         let booted = false;
         try {
-          let q = supabaseAdmin!
-            .from("kernel_access_log")
-            .select("id", { count: "exact", head: true })
-            .eq("cid", gateCid)
-            .eq("access_kind", "RUNTIME_LOAD")
-            .like("surface", "begin_session%")
-            .gte("at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
-          if (gateSession) q = q.eq("session_id", gateSession);
-          const { count } = await q;
-          booted = (count ?? 0) > 0;
+          const { data } = await supabaseAdmin!.rpc("session_boot_state", { p_cid: gateCid });
+          booted = String(data ?? "") === "BOOTED";
         } catch { booted = false; }
+
         if (!booted) {
           return refuse(
             "not_booted",
