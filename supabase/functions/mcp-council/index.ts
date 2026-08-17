@@ -3377,8 +3377,10 @@ const TOOL_WORK_DISPOSE = {
       work_id: { type: "string", description: "The id from work_disposition or work_raise." },
       disposition: { type: "string", enum: ["tracked", "forgotten"] },
       principal_acts: { type: "boolean", description: "Required when tracking." },
-      lane: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this carries." },
+      date_kind: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this item carries." },
+      lane: { type: "string", description: "Which part of this client's world the item belongs to. Their own business lane, not a date. Validated against the lanes already in use in their world." },
       reason: { type: "string", description: "Required when forgetting." },
+
       ...MANIFEST_PROP,
     },
     required: ["work_id", "disposition"],
