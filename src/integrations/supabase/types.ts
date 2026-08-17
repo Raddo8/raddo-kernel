@@ -583,6 +583,33 @@ export type Database = {
           },
         ]
       }
+      boot_enforcement_report: {
+        Row: {
+          after_state: string
+          at: string
+          before_state: string
+          fn: string
+          id: number
+          layer: string
+        }
+        Insert: {
+          after_state: string
+          at?: string
+          before_state: string
+          fn: string
+          id?: number
+          layer: string
+        }
+        Update: {
+          after_state?: string
+          at?: string
+          before_state?: string
+          fn?: string
+          id?: number
+          layer?: string
+        }
+        Relationships: []
+      }
       boot_log: {
         Row: {
           booted_at: string
@@ -3683,6 +3710,27 @@ export type Database = {
           passed?: boolean
           probe?: string
           ran_at?: string
+        }
+        Relationships: []
+      }
+      harden15_probe: {
+        Row: {
+          at: string
+          id: number
+          observed: string | null
+          probe: string
+        }
+        Insert: {
+          at?: string
+          id?: number
+          observed?: string | null
+          probe: string
+        }
+        Update: {
+          at?: string
+          id?: number
+          observed?: string | null
+          probe?: string
         }
         Relationships: []
       }
@@ -10278,6 +10326,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_param_mismatch: {
+        Row: {
+          checked_at: string
+          fn: string | null
+          function_only: string[]
+          id: number
+          published_only: string[]
+          tool: string
+          verdict: string
+        }
+        Insert: {
+          checked_at?: string
+          fn?: string | null
+          function_only?: string[]
+          id?: number
+          published_only?: string[]
+          tool: string
+          verdict: string
+        }
+        Update: {
+          checked_at?: string
+          fn?: string | null
+          function_only?: string[]
+          id?: number
+          published_only?: string[]
+          tool?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       unbound_principals: {
         Row: {
           bound_at: string | null
@@ -11397,6 +11475,36 @@ export type Database = {
         }
         Relationships: []
       }
+      write_refusal: {
+        Row: {
+          at: string
+          caller_cid: string | null
+          cid: string | null
+          detail: string | null
+          id: string
+          refusal: string
+          tool: string
+        }
+        Insert: {
+          at?: string
+          caller_cid?: string | null
+          cid?: string | null
+          detail?: string | null
+          id?: string
+          refusal: string
+          tool: string
+        }
+        Update: {
+          at?: string
+          caller_cid?: string | null
+          cid?: string | null
+          detail?: string | null
+          id?: string
+          refusal?: string
+          tool?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       admin_activity_feed: {
@@ -11974,6 +12082,10 @@ export type Database = {
         }
         Returns: Json
       }
+      assert_booted: {
+        Args: { p_cid: string; p_tool: string }
+        Returns: undefined
+      }
       assurance_integrity_scan: {
         Args: never
         Returns: {
@@ -12126,6 +12238,16 @@ export type Database = {
       check_rate_limit: {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
+      }
+      check_tool_param_contract: {
+        Args: { p_tools: Json }
+        Returns: {
+          fn: string
+          function_only: string[]
+          published_only: string[]
+          tool: string
+          verdict: string
+        }[]
       }
       cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
@@ -12966,6 +13088,15 @@ export type Database = {
         Args: { p_method: string; p_subject_ref: string }
         Returns: boolean
       }
+      probe_write_refusal: {
+        Args: {
+          p_call: string
+          p_cid?: string
+          p_claims: string
+          p_work?: string
+        }
+        Returns: string
+      }
       propose_doctrine_rule: {
         Args: {
           p_actor: string
@@ -13097,6 +13228,16 @@ export type Database = {
         }
         Returns: Json
       }
+      record_write_refusal: {
+        Args: {
+          p_caller_cid?: string
+          p_cid: string
+          p_detail?: string
+          p_refusal: string
+          p_tool: string
+        }
+        Returns: undefined
+      }
       redeem_access_code: {
         Args: { p_cob_name?: string; p_code: string; p_display_name: string }
         Returns: Json
@@ -13138,6 +13279,10 @@ export type Database = {
           out_status: string
         }[]
       }
+      resolve_write_cid: {
+        Args: { p_row_cid: string; p_tool: string }
+        Returns: string
+      }
       retire_doctrine_rule: {
         Args: {
           p_actor: string
@@ -13148,7 +13293,7 @@ export type Database = {
         Returns: Json
       }
       revert_change: {
-        Args: { p_cid?: string; p_ledger_id: number; p_reason: string }
+        Args: { p_ledger_id: number; p_reason: string }
         Returns: Json
       }
       route_evidence_gaps: {
@@ -13205,6 +13350,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      session_boot_state: { Args: { p_cid: string }; Returns: string }
       session_context_purge: { Args: never; Returns: number }
       session_id_for_context: {
         Args: { p_session_id: string }
@@ -13276,6 +13422,7 @@ export type Database = {
       sync_tool_contract_edge: { Args: { p_payload: Json }; Returns: Json }
       tenant_clock: { Args: { p_cid: string }; Returns: Json }
       tenant_keys: { Args: { p_cid: string }; Returns: string[] }
+      tenant_lanes: { Args: { p_cid: string }; Returns: string[] }
       tenant_timezone: { Args: { p_cid: string }; Returns: string }
       tool_latency_report: {
         Args: { p_min_calls?: number; p_tools?: string[] }
@@ -13325,7 +13472,6 @@ export type Database = {
       }
       work_dispose: {
         Args: {
-          p_cid?: string
           p_date_kind?: string
           p_disposition: string
           p_lane?: string

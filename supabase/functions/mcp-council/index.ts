@@ -3377,8 +3377,10 @@ const TOOL_WORK_DISPOSE = {
       work_id: { type: "string", description: "The id from work_disposition or work_raise." },
       disposition: { type: "string", enum: ["tracked", "forgotten"] },
       principal_acts: { type: "boolean", description: "Required when tracking." },
-      lane: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this carries." },
+      date_kind: { type: "string", enum: ["hard_deadline", "scheduled_event", "target", "window", "reference", "expected_next"], description: "What kind of date this item carries." },
+      lane: { type: "string", description: "Which part of this client's world the item belongs to. Their own business lane, not a date. Validated against the lanes already in use in their world." },
       reason: { type: "string", description: "Required when forgetting." },
+
       ...MANIFEST_PROP,
     },
     required: ["work_id", "disposition"],
@@ -4752,8 +4754,13 @@ Deno.serve(async (req) => {
         "comm_write", "decision_write", "record_file", "board_respond",
         "board_render", "board_read", "board_update", "board_supersede",
         "work_raise", "work_dispose", "work_reschedule",
+        // HARDEN-15 R2 · uniform enforcement. These three carried an explicit
+        // cid and so never noticed a missing boot, which made an un-booted
+        // session look healthy right up until a disposal refused.
+        "signal_raise", "request_resolve", "record_probe",
         "save_session", "sync_session", "end_session",
       ]);
+
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
         const gateCid = await serverCid();
         const gateSession = typeof args?.session_id === "string" ? args.session_id : null;
@@ -4787,21 +4794,16 @@ Deno.serve(async (req) => {
           );
         }
 
-        // begin_session is the only writer of a RUNTIME_LOAD on a
-        // begin_session surface, so its presence is the boot proof.
+        // HARDEN-15 R2 · boot truth is the live tenant_session_context row,
+        // the same row the SQL writers resolve through. The old proxy read
+        // kernel_access_log, which stayed true for twelve hours after a
+        // session had already been un-booted by a reconnect.
         let booted = false;
         try {
-          let q = supabaseAdmin!
-            .from("kernel_access_log")
-            .select("id", { count: "exact", head: true })
-            .eq("cid", gateCid)
-            .eq("access_kind", "RUNTIME_LOAD")
-            .like("surface", "begin_session%")
-            .gte("at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
-          if (gateSession) q = q.eq("session_id", gateSession);
-          const { count } = await q;
-          booted = (count ?? 0) > 0;
+          const { data } = await supabaseAdmin!.rpc("session_boot_state", { p_cid: gateCid });
+          booted = String(data ?? "") === "BOOTED";
         } catch { booted = false; }
+
         if (!booted) {
           return refuse(
             "not_booted",
@@ -6122,12 +6124,14 @@ Deno.serve(async (req) => {
             p_disposition: str(args?.disposition),
             p_reason: str(args?.reason),
             p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            // HARDEN-15 R3 · date and lane are two different fields. The date
+            // kind describes the date; the lane names the client's own part of
+            // the world and is validated server-side against their real lanes.
+            p_date_kind: str(args?.date_kind),
             p_lane: str(args?.lane),
-            // HARDEN-15 Q1 · the connector runs as service_role, so auth.uid()
-            // is null and current_cid() cannot resolve. Declare the tenant the
-            // same way every other governed writer does.
-            p_cid: worldCid,
           };
+
+
 
         } else if (name === "work_reschedule") {
           // H2 · reason-bearing, tenant-scoped, receipted.
@@ -6310,6 +6314,27 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabaseAdmin.rpc(rpcName, params);
         if (error) {
+          // HARDEN-15 R1c · a refusal raised inside the function rolls back with
+          // its own log line, so the record is written here, outside that
+          // transaction. NOT_BOOTED and CROSS_TENANT_REFUSED must stay
+          // distinguishable in one query: they have opposite remedies.
+          const msg = String(error.message ?? "");
+          const kind = msg.includes("NOT_BOOTED")
+            ? "NOT_BOOTED"
+            : msg.includes("CROSS_TENANT_REFUSED")
+            ? "CROSS_TENANT_REFUSED"
+            : null;
+          if (kind) {
+            try {
+              await supabaseAdmin.from("write_refusal").insert({
+                cid: worldCid ?? null,
+                tool: name,
+                refusal: kind,
+                caller_cid: pctx.legacy_cid ?? null,
+                detail: msg.slice(0, 800),
+              });
+            } catch { /* best-effort */ }
+          }
           // Verbatim Postgres message: it names the bad value and the allowed set.
           // Includes COB_RULE_CONFLICTS_WITH_KERNEL (42501) from cob_canon_check ·
           // its text tells the COBCLIENT how to reword, so it must not be rephrased.
@@ -6326,6 +6351,7 @@ Deno.serve(async (req) => {
             isError: true,
           });
         }
+
 
         try {
           await recordMcpUsage(supabaseAdmin, {
