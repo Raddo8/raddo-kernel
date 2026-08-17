@@ -12004,6 +12004,10 @@ export type Database = {
         }
         Returns: Json
       }
+      assert_booted: {
+        Args: { p_cid: string; p_tool: string }
+        Returns: undefined
+      }
       assurance_integrity_scan: {
         Args: never
         Returns: {
@@ -12995,6 +12999,15 @@ export type Database = {
       probe_method_writes_subject: {
         Args: { p_method: string; p_subject_ref: string }
         Returns: boolean
+      }
+      probe_write_refusal: {
+        Args: {
+          p_call: string
+          p_cid?: string
+          p_claims: string
+          p_work?: string
+        }
+        Returns: string
       }
       propose_doctrine_rule: {
         Args: {
