@@ -6124,12 +6124,14 @@ Deno.serve(async (req) => {
             p_disposition: str(args?.disposition),
             p_reason: str(args?.reason),
             p_principal_acts: typeof args?.principal_acts === "boolean" ? args.principal_acts : null,
+            // HARDEN-15 R3 · date and lane are two different fields. The date
+            // kind describes the date; the lane names the client's own part of
+            // the world and is validated server-side against their real lanes.
+            p_date_kind: str(args?.date_kind),
             p_lane: str(args?.lane),
-            // HARDEN-15 Q1 · the connector runs as service_role, so auth.uid()
-            // is null and current_cid() cannot resolve. Declare the tenant the
-            // same way every other governed writer does.
-            p_cid: worldCid,
           };
+
+
 
         } else if (name === "work_reschedule") {
           // H2 · reason-bearing, tenant-scoped, receipted.
