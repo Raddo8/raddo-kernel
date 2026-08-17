@@ -1528,6 +1528,8 @@ export type Database = {
           run_id: string
           transact_detail: string | null
           transact_status: string
+          write_detail: string | null
+          write_status: string | null
         }
         Insert: {
           boot_detail?: string | null
@@ -1539,6 +1541,8 @@ export type Database = {
           run_id: string
           transact_detail?: string | null
           transact_status: string
+          write_detail?: string | null
+          write_status?: string | null
         }
         Update: {
           boot_detail?: string | null
@@ -1550,6 +1554,8 @@ export type Database = {
           run_id?: string
           transact_detail?: string | null
           transact_status?: string
+          write_detail?: string | null
+          write_status?: string | null
         }
         Relationships: [
           {
@@ -1573,6 +1579,7 @@ export type Database = {
           tenants_total: number
           transact_ok: number
           unverified: number
+          write_ok: number | null
         }
         Insert: {
           boot_ok?: number
@@ -1585,6 +1592,7 @@ export type Database = {
           tenants_total?: number
           transact_ok?: number
           unverified?: number
+          write_ok?: number | null
         }
         Update: {
           boot_ok?: number
@@ -1597,6 +1605,7 @@ export type Database = {
           tenants_total?: number
           transact_ok?: number
           unverified?: number
+          write_ok?: number | null
         }
         Relationships: []
       }
