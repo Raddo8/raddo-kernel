@@ -12110,6 +12110,7 @@ export type Database = {
           state: string
         }[]
       }
+      caller_is_service_role: { Args: never; Returns: boolean }
       campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
       canary_assert_no_regression: { Args: { p_label: string }; Returns: Json }
       canary_by_design_refusal: { Args: { p_msg: string }; Returns: boolean }
