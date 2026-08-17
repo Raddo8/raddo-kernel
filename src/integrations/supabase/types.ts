@@ -3686,6 +3686,27 @@ export type Database = {
         }
         Relationships: []
       }
+      harden15_probe: {
+        Row: {
+          at: string
+          id: number
+          observed: string | null
+          probe: string
+        }
+        Insert: {
+          at?: string
+          id?: number
+          observed?: string | null
+          probe: string
+        }
+        Update: {
+          at?: string
+          id?: number
+          observed?: string | null
+          probe?: string
+        }
+        Relationships: []
+      }
       hq_action_request: {
         Row: {
           ack_at: string | null
