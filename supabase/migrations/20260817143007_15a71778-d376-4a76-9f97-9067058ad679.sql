@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.probe_write_refusal(text,text,uuid,text) TO service_role;
