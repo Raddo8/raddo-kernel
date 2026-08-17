@@ -6314,6 +6314,27 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabaseAdmin.rpc(rpcName, params);
         if (error) {
+          // HARDEN-15 R1c · a refusal raised inside the function rolls back with
+          // its own log line, so the record is written here, outside that
+          // transaction. NOT_BOOTED and CROSS_TENANT_REFUSED must stay
+          // distinguishable in one query: they have opposite remedies.
+          const msg = String(error.message ?? "");
+          const kind = msg.includes("NOT_BOOTED")
+            ? "NOT_BOOTED"
+            : msg.includes("CROSS_TENANT_REFUSED")
+            ? "CROSS_TENANT_REFUSED"
+            : null;
+          if (kind) {
+            try {
+              await supabaseAdmin.from("write_refusal").insert({
+                cid: worldCid ?? null,
+                tool: name,
+                refusal: kind,
+                caller_cid: pctx.legacy_cid ?? null,
+                detail: msg.slice(0, 800),
+              });
+            } catch { /* best-effort */ }
+          }
           // Verbatim Postgres message: it names the bad value and the allowed set.
           // Includes COB_RULE_CONFLICTS_WITH_KERNEL (42501) from cob_canon_check ·
           // its text tells the COBCLIENT how to reword, so it must not be rephrased.
@@ -6330,6 +6351,7 @@ Deno.serve(async (req) => {
             isError: true,
           });
         }
+
 
         try {
           await recordMcpUsage(supabaseAdmin, {
