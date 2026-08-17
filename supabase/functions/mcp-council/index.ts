@@ -4754,8 +4754,13 @@ Deno.serve(async (req) => {
         "comm_write", "decision_write", "record_file", "board_respond",
         "board_render", "board_read", "board_update", "board_supersede",
         "work_raise", "work_dispose", "work_reschedule",
+        // HARDEN-15 R2 · uniform enforcement. These three carried an explicit
+        // cid and so never noticed a missing boot, which made an un-booted
+        // session look healthy right up until a disposal refused.
+        "signal_raise", "request_resolve", "record_probe",
         "save_session", "sync_session", "end_session",
       ]);
+
       if (typeof name === "string" && BOOT_GATED_WRITES.has(name)) {
         const gateCid = await serverCid();
         const gateSession = typeof args?.session_id === "string" ? args.session_id : null;
