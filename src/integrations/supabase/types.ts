@@ -10299,6 +10299,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tool_param_mismatch: {
+        Row: {
+          checked_at: string
+          fn: string | null
+          function_only: string[]
+          id: number
+          published_only: string[]
+          tool: string
+          verdict: string
+        }
+        Insert: {
+          checked_at?: string
+          fn?: string | null
+          function_only?: string[]
+          id?: number
+          published_only?: string[]
+          tool: string
+          verdict: string
+        }
+        Update: {
+          checked_at?: string
+          fn?: string | null
+          function_only?: string[]
+          id?: number
+          published_only?: string[]
+          tool?: string
+          verdict?: string
+        }
+        Relationships: []
+      }
       unbound_principals: {
         Row: {
           bound_at: string | null
@@ -12181,6 +12211,16 @@ export type Database = {
       check_rate_limit: {
         Args: { p_key: string; p_max_requests: number; p_window_ms: number }
         Returns: Json
+      }
+      check_tool_param_contract: {
+        Args: { p_tools: Json }
+        Returns: {
+          fn: string
+          function_only: string[]
+          published_only: string[]
+          tool: string
+          verdict: string
+        }[]
       }
       cid_null_watchdog: { Args: never; Returns: number }
       clean_expired_rate_limits: { Args: never; Returns: number }
