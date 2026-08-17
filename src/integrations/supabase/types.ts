@@ -1528,6 +1528,8 @@ export type Database = {
           run_id: string
           transact_detail: string | null
           transact_status: string
+          write_detail: string | null
+          write_status: string | null
         }
         Insert: {
           boot_detail?: string | null
@@ -1539,6 +1541,8 @@ export type Database = {
           run_id: string
           transact_detail?: string | null
           transact_status: string
+          write_detail?: string | null
+          write_status?: string | null
         }
         Update: {
           boot_detail?: string | null
@@ -1550,6 +1554,8 @@ export type Database = {
           run_id?: string
           transact_detail?: string | null
           transact_status?: string
+          write_detail?: string | null
+          write_status?: string | null
         }
         Relationships: [
           {
@@ -1573,6 +1579,7 @@ export type Database = {
           tenants_total: number
           transact_ok: number
           unverified: number
+          write_ok: number | null
         }
         Insert: {
           boot_ok?: number
@@ -1585,6 +1592,7 @@ export type Database = {
           tenants_total?: number
           transact_ok?: number
           unverified?: number
+          write_ok?: number | null
         }
         Update: {
           boot_ok?: number
@@ -1597,6 +1605,7 @@ export type Database = {
           tenants_total?: number
           transact_ok?: number
           unverified?: number
+          write_ok?: number | null
         }
         Relationships: []
       }
@@ -12101,6 +12110,7 @@ export type Database = {
           state: string
         }[]
       }
+      caller_is_service_role: { Args: never; Returns: boolean }
       campaign_raise_tasks: { Args: { p_cid: string }; Returns: Json }
       canary_assert_no_regression: { Args: { p_label: string }; Returns: Json }
       canary_by_design_refusal: { Args: { p_msg: string }; Returns: boolean }
@@ -13138,7 +13148,7 @@ export type Database = {
         Returns: Json
       }
       revert_change: {
-        Args: { p_ledger_id: number; p_reason: string }
+        Args: { p_cid?: string; p_ledger_id: number; p_reason: string }
         Returns: Json
       }
       route_evidence_gaps: {
@@ -13315,6 +13325,7 @@ export type Database = {
       }
       work_dispose: {
         Args: {
+          p_cid?: string
           p_date_kind?: string
           p_disposition: string
           p_lane?: string
