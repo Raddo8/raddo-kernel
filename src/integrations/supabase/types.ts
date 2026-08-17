@@ -13192,7 +13192,7 @@ export type Database = {
         Returns: Json
       }
       revert_change: {
-        Args: { p_cid?: string; p_ledger_id: number; p_reason: string }
+        Args: { p_ledger_id: number; p_reason: string }
         Returns: Json
       }
       route_evidence_gaps: {
@@ -13371,7 +13371,6 @@ export type Database = {
       }
       work_dispose: {
         Args: {
-          p_cid?: string
           p_date_kind?: string
           p_disposition: string
           p_lane?: string
