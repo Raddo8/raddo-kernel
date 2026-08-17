@@ -583,6 +583,33 @@ export type Database = {
           },
         ]
       }
+      boot_enforcement_report: {
+        Row: {
+          after_state: string
+          at: string
+          before_state: string
+          fn: string
+          id: number
+          layer: string
+        }
+        Insert: {
+          after_state: string
+          at?: string
+          before_state: string
+          fn: string
+          id?: number
+          layer: string
+        }
+        Update: {
+          after_state?: string
+          at?: string
+          before_state?: string
+          fn?: string
+          id?: number
+          layer?: string
+        }
+        Relationships: []
+      }
       boot_log: {
         Row: {
           booted_at: string
