@@ -5945,6 +5945,54 @@ export type Database = {
         }
         Relationships: []
       }
+      migration_triage: {
+        Row: {
+          chars: number | null
+          cid: string | null
+          created_at: string | null
+          created_by: string | null
+          grade: string | null
+          id: string | null
+          notion_db: string | null
+          predicate: string | null
+          preview: string | null
+          proposed_destination: string | null
+          source_ref: string | null
+          status: string | null
+          subject_id: string | null
+        }
+        Insert: {
+          chars?: number | null
+          cid?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          grade?: string | null
+          id?: string | null
+          notion_db?: string | null
+          predicate?: string | null
+          preview?: string | null
+          proposed_destination?: string | null
+          source_ref?: string | null
+          status?: string | null
+          subject_id?: string | null
+        }
+        Update: {
+          chars?: number | null
+          cid?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          grade?: string | null
+          id?: string | null
+          notion_db?: string | null
+          predicate?: string | null
+          preview?: string | null
+          proposed_destination?: string | null
+          source_ref?: string | null
+          status?: string | null
+          subject_id?: string | null
+        }
+        Relationships: []
+      }
       notion_dependency: {
         Row: {
           created_at: string
@@ -5981,6 +6029,24 @@ export type Database = {
           resolved_at?: string | null
           severity?: string
           what?: string
+        }
+        Relationships: []
+      }
+      notion_source_map: {
+        Row: {
+          cid: string
+          notion_db: string
+          page_id: string
+        }
+        Insert: {
+          cid: string
+          notion_db: string
+          page_id: string
+        }
+        Update: {
+          cid?: string
+          notion_db?: string
+          page_id?: string
         }
         Relationships: []
       }
@@ -7747,6 +7813,39 @@ export type Database = {
             referencedColumns: ["cid"]
           },
         ]
+      }
+      resort_audit: {
+        Row: {
+          cid: string
+          claim_id: string
+          claim_row: Json
+          destination: string
+          id: number
+          moved_at: string
+          new_id: string | null
+          run_key: string
+        }
+        Insert: {
+          cid: string
+          claim_id: string
+          claim_row: Json
+          destination: string
+          id?: number
+          moved_at?: string
+          new_id?: string | null
+          run_key: string
+        }
+        Update: {
+          cid?: string
+          claim_id?: string
+          claim_row?: Json
+          destination?: string
+          id?: number
+          moved_at?: string
+          new_id?: string | null
+          run_key?: string
+        }
+        Relationships: []
       }
       revenue_occurrence_overrides: {
         Row: {
@@ -10049,6 +10148,8 @@ export type Database = {
       }
       tenants: {
         Row: {
+          boot_claim_ceiling: number | null
+          boot_claim_char_budget: number | null
           cid: string
           cob_name: string | null
           cob_name_normalized: string | null
@@ -10069,6 +10170,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          boot_claim_ceiling?: number | null
+          boot_claim_char_budget?: number | null
           cid: string
           cob_name?: string | null
           cob_name_normalized?: string | null
@@ -10089,6 +10192,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          boot_claim_ceiling?: number | null
+          boot_claim_char_budget?: number | null
           cid?: string
           cob_name?: string | null
           cob_name_normalized?: string | null
@@ -12187,6 +12292,10 @@ export type Database = {
         }
         Returns: Json
       }
+      board_respond_state_for: {
+        Args: { p_brief_status: string; p_current_state: string }
+        Returns: string
+      }
       board_supersede: {
         Args: { p_cid?: string; p_duplicate: string; p_keep: string }
         Returns: Json
@@ -12485,8 +12594,22 @@ export type Database = {
         }
         Returns: Json
       }
+      cob_world_domain: { Args: { p_value: string }; Returns: string }
       cob_world_read: {
         Args: { p_cid: string; p_limit?: number; p_q?: string }
+        Returns: Json
+      }
+      cob_world_vocab: {
+        Args: { p_default: string; p_field: string; p_value: string }
+        Returns: string
+      }
+      cob_world_write: {
+        Args: {
+          p_actor?: string
+          p_cid: string
+          p_kind: string
+          p_payload: Json
+        }
         Returns: Json
       }
       code_claim: {
