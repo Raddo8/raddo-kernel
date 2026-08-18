@@ -2953,6 +2953,44 @@ const TOOL_WORLD_READ = {
   },
 };
 
+// The only write path into the world registers. `cid` is never an argument:
+// it is derived server-side from the authenticated session, exactly as
+// world_read and memory_write do. Database exception messages
+// (COB_WORLD_WRITE_*) pass through unmodified · they are written to be read
+// by an agent.
+const TOOL_WORLD_WRITE = {
+  name: "world_write",
+  title: "World Write",
+  description:
+    "Record something in the client's world: an entity, a claim, an item, an edge, a source, or a status change. The identity kernel and every kernel part are read-only and refused.",
+  annotations: { title: "World Write" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      kind: {
+        type: "string",
+        enum: ["entity", "claim", "item", "edge", "source", "entity_status", "claim_status"],
+        description:
+          "What is being recorded. entity · a person, organisation, property, event, topic or case. claim · a stated fact about an entity. item · a record with a title and a body. edge · a relation between two entities. source · where information comes from. entity_status / claim_status · a status change on an existing row.",
+      },
+      payload: {
+        type: "object",
+        description:
+          "The fields for that kind. entity: name (required), etype (Person/Organization/Property/Event/Topic/Case), status (active|candidate|merged|retired), lifecycle (live|ended|disputed|unknown), sensitivity, meta (object), origin_date, end_date, occurred_at. claim: subject or subject_id, predicate (required), value_text, grade, confidence, source_ref, observed_at, valid_from, supersedes (uuid). item: title (required), body, item_type, source, domain_key, confidence, sensitivity, provenance (object), occurred_at. edge: src or src_id, dst or dst_id, etype (required), meta (object). source: kind (required), label, scope, meta (object). entity_status: id or name (required), status, lifecycle, merged_into. claim_status: id (required), status.",
+      },
+      actor: {
+        type: "string",
+        description: "Who is recording it. Defaults to cob:world_write.",
+      },
+      ...MANIFEST_PROP,
+    },
+    required: ["kind", "payload"],
+    additionalProperties: false,
+  },
+};
+
+
+
 const TOOL_REGISTERS_READ = {
   name: "registers_read",
   title: "Registers Read",
