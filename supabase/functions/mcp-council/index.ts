@@ -2182,7 +2182,7 @@ const SERVER_INFO = {
   // that never moves this string is a server whose new tools stay invisible,
   // which is exactly what COB-HQ saw: 43 tools across three deploys that each
   // listed 44. Bump this whenever TOOL_MANIFEST_VERSION moves.
-  version: "0.4.2",
+  version: "0.4.3",
   icons: [
     {
       src: "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png",
@@ -2243,7 +2243,7 @@ function runInBackground(p: Promise<unknown>) {
   return guarded;
 }
 
-const TOOL_MANIFEST_VERSION = "2026.08.18.1";
+const TOOL_MANIFEST_VERSION = "2026.08.30.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
