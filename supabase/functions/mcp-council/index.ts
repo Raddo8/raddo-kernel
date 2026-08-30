@@ -3896,7 +3896,78 @@ const supabaseAdmin = (supabaseUrl && serviceRole)
   ? createClient(supabaseUrl, serviceRole, { auth: { persistSession: false } })
   : null;
 
-Deno.serve(async (req) => {
+// ── KEYCARD PROTOCOL ────────────────────────────────────────────────────
+// One shared observation point for every tool. The verdict is computed in
+// the database (public.keycard_check); nothing here reimplements it. The
+// keycard never refuses, never blocks, never changes a tool's behaviour.
+// Tools that ARE the boot or the fix path are excluded, or the check would
+// nag during boot and loop during realignment.
+const KEYCARD_EXCLUDED = new Set<string>([
+  "begin_session", "boot_kernel", "kernel_attest", "reanchor",
+  "session_ledger", "sync_session", "load_kernel_part",
+  "kernel_inputs_check", "transcript_append",
+]);
+
+type KeycardCall = { cid: string | null; tool: string; session_id: string | null };
+const KEYCARD_CALLS = new WeakMap<Request, KeycardCall>();
+
+async function keycardVerdict(call: KeycardCall): Promise<Record<string, unknown>> {
+  if (!supabaseAdmin || !call.cid) return { keycard: "UNAVAILABLE" };
+  try {
+    const rpc = supabaseAdmin.rpc("keycard_check", {
+      p_cid: call.cid,
+      p_tool: call.tool,
+      p_session_id: call.session_id,
+    });
+    const timeout = new Promise<null>((r) => setTimeout(() => r(null), 2000));
+    const res: any = await Promise.race([rpc, timeout]);
+    if (!res || res.error || !res.data || typeof res.data !== "object") {
+      return { keycard: "UNAVAILABLE" };
+    }
+    const v = res.data as Record<string, unknown>;
+    // PASS stays tiny. REALIGN carries reasons, upload and do_now verbatim.
+    return v.keycard === "PASS" ? { keycard: "PASS" } : v;
+  } catch (_e) {
+    return { keycard: "UNAVAILABLE" };
+  }
+}
+
+// Injects the verdict at the single response boundary, so a new tool
+// inherits the keycard without touching its handler.
+async function withKeycard(req: Request, res: Response): Promise<Response> {
+  const call = KEYCARD_CALLS.get(req);
+  if (!call || KEYCARD_EXCLUDED.has(call.tool)) return res;
+  const ct = res.headers.get("Content-Type") ?? "";
+  if (!ct.includes("application/json")) return res; // SSE frames pass through
+  let envelope: any;
+  let raw = "";
+  try {
+    raw = await res.clone().text();
+    envelope = JSON.parse(raw);
+  } catch {
+    return res;
+  }
+  if (!envelope || typeof envelope !== "object" || !envelope.result) return res;
+  const keycard = await keycardVerdict(call);
+  const result = envelope.result;
+  if (result.structuredContent && typeof result.structuredContent === "object") {
+    result.structuredContent = { ...result.structuredContent, keycard };
+    const one = Array.isArray(result.content) && result.content.length === 1 ? result.content[0] : null;
+    if (one && one.type === "text" && typeof one.text === "string") {
+      let mirrors = false;
+      try { mirrors = !!JSON.parse(one.text) && typeof JSON.parse(one.text) === "object"; } catch { mirrors = false; }
+      if (mirrors) result.content = [{ type: "text", text: JSON.stringify(result.structuredContent) }];
+    }
+  } else {
+    result.keycard = keycard;
+  }
+  const headers = new Headers(res.headers);
+  headers.delete("Content-Length");
+  return new Response(JSON.stringify(envelope), { status: res.status, headers });
+}
+
+const mcpHandler = async (req: Request): Promise<Response> => {
+
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: {
