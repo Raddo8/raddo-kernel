@@ -6174,7 +6174,9 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         name === "board_render" || name === "board_read" ||
         name === "board_update" || name === "board_supersede" ||
         name === "work_raise" || name === "work_disposition" || name === "work_dispose" ||
-        name === "work_reschedule"
+        name === "work_reschedule" ||
+        name === "transcript_append" || name === "reanchor" ||
+        name === "session_ledger"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
