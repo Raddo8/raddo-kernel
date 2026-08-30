@@ -4838,6 +4838,16 @@ const mcpHandler = async (req: Request): Promise<Response> => {
       // boundary renderer stamps local strings in the caller's own zone.
       await tenantTz();
 
+      // KEYCARD · record who this call belongs to. The verdict itself is
+      // taken once, at the response boundary, for every tool alike.
+      KEYCARD_CALLS.set(req, {
+        cid: pctx.legacy_cid ?? null,
+        tool: typeof name === "string" ? name : "unknown",
+        session_id: typeof (args as any)?.session_id === "string" ? (args as any).session_id : null,
+      });
+
+
+
       // ITEM 3 · every tool leaves an identity trace, kernel path or not.
       void recordMcpUsage(supabaseAdmin, {
         tenant,
