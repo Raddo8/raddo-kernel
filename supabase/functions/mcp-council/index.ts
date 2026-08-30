@@ -8466,4 +8466,9 @@ const mcpHandler = async (req: Request): Promise<Response> => {
   } catch (_e) {
     return rpcError(id, -32603, "internal_error");
   }
+};
+
+Deno.serve(async (req) => {
+  const res = await mcpHandler(req);
+  try { return await withKeycard(req, res); } catch (_e) { return res; }
 });
