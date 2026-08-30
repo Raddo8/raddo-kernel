@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -582,6 +582,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      board_attribution_audit: {
+        Row: {
+          basis: string | null
+          changed_at: string
+          cid: string
+          id: number
+          loop_id: string
+          new_principal_acts: boolean | null
+          old_principal_acts: boolean | null
+          run_key: string
+          title_snap: string | null
+        }
+        Insert: {
+          basis?: string | null
+          changed_at?: string
+          cid: string
+          id?: number
+          loop_id: string
+          new_principal_acts?: boolean | null
+          old_principal_acts?: boolean | null
+          run_key: string
+          title_snap?: string | null
+        }
+        Update: {
+          basis?: string | null
+          changed_at?: string
+          cid?: string
+          id?: number
+          loop_id?: string
+          new_principal_acts?: boolean | null
+          old_principal_acts?: boolean | null
+          run_key?: string
+          title_snap?: string | null
+        }
+        Relationships: []
       }
       boot_enforcement_report: {
         Row: {
@@ -1633,6 +1669,39 @@ export type Database = {
           transact_ok?: number
           unverified?: number
           write_ok?: number | null
+        }
+        Relationships: []
+      }
+      client_access_tool_probe: {
+        Row: {
+          cid: string
+          detail: string | null
+          id: number
+          probed_at: string
+          register: string
+          run_id: string | null
+          status: string
+          tool: string
+        }
+        Insert: {
+          cid: string
+          detail?: string | null
+          id?: number
+          probed_at?: string
+          register: string
+          run_id?: string | null
+          status: string
+          tool: string
+        }
+        Update: {
+          cid?: string
+          detail?: string | null
+          id?: number
+          probed_at?: string
+          register?: string
+          run_id?: string | null
+          status?: string
+          tool?: string
         }
         Relationships: []
       }
@@ -4043,7 +4112,7 @@ export type Database = {
           source_surface?: string | null
           status?: string
           subject_tool?: string | null
-          tenancy: Database["public"]["Enums"]["tenancy_t"]
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
           test_run_id?: string | null
           tool_version?: string | null
           transport_detail?: string | null
@@ -5635,6 +5704,36 @@ export type Database = {
           },
         ]
       }
+      keycard_log: {
+        Row: {
+          cid: string
+          created_at: string
+          id: string
+          reasons: Json | null
+          session_ref: string | null
+          tool: string | null
+          verdict: string
+        }
+        Insert: {
+          cid: string
+          created_at?: string
+          id?: string
+          reasons?: Json | null
+          session_ref?: string | null
+          tool?: string | null
+          verdict: string
+        }
+        Update: {
+          cid?: string
+          created_at?: string
+          id?: string
+          reasons?: Json | null
+          session_ref?: string | null
+          tool?: string | null
+          verdict?: string
+        }
+        Relationships: []
+      }
       knowledge_files: {
         Row: {
           category: string
@@ -5686,6 +5785,42 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           version?: number
+        }
+        Relationships: []
+      }
+      lane_audit: {
+        Row: {
+          basis: string
+          cid: string
+          id: number
+          moved_at: string
+          new_lane: string | null
+          old_lane: string | null
+          reg: string
+          row_id: string
+          run_key: string
+        }
+        Insert: {
+          basis: string
+          cid: string
+          id?: number
+          moved_at?: string
+          new_lane?: string | null
+          old_lane?: string | null
+          reg: string
+          row_id: string
+          run_key: string
+        }
+        Update: {
+          basis?: string
+          cid?: string
+          id?: number
+          moved_at?: string
+          new_lane?: string | null
+          old_lane?: string | null
+          reg?: string
+          row_id?: string
+          run_key?: string
         }
         Relationships: []
       }
@@ -5839,6 +5974,7 @@ export type Database = {
           lane: string | null
           notion_block_ref: string | null
           occurred_at: string | null
+          program: string | null
           session_id: string | null
           status: string
           superseded_by: string | null
@@ -5860,6 +5996,7 @@ export type Database = {
           lane?: string | null
           notion_block_ref?: string | null
           occurred_at?: string | null
+          program?: string | null
           session_id?: string | null
           status?: string
           superseded_by?: string | null
@@ -5881,6 +6018,7 @@ export type Database = {
           lane?: string | null
           notion_block_ref?: string | null
           occurred_at?: string | null
+          program?: string | null
           session_id?: string | null
           status?: string
           superseded_by?: string | null
@@ -9145,6 +9283,7 @@ export type Database = {
           lane: string | null
           period_end: string | null
           period_start: string | null
+          program: string | null
           revision: number
           status: string
           supersedes: string | null
@@ -9164,6 +9303,7 @@ export type Database = {
           lane?: string | null
           period_end?: string | null
           period_start?: string | null
+          program?: string | null
           revision?: number
           status?: string
           supersedes?: string | null
@@ -9183,6 +9323,7 @@ export type Database = {
           lane?: string | null
           period_end?: string | null
           period_start?: string | null
+          program?: string | null
           revision?: number
           status?: string
           supersedes?: string | null
@@ -10064,6 +10205,7 @@ export type Database = {
         Row: {
           auth_user_id: string | null
           cid: string
+          closing_at: string | null
           established_at: string
           expires_at: string | null
           revoked_at: string | null
@@ -10074,6 +10216,7 @@ export type Database = {
         Insert: {
           auth_user_id?: string | null
           cid: string
+          closing_at?: string | null
           established_at?: string
           expires_at?: string | null
           revoked_at?: string | null
@@ -10084,6 +10227,7 @@ export type Database = {
         Update: {
           auth_user_id?: string | null
           cid?: string
+          closing_at?: string | null
           established_at?: string
           expires_at?: string | null
           revoked_at?: string | null
@@ -10730,6 +10874,7 @@ export type Database = {
           origin: string
           owner: string | null
           principal_acts: boolean | null
+          program: string | null
           ref_date: string | null
           relationship: number | null
           significance: number | null
@@ -10765,6 +10910,7 @@ export type Database = {
           origin: string
           owner?: string | null
           principal_acts?: boolean | null
+          program?: string | null
           ref_date?: string | null
           relationship?: number | null
           significance?: number | null
@@ -10800,6 +10946,7 @@ export type Database = {
           origin?: string
           owner?: string | null
           principal_acts?: boolean | null
+          program?: string | null
           ref_date?: string | null
           relationship?: number | null
           significance?: number | null
@@ -12386,6 +12533,10 @@ export type Database = {
         Returns: Json
       }
       client_access_canary_tick: { Args: never; Returns: Json }
+      client_access_write_probe: {
+        Args: { p_cid: string; p_run?: string }
+        Returns: Json
+      }
       close_board_v2: {
         Args: { p_cid?: string; p_session_id?: string }
         Returns: Json
@@ -12430,37 +12581,22 @@ export type Database = {
         }
         Returns: Json
       }
-      cob_decision_write:
-        | {
-            Args: {
-              p_cid: string
-              p_decided_by?: string
-              p_decision_md: string
-              p_minute_id?: string
-              p_rationale_md?: string
-              p_reversibility?: string
-              p_session_id?: string
-              p_supersedes?: string
-              p_title: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_cid: string
-              p_decided_by?: string
-              p_decision_md: string
-              p_minute_id?: string
-              p_rationale_md?: string
-              p_reversibility?: string
-              p_session_id?: string
-              p_supersedes?: string
-              p_test_run_id?: string
-              p_title: string
-              p_verification_state?: string
-            }
-            Returns: Json
-          }
+      cob_decision_write: {
+        Args: {
+          p_cid: string
+          p_decided_by?: string
+          p_decision_md: string
+          p_minute_id?: string
+          p_rationale_md?: string
+          p_reversibility?: string
+          p_session_id?: string
+          p_supersedes?: string
+          p_test_run_id?: string
+          p_title: string
+          p_verification_state?: string
+        }
+        Returns: Json
+      }
       cob_domain_suggest: {
         Args: { p_scope?: string; p_text: string }
         Returns: Json
@@ -12554,12 +12690,15 @@ export type Database = {
           p_audience?: string
           p_cid: string
           p_detail?: string
+          p_elapsed_seconds?: number
+          p_failure_mode?: string
           p_key: string
           p_link?: Json
           p_session_id?: string
           p_subject?: string
           p_surface?: string
           p_tool?: string
+          p_transport_detail?: string
         }
         Returns: Json
       }
@@ -12621,6 +12760,7 @@ export type Database = {
         }
         Returns: Json
       }
+      council_health_watchdog: { Args: never; Returns: Json }
       council_minute_watchdog: { Args: never; Returns: number }
       crypto_erase_expired_recovery: {
         Args: { p_reason?: string }
@@ -12631,6 +12771,10 @@ export type Database = {
       entity_block: {
         Args: { p_cid: string; p_threshold?: number }
         Returns: number
+      }
+      entity_context_read: {
+        Args: { p_budget?: number; p_cid: string }
+        Returns: Json
       }
       entity_is_bridge: {
         Args: { p_cid: string; p_id: string }
@@ -12884,26 +13028,16 @@ export type Database = {
         }
         Returns: Json
       }
-      ingest_campaign_record_run:
-        | {
-            Args: {
-              p_campaign: string
-              p_headline?: string
-              p_program: string
-              p_since?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_campaign: string
-              p_headline?: string
-              p_program: string
-              p_since?: string
-              p_until?: string
-            }
-            Returns: Json
-          }
+      ingest_campaign_record_run: {
+        Args: {
+          p_campaign: string
+          p_headline?: string
+          p_program: string
+          p_since?: string
+          p_until?: string
+        }
+        Returns: Json
+      }
       ingest_catchall: { Args: { p_cid: string }; Returns: Json }
       ingest_claim: {
         Args: {
@@ -12999,12 +13133,10 @@ export type Database = {
         Returns: Json
       }
       kernel_boot_watchdog: { Args: never; Returns: number }
-      kernel_challenge_attest:
-        | { Args: { p_cid: string; p_phrase: string }; Returns: Json }
-        | {
-            Args: { p_cid: string; p_phrase?: string; p_phrases?: Json }
-            Returns: Json
-          }
+      kernel_challenge_attest: {
+        Args: { p_cid: string; p_phrase?: string; p_phrases?: Json }
+        Returns: Json
+      }
       kernel_challenge_issue: {
         Args: {
           p_bytes?: number
@@ -13026,6 +13158,10 @@ export type Database = {
           detail: string
           verdict: string
         }[]
+      }
+      keycard_check: {
+        Args: { p_cid: string; p_session_id?: string; p_tool?: string }
+        Returns: Json
       }
       lane_a_commit2_selftest: {
         Args: never
@@ -13152,33 +13288,19 @@ export type Database = {
         }
         Returns: Json
       }
-      open_save_attempt:
-        | {
-            Args: {
-              p_cid: string
-              p_client_request_id: string
-              p_payload_hash?: string
-              p_requested_layer_counts: Json
-              p_ritual: string
-              p_session_id: string
-              p_surface?: string
-              p_tool_version?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_cid: string
-              p_client_request_id: string
-              p_external_identity_id?: string
-              p_payload: Json
-              p_principal_id?: string
-              p_session_id: string
-              p_surface: string
-              p_tool_version: string
-            }
-            Returns: Json
-          }
+      open_save_attempt: {
+        Args: {
+          p_cid: string
+          p_client_request_id: string
+          p_payload_hash?: string
+          p_requested_layer_counts: Json
+          p_ritual: string
+          p_session_id: string
+          p_surface?: string
+          p_tool_version?: string
+        }
+        Returns: string
+      }
       open_save_attempt_v2: {
         Args: {
           p_aad?: string
@@ -13277,6 +13399,10 @@ export type Database = {
         }
         Returns: Json
       }
+      reanchor: {
+        Args: { p_cid: string; p_session_id?: string }
+        Returns: Json
+      }
       reap_stale_action_claims: { Args: never; Returns: number }
       reconcile_kernel_absent_signals: { Args: never; Returns: number }
       record_decision: {
@@ -13360,6 +13486,10 @@ export type Database = {
           p_session_id?: string
         }
         Returns: Json
+      }
+      record_tenancy_unresolved: {
+        Args: { p_identity?: Json; p_label: string; p_table: string }
+        Returns: string
       }
       record_unbound_principal: {
         Args: {
@@ -13500,6 +13630,11 @@ export type Database = {
         Args: { p_session_id: string }
         Returns: string
       }
+      session_ledger: {
+        Args: { p_cid: string; p_limit?: number; p_session_id?: string }
+        Returns: Json
+      }
+      session_lifecycle_probe: { Args: never; Returns: Json }
       session_raise: {
         Args: {
           p_cid: string
@@ -13514,6 +13649,11 @@ export type Database = {
         }
         Returns: Json
       }
+      session_reclaim: {
+        Args: { p_cid: string; p_tool?: string }
+        Returns: boolean
+      }
+      session_renew: { Args: { p_cid: string }; Returns: number }
       session_title_rule: { Args: never; Returns: string }
       session_transcript_read: { Args: { p_session_id: string }; Returns: Json }
       session_transcript_write: {
@@ -13527,6 +13667,10 @@ export type Database = {
           p_scrubbed?: boolean
           p_session_id: string
         }
+        Returns: Json
+      }
+      session_write_debt: {
+        Args: { p_cid: string; p_session_id?: string }
         Returns: Json
       }
       set_doctrine_tier: {
@@ -13574,6 +13718,15 @@ export type Database = {
       }
       tool_manifest_descriptions: { Args: never; Returns: Json }
       tool_problem_report: { Args: { p_cid?: string }; Returns: Json }
+      transcript_append: {
+        Args: {
+          p_cid: string
+          p_fidelity?: string
+          p_note: string
+          p_session_id: string
+        }
+        Returns: Json
+      }
       unbound_principal_escalate: { Args: never; Returns: Json }
       unbound_principals_report: { Args: never; Returns: Json }
       verify_cron_token: {
