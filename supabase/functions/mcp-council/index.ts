@@ -6334,6 +6334,26 @@ const mcpHandler = async (req: Request): Promise<Response> => {
             p_date_kind: str(args?.date_kind),
             p_cid: worldCid,
           };
+        } else if (name === "transcript_append") {
+          // Record-as-you-go. p_session_id may be null · the function
+          // resolves the open session itself.
+          rpcName = "transcript_append";
+          params = {
+            p_cid: worldCid,
+            p_session_id: str(args?.session_id),
+            p_note: typeof args?.note === "string" ? args.note : null,
+            p_fidelity: str(args?.fidelity) ?? "reconstruction",
+          };
+        } else if (name === "reanchor") {
+          rpcName = "reanchor";
+          params = { p_cid: worldCid, p_session_id: str(args?.session_id) };
+        } else if (name === "session_ledger") {
+          rpcName = "session_ledger";
+          params = {
+            p_cid: worldCid,
+            p_session_id: str(args?.session_id),
+            p_limit: num(args?.limit, 12),
+          };
         } else if (name === "decision_write") {
           rpcName = "cob_decision_write";
           params = {
