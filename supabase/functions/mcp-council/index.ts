@@ -3983,6 +3983,42 @@ const KEYCARD_EXCLUDED = new Set<string>([
 type KeycardCall = { cid: string | null; tool: string; session_id: string | null };
 const KEYCARD_CALLS = new WeakMap<Request, KeycardCall>();
 
+// ── ATTRIBUTION STAMP ───────────────────────────────────────────────────
+// Who acted, from where, on which declared model. Actor and surface are
+// derived server-side; the model is a client CLAIM and is passed through
+// verbatim, never inferred. Carried to Postgres as request headers on a
+// per-request PostgREST client, so the values arrive inside the same
+// transaction as the RPC (PostgREST exposes them as request.headers, which
+// the cob.* GUC mapping reads). No database function is modified here.
+export type Attribution = {
+  actor: string | null;
+  surface: string | null;
+  model: string | null;
+};
+const ATTRIBUTION = new WeakMap<Request, Attribution>();
+
+const _attrClients = new Map<string, any>();
+function rpcClientFor(attr: Attribution | undefined): any {
+  if (!supabaseAdmin) return null;
+  if (!attr || (!attr.actor && !attr.surface && !attr.model)) return supabaseAdmin;
+  const headers: Record<string, string> = {};
+  if (attr.actor) headers["x-cob-actor"] = attr.actor.slice(0, 200);
+  if (attr.surface) headers["x-cob-surface"] = attr.surface.slice(0, 120);
+  if (attr.model) headers["x-cob-model"] = attr.model.slice(0, 200);
+  const key = JSON.stringify(headers);
+  const cached = _attrClients.get(key);
+  if (cached) return cached;
+  const client = createClient(supabaseUrl, serviceRole, {
+    auth: { persistSession: false },
+    global: { headers },
+  });
+  // Bounded cache · attribution keys are low-cardinality per deployment.
+  if (_attrClients.size > 200) _attrClients.clear();
+  _attrClients.set(key, client);
+  return client;
+}
+
+
 async function keycardVerdict(call: KeycardCall): Promise<Record<string, unknown>> {
   if (!supabaseAdmin || !call.cid) return { keycard: "UNAVAILABLE" };
   try {
