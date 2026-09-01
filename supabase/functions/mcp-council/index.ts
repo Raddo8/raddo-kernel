@@ -3661,6 +3661,50 @@ const TOOL_SESSION_LEDGER = {
   },
 };
 
+// ── PROJECT THREAD v1 ───────────────────────────────────────────────────
+// The room where collaborators discuss a build on the record. `cid` is never
+// an argument: it is derived server-side. Database exception messages pass
+// through unmodified. Both are covered by the keycard.
+const TOOL_PROJECT_THREAD_POST = {
+  name: "project_thread_post",
+  title: "Project Thread Post",
+  description:
+    "Post to a project's shared discussion thread, keyed to a blueprint by title or id. The room where collaborators discuss a build on the record.",
+  annotations: { title: "Project Thread Post" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      blueprint: { type: "string", description: "The blueprint, by title or id." },
+      content: { type: "string", description: "What you are putting on the record." },
+      author: {
+        type: "string",
+        description: "Optional. Omit and the server attributes the caller.",
+      },
+      ...MANIFEST_PROP,
+    },
+    required: ["blueprint", "content"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_PROJECT_THREAD_READ = {
+  name: "project_thread_read",
+  title: "Project Thread Read",
+  description:
+    "Read a project's discussion thread plus the blueprint's current state. Read the room before posting.",
+  annotations: { title: "Project Thread Read", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      blueprint: { type: "string", description: "The blueprint, by title or id." },
+      limit: { type: "number", description: "Max thread entries to return (default 20)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["blueprint"],
+    additionalProperties: false,
+  },
+};
+
 const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_WORLD_WRITE, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_RENDER, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_WORK_RAISE, TOOL_WORK_DISPOSITION, TOOL_WORK_DISPOSE, TOOL_WORK_RESCHEDULE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_TRANSCRIPT_APPEND, TOOL_REANCHOR, TOOL_SESSION_LEDGER, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
