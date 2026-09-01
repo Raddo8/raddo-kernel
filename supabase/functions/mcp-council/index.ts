@@ -4998,6 +4998,38 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         session_id: typeof (args as any)?.session_id === "string" ? (args as any).session_id : null,
       });
 
+      // ATTRIBUTION · derived here, once, alongside the keycard record.
+      // actor and surface are server-derived and never client-settable; the
+      // model is a client claim and passes through verbatim.
+      {
+        const declaredSurface = typeof (args as any)?.surface === "string" &&
+            (args as any).surface.trim()
+          ? (args as any).surface.trim()
+          : null;
+        let clientHint = "";
+        try {
+          clientHint = (req.headers.get("x-client-info") ?? "").split("/")[0].trim();
+        } catch { clientHint = ""; }
+        const surfaceLabel = (declaredSurface || clientHint || "mcp").slice(0, 120);
+        const principalLabel = (
+          pctx.principal_id
+            ? (pctx.tenant_claim ?? tenant ?? "unknown")
+            : (tenant ?? pctx.tenant_claim ?? "unknown")
+        ).toString().toLowerCase().slice(0, 80);
+        const modelClaim =
+          (typeof (params as any)?._meta?.model === "string" && (params as any)._meta.model) ||
+          (typeof (body as any)?.params?.clientInfo?.model === "string" &&
+            (body as any).params.clientInfo.model) ||
+          (req.headers.get("x-model") ?? null);
+        ATTRIBUTION.set(req, {
+          actor: `principal:${principalLabel} via ${surfaceLabel}`,
+          surface: surfaceLabel,
+          model: typeof modelClaim === "string" && modelClaim.trim() ? modelClaim.trim() : null,
+        });
+      }
+
+
+
 
 
       // ITEM 3 · every tool leaves an identity trace, kernel path or not.
