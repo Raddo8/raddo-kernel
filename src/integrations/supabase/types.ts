@@ -1313,6 +1313,7 @@ export type Database = {
           changed_fields: string[] | null
           cid: string | null
           ledger_id: number
+          model_claim: string | null
           op: string
           pk_col: string | null
           reason: string | null
@@ -1320,6 +1321,7 @@ export type Database = {
           reverts: number | null
           row_pk: string
           session_ref: string | null
+          surface: string | null
           table_name: string
           tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
@@ -1332,6 +1334,7 @@ export type Database = {
           changed_fields?: string[] | null
           cid?: string | null
           ledger_id?: number
+          model_claim?: string | null
           op: string
           pk_col?: string | null
           reason?: string | null
@@ -1339,6 +1342,7 @@ export type Database = {
           reverts?: number | null
           row_pk: string
           session_ref?: string | null
+          surface?: string | null
           table_name: string
           tenancy: Database["public"]["Enums"]["tenancy_t"]
         }
@@ -1351,6 +1355,7 @@ export type Database = {
           changed_fields?: string[] | null
           cid?: string | null
           ledger_id?: number
+          model_claim?: string | null
           op?: string
           pk_col?: string | null
           reason?: string | null
@@ -1358,6 +1363,7 @@ export type Database = {
           reverts?: number | null
           row_pk?: string
           session_ref?: string | null
+          surface?: string | null
           table_name?: string
           tenancy?: Database["public"]["Enums"]["tenancy_t"]
         }
@@ -7332,6 +7338,39 @@ export type Database = {
           },
         ]
       }
+      project_posts: {
+        Row: {
+          author: string
+          blueprint_id: string
+          cid: string
+          content_md: string
+          created_at: string
+          id: string
+          model_claim: string | null
+          surface: string | null
+        }
+        Insert: {
+          author: string
+          blueprint_id: string
+          cid: string
+          content_md: string
+          created_at?: string
+          id?: string
+          model_claim?: string | null
+          surface?: string | null
+        }
+        Update: {
+          author?: string
+          blueprint_id?: string
+          cid?: string
+          content_md?: string
+          created_at?: string
+          id?: string
+          model_claim?: string | null
+          surface?: string | null
+        }
+        Relationships: []
+      }
       protected_artifact_access_log: {
         Row: {
           access_id: number
@@ -9009,6 +9048,7 @@ export type Database = {
           event_id: string
           latency_ms: number | null
           ok: boolean
+          orig_session_ref: string | null
           result_digest: string | null
           session_id: string | null
           session_source: string | null
@@ -9025,6 +9065,7 @@ export type Database = {
           event_id?: string
           latency_ms?: number | null
           ok: boolean
+          orig_session_ref?: string | null
           result_digest?: string | null
           session_id?: string | null
           session_source?: string | null
@@ -9041,6 +9082,7 @@ export type Database = {
           event_id?: string
           latency_ms?: number | null
           ok?: boolean
+          orig_session_ref?: string | null
           result_digest?: string | null
           session_id?: string | null
           session_source?: string | null
@@ -13362,6 +13404,19 @@ export type Database = {
           p_work?: string
         }
         Returns: string
+      }
+      project_thread_post: {
+        Args: {
+          p_author?: string
+          p_blueprint: string
+          p_cid: string
+          p_content: string
+        }
+        Returns: Json
+      }
+      project_thread_read: {
+        Args: { p_blueprint: string; p_cid: string; p_limit?: number }
+        Returns: Json
       }
       propose_doctrine_rule: {
         Args: {
