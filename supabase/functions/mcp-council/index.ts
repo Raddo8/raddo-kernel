@@ -2182,7 +2182,7 @@ const SERVER_INFO = {
   // that never moves this string is a server whose new tools stay invisible,
   // which is exactly what COB-HQ saw: 43 tools across three deploys that each
   // listed 44. Bump this whenever TOOL_MANIFEST_VERSION moves.
-  version: "0.4.3",
+  version: "0.4.4",
   icons: [
     {
       src: "https://chiefofbusiness.ai/__l5e/assets-v1/40f6ccbf-5111-471c-892f-8573f8083bcd/cob-square-dark.png",
@@ -2243,7 +2243,7 @@ function runInBackground(p: Promise<unknown>) {
   return guarded;
 }
 
-const TOOL_MANIFEST_VERSION = "2026.08.30.1";
+const TOOL_MANIFEST_VERSION = "2026.09.01.1";
 
 const MANIFEST_PROP = {
   client_manifest_version: {
@@ -3661,7 +3661,51 @@ const TOOL_SESSION_LEDGER = {
   },
 };
 
-const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_WORLD_WRITE, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_RENDER, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_WORK_RAISE, TOOL_WORK_DISPOSITION, TOOL_WORK_DISPOSE, TOOL_WORK_RESCHEDULE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_TRANSCRIPT_APPEND, TOOL_REANCHOR, TOOL_SESSION_LEDGER, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
+// ── PROJECT THREAD v1 ───────────────────────────────────────────────────
+// The room where collaborators discuss a build on the record. `cid` is never
+// an argument: it is derived server-side. Database exception messages pass
+// through unmodified. Both are covered by the keycard.
+const TOOL_PROJECT_THREAD_POST = {
+  name: "project_thread_post",
+  title: "Project Thread Post",
+  description:
+    "Post to a project's shared discussion thread, keyed to a blueprint by title or id. The room where collaborators discuss a build on the record.",
+  annotations: { title: "Project Thread Post" },
+  inputSchema: {
+    type: "object",
+    properties: {
+      blueprint: { type: "string", description: "The blueprint, by title or id." },
+      content: { type: "string", description: "What you are putting on the record." },
+      author: {
+        type: "string",
+        description: "Optional. Omit and the server attributes the caller.",
+      },
+      ...MANIFEST_PROP,
+    },
+    required: ["blueprint", "content"],
+    additionalProperties: false,
+  },
+};
+
+const TOOL_PROJECT_THREAD_READ = {
+  name: "project_thread_read",
+  title: "Project Thread Read",
+  description:
+    "Read a project's discussion thread plus the blueprint's current state. Read the room before posting.",
+  annotations: { title: "Project Thread Read", readOnlyHint: true },
+  inputSchema: {
+    type: "object",
+    properties: {
+      blueprint: { type: "string", description: "The blueprint, by title or id." },
+      limit: { type: "number", description: "Max thread entries to return (default 20)." },
+      ...MANIFEST_PROP,
+    },
+    required: ["blueprint"],
+    additionalProperties: false,
+  },
+};
+
+const TOOLS = [TOOL_WELCOME_PARTY, TOOL_TAYLOR_SETUP, TOOL_TAYLOR_THREAD_READ, TOOL_TAYLOR_THREAD_POST, TOOL_RECORD_INTAKE, TOOL_SET_CHIEF_NAME, TOOL_SETUP_PROGRESS, TOOL_CONSENT_RECORD, TOOL_LANE_RECORD, TOOL_BOUNDARIES_RECORD, TOOL_DEEPDIVE_COMMIT, TOOL_HARVEST_RECORD, TOOL_WIRE_GRANTS_RECORD, TOOL_KERNEL_INPUTS_CHECK, TOOL_TAYLOR_HANDOFF, TOOL_RUN_COUNCIL, TOOL_SUMMON_BEST_ADVISOR, TOOL_COUNCIL_TO_NOTION, TOOL_ABE_WEIGHING_IN, TOOL_COUNCIL_MINUTE_FETCH, TOOL_LIST_AGENTS, TOOL_BOOT_KERNEL, TOOL_LOAD_KERNEL_PART, TOOL_BEGIN_SESSION, TOOL_KERNEL_ATTEST, TOOL_MEMORY_SEARCH, TOOL_SEARCH, TOOL_FETCH, TOOL_WORLD_READ, TOOL_WORLD_WRITE, TOOL_REGISTERS_READ, TOOL_MEMORY_WRITE, TOOL_NARRATIVE_WRITE, TOOL_BLUEPRINT_WRITE, TOOL_RULE_WRITE, TOOL_REQUEST_READ, TOOL_REQUEST_RESOLVE, TOOL_COMM_WRITE, TOOL_SIGNAL_RAISE, TOOL_BOARD_RESPOND, TOOL_BOARD_RENDER, TOOL_BOARD_UPDATE, TOOL_BOARD_SUPERSEDE, TOOL_WORK_RAISE, TOOL_WORK_DISPOSITION, TOOL_WORK_DISPOSE, TOOL_WORK_RESCHEDULE, TOOL_DECISION_WRITE, TOOL_RECORD_PROBE, TOOL_RECORD_FILE, TOOL_TRANSCRIPT_APPEND, TOOL_REANCHOR, TOOL_SESSION_LEDGER, TOOL_PROJECT_THREAD_POST, TOOL_PROJECT_THREAD_READ, TOOL_SAVE_SESSION, TOOL_SYNC_SESSION, TOOL_END_SESSION];
 
 
 // Shared onboarding checklist · service-role upsert, never allowed to fail a tool.
@@ -3982,6 +4026,42 @@ const KEYCARD_EXCLUDED = new Set<string>([
 
 type KeycardCall = { cid: string | null; tool: string; session_id: string | null };
 const KEYCARD_CALLS = new WeakMap<Request, KeycardCall>();
+
+// ── ATTRIBUTION STAMP ───────────────────────────────────────────────────
+// Who acted, from where, on which declared model. Actor and surface are
+// derived server-side; the model is a client CLAIM and is passed through
+// verbatim, never inferred. Carried to Postgres as request headers on a
+// per-request PostgREST client, so the values arrive inside the same
+// transaction as the RPC (PostgREST exposes them as request.headers, which
+// the cob.* GUC mapping reads). No database function is modified here.
+export type Attribution = {
+  actor: string | null;
+  surface: string | null;
+  model: string | null;
+};
+const ATTRIBUTION = new WeakMap<Request, Attribution>();
+
+const _attrClients = new Map<string, any>();
+function rpcClientFor(attr: Attribution | undefined): any {
+  if (!supabaseAdmin) return null;
+  if (!attr || (!attr.actor && !attr.surface && !attr.model)) return supabaseAdmin;
+  const headers: Record<string, string> = {};
+  if (attr.actor) headers["x-cob-actor"] = attr.actor.slice(0, 200);
+  if (attr.surface) headers["x-cob-surface"] = attr.surface.slice(0, 120);
+  if (attr.model) headers["x-cob-model"] = attr.model.slice(0, 200);
+  const key = JSON.stringify(headers);
+  const cached = _attrClients.get(key);
+  if (cached) return cached;
+  const client = createClient(supabaseUrl, serviceRole, {
+    auth: { persistSession: false },
+    global: { headers },
+  });
+  // Bounded cache · attribution keys are low-cardinality per deployment.
+  if (_attrClients.size > 200) _attrClients.clear();
+  _attrClients.set(key, client);
+  return client;
+}
+
 
 async function keycardVerdict(call: KeycardCall): Promise<Record<string, unknown>> {
   if (!supabaseAdmin || !call.cid) return { keycard: "UNAVAILABLE" };
@@ -4917,6 +4997,38 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         tool: typeof name === "string" ? name : "unknown",
         session_id: typeof (args as any)?.session_id === "string" ? (args as any).session_id : null,
       });
+
+      // ATTRIBUTION · derived here, once, alongside the keycard record.
+      // actor and surface are server-derived and never client-settable; the
+      // model is a client claim and passes through verbatim.
+      {
+        const declaredSurface = typeof (args as any)?.surface === "string" &&
+            (args as any).surface.trim()
+          ? (args as any).surface.trim()
+          : null;
+        let clientHint = "";
+        try {
+          clientHint = (req.headers.get("x-client-info") ?? "").split("/")[0].trim();
+        } catch { clientHint = ""; }
+        const surfaceLabel = (declaredSurface || clientHint || "mcp").slice(0, 120);
+        const principalLabel = (
+          pctx.principal_id
+            ? (pctx.tenant_claim ?? tenant ?? "unknown")
+            : (tenant ?? pctx.tenant_claim ?? "unknown")
+        ).toString().toLowerCase().slice(0, 80);
+        const modelClaim =
+          (typeof (params as any)?._meta?.model === "string" && (params as any)._meta.model) ||
+          (typeof (body as any)?.params?.clientInfo?.model === "string" &&
+            (body as any).params.clientInfo.model) ||
+          (req.headers.get("x-model") ?? null);
+        ATTRIBUTION.set(req, {
+          actor: `principal:${principalLabel} via ${surfaceLabel}`,
+          surface: surfaceLabel,
+          model: typeof modelClaim === "string" && modelClaim.trim() ? modelClaim.trim() : null,
+        });
+      }
+
+
 
 
 
@@ -6176,7 +6288,8 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         name === "work_raise" || name === "work_disposition" || name === "work_dispose" ||
         name === "work_reschedule" ||
         name === "transcript_append" || name === "reanchor" ||
-        name === "session_ledger"
+        name === "session_ledger" ||
+        name === "project_thread_post" || name === "project_thread_read"
 
       ) {
         if (!tenant) return rpcError(id, -32001, "invalid_token");
@@ -6345,6 +6458,22 @@ const mcpHandler = async (req: Request): Promise<Response> => {
             p_session_id: str(args?.session_id),
             p_note: typeof args?.note === "string" ? args.note : null,
             p_fidelity: str(args?.fidelity) ?? "reconstruction",
+          };
+        } else if (name === "project_thread_post") {
+          // Client-supplied cid is ignored · p_cid comes from tenantCid().
+          rpcName = "project_thread_post";
+          params = {
+            p_cid: worldCid,
+            p_blueprint: str(args?.blueprint),
+            p_content: typeof args?.content === "string" ? args.content : null,
+            p_author: str(args?.author),
+          };
+        } else if (name === "project_thread_read") {
+          rpcName = "project_thread_read";
+          params = {
+            p_cid: worldCid,
+            p_blueprint: str(args?.blueprint),
+            p_limit: num(args?.limit, 20),
           };
         } else if (name === "reanchor") {
           rpcName = "reanchor";
@@ -6535,7 +6664,9 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         }
 
 
-        const { data, error } = await supabaseAdmin.rpc(rpcName, params);
+        // ATTRIBUTION · actor/surface/model travel with the RPC request.
+        const rpcClient = rpcClientFor(ATTRIBUTION.get(req)) ?? supabaseAdmin;
+        const { data, error } = await rpcClient.rpc(rpcName, params);
         if (error) {
           // HARDEN-15 R1c · a refusal raised inside the function rolls back with
           // its own log line, so the record is written here, outside that
