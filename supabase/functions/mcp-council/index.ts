@@ -7240,6 +7240,104 @@ const mcpHandler = async (req: Request): Promise<Response> => {
           if (clientRequestId.length < 8) {
             return rpcError(id, -32602, "client_request_id_required · supply a stable id of at least 8 characters so a repeated save cannot create a second receipt");
           }
+          // ══ C0.1 · SAVE_NO_CONTENT ════════════════════════════════════
+          // A save with zero layers is a caller mistake, not a valid
+          // checkpoint. Refuse by name before any write is attempted or any
+          // save_attempt is opened. This check is local to save_session —
+          // it does NOT touch the shared runSaveLeg() EMPTY_EXPECTED path,
+          // which end_session still relies on for "close with nothing new
+          // to record," a legitimate and common close shape. That path,
+          // and sync_session, are unchanged by this diff.
+          const _c01Decisions = Array.isArray(args?.decisions) ? args.decisions.filter((d: any) => d?.title) : [];
+          const _c01OpenLoops = Array.isArray(args?.open_loops) ? args.open_loops.filter((o: any) => o?.title || o?.id) : [];
+          const _c01Signals = Array.isArray(args?.signals) ? args.signals.filter((s: any) => s?.title) : [];
+          const _c01Memory = Array.isArray(args?.memory) ? args.memory.filter((m: any) => m?.title && m?.body_md) : [];
+          const _c01Rules = Array.isArray(args?.rules_captured) ? args.rules_captured.filter((r: any) => r?.text && r?.scope) : [];
+          const _c01Checkpoint = (args?.checkpoint && typeof args.checkpoint === "object") ? args.checkpoint : null;
+          const _c01CheckpointRequested = _c01Checkpoint && Object.keys(_c01Checkpoint).length > 0 ? 1 : 0;
+          const _c01TotalRequested =
+            _c01Decisions.length + _c01OpenLoops.length + _c01Signals.length +
+            _c01Memory.length + _c01Rules.length + _c01CheckpointRequested;
+          if (_c01TotalRequested === 0) {
+            const out = {
+              ok: false,
+              tool: name,
+              error:
+                "SAVE_NO_CONTENT: no decisions, open_loops, signals, memory, rules_captured or checkpoint were submitted. Nothing was saved. Include at least one layer, or call end_session/sync_session if you only meant to close or re-brief.",
+              session_id: args?.session_id ?? null,
+              ...identityBlock(pctx),
+              ...manifestBlock(args),
+            };
+            return rpcResult(id, {
+              content: [{ type: "text", text: JSON.stringify(out) }],
+              structuredContent: out,
+              isError: true,
+            });
+          }
+
+          // ══ C0.1 · SAVE_SESSION_NOT_LIVE ══════════════════════════════
+          // A session_id that does not resolve to THIS caller's own open
+          // session must refuse by name rather than silently proceed to a
+          // zero-content "ok". Live = the row exists, belongs to this
+          // tenant, and closed_at IS NULL — the same test
+          // resolveSessionForArgs() (tenant_session_context / sessions
+          // lookup, ~line 4407 of this file) and sync_session
+          // (~line 7450) already apply; save_session had fallen behind
+          // them and only checked tenant match, never closed_at.
+          //
+          // C0.1a · TOCTOU, accepted, not silently left open: this check
+          // runs once, here, before runSaveLeg() is called. runSaveLeg()'s
+          // own internal guard (~line 6868, shared with end_session) still
+          // only tests `sess.tenant !== tenant`, not closed_at, and is not
+          // touched by this diff because end_session needs its current
+          // behavior (closing a session that is, by definition, in the
+          // process of closing must still work). A session that closes in
+          // the few hundred milliseconds between this check and
+          // runSaveLeg()'s own write could still have that one write land.
+          // DECIDED: no second re-check was added immediately before
+          // runSaveLeg() — that would cost a second DB round trip on every
+          // real-content save and a second insertion point in a live,
+          // shared, 8700-line edge function, to close a window whose worst
+          // realistic outcome is one legitimate write landing a moment
+          // before a close would have blocked it. Not data corruption, not
+          // a cross-tenant write. Accepted as a bounded, extreme edge case.
+          const _c01SessionId = typeof args?.session_id === "string" ? args.session_id.trim() : "";
+          if (!_c01SessionId) {
+            return rpcError(id, -32602, "invalid_params · session_id is required");
+          }
+          {
+            const { data: _c01Sess, error: _c01SessErr } = await supabaseAdmin
+              .from("sessions").select("id, tenant, closed_at").eq("id", _c01SessionId).maybeSingle();
+            // C0.1a · a genuine DB lookup failure must be distinguishable,
+            // by an operator watching signals, from an ordinary "not live"
+            // business refusal. Sibling error paths in this same function
+            // (save_receipt_lookup_failed, save_receipt_write_failed)
+            // already call raiseSignal on their own DB failures; this
+            // lookup did not, until now. The client-visible refusal below
+            // is unchanged either way — only operator telemetry is added.
+            if (_c01SessErr) {
+              void raiseSignal("save_session_liveness_check_failed", _c01SessErr.message ?? String(_c01SessErr), {
+                session_id: _c01SessionId,
+                surface: "ritual",
+              });
+            }
+            if (_c01SessErr || !_c01Sess || _c01Sess.tenant !== tenant || _c01Sess.closed_at !== null) {
+              const out = {
+                ok: false,
+                tool: name,
+                error:
+                  `SAVE_SESSION_NOT_LIVE: session ${_c01SessionId} is not your caller's live session (not found, belongs to another tenant, or already closed). Nothing was saved. Open a new session and retry with its id.`,
+                session_id: _c01SessionId,
+                ...identityBlock(pctx),
+                ...manifestBlock(args),
+              };
+              return rpcResult(id, {
+                content: [{ type: "text", text: JSON.stringify(out) }],
+                structuredContent: out,
+                isError: true,
+              });
+            }
+          }
           try {
             // FIX 1 · CROSS-TENANT IDEMPOTENCY. The identity is resolved BEFORE
             // the receipt lookup, and the lookup is scoped to it. Two tenants
