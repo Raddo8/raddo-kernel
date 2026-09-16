@@ -1941,6 +1941,64 @@ export type Database = {
         }
         Relationships: []
       }
+      connection_inventory: {
+        Row: {
+          category: string
+          cid: string
+          created_at: string
+          grant_status: string
+          id: string
+          system_name: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+          updated_at: string
+          usage_role: string
+        }
+        Insert: {
+          category?: string
+          cid: string
+          created_at?: string
+          grant_status?: string
+          id?: string
+          system_name: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+          updated_at?: string
+          usage_role?: string
+        }
+        Update: {
+          category?: string
+          cid?: string
+          created_at?: string
+          grant_status?: string
+          id?: string
+          system_name?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+          updated_at?: string
+          usage_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connection_inventory_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "connection_inventory_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "connection_inventory_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+        ]
+      }
       connector_accounts: {
         Row: {
           account_id: string
@@ -3710,6 +3768,147 @@ export type Database = {
           status?: string | null
           tenancy?: Database["public"]["Enums"]["tenancy_t"]
           version?: string | null
+        }
+        Relationships: []
+      }
+      fleet_snapshot: {
+        Row: {
+          cid: string
+          claims_boot: number
+          claims_total: number
+          directives_active: number
+          doctrine_rules_active: number
+          doctrine_rules_total: number
+          edges_total: number
+          entities_live: number
+          entities_total: number
+          items_total: number
+          kernel_id: string | null
+          kernel_manifest_sha256: string | null
+          kernel_part_count: number
+          kernel_part_sha256s: unknown[]
+          kernel_version: number | null
+          label: string
+          last_checkpoint_at: string | null
+          last_checkpoint_id: string | null
+          last_checkpoint_kind: string | null
+          last_close_kind: string | null
+          last_session_id: string | null
+          loops_blocked: number
+          loops_board_eligible: number
+          loops_done: number
+          loops_dropped: number
+          loops_open: number
+          loops_waiting: number
+          mem_active: number
+          mem_binned: number
+          mem_review: number
+          mem_superseded: number
+          office_present: boolean
+          snapshot_id: string
+          sources_total: number
+          surface_present: boolean
+          taken_at: string
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+          work_answered: number
+          work_blocked: number
+          work_done: number
+          work_dropped: number
+          work_open: number
+          work_snoozed: number
+          work_superseded: number
+        }
+        Insert: {
+          cid: string
+          claims_boot: number
+          claims_total: number
+          directives_active: number
+          doctrine_rules_active: number
+          doctrine_rules_total: number
+          edges_total: number
+          entities_live: number
+          entities_total: number
+          items_total: number
+          kernel_id?: string | null
+          kernel_manifest_sha256?: string | null
+          kernel_part_count: number
+          kernel_part_sha256s: unknown[]
+          kernel_version?: number | null
+          label: string
+          last_checkpoint_at?: string | null
+          last_checkpoint_id?: string | null
+          last_checkpoint_kind?: string | null
+          last_close_kind?: string | null
+          last_session_id?: string | null
+          loops_blocked: number
+          loops_board_eligible: number
+          loops_done: number
+          loops_dropped: number
+          loops_open: number
+          loops_waiting: number
+          mem_active: number
+          mem_binned: number
+          mem_review: number
+          mem_superseded: number
+          office_present: boolean
+          snapshot_id: string
+          sources_total: number
+          surface_present: boolean
+          taken_at?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+          work_answered: number
+          work_blocked: number
+          work_done: number
+          work_dropped: number
+          work_open: number
+          work_snoozed: number
+          work_superseded: number
+        }
+        Update: {
+          cid?: string
+          claims_boot?: number
+          claims_total?: number
+          directives_active?: number
+          doctrine_rules_active?: number
+          doctrine_rules_total?: number
+          edges_total?: number
+          entities_live?: number
+          entities_total?: number
+          items_total?: number
+          kernel_id?: string | null
+          kernel_manifest_sha256?: string | null
+          kernel_part_count?: number
+          kernel_part_sha256s?: unknown[]
+          kernel_version?: number | null
+          label?: string
+          last_checkpoint_at?: string | null
+          last_checkpoint_id?: string | null
+          last_checkpoint_kind?: string | null
+          last_close_kind?: string | null
+          last_session_id?: string | null
+          loops_blocked?: number
+          loops_board_eligible?: number
+          loops_done?: number
+          loops_dropped?: number
+          loops_open?: number
+          loops_waiting?: number
+          mem_active?: number
+          mem_binned?: number
+          mem_review?: number
+          mem_superseded?: number
+          office_present?: boolean
+          snapshot_id?: string
+          sources_total?: number
+          surface_present?: boolean
+          taken_at?: string
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+          work_answered?: number
+          work_blocked?: number
+          work_done?: number
+          work_dropped?: number
+          work_open?: number
+          work_snoozed?: number
+          work_superseded?: number
         }
         Relationships: []
       }
@@ -12827,6 +13026,39 @@ export type Database = {
       er_identity_keys_only: { Args: { j: Json }; Returns: boolean }
       escalation_rank: { Args: { p_state: string }; Returns: number }
       fleet_authority: { Args: never; Returns: Json }
+      fleet_snapshot_bracket: {
+        Args: { p_label: string }
+        Returns: {
+          fields_changed: number
+          note: string
+          paired_with: string
+          phase: string
+          snapshot_id: string
+          tenants_changed: number
+          tenants_compared: number
+        }[]
+      }
+      fleet_snapshot_diff: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          cid: string
+          delta: number
+          field: string
+          fields_changed: number
+          from_value: string
+          note: string
+          row_kind: string
+          tenants_changed: number
+          tenants_compared: number
+          to_value: string
+        }[]
+      }
+      fleet_snapshot_nightly: { Args: never; Returns: Json }
+      fleet_snapshot_post_diff: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      fleet_snapshot_take: { Args: { p_label: string }; Returns: string }
       fleet_surfacing_health: { Args: never; Returns: Json }
       fn_degraded_sentence: { Args: { p_fn: string }; Returns: string }
       fn_tables_touched: {
