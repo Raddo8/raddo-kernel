@@ -128,6 +128,8 @@ function evaluatePredicate(
   }
 }
 
+const TERMINAL_STATES = new Set(["closed", "case_closed", "paid", "client_offboarded"]);
+
 // ── Main handler ──
 
 Deno.serve(async (req) => {
@@ -167,6 +169,8 @@ Deno.serve(async (req) => {
   let totalQueued = 0;
   let totalSkipped = 0;
   let totalErrors = 0;
+  let skippedTerminal = 0;
+  let skippedExisting = 0;
 
   try {
     const { data: workspaces, error: wsErr } = await supabase
@@ -185,14 +189,43 @@ Deno.serve(async (req) => {
 
       if (rulesErr || !rules || rules.length === 0) continue;
 
-      const { data: items, error: itemsErr } = await supabase
+      const { data: allItems, error: itemsErr } = await supabase
         .from("items")
-        .select("*")
+        .select("*, item_states(name)")
         .eq("workspace_id", ws.id)
         .or(`updated_at.gte.${tenMinutesAgo},due_date.lte.${oneDayFromNow}`)
         .limit(500);
 
-      if (itemsErr || !items || items.length === 0) continue;
+      if (itemsErr || !allItems || allItems.length === 0) continue;
+
+      const items = allItems.filter((it: Record<string, unknown>) => {
+        const stateName = (it.item_states as { name?: string } | null)?.name;
+        if (stateName && TERMINAL_STATES.has(stateName)) {
+          skippedTerminal++;
+          return false;
+        }
+        return true;
+      });
+
+      if (items.length === 0) continue;
+
+      const itemIds = items.map((it: Record<string, unknown>) => it.id);
+      let existingKeys: Set<string> | null = null;
+      const { data: existingActions, error: existingErr } = await supabase
+        .from("actions")
+        .select("idempotency_key")
+        .in("item_id", itemIds)
+        .like("idempotency_key", "policy:%");
+
+      if (existingErr) {
+        console.error("[process-policy-rules] Existing actions lookup failed:", existingErr);
+      } else {
+        existingKeys = new Set(
+          (existingActions || [])
+            .map((a: { idempotency_key: string | null }) => a.idempotency_key)
+            .filter((k): k is string => !!k)
+        );
+      }
 
       const predicateHashes: string[] = [];
       for (const rule of rules) {
@@ -219,6 +252,11 @@ Deno.serve(async (req) => {
           const scheduledFor = new Date(now + delayMs).toISOString();
 
           const idempotencyKey = `policy:${rule.id}:${item.id}:${predHash}:${i}`;
+
+          if (existingKeys && existingKeys.has(idempotencyKey)) {
+            skippedExisting++;
+            continue;
+          }
 
           // Route through execute-action-server create mode
           try {
@@ -278,6 +316,8 @@ Deno.serve(async (req) => {
       queued: totalQueued,
       skipped: totalSkipped,
       errors: totalErrors,
+      skipped_terminal: skippedTerminal,
+      skipped_existing: skippedExisting,
     };
     console.log("[process-policy-rules] Complete:", result);
 
