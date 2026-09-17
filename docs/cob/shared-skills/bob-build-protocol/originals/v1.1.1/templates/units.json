@@ -1,0 +1,30 @@
+{
+  "program": "{{PROGRAM_TITLE}}",
+  "scope": "{{FLEET or TENANT}}",
+  "appetite": {"hours": 0, "credits": 0, "set_by": "{{principal}}", "set_on": "{{YYYY-MM-DD}}"},
+  "continuous": {"commanded": false, "quote": null, "date": null, "source_link": null, "set_by": null, "rule": "Only the principal sets this, in their own words about this program, with a link to the message. The framer never writes it. commanded false means one pass per invocation. An event trigger needs commanded true too."},
+  "rule": "Builders may change only the passes field, from false to true, and set proof_ref, after the named proof exists. It is unacceptable to remove, reword, reorder, or add a unit here without a plan change recorded on the program thread. Verification steps are never edited by the builder.",
+  "units": [
+    {
+      "id": "U1.1",
+      "milestone": "M1",
+      "title": "{{one verifiable thing}}",
+      "category": "{{frame | build | prove | deliver | fix}}",
+      "priority": 1,
+      "prerequisites": [],
+      "owner": "cob",
+      "gate": "none",
+      "side_effect": "{{none | at_least_once | at_most_once}}",
+      "idempotency_key": null,
+      "hill": 0,
+      "proof": {
+        "artifact": "{{what exists when this passes}}",
+        "method": "{{how it is observed: fetch, byte compare, read back, screenshot, test run, render and inspect}}",
+        "expected": "{{the observation that means pass}}",
+        "evidence_required": ["{{command output | screenshot | read-back | fetched bytes}}"]
+      },
+      "passes": false,
+      "proof_ref": null
+    }
+  ]
+}
