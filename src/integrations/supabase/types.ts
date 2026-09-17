@@ -515,6 +515,117 @@ export type Database = {
         }
         Relationships: []
       }
+      blueprint_disposition: {
+        Row: {
+          action: string
+          blueprint_id: string
+          cid: string
+          decided_at: string
+          decided_by: string
+          id: string
+          moved_scheduled_action_ids: string[]
+          prior_next_action: string | null
+          prior_status: string
+          prior_version: number
+          reason: string
+          reverted_at: string | null
+          reverted_by: string | null
+          rule_ref: string | null
+          target_id: string | null
+          tenancy: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Insert: {
+          action: string
+          blueprint_id: string
+          cid: string
+          decided_at?: string
+          decided_by: string
+          id?: string
+          moved_scheduled_action_ids?: string[]
+          prior_next_action?: string | null
+          prior_status: string
+          prior_version: number
+          reason: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          rule_ref?: string | null
+          target_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Update: {
+          action?: string
+          blueprint_id?: string
+          cid?: string
+          decided_at?: string
+          decided_by?: string
+          id?: string
+          moved_scheduled_action_ids?: string[]
+          prior_next_action?: string | null
+          prior_status?: string
+          prior_version?: number
+          reason?: string
+          reverted_at?: string | null
+          reverted_by?: string | null
+          rule_ref?: string | null
+          target_id?: string | null
+          tenancy?: Database["public"]["Enums"]["tenancy_t"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blueprint_disposition_blueprint_id_fkey"
+            columns: ["blueprint_id"]
+            isOneToOne: false
+            referencedRelation: "blueprints"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blueprint_disposition_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "hq_readiness"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "blueprint_disposition_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "identity_census"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "blueprint_disposition_cid_fkey"
+            columns: ["cid"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["cid"]
+          },
+          {
+            foreignKeyName: "blueprint_disposition_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "blueprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      blueprint_disposition_token: {
+        Row: {
+          created_at: string
+          token: string
+          txid: number
+        }
+        Insert: {
+          created_at?: string
+          token: string
+          txid: number
+        }
+        Update: {
+          created_at?: string
+          token?: string
+          txid?: number
+        }
+        Relationships: []
+      }
       blueprints: {
         Row: {
           cid: string | null
@@ -12663,6 +12774,32 @@ export type Database = {
         }
         Returns: Json
       }
+      blueprint_dispose: {
+        Args: {
+          p_action: string
+          p_cid: string
+          p_decided_by: string
+          p_id: string
+          p_reason: string
+          p_rule_ref?: string
+          p_target: string
+        }
+        Returns: Json
+      }
+      blueprint_dispose_revert: {
+        Args: { p_by: string; p_disposition: string }
+        Returns: Json
+      }
+      blueprint_disposition_authorized: { Args: never; Returns: boolean }
+      blueprint_disposition_close: { Args: never; Returns: undefined }
+      blueprint_disposition_open: { Args: never; Returns: undefined }
+      blueprint_live_duplicates: {
+        Args: { p_cid: string; p_exclude: string; p_title: string }
+        Returns: string
+      }
+      blueprint_overlap_check: { Args: never; Returns: Json }
+      blueprint_title_head: { Args: { p: string }; Returns: string }
+      blueprint_title_norm: { Args: { p: string }; Returns: string }
       board_configuration_leak_check: {
         Args: { p_cid?: string }
         Returns: Json
