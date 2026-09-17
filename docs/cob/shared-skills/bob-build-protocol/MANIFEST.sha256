@@ -1,10 +1,11 @@
-# SHA256 manifest · bob-build-protocol (SS-0.2)
+# SHA256 manifest · bob-build-protocol (SS-0.2a)
 # sha256  bytes  path
-2538ee9afd3f6b7680d4bddac7d0e0727a44283c263a7574a047c280535f78fa     7233  IMPLEMENTATION_HANDOFF.md
-d6af7242c1bdd1f10ef92362ad6ae2412775db5394098c8c973ac30ff358f715     2865  PRECEDENCE.md
-f38409150d39aab94130d17edf10ab1324e5839256a186d48bc3fd0e146ecce4     2049  README.md
+a804bfb987f285abc4af6eacdfd04ac234b704dad3ae9b32d7b25a6b5a2ca4e4     6193  GROK_WORKER_CONTRACT.md
+fab1eefaaa9a2e7eafe81bf1d45163510bd2c03ec178cf532103e68fb404f991     7856  IMPLEMENTATION_HANDOFF.md
+0e04e73ebaea3ea08aaaa9f1ca0e2ca3d0479875078bdb90bbbf4de86553bc9b     4353  PRECEDENCE.md
+2224e445abe47534d3e82160722de01d76041e3260cb70ee25e51597b8d32261     2216  README.md
 6b0143cbd0c8f6e63fc51c87bd91d00e8e1531da4caa13f90eacfbc7d27209ab     8585  REQUIREMENTS_MATRIX.md
-ebee0f6fb2b5b77baf49630b6cb811b12a3ac237750ad6d956b8d6a784c23fb4     2931  candidates/v1.7.0-draft/templates/NEXT.md
+8240a7bd2835570f72e2c29a1dc6c0609dd531d30c7abb86597b7462d9c6f1fe     3452  candidates/v1.7.0-draft/templates/NEXT.md
 a240435c19f4bda711b32e944f60cad22f0c4ae73b29bc46b46f94e5dcb325b8     1768  candidates/v1.7.0-draft/templates/PROGRESS.md
 83ce2345ae70451d188485abbc9e6206c09f984cb5cbdce577916ee8cb1d61cf     1780  candidates/v1.7.0-draft/templates/agent_docs/dispatches/DISPATCH_TEMPLATE.md
 4993925ea0425d731448d0bab1c198f9cc1f07238f7d7587d60b95d1b9e649f5     1891  candidates/v1.7.0-draft/templates/agent_docs/reference/REFERENCE_TEMPLATE.md
