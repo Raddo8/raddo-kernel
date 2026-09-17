@@ -1,0 +1,16 @@
+{
+  "program": "{{PROGRAM_TITLE}}",
+  "rule": "Written by the evaluator pass before building starts, from PLAN.md and the mechanism playbook. The builder never reads this file. Each check is run by an evaluator with fresh context that did not write the unit. A unit that passes its own proof but fails a check here is a held-out gap and is reported at every close as a count of the denominator.",
+  "checks": [
+    {
+      "id": "V1",
+      "covers_units": ["U1.1"],
+      "assertion": "{{what a user of the finished thing must be able to do, stated as behavior}}",
+      "method": "{{how the evaluator observes it: open as a user, fetch, render every slide, re-verify a sampled row, run the prose linter, run the accessibility checker}}",
+      "evidence_required": ["{{screenshot | fetched bytes | linter output | sample audit sheet}}"],
+      "result": null,
+      "critique": null,
+      "checked_on": null
+    }
+  ]
+}
