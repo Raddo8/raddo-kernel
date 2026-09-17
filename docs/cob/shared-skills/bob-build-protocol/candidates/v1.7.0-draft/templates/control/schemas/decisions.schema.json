@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bob/control/decisions.schema.json",
+  "title": "Decisions",
+  "description": "Every decision taken on the program. A decision later reversed keeps its row and gains the reversal, because the reasoning is the asset.",
+  "type": "object",
+  "required": ["program", "version", "decisions"],
+  "additionalProperties": false,
+  "properties": {
+    "program": {"type": "string"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{3}\\.[0-9]+$"},
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "at", "by", "decided", "options_live", "why_this_one", "what_it_closed_off"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "at": {"type": "string", "description": "YYYY-MM-DD HH:MM with the zone named."},
+          "by": {"type": "string", "enum": ["principal", "bob", "named_person"]},
+          "by_name": {"type": ["string", "null"]},
+          "decided": {"type": "string"},
+          "principal_quote": {"type": ["string", "null"], "description": "Verbatim where the principal gave it. Never paraphrased."},
+          "hand_off_item": {"type": ["string", "null"], "description": "One decision row per hand-off item. A yes to one item never carries to its neighbor."},
+          "reading": {"type": "string", "enum": ["yes", "no", "yes_with_a_change", "question_back"]},
+          "options_live": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+          "why_this_one": {"type": "string"},
+          "what_it_closed_off": {"type": "string"},
+          "plan_change": {"type": ["string", "null"], "description": "The change_log entry in units.json made in the same pass, if the answer changed what the work should be."},
+          "applied_in_pass": {"type": ["integer", "null"]},
+          "reversal": {
+            "type": ["object", "null"],
+            "required": ["at", "by", "why"],
+            "additionalProperties": false,
+            "properties": {
+              "at": {"type": "string"},
+              "by": {"type": "string"},
+              "why": {"type": "string"},
+              "supersedes_with": {"type": ["string", "null"]}
+            }
+          }
+        }
+      }
+    }
+  }
+}

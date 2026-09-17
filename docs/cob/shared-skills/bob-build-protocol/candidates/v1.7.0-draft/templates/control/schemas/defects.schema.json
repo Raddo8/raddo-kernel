@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bob/control/defects.schema.json",
+  "title": "Problems and corrections",
+  "description": "Every defect the program has hit, including BOB's corrections to its own earlier claims and anything the principal caught. A record that only lists what went right is marketing.",
+  "type": "object",
+  "required": ["program", "version", "defects"],
+  "additionalProperties": false,
+  "properties": {
+    "program": {"type": "string"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{3}\\.[0-9]+$"},
+    "defects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "date", "kind", "plain_language", "cost", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string"},
+          "date": {"type": "string"},
+          "kind": {
+            "type": "string",
+            "enum": ["defect", "self_correction", "caught_by_principal", "caught_by_evaluator", "check_defect"],
+            "description": "self_correction is a correction to a claim BOB itself made on an earlier pass. It counts double, because it means a proof passed that should not have."
+          },
+          "plain_language": {"type": "string"},
+          "cost": {
+            "type": "object",
+            "required": ["passes", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "passes": {"type": "integer"},
+              "rows_affected": {"type": ["integer", "null"]},
+              "minutes": {"type": ["number", "null"]},
+              "what_shipped_wrong": {"type": ["string", "null"]},
+              "description": {"type": "string"}
+            }
+          },
+          "status": {"type": "string", "enum": ["fixed", "open", "known_and_named"]},
+          "what_it_means_for_the_numbers": {"type": ["string", "null"], "description": "Required in substance when status is known_and_named."},
+          "caused_by_unit": {"type": ["string", "null"], "description": "The unit whose defect a later pass paid for. Cost is written back against it in effort.json."},
+          "fixed_in_pass": {"type": ["integer", "null"]},
+          "guard": {
+            "type": ["object", "null"],
+            "description": "A cleanup with no guard is scheduled rework.",
+            "required": ["refusal_name", "write_paths_covered", "reversible_ledger", "recurring_check"],
+            "additionalProperties": false,
+            "properties": {
+              "refusal_name": {"type": "string"},
+              "write_paths_covered": {"type": "array", "items": {"type": "string"}},
+              "reversible_ledger": {"type": "string"},
+              "recurring_check": {"type": "string"},
+              "proven_against": {"type": "array", "items": {"type": "string"}}
+            }
+          },
+          "proposed_protocol_rule": {"type": ["string", "null"], "description": "One sentence. The rule that would have caught it, plus which program and pass taught it."},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

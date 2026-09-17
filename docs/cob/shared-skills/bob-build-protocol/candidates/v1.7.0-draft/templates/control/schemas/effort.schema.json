@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "bob/control/effort.schema.json",
+  "title": "Effort ledger",
+  "description": "One row per unit, estimate against actual, with the two clocks kept apart. BOB time and waiting time are never added together. This is a calibration instrument, not a productivity claim and not a price.",
+  "type": "object",
+  "required": ["program", "version", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "program": {"type": "string"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]{3}\\.[0-9]+$"},
+    "totals": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bob_hours": {"type": "number"},
+        "waiting_hours": {"type": "number"},
+        "units_closed": {"type": "integer"},
+        "note": {"type": "string", "const": "The two totals are reported separately and are never summed."}
+      }
+    },
+    "re_estimation": {
+      "type": ["object", "null"],
+      "description": "Written after every ten closed units.",
+      "required": ["at", "units_closed", "direction", "why"],
+      "additionalProperties": false,
+      "properties": {
+        "at": {"type": "string"},
+        "units_closed": {"type": "integer"},
+        "direction": {"type": "string", "enum": ["running_over", "running_under", "on_the_mark"]},
+        "why": {"type": "string"},
+        "units_re_estimated": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["unit", "estimate_hours", "bob_time", "waiting_time", "actual_basis", "variance"],
+        "additionalProperties": false,
+        "properties": {
+          "unit": {"type": "string"},
+          "title": {"type": "string"},
+          "estimate_hours": {"type": ["number", "null"]},
+          "bob_time": {
+            "type": "object",
+            "required": ["hours", "measured_from"],
+            "additionalProperties": false,
+            "properties": {
+              "hours": {"type": "number"},
+              "measured_from": {"type": "string", "enum": ["pass_window", "system_window"], "description": "pass_window is the pass's own recorded start and end and is the one to quote. system_window is first to last infrastructure action; it is hard evidence and it UNDERSTATES a unit, so it is never quoted as the cost of a unit."},
+              "system_window_hours": {"type": ["number", "null"]},
+              "evidence": {"type": "array", "items": {"type": "string"}, "description": "Migration timestamps, deploy times, API call logs, file dates, commit times. Never recollection."}
+            }
+          },
+          "waiting_time": {
+            "type": "object",
+            "required": ["hours"],
+            "additionalProperties": false,
+            "properties": {
+              "hours": {"type": "number"},
+              "runnable_at": {"type": ["string", "null"]},
+              "go_ahead_at": {"type": ["string", "null"]},
+              "waiting_on": {"type": ["string", "null"]}
+            }
+          },
+          "data_lift": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "rows_read": {"type": "integer"},
+              "rows_written": {"type": "integer"},
+              "calls": {"type": "integer"},
+              "files_deployed": {"type": "integer"},
+              "migrations_applied": {"type": "integer"},
+              "tables_or_views_created": {"type": "integer"},
+              "negative_tests_run": {"type": "integer"},
+              "bytes_of_source_shipped": {"type": "integer"}
+            }
+          },
+          "actual_basis": {"type": "string", "enum": ["evidence", "partial_evidence"], "description": "Never recollection."},
+          "variance": {"type": "string", "enum": ["under", "over", "on_estimate", "unplanned"], "description": "unplanned covers an audit the principal asked for, a probe that settles a question, a defect found while proving something else. Real work, counted, not hidden."},
+          "variance_line": {"type": "string", "description": "One line on why it ran over or under."},
+          "debt_written_back": {
+            "type": ["object", "null"],
+            "description": "A unit that closed under its estimate and left a defect behind has not come in under. A later pass's cost is written back against the unit that caused it.",
+            "required": ["hours", "from_pass", "defect_id"],
+            "additionalProperties": false,
+            "properties": {
+              "hours": {"type": "number"},
+              "from_pass": {"type": "integer"},
+              "defect_id": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
