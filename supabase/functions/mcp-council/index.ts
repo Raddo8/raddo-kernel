@@ -5219,7 +5219,6 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         });
       }
 
-
       if (name === "set_chief_name") {
         // UNIT 3 · one shared server path, also used by the Welcome Party.
         const cid = pctx.legacy_cid;
