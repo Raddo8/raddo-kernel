@@ -60,7 +60,7 @@ import {
 import { buildTaylorSetupPayload, type TaylorContext, buildWelcomePayload, buildWelcomeWidgetHtml, buildWelcomeArtifactHtml, normalizeClient, WELCOME_WIDGET_URI, type ProgressRow, type WelcomeClient } from "./welcome.ts";
 
 // harden-v1 · build stamp · echo on every response for deploy verification
-const BUILD_ID = "memory_read_path_v1";
+const BUILD_ID = "summit_bundle_2026_09_16";
 
 // Stamp build_id into a tool result payload so it's visible in the MCP
 // client's rendered text (not only in the outer JSON-RPC envelope, which
@@ -68,6 +68,26 @@ const BUILD_ID = "memory_read_path_v1";
 function stampBuildId<T extends Record<string, unknown>>(o: T): T & { build_id: string } {
   return (o && typeof o === "object" && !("build_id" in o)) ? { ...o, build_id: BUILD_ID } : (o as any);
 }
+
+// C0.1b · CHECKPOINT EMPTINESS. A checkpoint counts only if some value holds
+// content. Blank: null, undefined, a whitespace-only string, or an array or
+// object whose values are all blank (to a fixed depth; deeper counts as
+// content). Numbers and booleans are content. A non-object counts as zero.
+// Used by runSaveLeg and by the SAVE_NO_CONTENT guard.
+const CHECKPOINT_BLANK_DEPTH = 6;
+function isBlankCheckpointValue(v: unknown, depth = 0): boolean {
+  if (v === null || v === undefined) return true;
+  if (typeof v === "string") return v.trim().length === 0;
+  if (typeof v !== "object") return false;
+  if (depth >= CHECKPOINT_BLANK_DEPTH) return false;
+  const vals: unknown[] = Array.isArray(v) ? v : Object.values(v as Record<string, unknown>);
+  return vals.every((x) => isBlankCheckpointValue(x, depth + 1));
+}
+function checkpointHasContent(cp: unknown): boolean {
+  if (!cp || typeof cp !== "object" || Array.isArray(cp)) return false;
+  return !isBlankCheckpointValue(cp);
+}
+// end C0.1b
 import { verifySupabaseJwt, unauthorizedHeaders, type ResolvedIdentity } from "./auth.ts";
 import { runWithConfidenceFloor, type ClosingAction, type ProduceResult } from "./confidence.ts";
 import { triage, type TriageDecision } from "./triage.ts";
@@ -2564,7 +2584,7 @@ const TOOL_END_SESSION = {
   name: "end_session",
   title: "End Session",
   description:
-    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop · the ONLY path to an active rule), closes the session and any orphan open sessions as 'makeup', and returns the close board. " +
+    "Close a session: runs the full save leg, then processes directive confirmations (confirm/edit/drop · the ONLY path to an active rule), closes this session only (any other open session for the same client is left open and listed in other_open_sessions), and returns the close board. " +
     "Propose a title for the session and pass it as `title`. Name what the session was actually about, in the principal's own language. A principal finds a session again by its title, so a generic one is the same as none. " +
     "`close_board` is rendered to the principal ONCE, filled inline, with a single submit. Never auto-fire per item. Closure itself is non-blocking, but the identity write is not: an unconfirmed rule stays pending and governs nothing. " +
     "The proposed title is the VERY LAST thing you output at close, on its own line, ready to copy. Nothing follows it. The principal applies it themselves; you offer it.",
@@ -3309,7 +3329,7 @@ const TOOL_BOARD_UPDATE = {
   name: "board_update",
   title: "Update the board by id",
   description:
-    "Triage the whole board in one call, keyed on loop ids from board_read. Each item may change the title, trigger, owner, state, brief status, snooze date, or mark the loop urgent with a hard deadline. The id is authoritative: the title is never used for matching, so a loop whose title carries a masked account number updates in place instead of forking a duplicate. A snooze must carry a date.",
+    "Triage the whole board in one call, keyed on loop ids from board_render. Each item may change the title, trigger, owner, state, brief status, snooze date, or mark the loop urgent with a hard deadline. The id is authoritative: the title is never used for matching, so a loop whose title carries a masked account number updates in place instead of forking a duplicate. A snooze must carry a date.",
   annotations: { title: "Update the board by id", readOnlyHint: false },
   inputSchema: {
     type: "object",
@@ -4335,8 +4355,13 @@ const mcpHandler = async (req: Request): Promise<Response> => {
     if (!supabaseAdmin) return;
     try {
       const cid = await serverCid();
-      if (!cid) return;
-      await supabaseAdmin.rpc("cob_signal_raise", {
+      if (!cid) {
+        console.error("raise_signal_no_cid", key);
+        return;
+      }
+      // audience is NOT NULL in improvement_signals; null made every new key
+      // fail unseen. The rpc error is now read and logged by name.
+      const { error: sigErr } = await supabaseAdmin.rpc("cob_signal_raise", {
         p_cid: cid,
         p_key: key,
         p_detail: detail,
@@ -4345,9 +4370,14 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         p_surface: extra.surface ?? "connector",
         p_subject: extra.subject ?? null,
         p_link: extra.link ?? null,
-        p_audience: null,
+        p_audience: "operator",
       });
-    } catch { /* the log line already happened; never fail on the record of a failure */ }
+      if (sigErr) {
+        console.error("raise_signal_rpc_failed", key, sigErr.code ?? "no_code", sigErr.message ?? String(sigErr));
+      }
+    } catch (e) {
+      console.error("raise_signal_exception", key, e instanceof Error ? e.message : String(e));
+    }
   };
 
   // ── HARDEN-02 · H2 · GATEWAY SESSION EVENT LOG ───────────────────────────
@@ -5055,7 +5085,7 @@ const mcpHandler = async (req: Request): Promise<Response> => {
       const BOOT_GATED_WRITES = new Set([
         "memory_write", "rule_write", "narrative_write", "blueprint_write",
         "comm_write", "decision_write", "record_file", "board_respond",
-        "board_render", "board_read", "board_update", "board_supersede",
+        "board_render", "board_update", "board_supersede",
         "work_raise", "work_dispose", "work_reschedule",
         // HARDEN-15 R2 · uniform enforcement. These three carried an explicit
         // cid and so never noticed a missing boot, which made an un-booted
@@ -5172,6 +5202,22 @@ const mcpHandler = async (req: Request): Promise<Response> => {
       try {
         const __dispatchResponse = await (async (): Promise<Response> => {
 
+      // BOARD_READ_RETIRED · the alias release is over. Refuse by name, before
+      // any read or write. board_read is not in TOOLS (not in tools/list).
+      if (name === "board_read") {
+        const out = stampBuildId({
+          ok: false,
+          tool: "board_read",
+          reason: "BOARD_READ_RETIRED",
+          error: "BOARD_READ_RETIRED: board_read was retired; call board_render",
+          use_instead: "board_render",
+        });
+        return rpcResult(id, {
+          content: [{ type: "text", text: JSON.stringify(out) }],
+          structuredContent: out,
+          isError: false,
+        });
+      }
 
 
       if (name === "set_chief_name") {
@@ -6283,7 +6329,7 @@ const mcpHandler = async (req: Request): Promise<Response> => {
         name === "signal_raise" || name === "decision_write" || name === "record_file" ||
         name === "record_probe" ||
         name === "board_respond" ||
-        name === "board_render" || name === "board_read" ||
+        name === "board_render" ||
         name === "board_update" || name === "board_supersede" ||
         name === "work_raise" || name === "work_disposition" || name === "work_dispose" ||
         name === "work_reschedule" ||
@@ -6388,10 +6434,10 @@ const mcpHandler = async (req: Request): Promise<Response> => {
             p_timezone: str(args?.timezone) ?? "UTC",
             p_cid: worldCid,
           };
-        } else if (name === "board_render" || name === "board_read") {
+        } else if (name === "board_render") {
           // F2/F3 · The three-strike rule is mechanised here, not remembered.
-          // board_read is the retired name and still dispatches, so a host
-          // holding a stale manifest keeps working.
+          // board_read is retired and refuses by name at the top of dispatch
+          // (BOARD_READ_RETIRED).
           rpcName = "board_render";
           params = {
             p_cid: worldCid,
@@ -6849,7 +6895,7 @@ const mcpHandler = async (req: Request): Promise<Response> => {
           const memory = (Array.isArray(argsIn?.memory) ? argsIn.memory : []).filter((m: any) => m?.title && m?.body_md);
           const rules = (Array.isArray(argsIn?.rules_captured) ? argsIn.rules_captured : []).filter((r: any) => r?.text && r?.scope);
           const checkpoint = (argsIn?.checkpoint && typeof argsIn.checkpoint === "object") ? argsIn.checkpoint : null;
-          const checkpointRequested = checkpoint && Object.keys(checkpoint).length > 0 ? 1 : 0;
+          const checkpointRequested = checkpointHasContent(checkpoint) ? 1 : 0;
 
           const L: Record<LayerName, LayerAcc> = {
             checkpoint: newLayer("checkpoint", checkpointRequested),
@@ -7254,7 +7300,7 @@ const mcpHandler = async (req: Request): Promise<Response> => {
           const _c01Memory = Array.isArray(args?.memory) ? args.memory.filter((m: any) => m?.title && m?.body_md) : [];
           const _c01Rules = Array.isArray(args?.rules_captured) ? args.rules_captured.filter((r: any) => r?.text && r?.scope) : [];
           const _c01Checkpoint = (args?.checkpoint && typeof args.checkpoint === "object") ? args.checkpoint : null;
-          const _c01CheckpointRequested = _c01Checkpoint && Object.keys(_c01Checkpoint).length > 0 ? 1 : 0;
+          const _c01CheckpointRequested = checkpointHasContent(_c01Checkpoint) ? 1 : 0;
           const _c01TotalRequested =
             _c01Decisions.length + _c01OpenLoops.length + _c01Signals.length +
             _c01Memory.length + _c01Rules.length + _c01CheckpointRequested;
@@ -7810,21 +7856,79 @@ const mcpHandler = async (req: Request): Promise<Response> => {
                 endReasons.push("session_title_not_confirmed");
               }
             }
-            // Makeup-close any other still-open sessions for this tenant.
-            // Only rows that read back closed are counted as closed.
-            const { data: orphans } = await supabaseAdmin
-              .from("sessions").select("id").eq("tenant", tenant)
-              .is("closed_at", null).neq("id", session_id);
+            // C0.5 · OTHER OPEN SESSIONS ARE REPORTED, NEVER CLOSED. This used
+            // to makeup-close every other open session for the tenant
+            // (2026-09-04: one close ended 8). Nothing records which client
+            // opened a session, and a call with no session_id is logged
+            // against the newest session context, so idle time cannot tell
+            // dormant from abandoned. This close ends only its own session, at
+            // any age of the others. A failed activity lookup is "unknown",
+            // raises a signal, and is never read as idle. makeup_closed stays,
+            // always empty.
             const makeup_closed: string[] = [];
-            const makeup_not_closed: Array<{ id: string; reason: string }> = [];
-            for (const o of (orphans ?? [])) {
-              const { data: mkRows, error: mkErr } = await supabaseAdmin
-                .from("sessions")
-                .update({ closed_at: nowIso, close_kind: "makeup" })
-                .eq("id", o.id).eq("tenant", tenant)
-                .select("id, closed_at");
-              if (!mkErr && (mkRows ?? [])[0]?.closed_at) makeup_closed.push(o.id);
-              else makeup_not_closed.push({ id: o.id, reason: mkErr?.message ?? "no_matching_row_in_tenant" });
+            type OtherOpenSession = {
+              id: string;
+              opened_at: string | null;
+              last_activity_at: string | null;
+              activity: "recorded" | "none_recorded" | "unknown";
+              idle_hours: number | null;
+            };
+            const other_open_sessions: OtherOpenSession[] = [];
+            let otherOpenReadError: string | null = null;
+            {
+              const { data: openRows, error: openErr } = await supabaseAdmin
+                .from("sessions").select("id, opened_at").eq("tenant", tenant)
+                .is("closed_at", null).neq("id", session_id);
+              if (openErr) {
+                otherOpenReadError = openErr.message ?? String(openErr);
+                void raiseSignal("end_session_open_sessions_read_failed", otherOpenReadError, {
+                  session_id, surface: "ritual", subject: "end_session",
+                });
+              }
+              const lookupFailures: string[] = [];
+              const nowMsOthers = Date.now();
+              const rows = (openRows ?? []) as Array<{ id: string; opened_at: string | null }>;
+              const reported = await Promise.all(rows.map(async (o): Promise<OtherOpenSession> => {
+                let last: string | null = null;
+                let activity: OtherOpenSession["activity"] = "unknown";
+                try {
+                  const { data: ev, error: evErr } = await supabaseAdmin
+                    .from("session_event")
+                    .select("created_at")
+                    .eq("session_id", o.id)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                  if (evErr) throw new Error(evErr.message ?? "session_event_lookup_failed");
+                  if (ev?.created_at) {
+                    last = String(ev.created_at);
+                    activity = "recorded";
+                  } else {
+                    last = o.opened_at ?? null;
+                    activity = "none_recorded";
+                  }
+                } catch (e) {
+                  last = null;
+                  activity = "unknown";
+                  lookupFailures.push(`${o.id}:${e instanceof Error ? e.message : String(e)}`);
+                }
+                const t = last ? new Date(last).getTime() : Number.NaN;
+                return {
+                  id: o.id,
+                  opened_at: o.opened_at ?? null,
+                  last_activity_at: last,
+                  activity,
+                  idle_hours: Number.isFinite(t) ? Math.round(((nowMsOthers - t) / 3600000) * 10) / 10 : null,
+                };
+              }));
+              other_open_sessions.push(...reported);
+              if (lookupFailures.length) {
+                void raiseSignal(
+                  "end_session_recency_lookup_failed",
+                  `${lookupFailures.length} of ${rows.length} open session(s) had no readable activity; reported as unknown, none closed: ${lookupFailures.join("; ").slice(0, 800)}`,
+                  { session_id, surface: "ritual", subject: "end_session" },
+                );
+              }
             }
 
             // 4. ritual_runs
@@ -7906,7 +8010,11 @@ const mcpHandler = async (req: Request): Promise<Response> => {
               // update call returned without error.
               closed: { session_id, close_kind, confirmed: close_confirmed, title_confirmed, ...closeConfirm },
               makeup_closed,
-              ...(makeup_not_closed.length ? { makeup_not_closed } : {}),
+              other_open_sessions,
+              ...(other_open_sessions.length
+                ? { other_open_sessions_note: "Left open. This close ends only its own session." }
+                : {}),
+              ...(otherOpenReadError ? { other_open_sessions_error: otherOpenReadError } : {}),
               // Whether each correction actually bound. `not_applied` is the
               // honest answer to "did my correction take?".
               directives: {
