@@ -11,7 +11,8 @@ SCOPE: FLEET. This folder is a repository-only unit. Nothing here is installed, 
 - `MANIFEST.sha256` — SHA256 of every file in this folder.
 - `REQUIREMENTS_MATRIX.md` — all sixteen sections of v1.6.0, each marked template-satisfied or missing-runtime.
 - `IMPLEMENTATION_HANDOFF.md` — what remains to be built, explicitly not implemented here.
-- `PRECEDENCE.md` — which document wins where the two versions disagree.
+- `PRECEDENCE.md` — which document wins where the two versions disagree, with dated correction records.
+- `GROK_WORKER_CONTRACT.md` — a proposed contract for an external worker under this protocol. Design only, not active, not installed.
 
 ## What is deliberately not here
 
