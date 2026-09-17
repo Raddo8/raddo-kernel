@@ -26,7 +26,7 @@ Do not read any item below as delivered. The requirements matrix marks each of t
 
 **Recommended action.** A per-tenant setting carrying the protocol version in force and who set it, with the fleet default separate from any tenant override, and a refusal by name when a program asks for a version the tenant is not on.
 
-**Default if no answer.** Fleet default only, no overrides, and a MAJOR reaches everyone on the same pass.
+**Default if no answer.** Every tenant stays on the version currently authorized for it. An unapproved MAJOR stays blocked and is never rolled out fleet-wide by default; a program asking for it is refused by name until a person authorizes the move. Silence authorizes nothing.
 
 **Unblocks.** Safe version movement; H3, because a build record has to say which version produced it.
 
@@ -82,7 +82,7 @@ Do not read any item below as delivered. The requirements matrix marks each of t
 
 **Recommended action.** Write the first program's checks from the unit definitions alone before any building, using a context with no access to this folder's candidates, and keep the deny list from `CLAUDE.md` in force mechanically rather than by prose.
 
-**Default if no answer.** Builder self-grading only, which `PRECEDENCE.md` §2 says plainly is not verification.
+**Default if no answer.** Independent review stays **not done** and is reported as not done. A builder's own grade never counts as a completed independent review, never fills the `evaluation` object, and never reduces the held-out gap. Every unit verified only by its builder is counted in that gap at every close.
 
 **Unblocks.** Any honest held-out gap count.
 
@@ -110,7 +110,7 @@ Do not read any item below as delivered. The requirements matrix marks each of t
 
 **Recommended action.** Receipts first, because they are free and they are written in the same pass as an apply. The cost ledger only when the principal asks what the work has cost or a scope conversation is coming, with an hours range low to high and hard costs separate at the rate actually paid.
 
-**Default if no answer.** No receipts, and applies rest on the builder's report. That is the failure mode section 16 was written to stop.
+**Default if no answer.** No live apply proceeds at all. Until a rollback can be written, a dry run can be run in a transaction that cannot commit, and a receipt can be recorded in the same pass, the apply is blocked and the blockage is the pass's finding. An unreceipted apply resting on the builder's report is never the default; that is the failure mode section 16 was written to stop.
 
 **Unblocks.** Any claim that an apply was verified.
 
