@@ -1,0 +1,28 @@
+# SHA256 manifest · bob-build-protocol (SS-0.2)
+# sha256  bytes  path
+2538ee9afd3f6b7680d4bddac7d0e0727a44283c263a7574a047c280535f78fa     7233  IMPLEMENTATION_HANDOFF.md
+d6af7242c1bdd1f10ef92362ad6ae2412775db5394098c8c973ac30ff358f715     2865  PRECEDENCE.md
+f38409150d39aab94130d17edf10ab1324e5839256a186d48bc3fd0e146ecce4     2049  README.md
+6b0143cbd0c8f6e63fc51c87bd91d00e8e1531da4caa13f90eacfbc7d27209ab     8585  REQUIREMENTS_MATRIX.md
+ebee0f6fb2b5b77baf49630b6cb811b12a3ac237750ad6d956b8d6a784c23fb4     2931  candidates/v1.7.0-draft/templates/NEXT.md
+a240435c19f4bda711b32e944f60cad22f0c4ae73b29bc46b46f94e5dcb325b8     1768  candidates/v1.7.0-draft/templates/PROGRESS.md
+83ce2345ae70451d188485abbc9e6206c09f984cb5cbdce577916ee8cb1d61cf     1780  candidates/v1.7.0-draft/templates/agent_docs/dispatches/DISPATCH_TEMPLATE.md
+4993925ea0425d731448d0bab1c198f9cc1f07238f7d7587d60b95d1b9e649f5     1891  candidates/v1.7.0-draft/templates/agent_docs/reference/REFERENCE_TEMPLATE.md
+d28ef75a528da4861265de8f3cffdad5decd89a3db1434083eb58b97d7fa17ae     2664  candidates/v1.7.0-draft/templates/agent_docs/specs/UNIT_SPEC_TEMPLATE.md
+cbac0d15d025e06e9a7c453620b1b8be6913c83287994d97de32062ccf0b8f40     2320  candidates/v1.7.0-draft/templates/control/schemas/decisions.schema.json
+ef595faeef3f1d198e60bff686a7de794997e7a5e05e402684f0bf2e82f7cf7b     3147  candidates/v1.7.0-draft/templates/control/schemas/defects.schema.json
+d8e81c73603d21414eb67f91cebdd223110618de8616a00ec5999eb98ea0bf17     4787  candidates/v1.7.0-draft/templates/control/schemas/effort.schema.json
+84e8efdc94db448c90a9a7f038fef9c043dddd5dffdcd7661c245eca4064abb6     2348  candidates/v1.7.0-draft/templates/control/schemas/log.schema.json
+6389045a2f7eef9e460101d65a83ac402d1fded7b1266c91931ed5821686d8f8     3919  candidates/v1.7.0-draft/templates/evaluator/CONDUCT.md
+507e2acf3653b2a5c55aef1585d4be1f0801ee82f0a2451ea1a2832349c6ab54     4776  candidates/v1.7.0-draft/templates/migrations/README.md
+0bee2fa4480c811b64355c401787b9338705f14dbdb23438a7878cbb45b75c5c     3958  candidates/v1.7.0-draft/templates/units.json
+d7bb7d98bf6fa604f4a236b7a66806e536b4485e2f9608b8dca50c02e4cd4d76     5840  originals/v1.1.1/templates/AGENTS.md
+a8a3bd7f5edb158f1654903ee2e0b0b9c8de43dccca67d36d58ce04db806469b     1335  originals/v1.1.1/templates/CLAUDE.md
+c308ee0ae988a92806d1aa0f844828d53b9333270890703a548409ad61464b45     3829  originals/v1.1.1/templates/PLAN.md
+9d1ff34a38812c41b8b8949eb1345216fd396a326daafc81b3b504801a61f0a3      611  originals/v1.1.1/templates/PROGRESS.md
+e7a2b4e5cbedad448daea3072068aae1d8d33438d1603cefb9b7e0464c98fd90     1662  originals/v1.1.1/templates/README.md
+e7c618cb682049b9bbaa6de3902b64b8bab29c264638f4910d20aa0688eb8515      505  originals/v1.1.1/templates/agent_docs/README.md
+be3fe81c277e6d4715e27af8de12af37ed874a6c404377d3d22b4dc7b9abc7e7      923  originals/v1.1.1/templates/evaluator/checks.json
+ae92a59c034d568a2dcbf94691483f7b84575abf1237685cedcb8ba9a47b8dc6     1143  originals/v1.1.1/templates/init.sh
+a04c704abf35f30afc5c5b5819f1d77415909b6590180d84c5c189be2639539e     1579  originals/v1.1.1/templates/units.json
+eeffcab16913e69803466261db6399339cdfd79db752cd7ce80752d1924eab6e    66316  originals/v1.6.0/SKILL.md
