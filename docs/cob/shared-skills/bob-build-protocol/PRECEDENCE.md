@@ -2,13 +2,25 @@
 
 SCOPE: FLEET. Read this before using any file in this folder. The originals are preserved unchanged; where they disagree, this page says which one governs. No original was edited to resolve a conflict.
 
-## 1 · Unit selection: NEXT.md overrides AGENTS.md priority order
+## 1 · Unit selection: NEXT.md governs, and a missing assignment is a blocked state
 
 `originals/v1.1.1/templates/AGENTS.md`, step 3 of "Start of every pass", tells the builder to pick the highest-priority unit whose `passes` is false and whose prerequisites all pass.
 
 v1.6.0 section 10 introduces `NEXT.md`, the standing order, and states: "The builder takes the unit named here and nothing else."
 
-**`NEXT.md` wins.** Where a program folder carries a `NEXT.md`, the assignment in it overrides the AGENTS.md priority selection. The AGENTS.md rule remains the fallback for a program with no `NEXT.md`. The AGENTS.md original is not edited to say so; this page carries the reconciliation, and the candidate `NEXT.md` template states it on its own face.
+**`NEXT.md` governs.** For any program adopting 1.6.0, the assignment in `NEXT.md` is the only source of the unit for the pass.
+
+**A missing `NEXT.md`, or a `NEXT.md` with no named assignment, is a recorded blocked state.** The builder does not select a unit by priority, does not infer one, and does not build. It records the block in the progress log with the reason and the date, raises framing repair as the hand-off (recommended action: the framer writes the assignment; default: the program stays blocked; deadline named), and the pass ends there. A blocked pass is a legitimate outcome; a self-selected unit is not.
+
+**Legacy behavior is explicit, never implicit.** The AGENTS.md priority rule applies only to a program that declares itself legacy — pre-1.6.0, carrying no `protocol_version` in `units.json` and no `NEXT.md` by design. It is never a fallback for a 1.6.0 program whose framing is simply incomplete. The AGENTS.md original is not edited; this page carries the reconciliation, and the candidate `NEXT.md` template states it on its own face.
+
+### Correction record · 2026-09-17 · SS-0.2a
+
+The text of §1 as first written in SS-0.2 is preserved here as history. It made priority selection an implicit fallback, which lets an unframed 1.6.0 program keep building on a unit no framer chose. That is the defect this correction closes.
+
+> **`NEXT.md` wins.** Where a program folder carries a `NEXT.md`, the assignment in it overrides the AGENTS.md priority selection. The AGENTS.md rule remains the fallback for a program with no `NEXT.md`. The AGENTS.md original is not edited to say so; this page carries the reconciliation, and the candidate `NEXT.md` template states it on its own face.
+
+Changed by: this repository unit, under Jake's authorization of SS-0.2a. Nothing in `originals/` was touched.
 
 ## 2 · Builder passes are not independent verification
 

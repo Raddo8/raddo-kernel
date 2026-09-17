@@ -44,4 +44,6 @@ Reads may run in parallel: research, search, review, evaluation. Writes stay sin
 - A `KILL` file in the program folder means stop before the next call.
 
 ## Precedence note
-`AGENTS.md` step 3 (highest-priority unit whose `passes` is false) is the fallback for a program with no `NEXT.md`. It does not override the assignment above.
+This file is the only source of the unit for the pass. If this file is absent, or "This pass" carries no named unit, the pass is **blocked**: the builder records the block and its reason in the progress log, raises framing repair as a hand-off with a recommended action, a default and a deadline, and stops. It never selects a unit by priority and never infers one.
+
+`AGENTS.md` step 3 (highest-priority unit whose `passes` is false) applies **only to a program explicitly declared legacy** — pre-1.6.0, no `protocol_version` in `units.json`, no `NEXT.md` by design. It is not a fallback for a 1.6.0 program with incomplete framing, and it never overrides the assignment above.
